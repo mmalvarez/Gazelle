@@ -1,4 +1,4 @@
-theory SymVelle imports SymCelle
+theory Sym_Velle imports Sym_Celle
 begin
 
 record ('i, 'lix, 'ljx, 'ljix, 'lex, 'lcx, 'v) sym_velle = "('i, 'lix, 'ljx, 'ljix, 'lex, 'lcx) sym_celle" +

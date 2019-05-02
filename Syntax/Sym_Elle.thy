@@ -1,4 +1,4 @@
-theory SymElle imports SymI
+theory Sym_Elle imports Sym_I
 begin
 (* Elle syntax *)
     

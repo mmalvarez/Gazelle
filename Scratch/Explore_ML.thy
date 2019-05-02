@@ -1,4 +1,4 @@
-theory ExploreML
+theory Explore_ML
   imports Main
 begin
 

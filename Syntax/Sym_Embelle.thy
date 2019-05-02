@@ -1,4 +1,4 @@
-theory SymEmbelle imports SymElle
+theory Sym_Embelle imports Sym_Elle
 begin
 (* TODO: Elle extended with arbitrary embedded content
    idea: semantics need to be proven to never reach this content *)

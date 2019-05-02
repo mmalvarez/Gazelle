@@ -1,4 +1,4 @@
-theory SymCelle imports SymEmbelle
+theory Sym_Celle imports Sym_Embelle
 begin
 
 (* Elle extended with calls *)

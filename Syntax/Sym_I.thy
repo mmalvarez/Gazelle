@@ -1,4 +1,4 @@
-theory SymI imports "../SyntaxUtils"
+theory Sym_I imports "../SyntaxUtils"
 begin
 (* Syntax with instructions *)
 
