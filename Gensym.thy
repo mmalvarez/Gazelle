@@ -5,12 +5,12 @@ datatype ('b, 'r, 'g) gensym =
   GBase "'g" "'b"
   | GRec "'g" "'r" "(('b, 'r, 'g) gensym) list"
 
-(* are we using g and r correctly? *)
-lemma gensym_induct:
+
+lemma gensym_induct':
   assumes Lb: "(\<And> (g :: 'g) (b :: 'b) . P1 (GBase g b))"
-  and Lr : "(\<And> g r l . P2 l \<Longrightarrow> P1 (GRec g r l))"
-  and Lrn : "\<And> g r . P2 []"
-  and Lrc : "\<And>t g r l . P1 t \<Longrightarrow>
+  and Lr : "(\<And> (g :: 'g) (r :: 'r) (l :: ('b, 'r, 'g) gensym list) . P2 l \<Longrightarrow> P1 (GRec g r l))"
+  and Lrn : "P2 []"
+  and Lrc : "\<And>t l . P1 t \<Longrightarrow>
                          P2 l \<Longrightarrow> 
                          P2 (t # l)"
   shows "P1 t \<and> P2 l"
@@ -27,5 +27,17 @@ proof-
   
   thus ?thesis by auto
   qed
+
+lemma gensym_induct:
+  assumes Lb: "(\<And> (g :: 'g) (b :: 'b) . P1 (GBase g b))"
+  and Lr : "(\<And> (g :: 'g) (r :: 'r) (l :: ('b, 'r, 'g) gensym list) . P2 l \<Longrightarrow> P1 (GRec g r l))"
+  and Lrn : "P2 []"
+  and Lrc : "\<And>t l . P1 t \<Longrightarrow>
+                         P2 l \<Longrightarrow> 
+                         P2 (t # l)"
+shows C1: "P1 (t :: ('b, 'r, 'g) gensym)"
+  and C2 : "P2 (l :: ('b, 'r, 'g) gensym list)" using gensym_induct'[OF Lb Lr Lrn Lrc]
+proof(auto)
+qed
 
 end
