@@ -1,4 +1,4 @@
-theory SyntaxUtils imports Main
+theory Syntax_Utils imports Main
 begin
 
 (* general utilities for use in our extensible

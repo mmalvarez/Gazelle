@@ -34,29 +34,67 @@ gensym_get_list :: "('b, 'r, 'g) gensym list \<Rightarrow> childpath \<Rightarro
    gensym_get_list (ls) ((n-1)#p)"
 
 (* Tool for getting the next valid child in the tree *)
-fun cp_next :: "('b, 'r, 'g) gensym \<Rightarrow> childpath \<Rightarrow> childpath option"
-and cp_next_list :: "('b, 'r, 'g) gensym list \<Rightarrow> childpath \<Rightarrow> childpath option" 
+fun gensym_cp_next :: "('b, 'r, 'g) gensym \<Rightarrow> childpath \<Rightarrow> childpath option"
+and gensym_cp_next_list :: "('b, 'r, 'g) gensym list \<Rightarrow> childpath \<Rightarrow> childpath option" 
 where
-"cp_next (GRec _ _ l) (cp) = cp_next_list l cp"
-| "cp_next _ _ = None"
+"gensym_cp_next (GRec _ _ l) (cp) = gensym_cp_next_list l cp"
+| "gensym_cp_next _ _ = None"
 
-| "cp_next_list [] _ = None"
-| "cp_next_list _ [] = None" (* corresponds to running off the end*)
+| "gensym_cp_next_list [] _ = None"
+| "gensym_cp_next_list _ [] = None" (* corresponds to hitting a list case with no cp left - we want to go to its sibling*)
 (* idea: maintain a lookahead of 1. this is why we talk about both cases *)
 (* do we need to be tacking on a 0 *)
-| "cp_next_list ([h]) (0#cpt) =
-    (case cp_next h cpt of None \<Rightarrow> None 
+| "gensym_cp_next_list ([h]) (0#cpt) =
+    (case gensym_cp_next h cpt of None \<Rightarrow> None 
                          | Some res \<Rightarrow> Some (0#res))"
-| "cp_next_list ([h]) ((Suc n)#cpt) = None"
-| "cp_next_list (h1#h2#t) (0#cpt) =
-    (case cp_next h1 cpt of
+| "gensym_cp_next_list ([h]) ((Suc n)#cpt) = None"
+| "gensym_cp_next_list (h1#h2#t) (0#cpt) =
+    (case gensym_cp_next h1 cpt of
       Some cp' \<Rightarrow> Some (0#cp')
      | None \<Rightarrow> Some [1])"
-| "cp_next_list (h#h2#t) (Suc n # cpt) =
-    (case cp_next_list (h2#t) (n # cpt) of
+| "gensym_cp_next_list (h#h2#t) (Suc n # cpt) =
+    (case gensym_cp_next_list (h2#t) (n # cpt) of
       Some (n'#cp') \<Rightarrow> Some (Suc n' # cp')
      | _ \<Rightarrow> None)
     "
 
+fun gensym_cp_next' :: "('b, 'r, 'g) gensym \<Rightarrow> childpath \<Rightarrow> childpath option"
+  where
+"gensym_cp_next' g cp =
+  (case (rev cp) of
+      [] \<Rightarrow> None
+    | (cl # cp') \<Rightarrow>
+        (case (gensym_get g (rev cp')) of
+              Some (GRec _ _ l) \<Rightarrow>
+                (if cl + 1 < length l then Some (rev ((cl + 1)#cp'))
+                 else gensym_cp_next' g (rev cp'))
+            | Some (GBase _ _) \<Rightarrow> None
+            | None \<Rightarrow> None))"
 
-end
+(* idea: this will attempt to go to the next immediate child of our node
+   if it is a list node *)
+(* TODO: should we define this recursively like cp_next *)
+fun gensym_dig :: "('b, 'r, 'g) gensym \<Rightarrow> childpath \<Rightarrow> childpath option" where
+"gensym_dig g c =
+  (case gensym_get g c of
+    Some (GRec _ _ (h#t)) \<Rightarrow> Some (c@[0])
+    | _ \<Rightarrow> None)"
+
+(* another option for defining cp_next. this should work for our purposes as well *)
+(*
+fun gensym_cp_next2' :: "('b, 'r, 'g) gensym \<Rightarrow> childpath \<Rightarrow> childpath option" where
+"gensym_cp_next2' g cp =
+  (case gensym_get g cp of
+    
+  
+
+  (case (rev cp) of
+      [] \<Rightarrow> None
+    | (cl # cp') \<Rightarrow>
+        (case (gensym_get g (rev cp')) of
+              Some (GRec _ _ l) \<Rightarrow>
+                (if cl + 1 < length l then Some (rev ((cl + 1)#cp'))
+                 else gensym_cp_next' g (rev cp'))
+            | _ \<Rightarrow> None))"
+*)
+end 
