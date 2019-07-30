@@ -1,9 +1,9 @@
-theory Gensym_Descend_Facts imports Gensym_Descend
+theory Gensyn_Descend_Facts imports Gensyn_Descend
 begin
 
 (*
-lemma gensym_get_len [rule_format] :
-"(! kh kt t' . gensym_get_list ts (kh#kt) = Some t' \<longrightarrow>
+lemma gensyn_get_len [rule_format] :
+"(! kh kt t' . gensyn_get_list ts (kh#kt) = Some t' \<longrightarrow>
  kh < length ts)"
 proof(induction ts)
 case Nil
@@ -17,9 +17,9 @@ next
     done
 qed
 *)
-lemma gensym_get_list_len  :
-  fixes ts :: "('b, 'r, 'g) gensym list" 
-  shows "\<And> kh kt t' . gensym_get_list ts (kh#kt) = Some t' \<Longrightarrow>
+lemma gensyn_get_list_len  :
+  fixes ts :: "('b, 'r, 'g) gensyn list" 
+  shows "\<And> kh kt t' . gensyn_get_list ts (kh#kt) = Some t' \<Longrightarrow>
           kh < length ts"
 proof(induction ts ) 
 case Nil
@@ -39,8 +39,8 @@ then show ?case by auto
   qed
 
 
-lemma gensym_get_list_len' :
-  assumes H:  "gensym_get_list ts (kh#kt) = Some t'"
+lemma gensyn_get_list_len' :
+  assumes H:  "gensyn_get_list ts (kh#kt) = Some t'"
   shows "kh < length (ts)" using H
 proof(induct ts arbitrary:kh)
 case Nil
@@ -55,8 +55,8 @@ qed
     
 
 
-lemma gensym_get_list_nth :
-  shows "gensym_get_list ts [kh] = Some t' \<Longrightarrow>
+lemma gensyn_get_list_nth :
+  shows "gensyn_get_list ts [kh] = Some t' \<Longrightarrow>
           ts ! kh = t'"
 proof(induction ts arbitrary:kh) 
   case Nil
@@ -70,10 +70,10 @@ next
   qed
 qed
 
-lemma gensym_get_list_nth2 :
+lemma gensyn_get_list_nth2 :
   shows "kh < length ts \<Longrightarrow>
          ts ! kh = t' \<Longrightarrow>
-         gensym_get_list ts [kh] = Some t'"
+         gensyn_get_list ts [kh] = Some t'"
 proof(induction ts arbitrary:kh)
   case Nil
   then show ?case by auto
@@ -89,10 +89,10 @@ next
   qed
 qed
 
-lemma gensym_get_list_child  :
-  assumes H:  "gensym_get_list ts (kh#kt) = Some t'"
+lemma gensyn_get_list_child  :
+  assumes H:  "gensyn_get_list ts (kh#kt) = Some t'"
   shows (*glc_C1 :*) "kh < length ts" 
-  and (*glc_C2:*) "gensym_get (ts ! kh) kt = Some t'"
+  and (*glc_C2:*) "gensyn_get (ts ! kh) kt = Some t'"
   using H
 proof(induction ts arbitrary:kh)
   case Nil 
@@ -118,12 +118,12 @@ proof(induction ts arbitrary:kh)
 qed
 
 (* need converse of previous lemma, to prove last-child lemma *)
-lemma gensym_get_list_child2 :
-  assumes Hg: "gensym_get t kt = Some t'"
+lemma gensyn_get_list_child2 :
+  assumes Hg: "gensyn_get t kt = Some t'"
   and Hl: "kh < length ts"
   and Hc: "ts ! kh = t"
 shows
-    "gensym_get_list ts (kh#kt) = Some t'" using Hg Hl Hc
+    "gensyn_get_list ts (kh#kt) = Some t'" using Hg Hl Hc
 proof(induction ts arbitrary:kh) 
 case Nil then show ?case by auto
 next
@@ -139,35 +139,35 @@ next
 qed
 
 (* need to constrain t'1. need exists *)
-lemma gensym_get_child :
-  assumes H: "gensym_get t (kh#kt) = Some t'"
-  shows  "\<exists> t'1 . gensym_get t [kh] = Some t'1 \<and>
-            gensym_get t'1 kt = Some t'" using H
+lemma gensyn_get_child :
+  assumes H: "gensyn_get t (kh#kt) = Some t'"
+  shows  "\<exists> t'1 . gensyn_get t [kh] = Some t'1 \<and>
+            gensyn_get t'1 kt = Some t'" using H
 proof(cases t)
   case (GBase x11 x12)
   thus ?thesis using H by auto next
   case (GRec a1 a2 l)
-  thus ?thesis using H gensym_get_list_child gensym_get_list_nth2
+  thus ?thesis using H gensyn_get_list_child gensyn_get_list_nth2
     by auto blast+
 qed
 
-lemma gensym_get_child2 :
-  assumes H1 : "gensym_get t [kh] = Some t'1"
-  and H2 : "gensym_get t'1 kt = Some t'"
-  shows  "gensym_get t (kh#kt) = Some t'" using H1 H2
+lemma gensyn_get_child2 :
+  assumes H1 : "gensyn_get t [kh] = Some t'1"
+  and H2 : "gensyn_get t'1 kt = Some t'"
+  shows  "gensyn_get t (kh#kt) = Some t'" using H1 H2
 proof(cases t)
   case (GBase x11 x12)
   thus ?thesis using H1 H2 by auto next
   case (GRec a1 a2 l)
-  thus ?thesis using H1 H2 gensym_get_list_child2[of t'1 kt t']
-                           gensym_get_list_len[of l kh "[]" t'1]
-                           gensym_get_list_nth[of l kh t'1] by auto
+  thus ?thesis using H1 H2 gensyn_get_list_child2[of t'1 kt t']
+                           gensyn_get_list_len[of l kh "[]" t'1]
+                           gensyn_get_list_nth[of l kh t'1] by auto
 qed
 
-lemma gensym_get_last :
-  assumes H: "gensym_get t (k@[kl]) = Some t''"
-  shows "\<exists> t' . (gensym_get t k = Some (t' :: ('a, 'b, 'c) gensym) \<and>
-         gensym_get t' [kl] = Some t'')"  using H
+lemma gensyn_get_last :
+  assumes H: "gensyn_get t (k@[kl]) = Some t''"
+  shows "\<exists> t' . (gensyn_get t k = Some (t' :: ('a, 'b, 'c) gensyn) \<and>
+         gensyn_get t' [kl] = Some t'')"  using H
 proof(induction k arbitrary: t kl t'')
   case Nil then show ?case by auto next
   case (Cons a k) then show ?case
@@ -176,17 +176,17 @@ proof(induction k arbitrary: t kl t'')
     then show ?thesis using Cons by auto
   next
     case (GRec a1 a2 l)
-    hence 0: "gensym_get (l ! a) (k@[kl]) = Some t''" using Cons gensym_get_list_child GRec by auto
-    hence 1: "\<exists> t' .  gensym_get (l ! a) k = Some t' \<and> gensym_get t' [kl] = Some t''" using Cons by auto
-    hence 2: "a < length l" using Cons GRec gensym_get_list_len by auto
-    thus ?thesis using GRec gensym_get_list_nth2 gensym_get_list_child2 0 1 by auto blast+
+    hence 0: "gensyn_get (l ! a) (k@[kl]) = Some t''" using Cons gensyn_get_list_child GRec by auto
+    hence 1: "\<exists> t' .  gensyn_get (l ! a) k = Some t' \<and> gensyn_get t' [kl] = Some t''" using Cons by auto
+    hence 2: "a < length l" using Cons GRec gensyn_get_list_len by auto
+    thus ?thesis using GRec gensyn_get_list_nth2 gensyn_get_list_child2 0 1 by auto blast+
   qed
 qed
 
-lemma gensym_get_last2 :
-  assumes H1: "gensym_get t k = Some t'"
-  and H2: "gensym_get t' [kl] = Some t''"
-shows "gensym_get t (k@[kl]) = Some t''"  using H1 H2
+lemma gensyn_get_last2 :
+  assumes H1: "gensyn_get t k = Some t'"
+  and H2: "gensyn_get t' [kl] = Some t''"
+shows "gensyn_get t (k@[kl]) = Some t''"  using H1 H2
 proof(induction k arbitrary: t t' kl t'')
   case Nil
   then show ?case by auto next
@@ -198,17 +198,17 @@ proof(induction k arbitrary: t t' kl t'')
     then show ?thesis using Cons by auto
   next
     case (GRec a1 a2 l)
-    hence 0: "gensym_get (l!a) (k) = Some t'" using Cons gensym_get_list_child GRec by auto
-    hence 1: "gensym_get (l!a) (k@[kl]) = Some t''" using Cons by auto
-    hence 2: "a < length l" using Cons GRec gensym_get_list_len by auto
-    show ?thesis using GRec gensym_get_list_child2 0 1 2 by auto blast+
+    hence 0: "gensyn_get (l!a) (k) = Some t'" using Cons gensyn_get_list_child GRec by auto
+    hence 1: "gensyn_get (l!a) (k@[kl]) = Some t''" using Cons by auto
+    hence 2: "a < length l" using Cons GRec gensyn_get_list_len by auto
+    show ?thesis using GRec gensyn_get_list_child2 0 1 2 by auto blast+
   qed
 qed
 
-lemma gensym_get_comp :
-  assumes H1: "gensym_get t' p' = Some t''"
-  assumes H2: "gensym_get t p = Some t'"
-  shows "gensym_get t (p@p') = Some t''" using H1 H2
+lemma gensyn_get_comp :
+  assumes H1: "gensyn_get t' p' = Some t''"
+  assumes H2: "gensyn_get t p = Some t'"
+  shows "gensyn_get t (p@p') = Some t''" using H1 H2
 proof(induction p' arbitrary: t' t'' t p)
   case Nil
   then show ?case by auto
@@ -227,39 +227,39 @@ next
     qed next
 
     case (GRec a1 a2 l)
-    obtain tmid where 1: "gensym_get t' [a'] = Some tmid \<and>
-                 gensym_get tmid p' = Some t''" using Cons gensym_get_child by blast
-    hence 2: "gensym_get t (p @ [a']) = Some tmid" using Cons gensym_get_last2 by blast
-    hence 3: "gensym_get t ((p @ [a']) @ p') = Some t''" 
+    obtain tmid where 1: "gensyn_get t' [a'] = Some tmid \<and>
+                 gensyn_get tmid p' = Some t''" using Cons gensyn_get_child by blast
+    hence 2: "gensyn_get t (p @ [a']) = Some tmid" using Cons gensyn_get_last2 by blast
+    hence 3: "gensyn_get t ((p @ [a']) @ p') = Some t''" 
         using Cons.IH[of tmid t'' t "p@[a']"] 1
         by auto
       show ?thesis using 3 by auto
     qed
   qed
 
-lemma gensym_get_comp2 :
-  assumes H: "gensym_get t (p1@p2) = Some t''"
-  shows  "\<exists> t' . gensym_get t p1 = Some t' \<and>
-                 gensym_get t' p2 = Some t''" using H
+lemma gensyn_get_comp2 :
+  assumes H: "gensyn_get t (p1@p2) = Some t''"
+  shows  "\<exists> t' . gensyn_get t p1 = Some t' \<and>
+                 gensyn_get t' p2 = Some t''" using H
 proof(induction p2 arbitrary: t p1 t'')
   case Nil
   then show ?case by auto
 next
   case (Cons a k2t)
-  hence 1: "gensym_get t ((p1 @ [a])@k2t) = Some t''" by auto
-  obtain t' where 2: "gensym_get t (p1@[a]) = Some t' \<and>
-                        gensym_get t' k2t =
+  hence 1: "gensyn_get t ((p1 @ [a])@k2t) = Some t''" by auto
+  obtain t' where 2: "gensyn_get t (p1@[a]) = Some t' \<and>
+                        gensyn_get t' k2t =
                         Some t''" using 1 Cons.IH[of t "p1@[a]" t''] by auto
-  obtain t'2 where 3: "gensym_get t p1 = Some t'2 \<and>
-                        gensym_get t'2 [a] = Some t'"
-    using 2 gensym_get_last[of t p1 a t'] by auto
-  show ?case using 2 3 gensym_get_child2 by auto blast+
+  obtain t'2 where 3: "gensyn_get t p1 = Some t'2 \<and>
+                        gensyn_get t'2 [a] = Some t'"
+    using 2 gensyn_get_last[of t p1 a t'] by auto
+  show ?case using 2 3 gensyn_get_child2 by auto blast+
 qed
 
 (* now we need to show compatibility with the inductive one *)
-lemma gensym_descend_eq_l2r :
-  assumes H: "gensym_get t (kh#kt) = Some t'"
-  shows "gensym_descend t t'(kh#kt)" using H
+lemma gensyn_descend_eq_l2r :
+  assumes H: "gensyn_get t (kh#kt) = Some t'"
+  shows "gensyn_descend t t'(kh#kt)" using H
 proof(induction kt arbitrary: t kh t')
   case Nil
   then show ?case
@@ -269,52 +269,52 @@ proof(induction kt arbitrary: t kh t')
       using Nil by auto
   next
     case (GRec x21 x22 l)
-    then show ?thesis using Nil gensym_descend.intros(1)[of kh l]
-              gensym_get_list_child[of l kh "[]" t'] by auto
+    then show ?thesis using Nil gensyn_descend.intros(1)[of kh l]
+              gensyn_get_list_child[of l kh "[]" t'] by auto
   qed
 next
   case (Cons a kt)
   then show ?case
   (* why do we need the rule here? *)
-  proof(cases t rule:gensym.exhaust)
+  proof(cases t rule:gensyn.exhaust)
     case (GBase x11 x12)
     then show ?thesis using Cons by auto
   next
     case (GRec x21 x22 l)
-    obtain tmid where 1 : "gensym_get t [kh] = Some tmid \<and> gensym_get tmid (a#kt) = Some t'"
-      using gensym_get_child[of t kh "a#kt" t'] Cons by auto
-    have 2 : "gensym_descend tmid t' (a#kt)" using Cons 1 by auto
-    have 3: "gensym_descend t tmid [kh]" using 1 GRec gensym_descend.intros(1)[of kh l]
-                                    gensym_get_list_child[of l kh "[]" tmid]
+    obtain tmid where 1 : "gensyn_get t [kh] = Some tmid \<and> gensyn_get tmid (a#kt) = Some t'"
+      using gensyn_get_child[of t kh "a#kt" t'] Cons by auto
+    have 2 : "gensyn_descend tmid t' (a#kt)" using Cons 1 by auto
+    have 3: "gensyn_descend t tmid [kh]" using 1 GRec gensyn_descend.intros(1)[of kh l]
+                                    gensyn_get_list_child[of l kh "[]" tmid]
       by auto
-    thus ?thesis using 2 gensym_descend.intros(2) by fastforce
+    thus ?thesis using 2 gensyn_descend.intros(2) by fastforce
   qed
 qed
 
 lemma ll3_descend_nonnil :
-assumes H: "gensym_descend t t' k"
+assumes H: "gensyn_descend t t' k"
 shows "\<exists> hd tl . k = hd # tl" using H
-proof(induction rule:gensym_descend.induct)
+proof(induction rule:gensyn_descend.induct)
   case 1 thus ?case by auto next
   case 2 thus ?case by auto
 qed
 
 lemma ll_descend_eq_r2l :
-"gensym_descend t t' k \<Longrightarrow>
-gensym_get t k = Some t'"
-proof(induction rule:gensym_descend.induct)
+"gensyn_descend t t' k \<Longrightarrow>
+gensyn_get t k = Some t'"
+proof(induction rule:gensyn_descend.induct)
   case (1 c q e ls t)
-  then show ?case using gensym_get_list_nth2 by auto next
+  then show ?case using gensyn_get_list_nth2 by auto next
   case (2 t t' n t'' n')
-  then show ?case using gensym_get_comp by fastforce
+  then show ?case using gensyn_get_comp by fastforce
 qed
 
-lemma gensym_cp_next_nonnil_genind :
-  shows (*C1 :*) "\<And> cp cp' . gensym_cp_next (t :: ('b, 'r, 'g) gensym) cp = Some cp' \<longrightarrow>
+lemma gensyn_cp_next_nonnil_genind :
+  shows (*C1 :*) "\<And> cp cp' . gensyn_cp_next (t :: ('b, 'r, 'g) gensyn) cp = Some cp' \<longrightarrow>
     (? cph' cpt' . cp' = cph' # cpt')"
-  and (*C2 :*) "\<And> cp cp' . gensym_cp_next_list (l :: ('b, 'r, 'g) gensym list) cp = Some cp' \<longrightarrow>
+  and (*C2 :*) "\<And> cp cp' . gensyn_cp_next_list (l :: ('b, 'r, 'g) gensyn list) cp = Some cp' \<longrightarrow>
     (? cph' cpt' . cp' = cph' # cpt')"
-proof(induction t and l rule:gensym_induct)
+proof(induction t and l rule:gensyn_induct)
 case (1 g b)
   then show ?case
   proof(cases cp)
@@ -354,7 +354,7 @@ next
       proof(cases l)
         assume Nil' : "l=[]"
         then show ?thesis
-        proof(cases "gensym_cp_next t list")
+        proof(cases "gensyn_cp_next t list")
           case None
           then show ?thesis using Nil' Cons 4 0 by auto
         next
@@ -365,7 +365,7 @@ next
         fix lh ll
         assume Cons' : "l = lh#ll"
         then show ?thesis
-        proof(cases "gensym_cp_next t list")
+        proof(cases "gensyn_cp_next t list")
           case None
           then show ?thesis using Cons' Cons 4 0 by auto
         next
@@ -383,7 +383,7 @@ next
           fix lh ll
           assume Cons' : "l=lh#ll"
           then show ?thesis using Cons Suc 4 
-          proof(cases "gensym_cp_next_list (lh # ll) (nat # list)")
+          proof(cases "gensyn_cp_next_list (lh # ll) (nat # list)")
             case None
             then show ?thesis using Cons Cons' Suc 4 by auto
           next
@@ -403,10 +403,10 @@ next
     qed next
   qed
 
-lemma gensym_cp_next_list_lesser:
+lemma gensyn_cp_next_list_lesser:
   
     assumes H: "a < length lt"
-    shows "Some [Suc a] = gensym_cp_next_list (lh # lt) [a]" using H
+    shows "Some [Suc a] = gensyn_cp_next_list (lh # lt) [a]" using H
 proof(induction a arbitrary: lt lh)
   case 0
   then show ?case
@@ -421,9 +421,9 @@ next
     done
 qed
 
-lemma gensym_cp_next_list_greater:
+lemma gensyn_cp_next_list_greater:
     assumes H: "\<not> a < length lt"
-    shows "None = gensym_cp_next_list (lh # lt) [a]" using H
+    shows "None = gensyn_cp_next_list (lh # lt) [a]" using H
 proof(induction a arbitrary: lt lh)
   case 0
   then show ?case
@@ -448,9 +448,9 @@ paths anyhow.
 *)
 
 (*
-lemma gensym_cp_next'_eq' :
-  assumes H: "gensym_get s (h#c) = Some s'"
-  shows "gensym_cp_next' s (h#c) = gensym_cp_next s (h#c)" using H
+lemma gensyn_cp_next'_eq' :
+  assumes H: "gensyn_get s (h#c) = Some s'"
+  shows "gensyn_cp_next' s (h#c) = gensyn_cp_next s (h#c)" using H
 proof(induction c arbitrary: s h s')
   case Nil
   then show ?case
@@ -461,8 +461,8 @@ proof(induction c arbitrary: s h s')
     case (GRec x21 x22 x23)
     then show ?thesis 
       apply(case_tac x23) apply(auto)
-      apply(drule_tac gensym_cp_next_list_lesser) apply(auto)
-      apply(drule_tac gensym_cp_next_list_greater) apply(auto)
+      apply(drule_tac gensyn_cp_next_list_lesser) apply(auto)
+      apply(drule_tac gensyn_cp_next_list_greater) apply(auto)
       done
   qed
 next
@@ -553,17 +553,17 @@ qed
 
 (*
 lemma cp_less_get_genind :
-  fixes t :: "('a, 'b, 'c) gensym"
-  and l :: "('a, 'b, 'c) gensym list"
+  fixes t :: "('a, 'b, 'c) gensyn"
+  and l :: "('a, 'b, 'c) gensyn list"
   shows
-    "\<And> c d c' . gensym_get t c = Some d \<Longrightarrow>
+    "\<And> c d c' . gensyn_get t c = Some d \<Longrightarrow>
      cp_less c' c \<Longrightarrow>
-     (\<exists> d' . gensym_get t c' = Some d')"
+     (\<exists> d' . gensyn_get t c' = Some d')"
   and
-"\<And> c d c' . gensym_get_list l c = Some d \<Longrightarrow>
+"\<And> c d c' . gensyn_get_list l c = Some d \<Longrightarrow>
      cp_less c' c \<Longrightarrow>
-     (\<exists> d' . gensym_get_list l c' = Some d')"
-proof(induction t and l rule: gensym_induct)
+     (\<exists> d' . gensyn_get_list l c' = Some d')"
+proof(induction t and l rule: gensyn_induct)
 case (1 g b)
   then show ?case by (cases c, auto)
 next
@@ -627,20 +627,20 @@ qed
 *)
 
 (*
-lemma gensym_next_spec' :
-(*  assumes H: "gensym_cp_next' s c = Some c'"
+lemma gensyn_next_spec' :
+(*  assumes H: "gensyn_cp_next' s c = Some c'"
   shows "cp_next_less c c' \<and>
          (! c'' . cp_next_less c c'' \<longrightarrow>
               ((? suf . c'' = c'@suf) \<or> cp_next_less c' c''))" using H *)
 "(! s c' .
-(gensym_cp_next' (s :: ('a, 'b, 'c) gensym) c = Some c' \<longrightarrow>
+(gensyn_cp_next' (s :: ('a, 'b, 'c) gensyn) c = Some c' \<longrightarrow>
 cp_less c c' \<and>
-(! s' c'' . gensym_get s c'' = Some (s' :: ('a, 'b, 'c) gensym) \<longrightarrow>
+(! s' c'' . gensyn_get s c'' = Some (s' :: ('a, 'b, 'c) gensyn) \<longrightarrow>
         cp_less c c'' \<longrightarrow>
         (c'' = c' \<or> cp_less_nilmin c' c'')))
 \<and>
-(gensym_cp_next' s c = None \<longrightarrow>
-  (! s' c'' . gensym_get s c'' = Some (s' :: ('a, 'b, 'c) gensym) \<longrightarrow>
+(gensyn_cp_next' s c = None \<longrightarrow>
+  (! s' c'' . gensyn_get s c'' = Some (s' :: ('a, 'b, 'c) gensyn) \<longrightarrow>
             \<not> cp_less c c''
             ))
 )"
@@ -659,7 +659,7 @@ next
      apply(case_tac a, auto) apply(case_tac s, auto)
        apply(case_tac x23, auto)
 
-    apply(case_tac "gensym_get aaa (rev list)", auto)
+    apply(case_tac "gensyn_get aaa (rev list)", auto)
        apply(case_tac ab, auto)
        apply(case_tac "Suc aa < length x23", auto)
 
@@ -668,7 +668,7 @@ next
         apply(drule_tac x = aaa in spec) apply(auto)
          apply(case_tac list, auto)
 
-         apply(case_tac "gensym_get aaa (rev listb)", auto)
+         apply(case_tac "gensyn_get aaa (rev listb)", auto)
          apply(drule_tac x = "ac" in spec)
          apply(drule_tac x = "rev listb" in spec)
          apply(auto)
@@ -677,7 +677,7 @@ next
 
     apply(case_tac c', auto)
 
-      apply(case_tac "gensym_get lol (rev list)", auto)
+      apply(case_tac "gensyn_get lol (rev list)", auto)
       apply(rename_tac blah)
       apply(case_tac blah, auto)
       apply(case_tac "Suc aa < length x23") apply(auto)
@@ -687,7 +687,7 @@ next
     apply(case_tac list, auto)
        apply(case_tac hoo, auto)
 
-      apply(frule_tac gensym_get_comp2, auto)
+      apply(frule_tac gensyn_get_comp2, auto)
        apply(case_tac t', auto)
 
        apply(case_tac " Suc aaa < length x23a", auto)
@@ -707,7 +707,7 @@ next
 (* still stuck going in circles here *)
        apply(drule_tac spec) apply(auto)
        apply(drule_tac x = lol in spec, auto)
-       apply(case_tac "gensym_get lol (rev lista)", auto)
+       apply(case_tac "gensyn_get lol (rev lista)", auto)
        apply(case_tac ab, auto)
     apply(case_tac "Suc aaa < length x23a") apply(auto)
 
@@ -719,32 +719,32 @@ qed
 *)
 
 (* need to characterize None case? *)
-lemma gensym_next_spec' :
-  fixes s :: "('a, 'b, 'c) gensym"
-  and l :: "('a, 'b, 'c) gensym list"
+lemma gensyn_next_spec' :
+  fixes s :: "('a, 'b, 'c) gensyn"
+  and l :: "('a, 'b, 'c) gensyn list"
 shows "\<And> c c' c'' s'. 
-         (gensym_cp_next s c = Some c' \<longrightarrow>
+         (gensyn_cp_next s c = Some c' \<longrightarrow>
           cp_less c c' \<and>
          ( 
-               gensym_get s c'' = Some s' \<longrightarrow>
+               gensyn_get s c'' = Some s' \<longrightarrow>
                cp_less c c'' \<longrightarrow>
               (c'' = c' \<or> cp_less_nilmin c' c'')))
           \<and>
-          (gensym_cp_next s c = None \<longrightarrow>
-          gensym_get s c'' = Some s' \<longrightarrow>
+          (gensyn_cp_next s c = None \<longrightarrow>
+          gensyn_get s c'' = Some s' \<longrightarrow>
           \<not> cp_less c c'')"
   and "\<And> c c' c'' s'. 
-        (gensym_cp_next_list l c = Some c' \<longrightarrow>
+        (gensyn_cp_next_list l c = Some c' \<longrightarrow>
          cp_less c c' \<and>
           (
-               gensym_get_list l c'' = Some s' \<longrightarrow>
+               gensyn_get_list l c'' = Some s' \<longrightarrow>
                cp_less c c'' \<longrightarrow>
               (c''= c' \<or> cp_less_nilmin c' c'')))
         \<and>
-        (gensym_cp_next_list l c = None \<longrightarrow>
-          gensym_get_list l c'' = Some s' \<longrightarrow>
+        (gensyn_cp_next_list l c = None \<longrightarrow>
+          gensyn_get_list l c'' = Some s' \<longrightarrow>
           \<not> cp_less c c'')"
-proof(induction s and l rule:gensym_induct)
+proof(induction s and l rule:gensyn_induct)
   case (1 g b)
   then show ?case by (cases c'', auto)
 next
@@ -775,7 +775,7 @@ next
       proof(cases a)
         case 0
         then show ?thesis using 4 Nil Cons'
-        proof(cases "gensym_cp_next t list")
+        proof(cases "gensyn_cp_next t list")
           case None
           then show ?thesis using "4.prems" "4.IH"(1)[of list] Nil Cons' 0
             apply(case_tac c'', auto)
@@ -812,8 +812,8 @@ next
         case 0
         then show ?thesis using "4.prems" "4.IH" Cons Cons'
           apply(auto)
-            apply(case_tac "gensym_cp_next t list'", auto)
-            apply(case_tac "gensym_cp_next t list'", auto)
+            apply(case_tac "gensyn_cp_next t list'", auto)
+            apply(case_tac "gensyn_cp_next t list'", auto)
 
            apply(case_tac c'', auto)
              apply(case_tac "0 < aa", auto)
@@ -829,11 +829,11 @@ next
             apply(case_tac "0 < aaa", auto)
            apply(case_tac "0 < aaa", auto)
 
-          apply(case_tac "gensym_cp_next t list'", auto)
+          apply(case_tac "gensyn_cp_next t list'", auto)
           done next
         case (Suc a'')
         then show ?thesis using "4.prems" "4.IH" Cons Cons'
-        proof (cases "gensym_cp_next_list (a # list) (a'' # list')")
+        proof (cases "gensyn_cp_next_list (a # list) (a'' # list')")
           case None
           then show ?thesis using 4 Cons Cons' Suc
           proof(cases c'')
@@ -942,32 +942,32 @@ next
 qed
 
 (*
-lemma gensym_next_spec :
-  fixes s :: "('a, 'b, 'c) gensym"
-  and l :: "('a, 'b, 'c) gensym list"
+lemma gensyn_next_spec :
+  fixes s :: "('a, 'b, 'c) gensyn"
+  and l :: "('a, 'b, 'c) gensyn list"
 shows "! c c' c'' s'. 
-         (gensym_cp_next' s c = Some c' \<longrightarrow>
+         (gensyn_cp_next' s c = Some c' \<longrightarrow>
           cp_less c c' \<and>
          ( 
-               gensym_get s c'' = Some s' \<longrightarrow>
+               gensyn_get s c'' = Some s' \<longrightarrow>
                cp_less c c'' \<longrightarrow>
               (c'' = c' \<or> cp_less_nilmin c' c'')))
           \<and>
-          (gensym_cp_next' s c = None \<longrightarrow>
-          gensym_get s c'' = Some s' \<longrightarrow>
+          (gensyn_cp_next' s c = None \<longrightarrow>
+          gensyn_get s c'' = Some s' \<longrightarrow>
           \<not> cp_less c c'')"
   and "! c c' c'' s' x1 x2. 
-        (gensym_cp_next' (GRec x1 x2 l) c = Some c' \<longrightarrow>
+        (gensyn_cp_next' (GRec x1 x2 l) c = Some c' \<longrightarrow>
          cp_less c c' \<and>
           (
-               gensym_get_list l c'' = Some s' \<longrightarrow>
+               gensyn_get_list l c'' = Some s' \<longrightarrow>
                cp_less c c'' \<longrightarrow>
               (c''= c' \<or> cp_less_nilmin c' c'')))
         \<and>
-        (gensym_cp_next (GRec x1 x2 l) c = None \<longrightarrow>
-          gensym_get_list l c'' = Some s' \<longrightarrow>
+        (gensyn_cp_next (GRec x1 x2 l) c = None \<longrightarrow>
+          gensyn_get_list l c'' = Some s' \<longrightarrow>
           \<not> cp_less c c'')"
-proof(induction s and l rule:gensym_induct)
+proof(induction s and l rule:gensyn_induct)
 case (1 g b)
   then show ?case
     apply(auto)
@@ -990,9 +990,9 @@ next
      apply(case_tac "rev list", auto)
       apply(case_tac "Suc a < length l", auto)
 
-     apply(case_tac " gensym_get_list l (aa # lista)", auto)
+     apply(case_tac " gensyn_get_list l (aa # lista)", auto)
      apply(case_tac ab, auto)
-     apply(case_tac "Suc a < length x23", auto simp del:gensym_cp_next'.simps)
+     apply(case_tac "Suc a < length x23", auto simp del:gensyn_cp_next'.simps)
 
    apply(rule_tac cp_less_last)
 
@@ -1002,7 +1002,7 @@ next
       apply(drule_tac x = "aa#lista" in spec)
       apply(drule_tac x = "GRec x21 x22 x23" in spec)
       apply(drule_tac x = g in spec) apply(drule_tac x = r in spec)
-      apply(auto simp del:gensym_cp_next'.simps)
+      apply(auto simp del:gensyn_cp_next'.simps)
 
          apply(drule_tac cp_less_suf, auto)
         apply(drule_tac cp_less_suf, auto)

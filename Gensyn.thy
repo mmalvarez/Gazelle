@@ -1,14 +1,14 @@
-theory Gensym imports Main
+theory Gensyn imports Main
 begin
 
-datatype ('b, 'r, 'g) gensym = 
+datatype ('b, 'r, 'g) gensyn = 
   GBase "'g" "'b"
-  | GRec "'g" "'r" "(('b, 'r, 'g) gensym) list"
+  | GRec "'g" "'r" "(('b, 'r, 'g) gensyn) list"
 
 
-lemma gensym_induct':
+lemma gensyn_induct':
   assumes Lb: "(\<And> (g :: 'g) (b :: 'b) . P1 (GBase g b))"
-  and Lr : "(\<And> (g :: 'g) (r :: 'r) (l :: ('b, 'r, 'g) gensym list) . P2 l \<Longrightarrow> P1 (GRec g r l))"
+  and Lr : "(\<And> (g :: 'g) (r :: 'r) (l :: ('b, 'r, 'g) gensyn list) . P2 l \<Longrightarrow> P1 (GRec g r l))"
   and Lrn : "P2 []"
   and Lrc : "\<And>t l . P1 t \<Longrightarrow>
                          P2 l \<Longrightarrow> 
@@ -28,15 +28,15 @@ proof-
   thus ?thesis by auto
   qed
 
-lemma gensym_induct:
+lemma gensyn_induct:
   assumes Lb: "(\<And> (g :: 'g) (b :: 'b) . P1 (GBase g b))"
-  and Lr : "(\<And> (g :: 'g) (r :: 'r) (l :: ('b, 'r, 'g) gensym list) . P2 l \<Longrightarrow> P1 (GRec g r l))"
+  and Lr : "(\<And> (g :: 'g) (r :: 'r) (l :: ('b, 'r, 'g) gensyn list) . P2 l \<Longrightarrow> P1 (GRec g r l))"
   and Lrn : "P2 []"
   and Lrc : "\<And>t l . P1 t \<Longrightarrow>
                          P2 l \<Longrightarrow> 
                          P2 (t # l)"
-shows C1: "P1 (t :: ('b, 'r, 'g) gensym)"
-  and C2 : "P2 (l :: ('b, 'r, 'g) gensym list)" using gensym_induct'[OF Lb Lr Lrn Lrc]
+shows C1: "P1 (t :: ('b, 'r, 'g) gensyn)"
+  and C2 : "P2 (l :: ('b, 'r, 'g) gensyn list)" using gensyn_induct'[OF Lb Lr Lrn Lrc]
 proof(auto)
 qed
 
