@@ -1,4 +1,4 @@
-theory Gensyn_Semantics_Newstep
+theory Gensyn_Semantics
   imports "../Gensyn" "../Gensyn_Descend"
 begin
 
