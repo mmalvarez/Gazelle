@@ -1,4 +1,4 @@
-theory I_Semantics imports "Gensym_Semantics" "../Syntax/Sym_I"
+theory I_Semantics imports "Gensyn_Semantics_Newstep" "../Syntax/Syn_I"
 begin
 
 (* Do we interpret or extend?
@@ -28,23 +28,65 @@ eed
 
 *)
 
+(* want "a gensyn that includes at least a sym_i" *)
+
+(* this doesn't work, need gensyn tree *)
+
 locale I_Semantics = 
-  fixes i_sem :: "'i \<Rightarrow> 'g \<Rightarrow> childpath \<Rightarrow> 'mstate => 'mstate \<Rightarrow> childpath option \<Rightarrow> bool"
+  fixes i_sem :: "'i \<Rightarrow> 'mstate => 'mstate \<Rightarrow> bool"
 
-fun i_base_sem :: "('b, 'r, 'g) gensym \<Rightarrow>
-                   'g \<Rightarrow> 'b \<Rightarrow> childpath \<Rightarrow> 'mstate \<Rightarrow>
-                    
-                    
+begin
 
-(* should this be for anything extending inst gensym?
-it seems like we don't lose much by doing that
+(* 2 approaches.
+   approach 1: i_semantics builds a gensym semantics "from nothing"
+   if instruction execution fails, we halt.
+
+   approach 2: i_semantics takes an existing gensym semantics
+   and "adds in" instructions.
+
+   approach 1 is better because it allows the _user_ to later define
+   approach 2 style semantics (mixins)
 *)
-interpretation Gensym_I_Semantics 
 
-(* approach for now: new locale that instantiates the old one
-   and adds new ones 
-   this might not enable us to make maximal use of the locale
-   hierarchy though
- *)
+(* question: dealing with interactions between global parameters
+   and other things?
+  sized insts?
+*)
+
+(* we can probably generalize this, by using unknown type parameters
+  for everything, but this may not be necessary *)
+
+(* we can also probably generalize over result/error types if we really
+   want *)
+(* TODO make sure this is a general enough type  in terms of
+where quantifiers are*)
+
+(* we need some way of selecting the next instruction
+this depends on the kind of parent node we have
+do we need another extension point to allow for this?. *)
+
+inductive i_base_sem :: "'g \<Rightarrow> ('i, 'xb, 'xa) syn_i \<Rightarrow> 'mstate \<Rightarrow> 'mstate \<Rightarrow>
+                    childpath \<Rightarrow> gensyn_skel \<Rightarrow> 
+                   ('cb, 'xb) gs_result \<Rightarrow> bool" where
+"i_sem i m m' \<Longrightarrow> i_base_sem g (LInst i) m m' cp sk GRUnhandled"
+
+(* We still need a way to handle different kinds of gs results *)
+
+(* key thing here: we are not actually descending into recursive nodes
+as this would require a recursive semantics; we use nosem *)
+interpretation I_Semantics : Gensyn_Semantics
+  i_base_sem nosem_rec_sem
+  done
+
+end
+
+(*******************
+
+This is _almost_ what we want.
+However, the problem now is that we don't have an extension point to
+allow for later syntactic/semantic extensions to change how next
+nodes are calculated.
+
+********************)
 
 end

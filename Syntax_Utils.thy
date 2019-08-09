@@ -108,6 +108,24 @@ fun deassoc4_sum ::
       Inl bcd \<Rightarrow> Inl (Inr bcd)
     | Inr e \<Rightarrow> Inr e))"
 
+fun reassoc5_sum ::
+  "(('a + 'b + 'c + 'd + 'e) + 'f) \<Rightarrow> ('a + 'b + 'c + 'd + 'e + 'f)" where
+"reassoc5_sum s =
+  (case reassoc_sum s of
+    Inl a \<Rightarrow> Inl a
+  | Inr bcd \<Rightarrow> Inr (reassoc4_sum bcd))"
+
+fun deassoc5_sum ::
+  "('a + 'b + 'c + 'd + 'e + 'f) \<Rightarrow>
+  (('a + 'b + 'c + 'd + 'e) + 'f)" where
+"deassoc5_sum s =
+  (case s of
+    Inl a \<Rightarrow> Inl (Inl a)
+  | Inr bcde \<Rightarrow> (case deassoc4_sum bcde of
+      Inl bcd \<Rightarrow> Inl (Inr bcd)
+    | Inr e \<Rightarrow> Inr e))"
+
+
 (* writing associators becomes formulaic *)
 
 (* unit functions *)
@@ -244,6 +262,12 @@ fun snth3h :: "'c \<Rightarrow> ('a + 'b + 'c + 'd)" where
 
 fun snth3t :: "'d \<Rightarrow> ('a + 'b + 'c + 'd)" where
 "snth3t d = snth2t (snth1t d)"
+
+fun snth4h :: "'d \<Rightarrow> ('a + 'b + 'c + 'd + 'e)" where
+"snth4h c = snth3t (snth1h c)"
+
+fun snth4t :: "'e \<Rightarrow> ('a + 'b + 'c + 'd + 'e)" where
+"snth4t d = snth3t (snth1t d)"
 
 (*
     functor-style map for tuples
