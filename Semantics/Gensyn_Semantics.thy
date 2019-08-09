@@ -1,21 +1,32 @@
-theory Gensyn_Semantics
+theory Gensyn_Semantics_Newstep
   imports "../Gensyn" "../Gensyn_Descend"
 begin
 
 (* TODO:
 break this file up into code and spec? *)
 
-fun nosem_base_sem::
-  "('b, 'r, 'g) gensyn \<Rightarrow>
-    'g \<Rightarrow> 
-    'b \<Rightarrow> 
-    childpath \<Rightarrow> 
-    'mstate \<Rightarrow> 
-    childpath option \<Rightarrow>
-    'mstate \<Rightarrow> 
-     bool"
-  where "nosem_base_sem _ _ _ _ _ _ _ = False"
+datatype ('x) gs_result =
+  GRUnhandled
+  | GRPath childpath
+  | GRCrash
+  | GRDone
+  | GROther 'x
 
+type_synonym gensyn_skel = "(unit, unit, unit) gensyn"
+
+inductive nosem_base_sem::
+  " 'g \<Rightarrow> 
+    'b \<Rightarrow>
+    'mstate \<Rightarrow> 
+    'mstate \<Rightarrow> 
+      childpath \<Rightarrow>
+      gensyn_skel \<Rightarrow>  
+      ('rxb) gs_result \<Rightarrow>
+      bool"
+  where  "nosem_base_sem _ _ _ _ _ _ GRUnhandled"
+
+
+(*
 fun nosem_base_sem_exec ::
   "('b, 'r, 'g) gensyn \<Rightarrow>
     'g \<Rightarrow> 
@@ -25,18 +36,20 @@ fun nosem_base_sem_exec ::
     (childpath option *
     'mstate) option"
   where "nosem_base_sem_exec _ _ _ _ _ = None"
+*)
 
-fun nosem_rec_sem ::
-  "('b, 'r, 'g) gensyn \<Rightarrow>
-    'g \<Rightarrow> 
+inductive nosem_rec_sem ::
+  " 'g \<Rightarrow> 
     'r \<Rightarrow> 
-    childpath \<Rightarrow> 
     'mstate \<Rightarrow> 
-    childpath option \<Rightarrow>
     'mstate \<Rightarrow> 
-     bool"
-  where "nosem_rec_sem _ _ _ _ _ _ _ = False"
+      childpath \<Rightarrow>
+      gensyn_skel \<Rightarrow>  
+      ('rxr) gs_result \<Rightarrow>
+      bool"
+  where "nosem_rec_sem _ _ _ _ _ _ GRUnhandled"
 
+(*
 fun nosem_rec_sem_exec ::
   "('b, 'r, 'g) gensyn \<Rightarrow>
     'g \<Rightarrow> 
@@ -46,33 +59,88 @@ fun nosem_rec_sem_exec ::
     (childpath option *
     'mstate) option"
   where "nosem_rec_sem_exec _ _ _ _ _ = None"
+*)
 
-locale Gensym_Semantics =
+(* idea: we distinguish an "unhandled" case, which allows us to
+   signal that this particular semantics does not handle this case, but some other one may
+   TODO: do we want an explicit "crash"/failure as well? i think we probably actually do not.
+*)
+
+fun gs_strip :: "('a, 'b, 'c) gensyn \<Rightarrow> gensyn_skel" where
+"gs_strip (GBase _ _) = GBase () ()"
+| "gs_strip (GRec _ _ l) = GRec () () (map gs_strip l)"
+
+locale Gensyn_Semantics =
   (* fixes/assumes go here *)
   (* NB: these are "small steps" in that they return a new childpath and don't do a full
          execution *)
-  (* TODO: make these parametric in gensyn parameters so that
+  (* we are making these parametric in gensyn parameters so that
            they can't do weird computations over tree other than
-           calculating new childpath? *)
-  fixes base_sem :: "('b, 'r, 'g) gensyn \<Rightarrow>
-                      'g \<Rightarrow> 
-                      'b \<Rightarrow> 
-                      childpath \<Rightarrow> 
+           calculating new childpath
+    
+     this assumes that we do not need to do extra state updates when walking the
+     syntax tree - but we should not
+*)
+
+
+(* one option: separate base from result. this seems like an unnecessary extra
+level of indirection. *)
+(*
+  fixes base_sem :: " 'g \<Rightarrow> 
+                      'b \<Rightarrow>  
                       'mstate \<Rightarrow> 
-                      childpath option \<Rightarrow>
+                      'result \<Rightarrow>
                       'mstate \<Rightarrow> 
                       bool"
-  (* TODO: should rec_sem take the list component of GRec?
-     probably not *)
-  fixes rec_sem :: "('b, 'r, 'g) gensyn \<Rightarrow>
-                    'g \<Rightarrow>
+
+fixes base_result_sem :: "'result \<Rightarrow>
+                     gensyn_skel \<Rightarrow>
+                     childpath \<Rightarrow>
+                     ('cb, 'xb) gs_result \<Rightarrow> (* should output be an option? *)
+                     bool"
+
+
+  fixes rec_sem :: "'g \<Rightarrow>
                     'r \<Rightarrow>
-                    childpath \<Rightarrow>
                     'mstate \<Rightarrow>
-                    childpath option \<Rightarrow>
+                    'result \<Rightarrow>
                     'mstate \<Rightarrow>
                     bool"
+
+fixes rec_result_sem :: "'result \<Rightarrow>
+                     gensyn_skel \<Rightarrow>
+                     childpath \<Rightarrow>
+                     ('cr, 'xr) gs_result \<Rightarrow> (* should output be an option? *)
+                     bool"
+*)
+(* second option: combine *)
+  fixes base_sem :: " 'g \<Rightarrow> 
+                      'b \<Rightarrow>
+                      'mstate \<Rightarrow> 
+                      'mstate \<Rightarrow> 
+                      childpath \<Rightarrow>
+                      gensyn_skel \<Rightarrow>  
+                      ('bxr) gs_result \<Rightarrow>
+                      bool"
+
+  fixes rec_sem :: "'g \<Rightarrow>
+                    'r \<Rightarrow>
+                    'mstate \<Rightarrow>
+                    'mstate \<Rightarrow>
+                    childpath \<Rightarrow>
+                    gensyn_skel \<Rightarrow>
+                    ('rxr) gs_result \<Rightarrow>
+                    bool"
+
+(* question: dealing with state abstraciton.
+   do we want to allow different notions of mstate as long as we have the
+  ability to project in/out?
+
+  let's deal with this issue later
+*)
+
 begin
+
 
 (* NB this is a big step semantics. sufficient for Ethereum, but perhaps not enough
    for other platforms
@@ -87,28 +155,32 @@ inductive gensyn_sem ::
   where
   "\<And> t cp g b m m' .
     gensyn_get t cp = Some (GBase g b) \<Longrightarrow>
-    base_sem t g b cp m None m' \<Longrightarrow>
+    base_sem g b m m' cp (gs_strip t) GRDone \<Longrightarrow>
     gensyn_sem t cp m m'"
 
 | "\<And> t cp g b m cp' m' m'' .
     gensyn_get t cp = Some (GBase g b) \<Longrightarrow>
-    base_sem t g b cp m (Some cp') m' \<Longrightarrow>
+    base_sem g b m m' cp (gs_strip t) (GRPath cp') \<Longrightarrow>
     gensyn_sem t cp' m' m'' \<Longrightarrow>
     gensyn_sem t cp m m''"
 
 | "\<And> t cp g r l m m' .
    gensyn_get t cp = Some (GRec g r l) \<Longrightarrow>
-   rec_sem t g r cp m None m' \<Longrightarrow>
+   rec_sem g r m m' cp (gs_strip t) GRDone \<Longrightarrow>
    gensyn_sem t cp m m'"
 
 | "\<And> t cp g r l m cp' m' m'' .
    gensyn_get t cp = Some (GRec g r l) \<Longrightarrow>
-   rec_sem t g r cp m (Some cp') m' \<Longrightarrow>
+   rec_sem g r m m' cp (gs_strip t) (GRPath cp') \<Longrightarrow>
    gensyn_sem t cp' m' m'' \<Longrightarrow>
    gensyn_sem t cp m m''"
 
 end
 
+interpretation Gensyn_Semantics_Nosem : Gensyn_Semantics
+  nosem_base_sem nosem_rec_sem
+  done
+(*
 locale Gensym_Semantics_Exec =
   fixes base_sem_exec :: "('b, 'r, 'g) gensyn \<Rightarrow>
                       'g \<Rightarrow> 
@@ -127,6 +199,8 @@ locale Gensym_Semantics_Exec =
                       'mstate) option"
 
 begin
+
+(* TODO: deal with the rest of the exec stuff later *)
 
 (* fueled interpreter for semantics *)
 (* TODO: count down only for backwards jumps? *)
@@ -253,7 +327,7 @@ definition gsx_gensyn_sem ::
 where
 "gsx_gensyn_sem  =
   (\<lambda> t cp m m' . \<exists> fuel . gensyn_sem_exec t cp m fuel = Some m')"
-
+(*
 (* standard version of the semantics *)
 interpretation Gensym_Exec_Semantics : Gensym_Semantics
  gsx_base_sem gsx_rec_sem
@@ -364,7 +438,7 @@ lemma gensyn_exec_eq_r2l :
 qed
 qed
 qed
-
+*)
 (* version of the semantics that just wraps the fueled interpreter *)
 (* OK, we need some kind of lemma that will let us turn (f = g) into (forall x, f x = g x) *)
 interpretation Gensym_Exec_Semantics_Fuel : Gensym_Semantics
@@ -383,5 +457,5 @@ proof(unfold_locales)
   qed
 
 end
-
+*)
 end
