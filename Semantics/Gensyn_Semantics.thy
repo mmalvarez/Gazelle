@@ -476,5 +476,5 @@ proof(unfold_locales)
     thus "Gensyn_Exec_Semantics.gensyn_sem = gsx_gensyn_sem" by blast
   qed
 
-
+end
 end
