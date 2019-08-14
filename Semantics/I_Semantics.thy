@@ -1,4 +1,4 @@
-theory I_Semantics imports "Gensyn_Semantics_Newstep" "../Syntax/Syn_I"
+theory I_Semantics imports "Gensyn_Semantics" "../Syntax/Syn_I"
 begin
 
 (* Do we interpret or extend?
@@ -65,28 +65,49 @@ where quantifiers are*)
 this depends on the kind of parent node we have
 do we need another extension point to allow for this?. *)
 
-inductive i_base_sem :: "'g \<Rightarrow> ('i, 'xb, 'xa) syn_i \<Rightarrow> 'mstate \<Rightarrow> 'mstate \<Rightarrow>
-                    childpath \<Rightarrow> gensyn_skel \<Rightarrow> 
-                   ('cb, 'xb) gs_result \<Rightarrow> bool" where
+inductive i_base_sem :: "'g \<Rightarrow> 
+                         ('i, 'xb, 'xa) syn_i \<Rightarrow> 
+                         'mstate \<Rightarrow>
+                         'mstate \<Rightarrow>
+                          childpath \<Rightarrow> (('i, 'xb, 'xa) syn_i, 'r, 'g) gensyn \<Rightarrow> 
+                          ('xrs) gs_result \<Rightarrow> bool" where
 "i_sem i m m' \<Longrightarrow> i_base_sem g (LInst i) m m' cp sk GRUnhandled"
 
 (* We still need a way to handle different kinds of gs results *)
 
 (* key thing here: we are not actually descending into recursive nodes
 as this would require a recursive semantics; we use nosem *)
-interpretation I_Semantics : Gensyn_Semantics
-  i_base_sem nosem_rec_sem
-  done
 
 end
 
-(*******************
+print_locale Gensyn_Semantics
 
-This is _almost_ what we want.
-However, the problem now is that we don't have an extension point to
-allow for later syntactic/semantic extensions to change how next
-nodes are calculated.
+(* testing out sublocales *)
+(* i think the problem with this is that we cannot further
+sub-locale-ize I_Semantics *)
+sublocale I_Semantics  \<subseteq> Gensyn_Semantics i_base_sem nosem_rec_sem
+  done
 
-********************)
+(* test - small programming language for arithmetic *)
+datatype calc =
+  AccAdd nat
+  | AccSub nat
+  | AccReset
+
+fun calc_sem :: "calc \<Rightarrow> nat \<Rightarrow> nat" where
+"calc_sem (AccAdd x) n = x + n"
+| "calc_sem (AccSub x) n = x - n"
+| "calc_sem (AccReset) _ = 42"
+
+inductive calc_semb :: "calc \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool" where
+"calc c n = n' \<Longrightarrow> calc_semb c n n'"
+
+interpretation I_Semantics_Calc :
+  I_Semantics calc_semb
+  done
+
+interpretation Gensyn_Semantics_Calc :
+  Gensyn_Semantics I_Semantics_Calc.i_base_sem nosem_rec_sem
+  done
 
 end

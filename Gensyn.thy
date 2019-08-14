@@ -6,8 +6,10 @@ datatype ('b, 'r, 'g) gensyn =
   | GRec "'g" "'r" "(('b, 'r, 'g) gensyn) list"
 
 (* for consistency with other syntax declarations *)
+(*
 definition LSeq :: "'g \<Rightarrow> 'r \<Rightarrow> (('b, 'r, 'g) gensyn list) \<Rightarrow> ('b, 'r, 'g) gensyn" where
 "LSeq g r l = GRec g r l"
+*)
 
 lemma gensyn_induct':
   assumes Lb: "(\<And> (g :: 'g) (b :: 'b) . P1 (GBase g b))"
