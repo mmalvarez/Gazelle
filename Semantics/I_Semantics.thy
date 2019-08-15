@@ -78,6 +78,10 @@ inductive i_base_sem :: "'g \<Rightarrow>
 (* key thing here: we are not actually descending into recursive nodes
 as this would require a recursive semantics; we use nosem *)
 
+interpretation Gensyn_Semantics_I :
+  Gensyn_Semantics i_base_sem nosem_rec_sem
+  done
+
 end
 
 print_locale Gensyn_Semantics
@@ -85,8 +89,6 @@ print_locale Gensyn_Semantics
 (* testing out sublocales *)
 (* i think the problem with this is that we cannot further
 sub-locale-ize I_Semantics *)
-sublocale I_Semantics  \<subseteq> Gensyn_Semantics i_base_sem nosem_rec_sem
-  done
 
 (* test - small programming language for arithmetic *)
 datatype calc =
@@ -105,9 +107,13 @@ inductive calc_semb :: "calc \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> b
 interpretation I_Semantics_Calc :
   I_Semantics calc_semb
   done
+print_theory
+print_locale I_Semantics
 
+(*
 interpretation Gensyn_Semantics_Calc :
   Gensyn_Semantics I_Semantics_Calc.i_base_sem nosem_rec_sem
   done
+*)
 
 end

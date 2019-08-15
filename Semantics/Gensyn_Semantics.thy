@@ -13,8 +13,6 @@ datatype ('x) gs_result =
   | GRFuel
   | GROther 'x
 
-type_synonym gensyn_skel = "(unit, unit, unit) gensyn"
-
 inductive nosem_base_sem::
   " 'g \<Rightarrow> 
     'b \<Rightarrow>
@@ -27,18 +25,6 @@ inductive nosem_base_sem::
   where  "nosem_base_sem _ _ _ _ _ _ GRUnhandled"
 
 
-(*
-fun nosem_base_sem_exec ::
-  "('b, 'r, 'g) gensyn \<Rightarrow>
-    'g \<Rightarrow> 
-    'b \<Rightarrow> 
-    childpath \<Rightarrow> 
-    'mstate \<Rightarrow> 
-    (childpath option *
-    'mstate) option"
-  where "nosem_base_sem_exec _ _ _ _ _ = None"
-*)
-
 inductive nosem_rec_sem ::
   " 'g \<Rightarrow> 
     'r \<Rightarrow> 
@@ -50,71 +36,9 @@ inductive nosem_rec_sem ::
       bool"
   where "nosem_rec_sem _ _ _ _ _ _ GRUnhandled"
 
-(*
-fun nosem_rec_sem_exec ::
-  "('b, 'r, 'g) gensyn \<Rightarrow>
-    'g \<Rightarrow> 
-    'r \<Rightarrow> 
-    childpath \<Rightarrow> 
-    'mstate \<Rightarrow> 
-    (childpath option *
-    'mstate) option"
-  where "nosem_rec_sem_exec _ _ _ _ _ = None"
-*)
-
-(* idea: we distinguish an "unhandled" case, which allows us to
-   signal that this particular semantics does not handle this case, but some other one may
-   TODO: do we want an explicit "crash"/failure as well? i think we probably actually do not.
-*)
-
-fun gs_strip :: "('a, 'b, 'c) gensyn \<Rightarrow> gensyn_skel" where
-"gs_strip (GBase _ _) = GBase () ()"
-| "gs_strip (GRec _ _ l) = GRec () () (map gs_strip l)"
 
 locale Gensyn_Semantics =
-  (* fixes/assumes go here *)
-  (* NB: these are "small steps" in that they return a new childpath and don't do a full
-         execution *)
-  (* we are making these parametric in gensyn parameters so that
-           they can't do weird computations over tree other than
-           calculating new childpath
-    
-     this assumes that we do not need to do extra state updates when walking the
-     syntax tree - but we should not
-*)
 
-
-(* one option: separate base from result. this seems like an unnecessary extra
-level of indirection. *)
-(*
-  fixes base_sem :: " 'g \<Rightarrow> 
-                      'b \<Rightarrow>  
-                      'mstate \<Rightarrow> 
-                      'result \<Rightarrow>
-                      'mstate \<Rightarrow> 
-                      bool"
-
-fixes base_result_sem :: "'result \<Rightarrow>
-                     gensyn_skel \<Rightarrow>
-                     childpath \<Rightarrow>
-                     ('cb, 'xb) gs_result \<Rightarrow> (* should output be an option? *)
-                     bool"
-
-
-  fixes rec_sem :: "'g \<Rightarrow>
-                    'r \<Rightarrow>
-                    'mstate \<Rightarrow>
-                    'result \<Rightarrow>
-                    'mstate \<Rightarrow>
-                    bool"
-
-fixes rec_result_sem :: "'result \<Rightarrow>
-                     gensyn_skel \<Rightarrow>
-                     childpath \<Rightarrow>
-                     ('cr, 'xr) gs_result \<Rightarrow> (* should output be an option? *)
-                     bool"
-*)
-(* second option: combine *)
   fixes base_sem :: " 'g \<Rightarrow> 
                       'b \<Rightarrow>
                       'mstate \<Rightarrow> 
@@ -132,13 +56,6 @@ fixes rec_result_sem :: "'result \<Rightarrow>
                     ('b, 'r, 'g) gensyn \<Rightarrow>
                     ('xr) gs_result \<Rightarrow>
                     bool"
-
-(* question: dealing with state abstraciton.
-   do we want to allow different notions of mstate as long as we have the
-  ability to project in/out?
-
-  let's deal with this issue later
-*)
 
 begin
 
@@ -178,21 +95,11 @@ inductive gensyn_sem ::
 
 end
 
+(* we can probably get away with just an exec version of this one *)
 interpretation Gensyn_Semantics_Nosem : Gensyn_Semantics
   nosem_base_sem nosem_rec_sem
   done
 
-(* i don't know if these are actually useful *)
-fun unskel :: "(gensyn_skel \<Rightarrow> ('a, 'b, 'c) gensyn)" where
-"unskel (GBase () ()) = GBase undefined undefined"
-| "unskel (GRec () () l) = GRec undefined undefined (map unskel l)"
-  
-fun skel_lift1 :: "(('a, 'b, 'c) gensyn \<Rightarrow> bool) \<Rightarrow> gensyn_skel \<Rightarrow> bool"
-  where
-"skel_lift1 p s = p (unskel s)"
-
-fun skel_lift2 :: "(gensyn_skel \<Rightarrow> bool) \<Rightarrow> ('a, 'b, 'c) gensyn \<Rightarrow> bool" where
-"skel_lift2 p s = p (gs_strip s)"
 
 (* test - numnodes predicate *)
 fun gensyn_numnodes :: "('a, 'b, 'c) gensyn \<Rightarrow> nat" and
@@ -213,18 +120,20 @@ next
     done
 qed
 
-fun gensyn_two_nodes :: "('a, 'b, 'c) gensyn \<Rightarrow> bool" where
- "gensyn_two_nodes g = (gensyn_numnodes g = 2)"
-
-lemma preds_equal :
-    "skel_lift1 gensyn_two_nodes (GRec ()() [])"
-  apply(simp)
-  done
 
 (* in order to characterize when this works, though, we are going to
    need a way to characterize what the predicate is actually looking at *)
 
-locale Gensym_Semantics_Exec =
+(* should the returned states be undefined? it shouldn't really matter. *)
+fun nosem_base_sem_exec :: "'g \<Rightarrow> 'b \<Rightarrow> 'mstate \<Rightarrow>
+  childpath \<Rightarrow> ('b, 'r, 'g) gensyn \<Rightarrow> ('xr gs_result * 'mstate)" where
+"nosem_base_sem_exec _ _ m _ _ = (GRUnhandled, m)"
+
+fun nosem_rec_sem_exec :: "'g \<Rightarrow> 'r \<Rightarrow> 'mstate \<Rightarrow>
+  childpath \<Rightarrow> ('b, 'r, 'g) gensyn \<Rightarrow> ('xr gs_result * 'mstate)" where
+"nosem_rec_sem_exec _ _ m _ _ = (GRUnhandled, m)"
+
+locale Gensyn_Semantics_Exec =
   fixes base_sem_exec :: "
                       'g \<Rightarrow> 
                       'b \<Rightarrow> 
@@ -232,7 +141,7 @@ locale Gensym_Semantics_Exec =
                       childpath \<Rightarrow> 
                       ('b, 'r, 'g) gensyn \<Rightarrow> 
                       ('xr gs_result *
-                      'mstate) option"
+                      'mstate)"
 
   fixes rec_sem_exec :: "
                       'g \<Rightarrow>
@@ -241,7 +150,7 @@ locale Gensym_Semantics_Exec =
                       childpath \<Rightarrow>
                       ('b, 'r, 'g) gensyn \<Rightarrow>
                       ('xr gs_result *
-                      'mstate) option"
+                      'mstate)"
 
 begin
 
@@ -263,16 +172,15 @@ fun gensyn_sem_exec ::
      None \<Rightarrow> None
      | Some (GBase g b) \<Rightarrow>
        (case base_sem_exec g b m cp t of
-             None \<Rightarrow> None
-             | Some (GRDone, m') \<Rightarrow> Some m'
-             | Some (GRPath cp', m') \<Rightarrow> gensyn_sem_exec t cp' m' n
-             | Some (_, _) \<Rightarrow> None)
+
+              (GRDone, m') \<Rightarrow> Some m'
+             | (GRPath cp', m') \<Rightarrow> gensyn_sem_exec t cp' m' n
+             | (_, _) \<Rightarrow> None)
      | Some (GRec g r l) \<Rightarrow>
         (case rec_sem_exec g r m cp t of
-             None \<Rightarrow> None
-             | Some (GRDone, m') \<Rightarrow> Some m'
-             | Some (GRPath cp', m') \<Rightarrow> gensyn_sem_exec t cp' m' n
-             | Some (_, _) \<Rightarrow> None))"
+             (GRDone, m') \<Rightarrow> Some m'
+             | (GRPath cp', m') \<Rightarrow> gensyn_sem_exec t cp' m' n
+             | (_, _) \<Rightarrow> None))"
 
 lemma gensyn_sem_exec_morefuel :
   assumes H: "gensyn_sem_exec t cp m n = Some m'"
@@ -294,39 +202,23 @@ next
       case (GBase x11 x12)
       then show ?thesis using Suc Some
       proof(cases "base_sem_exec x11 x12 m cp t")
-        assume None': "base_sem_exec x11 x12 m cp t = None"
-        then show ?thesis using Suc Some GBase by auto
-      next
-        fix stm'
-        assume Some': "base_sem_exec x11 x12 m cp t = Some stm'"
-        then show ?thesis
-        proof(cases stm')
           case (Pair st' m'')
-          then show ?thesis using Pair Some' GBase Some Suc
+          then show ?thesis using Pair GBase Some Suc
             apply(case_tac st', auto)
             done
         qed
-      qed
     next
       case (GRec x21 x22 x23)
       then show ?thesis
       proof(cases "rec_sem_exec x21 x22 m cp t")
-        assume None' :"rec_sem_exec x21 x22 m cp t = None"
-        then show ?thesis using Suc Some GRec by auto
-      next
-        fix stm'
-        assume Some': "rec_sem_exec x21 x22 m cp t = Some stm'"
-        then show ?thesis
-        proof(cases stm')
           case (Pair st' m'')
-          then show ?thesis using Pair Some' GRec Some Suc
+          then show ?thesis using Pair GRec Some Suc
             apply(case_tac st', auto)
             done
         qed
       qed
     qed
   qed
-qed
 
 fun gsx_base_sem :: " 'g \<Rightarrow> 
                       'b \<Rightarrow> 
@@ -338,9 +230,8 @@ fun gsx_base_sem :: " 'g \<Rightarrow>
                       bool"
   where
 "gsx_base_sem g b m m' cp t res = 
-    (case base_sem_exec g b m cp t of
-        None \<Rightarrow> m' = m \<and> res = GRFuel
-        | Some (res', m'') \<Rightarrow> m' = m'' \<and> res = res')"
+    (base_sem_exec g b m cp t = (res, m'))"
+
 
 fun gsx_rec_sem :: "'g \<Rightarrow>
                     'r \<Rightarrow>
@@ -352,9 +243,7 @@ fun gsx_rec_sem :: "'g \<Rightarrow>
                     bool"
   where
 "gsx_rec_sem g r m m' cp t res =
-  (case rec_sem_exec g r m cp t of
-    None \<Rightarrow> m' = m \<and> res = GRFuel
-    | Some (res', m'') \<Rightarrow> m' = m'' \<and> res = res')"
+  (rec_sem_exec g r m cp t = (res, m'))"
 
 fun gsx_gensyn_sem ::
 "('b, 'r, 'g) gensyn \<Rightarrow>
@@ -379,7 +268,6 @@ case (1 t cp g b m m')
   then show ?case
     apply(simp)
     apply(rule_tac x = 1 in exI) apply(auto)
-    apply(case_tac "base_sem_exec g b m cp t", auto)
     done
 next
 case (2 t cp g b m cp' m' m'')
@@ -387,14 +275,12 @@ case (2 t cp g b m cp' m' m'')
     apply(simp)
     apply(auto)
     apply(rule_tac x = "Suc fuel" in exI) apply(auto)
-    apply(case_tac "base_sem_exec g b m cp t", auto)
     done
 next
   case (3 t cp g r l m m')
   then show ?case
     apply(simp)
     apply(rule_tac x = 1 in exI) apply(auto)
-    apply(case_tac "rec_sem_exec g r m cp t", auto)
     done
 next
   case (4 t cp g r l m cp' m' m'')
@@ -402,7 +288,6 @@ next
     apply(simp)
     apply(auto)
     apply(rule_tac x = "Suc fuel" in exI) apply(auto)
-    apply(case_tac "rec_sem_exec g r m cp t", auto)
     done
 qed
 
@@ -424,42 +309,25 @@ lemma gensyn_exec_eq_r2l :
       proof(cases a)
         case (GBase x11 x12) then show ?thesis using Some Suc
         proof(cases "base_sem_exec x11 x12 m cp t")
-          assume None' : "base_sem_exec x11 x12 m cp t = None"
-          thus ?thesis using GBase Some Suc by auto
-        next
-          fix a'
-          assume Some' : "base_sem_exec x11 x12 m cp t = Some a'"
-          thus ?thesis using GBase Some Suc
-          proof(cases a')
             case (Pair a'' b)
-            then show ?thesis using Some' GBase Some Suc
+            then show ?thesis using GBase Some Suc
               apply(simp)
               apply(case_tac a'', auto simp add: Gensyn_Semantics.gensyn_sem.intros)
               done
           qed
-        qed
       next
         case (GRec x21 x22 x23)
         then show ?thesis using Some Suc
           proof(cases "rec_sem_exec x21 x22 m cp t")
-            assume None' : "rec_sem_exec x21 x22 m cp t = None"
-            thus ?thesis using GRec Some Suc by auto
-          next
-        fix a'
-        assume Some' : "rec_sem_exec x21 x22 m cp t = Some a'"
-        thus ?thesis using GRec Some Suc
-        proof(cases a')
-          case (Pair a'' b)
-            then show ?thesis using Some' GRec Some Suc
+            case (Pair a'' b)
+            then show ?thesis using GRec Some Suc
               apply(simp)
               apply(case_tac a'', auto simp add: Gensyn_Semantics.gensyn_sem.intros)
               done
-          qed
         qed
       qed
     qed
 qed
-
 
 interpretation Gensyn_Exec_Semantics_Fuel : Gensyn_Semantics
  gsx_base_sem gsx_rec_sem
@@ -469,12 +337,17 @@ proof(unfold_locales)
   proof - 
     fix t cp m m'
     show "Gensyn_Exec_Semantics.gensyn_sem t cp m m' = gsx_gensyn_sem t cp m m'"
-      using gensyn_exec_eq_l2r
-                             gensyn_exec_eq_r2l  by auto
+      using gensyn_exec_eq_l2r gensyn_exec_eq_r2l  by auto
   qed
 
     thus "Gensyn_Exec_Semantics.gensyn_sem = gsx_gensyn_sem" by blast
   qed
 
 end
+
+global_interpretation Gensyn_Exec_Semantics_Nosem : Gensyn_Semantics_Exec nosem_base_sem_exec nosem_rec_sem_exec
+  
+  done
+
+
 end
