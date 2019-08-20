@@ -1,12 +1,6 @@
-theory I_Semantics imports "Gensyn_Semantics" "../Syntax/Syn_I"
+theory I_Semantics imports "Gensyn_Semantics_Fuse2" "../Syntax/Syn_I"
 begin
 
-(* Do we interpret or extend?
-sublocale? 
-use rewrites to change base_sem and rec_sem?
-should this have trivial control flow, or allow insts
-to do weird control flow things?
-*)
 (* Do we want both a regular and exec? i think so *)
 
 (* options
@@ -28,13 +22,11 @@ eed
 
 *)
 
-(* want "a gensyn that includes at least a sym_i" *)
-
-(* this doesn't work, need gensyn tree *)
-
-locale I_Semantics = 
+locale I_Semantics_Sig =
   fixes i_sem :: "'i \<Rightarrow> 'mstate => 'mstate \<Rightarrow> bool"
 
+
+locale I_Semantics = I_Semantics_Sig 
 begin
 
 (* 2 approaches.
@@ -66,9 +58,9 @@ this depends on the kind of parent node we have
 do we need another extension point to allow for this?. *)
 
 inductive i_base_sem :: "'g \<Rightarrow> 
-                         ('i, 'xb, 'xa) syn_i \<Rightarrow> 
-                         'mstate \<Rightarrow>
-                         'mstate \<Rightarrow>
+                         ('a, 'xb, 'xa) syn_i \<Rightarrow> 
+                         'b \<Rightarrow>
+                         'b \<Rightarrow>
                           childpath \<Rightarrow> (('i, 'xb, 'xa) syn_i, 'r, 'g) gensyn \<Rightarrow> 
                           ('xrs) gs_result \<Rightarrow> bool" where
 "i_sem i m m' \<Longrightarrow> i_base_sem g (LInst i) m m' cp sk GRUnhandled"
@@ -78,13 +70,34 @@ inductive i_base_sem :: "'g \<Rightarrow>
 (* key thing here: we are not actually descending into recursive nodes
 as this would require a recursive semantics; we use nosem *)
 
-interpretation Gensyn_Semantics_I :
-  Gensyn_Semantics i_base_sem nosem_rec_sem
-  done
 
 end
 
-print_locale Gensyn_Semantics
+
+locale Gensyn_Semantics_I = I_Semantics 
+
+(* this seems like a bad idea unless we can make things work out
+   when we combine together multiple locales *)
+sublocale Gensyn_Semantics_I \<subseteq> Gensyn_Semantics_Base_Sig
+  where base_sem = i_base_sem
+  done
+
+
+locale RecSem_Test
+
+sublocale RecSem_Test \<subseteq> Gensyn_Semantics_Rec_SigO
+  where rec_sem = nosem_rec_sem
+  done
+
+print_locale! RecSem_Test
+
+(* how can we fuse a base and rec sem together in a modular/separated way?
+can we?*)
+
+locale Gensyn_Semantics_Full_I' = Gensyn_Semantics_I
+
+sublocale Gensyn_Semantics_Full_I' \<subseteq> RecSem_Test
+  done
 
 (* testing out sublocales *)
 (* i think the problem with this is that we cannot further
@@ -107,13 +120,62 @@ inductive calc_semb :: "calc \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> b
 interpretation I_Semantics_Calc :
   I_Semantics calc_semb
   done
-print_theory
-print_locale I_Semantics
 
-(*
+
 interpretation Gensyn_Semantics_Calc :
   Gensyn_Semantics I_Semantics_Calc.i_base_sem nosem_rec_sem
   done
-*)
+
+
+locale Gensyn_Base_Override_Unhandled =
+  fixes base_sem :: "'g \<Rightarrow> 
+                          'b \<Rightarrow> 
+                           'mstate \<Rightarrow>
+                           'mstate \<Rightarrow>
+                           childpath \<Rightarrow> ('b, 'r, 'g) gensyn \<Rightarrow> 
+                           ('xrs) gs_result \<Rightarrow> bool"
+begin
+
+inductive base_sem_done :: "'g \<Rightarrow> 
+                          'b \<Rightarrow> 
+                           'mstate \<Rightarrow>
+                           'mstate \<Rightarrow>
+                           childpath \<Rightarrow> ('b, 'r, 'g) gensyn \<Rightarrow> 
+                           ('xrs) gs_result \<Rightarrow> bool"
+  where
+"base_sem g b m m' cp t GRUnhandled \<Longrightarrow>
+ base_sem_done g b m m' cp t GRDone"
+
+| "base_sem g b m m' cp t res \<Longrightarrow>
+  base_sem_done g b m m' cp t res"
+
+end
+
+locale I_Semantics_Done = Gensyn_Base_Override_Unhandled
+
+
+sublocale I_Semantics \<subseteq> Gensyn_Base_Override_Unhandled
+  where base_sem = i_base_sem
+  done
+  
+
+sublocale Gensyn_Semantics_Full_I' \<subseteq> Gensyn_Semantics
+  where base_sem = base_sem_done
+  and rec_sem = rec_semO
+  done
+
+interpretation Gensyn_Semantics_Full_Calc :
+  Gensyn_Semantics_Full_I' calc_semb
+  done
+
+term Gensyn_Semantics_Calc.gensyn_sem
+
+lemma testout1 : "Gensyn_Semantics_Full_Calc.gensyn_sem (TYPE (unit)) (GBase () (LInst AccReset)) [] 0 42"
+  apply(rule Gensyn_Semantics_Full_Calc.gensyn_sem.intros) apply(auto)
+  apply(rule Gensyn_Base_Override_Unhandled.base_sem_done.intros)
+  apply(rule I_Semantics.i_base_sem.intros)
+  apply(rule calc_semb.intros)
+  apply(auto)
+  done
 
 end

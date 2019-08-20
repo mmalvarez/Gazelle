@@ -1,4 +1,4 @@
-theory Gensyn_Semantics
+theory Gensyn_Semantics_Fuse2
   imports "../Gensyn" "../Gensyn_Descend"
 begin
 
@@ -38,6 +38,60 @@ inductive nosem_rec_sem ::
       bool"
   where "nosem_rec_sem _ _ _ _ _ _ GRUnhandled"
 
+locale Gensyn_Semantics_Base_Sig =
+  fixes  base_sem  :: " 'g \<Rightarrow> 
+                      'b \<Rightarrow>
+                      'mstate \<Rightarrow> 
+                      'mstate \<Rightarrow> 
+                      childpath \<Rightarrow>
+                      ('b, 'r, 'g) gensyn \<Rightarrow>  
+                      ('xr) gs_result \<Rightarrow>
+                      bool" 
+
+locale Gensyn_Semantics_Base_SigO =
+fixes  base_sem  :: " 'g \<Rightarrow> 
+                      'b \<Rightarrow>
+                      'mstate \<Rightarrow> 
+                      'mstate \<Rightarrow> 
+                      childpath \<Rightarrow>
+                      ('b, 'r, 'g) gensyn \<Rightarrow>  
+                      ('xr) gs_result \<Rightarrow>
+                      bool" 
+begin
+definition "base_semO \<equiv> base_sem"
+declare base_semO_def [simp]
+end
+
+locale Gensyn_Semantics_Rec_Sig =
+  fixes rec_sem :: "'g \<Rightarrow>
+                    'r \<Rightarrow>
+                    'mstate \<Rightarrow>
+                    'mstate \<Rightarrow>
+                    childpath \<Rightarrow>
+                    ('b, 'r, 'g) gensyn \<Rightarrow>
+                    ('xr) gs_result \<Rightarrow>
+                    bool" 
+
+locale Gensyn_Semantics_Rec_SigO =
+  fixes rec_sem :: "'g \<Rightarrow>
+                    'r \<Rightarrow>
+                    'mstate \<Rightarrow>
+                    'mstate \<Rightarrow>
+                    childpath \<Rightarrow>
+                    ('b, 'r, 'g) gensyn \<Rightarrow>
+                    ('xr) gs_result \<Rightarrow>
+                    bool" 
+
+begin
+definition "rec_semO \<equiv> rec_sem"
+declare rec_semO_def [simp]
+end
+
+
+sublocale Gensyn_Semantics_Rec_SigO \<subseteq> Gensyn_Semantics_Rec_Sig
+  where rec_sem = rec_sem
+  done
+
 locale Gensyn_Semantics_Sig =
   fixes base_sem :: " 'g \<Rightarrow> 
                       'b \<Rightarrow>
@@ -47,7 +101,6 @@ locale Gensyn_Semantics_Sig =
                       ('b, 'r, 'g) gensyn \<Rightarrow>  
                       ('xr) gs_result \<Rightarrow>
                       bool"
-
   fixes rec_sem :: "'g \<Rightarrow>
                     'r \<Rightarrow>
                     'mstate \<Rightarrow>
@@ -56,18 +109,18 @@ locale Gensyn_Semantics_Sig =
                     ('b, 'r, 'g) gensyn \<Rightarrow>
                     ('xr) gs_result \<Rightarrow>
                     bool"
-begin
-(*
-definition dummy1 :: "'g \<Rightarrow> 'b \<Rightarrow> 'r \<Rightarrow> 'mstate \<Rightarrow> 'mstate \<Rightarrow> childpath \<Rightarrow>
-  ('b, 'r, 'g) gensyn \<Rightarrow>  'xr gs_result \<Rightarrow> bool" where
-"dummy1 g b r m m' cp t res =
-  (base_sem g b m m' cp t res = rec_sem g r m m' cp t res)"
 
-term rec_sem
+sublocale Gensyn_Semantics_Sig \<subseteq> Gensyn_Semantics_Base_Sig
+  where base_sem = base_sem
+  done
 
-type_synonym  thissim = "('b, 'r, 'g) gensyn"
-*)
-end
+sublocale Gensyn_Semantics_Sig \<subseteq> Gensyn_Semantics_Rec_Sig
+  where rec_sem = rec_sem
+  done
+
+print_locale Gensyn_Semantics_Sig
+
+
 
 locale Gensyn_Semantics =
 Gensyn_Semantics_Sig 
