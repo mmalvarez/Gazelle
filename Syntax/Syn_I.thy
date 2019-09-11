@@ -21,4 +21,7 @@ fun syn_i_cases ::
 definition LInst :: "'i \<Rightarrow> ('i, 'xb, 'xa) syn_i" where
     "LInst x = snth2h x"
 
+(* have a syn_i_dat definition to allow more annotations at the node?
+   see seq e.g. *)
+
 end

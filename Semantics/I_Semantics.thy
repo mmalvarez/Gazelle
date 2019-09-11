@@ -1,4 +1,4 @@
-theory I_Semantics imports "Gensyn_Semantics_Fuse2" "../Syntax/Syn_I"
+theory I_Semantics imports "Gensyn_Semantics_TypeParam" "../Syntax/Syn_I"
 begin
 
 (* Do we want both a regular and exec? i think so *)
@@ -23,6 +23,8 @@ eed
 *)
 
 locale I_Semantics_Sig =
+  fixes xr :: "'rs itself"
+  fixes ms :: "'mstate itself"
   fixes i_sem :: "'i \<Rightarrow> 'mstate => 'mstate \<Rightarrow> bool"
 
 
@@ -57,12 +59,14 @@ where quantifiers are*)
 this depends on the kind of parent node we have
 do we need another extension point to allow for this?. *)
 
-inductive i_base_sem :: "'g \<Rightarrow> 
-                         ('a, 'xb, 'xa) syn_i \<Rightarrow> 
+print_context
+
+inductive i_base_sem :: "'g \<Rightarrow>
+                         ('c, 'xb, 'xa) syn_i \<Rightarrow> 
                          'b \<Rightarrow>
                          'b \<Rightarrow>
-                          childpath \<Rightarrow> (('i, 'xb, 'xa) syn_i, 'r, 'g) gensyn \<Rightarrow> 
-                          ('xrs) gs_result \<Rightarrow> bool" where
+                          childpath \<Rightarrow> (('c, 'xb, 'xa) syn_i, 'r, 'g) gensyn \<Rightarrow> 
+                          ('a) gs_result \<Rightarrow> bool" where
 "i_sem i m m' \<Longrightarrow> i_base_sem g (LInst i) m m' cp sk GRUnhandled"
 
 (* We still need a way to handle different kinds of gs results *)
@@ -115,15 +119,15 @@ fun calc_sem :: "calc \<Rightarrow> nat \<Rightarrow> nat" where
 | "calc_sem (AccReset) _ = 42"
 
 inductive calc_semb :: "calc \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool" where
-"calc c n = n' \<Longrightarrow> calc_semb c n n'"
+"\<And> c n n' . calc_sem c n = n' \<Longrightarrow> calc_semb c n n'"
 
 interpretation I_Semantics_Calc :
-  I_Semantics calc_semb
+  I_Semantics "TYPE(unit)" _ calc_semb
   done
 
 
 interpretation Gensyn_Semantics_Calc :
-  Gensyn_Semantics I_Semantics_Calc.i_base_sem nosem_rec_sem
+  Gensyn_Semantics "TYPE(unit)" _ I_Semantics_Calc.i_base_sem nosem_rec_sem
   done
 
 
@@ -165,12 +169,12 @@ sublocale Gensyn_Semantics_Full_I' \<subseteq> Gensyn_Semantics
   done
 
 interpretation Gensyn_Semantics_Full_Calc :
-  Gensyn_Semantics_Full_I' calc_semb
+  Gensyn_Semantics_Full_I' "TYPE(unit)" _ calc_semb
   done
 
 term Gensyn_Semantics_Calc.gensyn_sem
 
-lemma testout1 : "Gensyn_Semantics_Full_Calc.gensyn_sem (TYPE (unit)) (GBase () (LInst AccReset)) [] 0 42"
+lemma testout1 : "Gensyn_Semantics_Full_Calc.gensyn_sem (GBase () (LInst AccReset)) [] 0 42"
   apply(rule Gensyn_Semantics_Full_Calc.gensyn_sem.intros) apply(auto)
   apply(rule Gensyn_Base_Override_Unhandled.base_sem_done.intros)
   apply(rule I_Semantics.i_base_sem.intros)

@@ -172,13 +172,32 @@ fun empE :: "Empty \<Rightarrow> 'a" where
 
 fun disc ::
   "('a + 'b) \<Rightarrow> (('a \<Rightarrow> 'o) * ('b \<Rightarrow> 'o)) \<Rightarrow> 'o" where
-"disc (Inl a) (fa, _) = fa a"
-| "disc (Inr b) (_, fb) = fb b"
+"disc s (fa, fb) =
+  (case s of
+    Inl a \<Rightarrow> fa a
+    | Inr b \<Rightarrow> fb b)"
 
 fun disc3 ::
   "('a + 'b + 'c) \<Rightarrow> (('a \<Rightarrow> 'o) * ('b \<Rightarrow> 'o) * ('c \<Rightarrow> 'o)) \<Rightarrow> 'o" where
-"disc3 (Inl a) (fa, _) = fa a"
-| "disc3 (Inr bc) (_, fbc) = disc bc fbc"
+"disc3 s (fa, fb) =
+  (case s of
+  Inl a \<Rightarrow> fa a
+  | Inr b \<Rightarrow> disc b fb)"
+
+fun disc4 ::
+  "('a + 'b + 'c + 'd) \<Rightarrow> (('a \<Rightarrow> 'o) * ('b \<Rightarrow> 'o) * ('c \<Rightarrow> 'o) * ('d \<Rightarrow> 'o)) \<Rightarrow> 'o" where
+"disc4 s (fa, fbc) = 
+  (case s of
+    Inl a \<Rightarrow> fa a
+   | Inr bc \<Rightarrow> disc3 bc fbc)"
+
+fun disc5 ::
+  "('a + 'b + 'c + 'd + 'e) \<Rightarrow> (('a \<Rightarrow> 'o) * ('b \<Rightarrow> 'o) * ('c \<Rightarrow> 'o) * ('d \<Rightarrow> 'o) * ('e \<Rightarrow> 'o)) \<Rightarrow> 'o" where
+"disc5 s (fa, fb) = 
+  (case s of
+    Inl a \<Rightarrow> fa a
+    | Inr b \<Rightarrow> disc4 b fb)"
+
 
 (*
   resolving type issues that show up when applying differently

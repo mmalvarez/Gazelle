@@ -1,10 +1,13 @@
-theory Seq_Semantics imports "Gensyn_Semantics_Fuse2" "../Syntax/Syn_Seq"
+theory Seq_Semantics imports "Gensyn_Semantics_TypeParam" "../Syntax/Syn_Seq"
 begin
 
 locale Seq_Semantics_Sig =
+  fixes xr :: "'xr itself"
+  fixes ms :: "'mstate itself"
   fixes seq_sem :: "'g \<Rightarrow> 'sq \<Rightarrow> 'mstate \<Rightarrow> 'mstate \<Rightarrow> bool"
 
-
+inductive seq_nop :: "'g \<Rightarrow> 'sq \<Rightarrow> 'mstate \<Rightarrow> 'mstate \<Rightarrow> bool" where
+"seq_nop _ _ m m"
 
 locale Seq_Semantics = Seq_Semantics_Sig 
 begin
@@ -18,8 +21,8 @@ print_context
 (* a third option is to only use "unhandled" cases *)
 (* another way to get at this: what should the hierarchy look like? *)
 (* hierarchy: can we worry about it later? *)
-inductive seq_rec_sem :: "'a \<Rightarrow> ('b, 'xb, 'xa) syn_seq \<Rightarrow> 'c \<Rightarrow> 'c \<Rightarrow>
-  childpath \<Rightarrow> ('bs, ('b, 'xb, 'xa) syn_seq, 'a) gensyn \<Rightarrow> ('xr) gs_result \<Rightarrow> bool" where
+inductive seq_rec_sem :: "'c \<Rightarrow> ('d, 'xb, 'xa) syn_seq \<Rightarrow> 'b \<Rightarrow> 'b \<Rightarrow>
+  childpath \<Rightarrow> ('bs, ('d, 'xb, 'xa) syn_seq, 'c) gensyn \<Rightarrow> ('a) gs_result \<Rightarrow> bool" where
 "seq_sem g s m m' \<Longrightarrow> seq_rec_sem g (LSeq s) m m' cp sk (GRPath (cp@[0]))"
 
 end
@@ -30,10 +33,13 @@ end
 
 locale Base_Next_Semantics = Gensyn_Semantics_Base_Sig 
 begin
+
+print_context
+
 inductive base_sem_next ::
-    "'a \<Rightarrow> 'b \<Rightarrow> 'c \<Rightarrow> 'c \<Rightarrow> childpath \<Rightarrow>
-            ('b, 'd, 'a) gensyn \<Rightarrow>
-                 ('e) gs_result \<Rightarrow> bool"
+    "'c \<Rightarrow> 'd \<Rightarrow> 'b \<Rightarrow> 'b \<Rightarrow> childpath \<Rightarrow>
+            ('d, 'e, 'c) gensyn \<Rightarrow>
+                 ('a) gs_result \<Rightarrow> bool"
     where
 "base_sem g b m m' cp t GRUnhandled \<Longrightarrow>
  gensyn_cp_next t cp = Some cp' \<Longrightarrow>
