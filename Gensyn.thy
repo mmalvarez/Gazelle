@@ -49,14 +49,24 @@ lemma gensyn_induct:
 shows "P1 (t)"
 proof-
   {   fix l
-      have "P1 t \<and> l = [t]"
-proof(cases t)
-  case (G x1 x2)
-  then show ?thesis 
-    apply(induction x2 rule: gensyn_induct')
-      apply(auto)
-    apply(rule_tac Lr) apply(rule_tac Lrc) apply(auto)
-qed
+      have "P2 l \<and> (! h t . l = h#t \<longrightarrow> P1 h \<and> P2 t )" (*using Lr Lrn Lrc*)
+proof(induction l rule:gensyn_induct') 
+  case (1 x l2)
+  then show ?case apply(auto intro:Lr Lrn Lrc) done
+next
+  case 2
+  then show ?case by (auto intro: Lr Lrn Lrc)
+next
+  case (3 t l)
+  then show ?case 
+    apply(clarsimp)
+    
+    apply(rule_tac Lrc) apply(auto)
+    done
+qed }
+
+  thus ?thesis apply(simp)
+    done
 qed
 
 end
