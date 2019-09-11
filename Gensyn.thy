@@ -1,9 +1,8 @@
 theory Gensyn imports Main
 begin
 
-datatype ('b, 'r, 'g) gensyn = 
-  GBase "'g" "'b"
-  | GRec "'g" "'r" "(('b, 'r, 'g) gensyn) list"
+datatype ('x) gensyn =
+  G "'x" "(('x) gensyn) list"
 
 (* for consistency with other syntax declarations *)
 (*
@@ -12,37 +11,59 @@ definition LSeq :: "'g \<Rightarrow> 'r \<Rightarrow> (('b, 'r, 'g) gensyn list)
 *)
 
 lemma gensyn_induct':
-  assumes Lb: "(\<And> (g :: 'g) (b :: 'b) . P1 (GBase g b))"
-  and Lr : "(\<And> (g :: 'g) (r :: 'r) (l :: ('b, 'r, 'g) gensyn list) . P2 l \<Longrightarrow> P1 (GRec g r l))"
+  assumes Lr : "(\<And> (x :: 'x) (l :: ('x) gensyn list) . P2 l \<Longrightarrow> P2 [(G x l)])"
   and Lrn : "P2 []"
-  and Lrc : "\<And>t l . P1 t \<Longrightarrow>
-                         P2 l \<Longrightarrow> 
+  and Lrc : "\<And>t l . P2 [(t :: 'x gensyn)] \<Longrightarrow>
+                         P2 l \<Longrightarrow>
                          P2 (t # l)"
-  shows "P1 t \<and> P2 l"
+  shows "P2 (l)"
 proof-
-  {fix t
-    have "P1 t \<and> (\<forall> g r l . t = GRec g r l \<longrightarrow> P2 l)"
-    proof (induction)
-    case (GBase g b) thus ?case using Lb by auto next
-    case (GRec g r l) thus ?case
-    apply (induct l) using Lr Lrn Lrc
-    apply(auto) apply(force) apply(force)
-    done
-    qed}
-  
+  {   fix t
+      have "P2 [t] \<and> (! x l . t = G x l \<longrightarrow> P2 l)"
+      proof(induction t)
+        case (G x l)
+        then show ?case
+          apply(induct l) using Lr Lrn Lrc
+           apply(clarsimp)
+          apply(clarsimp)
+          apply(auto)
+           apply(rule_tac Lr)
+           apply(rule_tac Lrc) apply(auto)
+          apply(rule_tac Lrc) apply(auto)
+          done
+ qed
+     }
   thus ?thesis by auto
-  qed
+qed
+
+
 
 lemma gensyn_induct:
-  assumes Lb: "(\<And> (g :: 'g) (b :: 'b) . P1 (GBase g b))"
-  and Lr : "(\<And> (g :: 'g) (r :: 'r) (l :: ('b, 'r, 'g) gensyn list) . P2 l \<Longrightarrow> P1 (GRec g r l))"
+  assumes Lr : "(\<And> (x :: 'x) (l :: ('x) gensyn list) . P2 l \<Longrightarrow> P1 (G x l))"
   and Lrn : "P2 []"
-  and Lrc : "\<And>t l . P1 t \<Longrightarrow>
-                         P2 l \<Longrightarrow> 
+  and Lrc : "\<And>t l . P1 (t :: 'x gensyn) \<Longrightarrow>
+                         P2 l \<Longrightarrow>
                          P2 (t # l)"
-shows C1: "P1 (t :: ('b, 'r, 'g) gensyn)"
-  and C2 : "P2 (l :: ('b, 'r, 'g) gensyn list)" using gensyn_induct'[OF Lb Lr Lrn Lrc]
-proof(auto)
+shows "P1 (t)"
+proof-
+  {   fix l
+      have "P2 l \<and> (! h t . l = h#t \<longrightarrow> P1 h \<and> P2 t )" (*using Lr Lrn Lrc*)
+proof(induction l rule:gensyn_induct')
+  case (1 x l2)
+  then show ?case apply(auto intro:Lr Lrn Lrc) done
+next
+  case 2
+  then show ?case by (auto intro: Lr Lrn Lrc)
+next
+  case (3 t l)
+  then show ?case
+    apply(clarsimp)
+    apply(rule_tac Lrc) apply(auto)
+    done
+qed }
+
+  thus ?thesis apply(simp)
+    done
 qed
 
 end
