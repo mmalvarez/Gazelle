@@ -1,24 +1,8 @@
 theory Gensyn_Descend_Facts imports Gensyn_Descend
 begin
 
-(*
-lemma gensyn_get_len [rule_format] :
-"(! kh kt t' . gensyn_get_list ts (kh#kt) = Some t' \<longrightarrow>
- kh < length ts)"
-proof(induction ts)
-case Nil
-then show ?case by auto
-next
-  case (Cons a ts)
-  then show ?case 
-    apply(auto)
-    apply(case_tac kh) apply(auto) 
-    apply(drule_tac[1] x = nat in spec) apply(auto)
-    done
-qed
-*)
 lemma gensyn_get_list_len  :
-  fixes ts :: "('b, 'r, 'g) gensyn list" 
+  fixes ts :: "('x) gensyn list" 
   shows "\<And> kh kt t' . gensyn_get_list ts (kh#kt) = Some t' \<Longrightarrow>
           kh < length ts"
 proof(induction ts ) 
@@ -144,9 +128,7 @@ lemma gensyn_get_child :
   shows  "\<exists> t'1 . gensyn_get t [kh] = Some t'1 \<and>
             gensyn_get t'1 kt = Some t'" using H
 proof(cases t)
-  case (GBase x11 x12)
-  thus ?thesis using H by auto next
-  case (GRec a1 a2 l)
+  case (G x l)
   thus ?thesis using H gensyn_get_list_child gensyn_get_list_nth2
     by auto blast+
 qed
@@ -156,30 +138,25 @@ lemma gensyn_get_child2 :
   and H2 : "gensyn_get t'1 kt = Some t'"
   shows  "gensyn_get t (kh#kt) = Some t'" using H1 H2
 proof(cases t)
-  case (GBase x11 x12)
-  thus ?thesis using H1 H2 by auto next
-  case (GRec a1 a2 l)
-  thus ?thesis using H1 H2 gensyn_get_list_child2[of t'1 kt t']
+  case (G x l)
+  thus ?thesis  using H1 H2 gensyn_get_list_child2[of t'1 kt t']
                            gensyn_get_list_len[of l kh "[]" t'1]
                            gensyn_get_list_nth[of l kh t'1] by auto
 qed
 
 lemma gensyn_get_last :
   assumes H: "gensyn_get t (k@[kl]) = Some t''"
-  shows "\<exists> t' . (gensyn_get t k = Some (t' :: ('a, 'b, 'c) gensyn) \<and>
+  shows "\<exists> t' . (gensyn_get t k = Some (t' :: ('x) gensyn) \<and>
          gensyn_get t' [kl] = Some t'')"  using H
 proof(induction k arbitrary: t kl t'')
   case Nil then show ?case by auto next
   case (Cons a k) then show ?case
   proof(cases t)
-    case (GBase x11 x12)
-    then show ?thesis using Cons by auto
-  next
-    case (GRec a1 a2 l)
-    hence 0: "gensyn_get (l ! a) (k@[kl]) = Some t''" using Cons gensyn_get_list_child GRec by auto
+    case (G x l)
+    hence 0: "gensyn_get (l ! a) (k@[kl]) = Some t''" using Cons gensyn_get_list_child G by auto
     hence 1: "\<exists> t' .  gensyn_get (l ! a) k = Some t' \<and> gensyn_get t' [kl] = Some t''" using Cons by auto
-    hence 2: "a < length l" using Cons GRec gensyn_get_list_len by auto
-    thus ?thesis using GRec gensyn_get_list_nth2 gensyn_get_list_child2 0 1 by auto blast+
+    hence 2: "a < length l" using Cons G gensyn_get_list_len by auto
+    thus ?thesis using G gensyn_get_list_nth2 gensyn_get_list_child2 0 1 by auto blast+
   qed
 qed
 

@@ -4,15 +4,15 @@ begin
 type_synonym childpath = "nat list"
 
 inductive gensyn_descend ::
-  "('b, 'r, 'g) gensyn \<Rightarrow> 
-   ('b, 'r, 'g) gensyn \<Rightarrow>
+  "('x) gensyn \<Rightarrow> 
+   ('x) gensyn \<Rightarrow>
    childpath \<Rightarrow> bool
   "
   where
-  " \<And> c ls t g r .
+  " \<And> c ls t x .
     c < length ls \<Longrightarrow>
     List.nth ls c = t \<Longrightarrow>
-    gensyn_descend (GRec g r ls) t [c]"
+    gensyn_descend (G x ls) t [c]"
 | "\<And> t t' l t'' l' .
       gensyn_descend t t' l \<Longrightarrow>
       gensyn_descend t' t'' l' \<Longrightarrow>
@@ -20,12 +20,11 @@ inductive gensyn_descend ::
 
 (* gensyn_get, functional version of gensyn_descend
 both versions are useful in different places *)
-fun gensyn_get :: "('b, 'r, 'g) gensyn \<Rightarrow> childpath \<Rightarrow> ('b, 'r, 'g) gensyn option" and
-gensyn_get_list :: "('b, 'r, 'g) gensyn list \<Rightarrow> childpath \<Rightarrow> ('b, 'r, 'g) gensyn option" where
+fun gensyn_get :: "('x) gensyn \<Rightarrow> childpath \<Rightarrow> ('x) gensyn option" and
+gensyn_get_list :: "('x) gensyn list \<Rightarrow> childpath \<Rightarrow> ('x) gensyn option"  where
     "gensyn_get T [] = Some T"
-  | "gensyn_get (GRec g r ls) p = 
+  | "gensyn_get (G x ls) p = 
      gensyn_get_list ls p"
-  | "gensyn_get _ _ = None"
 
 | "gensyn_get_list _ [] = None" (* this should never happen *)
 | "gensyn_get_list [] _ = None" (* this case will happen when we cannot find a node *)
@@ -34,11 +33,10 @@ gensyn_get_list :: "('b, 'r, 'g) gensyn list \<Rightarrow> childpath \<Rightarro
    gensyn_get_list (ls) ((n-1)#p)"
 
 (* Tool for getting the next valid child in the tree *)
-fun gensyn_cp_next :: "('b, 'r, 'g) gensyn \<Rightarrow> childpath \<Rightarrow> childpath option"
-and gensyn_cp_next_list :: "('b, 'r, 'g) gensyn list \<Rightarrow> childpath \<Rightarrow> childpath option" 
+fun gensyn_cp_next :: "('x) gensyn \<Rightarrow> childpath \<Rightarrow> childpath option"
+and gensyn_cp_next_list :: "('x) gensyn list \<Rightarrow> childpath \<Rightarrow> childpath option" 
 where
-"gensyn_cp_next (GRec _ _ l) (cp) = gensyn_cp_next_list l cp"
-| "gensyn_cp_next _ _ = None"
+"gensyn_cp_next (G _ l) (cp) = gensyn_cp_next_list l cp"
 
 | "gensyn_cp_next_list [] _ = None"
 | "gensyn_cp_next_list _ [] = None" (* corresponds to hitting a list case with no cp left - we want to go to its sibling*)
@@ -58,26 +56,25 @@ where
      | _ \<Rightarrow> None)
     "
 
-fun gensyn_cp_next' :: "('b, 'r, 'g) gensyn \<Rightarrow> childpath \<Rightarrow> childpath option"
+fun gensyn_cp_next' :: "('x) gensyn \<Rightarrow> childpath \<Rightarrow> childpath option"
   where
 "gensyn_cp_next' g cp =
   (case (rev cp) of
       [] \<Rightarrow> None
     | (cl # cp') \<Rightarrow>
         (case (gensyn_get g (rev cp')) of
-              Some (GRec _ _ l) \<Rightarrow>
+              Some (G _ l) \<Rightarrow>
                 (if cl + 1 < length l then Some (rev ((cl + 1)#cp'))
                  else gensyn_cp_next' g (rev cp'))
-            | Some (GBase _ _) \<Rightarrow> None
             | None \<Rightarrow> None))"
 
 (* idea: this will attempt to go to the next immediate child of our node
    if it is a list node *)
 (* TODO: should we define this recursively like cp_next *)
-fun gensyn_dig :: "('b, 'r, 'g) gensyn \<Rightarrow> childpath \<Rightarrow> childpath option" where
+fun gensyn_dig :: "('x) gensyn \<Rightarrow> childpath \<Rightarrow> childpath option" where
 "gensyn_dig g c =
   (case gensyn_get g c of
-    Some (GRec _ _ (h#t)) \<Rightarrow> Some (c@[0])
+    Some (G _ (h#t)) \<Rightarrow> Some (c@[0])
     | _ \<Rightarrow> None)"
 
 (* another option for defining cp_next. this should work for our purposes as well *)
