@@ -4,6 +4,8 @@ begin
 datatype ('x) gensyn =
   G "'x" "(('x) gensyn) list"
 
+declare gensyn.splits [split]
+
 (* for consistency with other syntax declarations *)
 (*
 definition LSeq :: "'g \<Rightarrow> 'r \<Rightarrow> (('b, 'r, 'g) gensyn list) \<Rightarrow> ('b, 'r, 'g) gensyn" where

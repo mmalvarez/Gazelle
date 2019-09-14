@@ -20,41 +20,39 @@ inductive gensyn_descend ::
 
 (* gensyn_get, functional version of gensyn_descend
 both versions are useful in different places *)
-fun gensyn_get :: "('x) gensyn \<Rightarrow> childpath \<Rightarrow> ('x) gensyn option" and
-gensyn_get_list :: "('x) gensyn list \<Rightarrow> childpath \<Rightarrow> ('x) gensyn option"  where
-    "gensyn_get T [] = Some T"
-  | "gensyn_get (G x ls) p = 
-     gensyn_get_list ls p"
-
-| "gensyn_get_list _ [] = None" (* this should never happen *)
-| "gensyn_get_list [] _ = None" (* this case will happen when we cannot find a node *)
-| "gensyn_get_list (h#ls) (0#p) = gensyn_get h p"
+fun gensyn_get_list :: "('x) gensyn list \<Rightarrow> childpath \<Rightarrow> ('x) gensyn option"  where
+ "gensyn_get_list [] _ = None" (* this case will happen when we cannot find a node *)
+| "gensyn_get_list _ [] = None"
+| "gensyn_get_list ((h)#lt) ([0]) = Some h"
+| "gensyn_get_list ((G x ld)#lt) (0#ct) = gensyn_get_list ld ct"
 | "gensyn_get_list (_#ls) (n#p) = 
    gensyn_get_list (ls) ((n-1)#p)"
 
-(* Tool for getting the next valid child in the tree *)
-fun gensyn_cp_next :: "('x) gensyn \<Rightarrow> childpath \<Rightarrow> childpath option"
-and gensyn_cp_next_list :: "('x) gensyn list \<Rightarrow> childpath \<Rightarrow> childpath option" 
-where
-"gensyn_cp_next (G _ l) (cp) = gensyn_cp_next_list l cp"
+fun gensyn_get :: "('x) gensyn \<Rightarrow> childpath \<Rightarrow> ('x) gensyn option" where
+"gensyn_get T [] = Some T"
+| "gensyn_get (G x ls) p = gensyn_get_list ls p"
 
-| "gensyn_cp_next_list [] _ = None"
-| "gensyn_cp_next_list _ [] = None" (* corresponds to hitting a list case with no cp left - we want to go to its sibling*)
-(* idea: maintain a lookahead of 1. this is why we talk about both cases *)
-(* do we need to be tacking on a 0 *)
-| "gensyn_cp_next_list ([h]) (0#cpt) =
-    (case gensyn_cp_next h cpt of None \<Rightarrow> None 
+(* Tool for getting the next valid child in the tree *)
+fun gensyn_cp_next_list :: "('x) gensyn list \<Rightarrow> childpath \<Rightarrow> childpath option" 
+  where
+  "gensyn_cp_next_list [] _ = None"
+| "gensyn_cp_next_list _ [] = None"
+| "gensyn_cp_next_list ([G x l]) (0#cpt) =
+    (case gensyn_cp_next_list l cpt of None \<Rightarrow> None 
                          | Some res \<Rightarrow> Some (0#res))"
 | "gensyn_cp_next_list ([h]) ((Suc n)#cpt) = None"
-| "gensyn_cp_next_list (h1#h2#t) (0#cpt) =
-    (case gensyn_cp_next h1 cpt of
+| "gensyn_cp_next_list ((G x l)#h2#t) (0#cpt) =
+    (case gensyn_cp_next_list l cpt of
       Some cp' \<Rightarrow> Some (0#cp')
      | None \<Rightarrow> Some [1])"
 | "gensyn_cp_next_list (h#h2#t) (Suc n # cpt) =
     (case gensyn_cp_next_list (h2#t) (n # cpt) of
       Some (n'#cp') \<Rightarrow> Some (Suc n' # cp')
-     | _ \<Rightarrow> None)
-    "
+     | _ \<Rightarrow> None)"
+
+fun gensyn_cp_next :: "('x) gensyn \<Rightarrow> childpath \<Rightarrow> childpath option"
+  where
+"gensyn_cp_next (G x l) (cp) = gensyn_cp_next_list l cp"
 
 fun gensyn_cp_next' :: "('x) gensyn \<Rightarrow> childpath \<Rightarrow> childpath option"
   where

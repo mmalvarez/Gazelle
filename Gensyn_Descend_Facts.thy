@@ -95,7 +95,9 @@ proof(induction ts arbitrary:kh)
 
     case 2 then show ?case
     proof(cases kh)
-      case 0 thus ?thesis using Cons 2 by auto next
+      case 0 thus ?thesis using Cons 2
+        apply(case_tac kt) apply(auto)
+        apply(case_tac a) apply(auto) done next
       case (Suc n) thus ?thesis using Cons 2 by auto
     qed
   }
@@ -115,7 +117,9 @@ next
   then show ?case
   proof(cases kh)
     case 0
-    then show ?thesis using Cons by auto
+    then show ?thesis using Cons
+      apply(case_tac kt) apply(auto)
+      apply(case_tac a) apply(auto) done
   next
     case (Suc nat)
     then show ?thesis using Cons by auto
@@ -171,14 +175,11 @@ proof(induction k arbitrary: t t' kl t'')
   case (Cons a k)
   then show ?case
   proof(cases t)
-    case (GBase x11 x12)
-    then show ?thesis using Cons by auto
-  next
-    case (GRec a1 a2 l)
-    hence 0: "gensyn_get (l!a) (k) = Some t'" using Cons gensyn_get_list_child GRec by auto
+    case (G x l)
+    hence 0: "gensyn_get (l!a) (k) = Some t'" using Cons gensyn_get_list_child G by auto
     hence 1: "gensyn_get (l!a) (k@[kl]) = Some t''" using Cons by auto
-    hence 2: "a < length l" using Cons GRec gensyn_get_list_len by auto
-    show ?thesis using GRec gensyn_get_list_child2 0 1 2 by auto blast+
+    hence 2: "a < length l" using Cons G gensyn_get_list_len by auto
+    show ?thesis using G gensyn_get_list_child2 0 1 2 by auto blast+
   qed
 qed
 
@@ -193,17 +194,7 @@ next
   case (Cons a' p')
   then show ?case
   proof(cases t') 
-    case (GBase x11 x12) thus ?thesis using Cons H1 H2
-    proof(cases p)
-      assume Nil' :"p=[]"
-      show ?thesis using GBase Cons Nil' by auto next
-
-      fix a list
-      assume Cons' :"p=a#list"
-      show ?thesis using GBase Cons Cons' by auto next
-    qed next
-
-    case (GRec a1 a2 l)
+    case (G x l) (* thus ?thesis using Cons H1 H2 *)
     obtain tmid where 1: "gensyn_get t' [a'] = Some tmid \<and>
                  gensyn_get tmid p' = Some t''" using Cons gensyn_get_child by blast
     hence 2: "gensyn_get t (p @ [a']) = Some tmid" using Cons gensyn_get_last2 by blast
@@ -241,12 +232,9 @@ proof(induction kt arbitrary: t kh t')
   case Nil
   then show ?case
   proof(cases t)
-    case (GBase x11 x12)
+    case (G x l)
     then show ?thesis 
-      using Nil by auto
-  next
-    case (GRec x21 x22 l)
-    then show ?thesis using Nil gensyn_descend.intros(1)[of kh l]
+      using Nil gensyn_descend.intros(1)[of kh l]
               gensyn_get_list_child[of l kh "[]" t'] by auto
   qed
 next
@@ -254,14 +242,11 @@ next
   then show ?case
   (* why do we need the rule here? *)
   proof(cases t rule:gensyn.exhaust)
-    case (GBase x11 x12)
-    then show ?thesis using Cons by auto
-  next
-    case (GRec x21 x22 l)
+    case (G x l)
     obtain tmid where 1 : "gensyn_get t [kh] = Some tmid \<and> gensyn_get tmid (a#kt) = Some t'"
       using gensyn_get_child[of t kh "a#kt" t'] Cons by auto
     have 2 : "gensyn_descend tmid t' (a#kt)" using Cons 1 by auto
-    have 3: "gensyn_descend t tmid [kh]" using 1 GRec gensyn_descend.intros(1)[of kh l]
+    have 3: "gensyn_descend t tmid [kh]" using 1 G gensyn_descend.intros(1)[of kh l]
                                     gensyn_get_list_child[of l kh "[]" tmid]
       by auto
     thus ?thesis using 2 gensyn_descend.intros(2) by fastforce
@@ -280,105 +265,61 @@ lemma ll_descend_eq_r2l :
 "gensyn_descend t t' k \<Longrightarrow>
 gensyn_get t k = Some t'"
 proof(induction rule:gensyn_descend.induct)
-  case (1 c q e ls t)
+  case (1 c ls t x)
   then show ?case using gensyn_get_list_nth2 by auto next
   case (2 t t' n t'' n')
   then show ?case using gensyn_get_comp by fastforce
 qed
 
-lemma gensyn_cp_next_nonnil_genind :
-  shows (*C1 :*) "\<And> cp cp' . gensyn_cp_next (t :: ('b, 'r, 'g) gensyn) cp = Some cp' \<longrightarrow>
+lemma cp_next_list_nonnil :
+  shows "\<And> cp cp' . gensyn_cp_next_list (l :: ('x) gensyn list) cp = Some cp' \<longrightarrow>
     (? cph' cpt' . cp' = cph' # cpt')"
-  and (*C2 :*) "\<And> cp cp' . gensyn_cp_next_list (l :: ('b, 'r, 'g) gensyn list) cp = Some cp' \<longrightarrow>
-    (? cph' cpt' . cp' = cph' # cpt')"
-proof(induction t and l rule:gensyn_induct)
-case (1 g b)
+proof(induction l rule:gensyn_induct')
+  case (1 x l)
+  then show ?case 
+   proof(cases cp)
+    case Nil then show ?thesis by auto next
+    case (Cons a list) then show ?thesis
+      apply(case_tac a) apply(clarsimp) apply(simp split:option.splits) apply(auto)
+      done
+  qed
+
+next
+  case 2
+  then show ?case by auto
+next
+  case (3 t l)
   then show ?case
   proof(cases cp)
-    case Nil then show ?thesis by auto next
-    case (Cons a list) then show ?thesis by auto next
-  qed
-next
-
-  case (2 g r l)
-  then show ?case 
-  proof(cases l)
-    case Nil then show ?thesis by auto next
-    case (Cons t list)
-    then show ?thesis
-    proof(cases cp)
-      assume Nil': "cp = []"
-      then show ?thesis using Cons by auto next
-
-      fix a lista
-      assume Cons' : "cp = a#lista"
-      then show ?thesis using Cons 2 by auto next
-    qed next
-  qed next
-
-  case (3) thus ?case by auto next
-
-  case (4 t l)
-  thus ?case
-  proof(cases cp)
     case Nil
-    then show ?thesis by auto next
-
+    then show ?thesis by auto
+  next
     case (Cons a list)
-    then show ?thesis using 4
-    proof(cases a)
-      case 0 then show ?thesis
-      proof(cases l)
+    then show ?thesis using 3        
+    proof(cases l)
         assume Nil' : "l=[]"
-        then show ?thesis
-        proof(cases "gensyn_cp_next t list")
-          case None
-          then show ?thesis using Nil' Cons 4 0 by auto
-        next
-          case (Some cpn)
-          then show ?thesis using Nil' Cons 4 0 by auto
-        qed next
+        then show ?thesis using Nil' Cons 3 by auto next
 
         fix lh ll
         assume Cons' : "l = lh#ll"
         then show ?thesis
-        proof(cases "gensyn_cp_next t list")
-          case None
-          then show ?thesis using Cons' Cons 4 0 by auto
+        proof(cases a)
+          case 0
+          then show ?thesis using Cons Cons' 3 
+            apply(case_tac t, auto)
+            apply(auto split:option.splits)
+            done
         next
-          case (Some cpn)
-          then show ?thesis using Cons Cons' 4 0 by auto
+          case (Suc nat)
+          then show ?thesis using Cons Cons' 3
+            apply(case_tac t, auto)
+            apply(auto split:option.splits list.splits)
+            done
         qed
-      qed next
+        qed
+      qed
+qed
 
-      case (Suc nat)
-      then show ?thesis
-        proof(cases l)
-          assume Nil' : "l=[]"
-          then show ?thesis using Cons Suc 4 by auto
-        next
-          fix lh ll
-          assume Cons' : "l=lh#ll"
-          then show ?thesis using Cons Suc 4 
-          proof(cases "gensyn_cp_next_list (lh # ll) (nat # list)")
-            case None
-            then show ?thesis using Cons Cons' Suc 4 by auto
-          next
-            case (Some cpn)
-            then show ?thesis
-            proof(cases cpn)
-              assume Nil'' : "cpn=[]"
-              then show ?thesis using Cons Cons' Suc 4 Some by auto
-            next
-              fix cpnh cpnt
-              assume Cons'' : "cpn=cpnh#cpnt"
-              then show ?thesis using Cons Cons' Suc 4 Some by auto
-            qed
-          qed
-        qed
-      qed next
-    qed next
-  qed
 
 lemma gensyn_cp_next_list_lesser:
   
@@ -389,7 +330,7 @@ proof(induction a arbitrary: lt lh)
   then show ?case
     apply(case_tac lt) apply(auto)
     apply(case_tac lh) apply(auto)
-    apply(case_tac x23) apply(auto)
+    apply(case_tac x2, auto)
     done
 next
   case (Suc a)
@@ -406,7 +347,7 @@ proof(induction a arbitrary: lt lh)
   then show ?case
     apply(case_tac lt) apply(auto)
     apply(case_tac lh) apply(auto)
-    apply(case_tac x23) apply(auto)
+    apply(case_tac x2) apply(auto)
     done
 next
   case (Suc a)
@@ -695,22 +636,9 @@ next
 qed
 *)
 
-(* need to characterize None case? *)
-lemma gensyn_next_spec' :
-  fixes s :: "('a, 'b, 'c) gensyn"
-  and l :: "('a, 'b, 'c) gensyn list"
-shows "\<And> c c' c'' s'. 
-         (gensyn_cp_next s c = Some c' \<longrightarrow>
-          cp_less c c' \<and>
-         ( 
-               gensyn_get s c'' = Some s' \<longrightarrow>
-               cp_less c c'' \<longrightarrow>
-              (c'' = c' \<or> cp_less_nilmin c' c'')))
-          \<and>
-          (gensyn_cp_next s c = None \<longrightarrow>
-          gensyn_get s c'' = Some s' \<longrightarrow>
-          \<not> cp_less c c'')"
-  and "\<And> c c' c'' s'. 
+lemma gensyn_cp_next_list_spec' [rule_format]:
+  fixes s :: "('x) gensyn list"
+  shows "! c c' c'' s'. 
         (gensyn_cp_next_list l c = Some c' \<longrightarrow>
          cp_less c c' \<and>
           (
@@ -721,171 +649,127 @@ shows "\<And> c c' c'' s'.
         (gensyn_cp_next_list l c = None \<longrightarrow>
           gensyn_get_list l c'' = Some s' \<longrightarrow>
           \<not> cp_less c c'')"
-proof(induction s and l rule:gensyn_induct)
-  case (1 g b)
-  then show ?case by (cases c'', auto)
-next
-  case (2 g r l)
+proof(induction l rule:gensyn_induct')
+  case (1 x l)
   then show ?case
-    apply(auto)
-     apply(case_tac c'', auto)
-    apply(case_tac c'', auto)
+    apply(clarsimp)
+    apply(case_tac c, auto) apply(case_tac a, auto) apply(simp split:option.splits)
+       apply(case_tac c') apply(auto)
+     apply(case_tac c') apply(auto)
+    apply(case_tac c'') apply(auto)
+
+    apply(case_tac a, auto)
+      apply(simp split:if_split_asm option.splits)
+    apply(case_tac c'') apply(auto)
+      apply(simp split:if_split_asm option.splits)
+      apply(simp split:if_split_asm option.splits)
+     apply(case_tac listb) apply(auto)
+
+    apply(case_tac c'') apply(auto)
+      apply(simp split:if_split_asm option.splits)
+     apply(case_tac aa, auto)
+apply(case_tac aa, auto)
+      apply(simp split:if_split_asm option.splits)
+
+    apply(case_tac lista) apply(auto)
     done
 next
-  case 3
-  then show ?case
-    apply(auto) apply(case_tac c'', auto)
-    done
+  case 2
+  then show ?case by auto
 next
-  case (4 t l)
-  then show ?case 
-  proof(cases l)
-    case Nil
-    then show ?thesis
-    proof(cases c)
-      assume Nil' : "c = []"
-      then show ?thesis using Nil 4 by auto
-    next
-      fix a list
-      assume Cons' : "c = a#list"
-      then show ?thesis
-      proof(cases a)
-        case 0
-        then show ?thesis using 4 Nil Cons'
-        proof(cases "gensyn_cp_next t list")
-          case None
-          then show ?thesis using "4.prems" "4.IH"(1)[of list] Nil Cons' 0
-            apply(case_tac c'', auto)
-            apply(case_tac aa, auto)
-            done
-        next
-          case (Some a')
-          then show ?thesis using "4.prems" "4.IH"(1)[of list a'] Nil Cons' 0 apply(auto)
-            apply(case_tac c'') apply(auto)
-             apply(case_tac "0 < aa", auto)
-            apply(case_tac "0 < aa", auto)
-            done
-        qed
-      next
-        case (Suc nat)
-        then show ?thesis using 4 Nil Cons'
-          apply(auto)
-          apply(case_tac c'', auto)
-          apply(case_tac aa, auto)
-          done
-      qed
-    qed
+  case (3 t l)
+  then show ?case
+    proof(cases l)
+      case Nil
+      then show ?thesis using 3
+        apply(clarsimp) 
+        done
   next
     case (Cons a list)
-    then show ?thesis using 4
-    proof(cases c)
-      assume Nil' : "c = []"
-      then show ?thesis using Nil 4 by auto
-    next
-      fix a' list'
-      assume Cons' : "c = a'#list'"
-      then show ?thesis
-      proof(cases a')
-        case 0
-        then show ?thesis using "4.prems" "4.IH" Cons Cons'
-          apply(auto)
-            apply(case_tac "gensyn_cp_next t list'", auto)
-            apply(case_tac "gensyn_cp_next t list'", auto)
+    then show ?thesis using 3
+      apply(clarsimp)
+      apply(case_tac t, clarsimp)
+      apply(case_tac "gensyn_cp_next_list (G x1 x2 # a # list) c")
 
-           apply(case_tac c'', auto)
-             apply(case_tac "0 < aa", auto)
-             apply(case_tac "Suc 0 < aa", auto)
+       apply(clarsimp)
+       apply(case_tac c) apply(clarsimp) apply(clarsimp)
+       apply(case_tac aa) apply(clarsimp) 
+        apply(simp split:option.split_asm)
+       apply(clarsimp)        
+        apply(simp split:option.split_asm)
 
-             apply(case_tac "0 < aa", auto)
-             apply(case_tac "Suc 0 < aa", auto)
+        apply(rotate_tac -3)
+        apply(drule_tac x = "nat#lista" in spec)  apply(clarsimp)
+        apply(case_tac c'') apply(clarsimp) apply(clarsimp)
+        apply(simp split:if_split_asm)
 
-            apply(case_tac lista, auto)
+         apply(case_tac aa) apply(clarsimp) apply(clarsimp)
+         apply(rotate_tac -5) apply(drule_tac x = "nata#listaa" in spec)
+         apply(clarsimp)
+
+      apply(clarsimp)
+         apply(rotate_tac -5) apply(drule_tac x = "nat#listaa" in spec)
+        apply(clarsimp)
+
+      apply(case_tac x2a) apply(clarsimp) 
+         apply(rotate_tac 4) apply(drule_tac x = "nat#lista" in spec)
+        apply(clarsimp)
+
+      apply(case_tac x2a) apply(clarsimp) 
+         apply(rotate_tac 4) apply(drule_tac x = "nat#lista" in spec)
+        apply(clarsimp)
+
+      apply(clarsimp)
+       apply(case_tac c) apply(clarsimp) apply(clarsimp)
+       apply(case_tac aa) apply(clarsimp) 
+        apply(simp split:option.split_asm)
+        apply(clarsimp)        
+        apply(case_tac c'') apply(clarsimp) apply(clarsimp)
+        apply(simp split:if_split_asm)
+
+      apply(case_tac listaa) apply(clarsimp) apply(clarsimp)
+
+      apply(clarsimp)
+         apply(drule_tac x = "0#lista" in spec)
+        apply(clarsimp)
+      apply(rotate_tac -1)
+        apply(drule_tac x = "0#listaa" in spec) apply(clarsimp)
+      apply(case_tac listaa) apply(clarsimp) apply(clarsimp)
+
+       apply(clarsimp)
+         apply(drule_tac x = "0#lista" in spec)
+        apply(clarsimp)
+      apply(rotate_tac -1)
+      apply(case_tac c'') apply(clarsimp) apply(clarsimp)
+       apply(simp split:if_split_asm)
+       apply(drule_tac x = "0#listaa" in spec) apply(clarsimp)
+       apply(case_tac listaa) apply(clarsimp) apply(clarsimp)
 
 
-           apply(case_tac c'', auto)
-            apply(case_tac "0 < aaa", auto)
-           apply(case_tac "0 < aaa", auto)
 
-          apply(case_tac "gensyn_cp_next t list'", auto)
-          done next
-        case (Suc a'')
-        then show ?thesis using "4.prems" "4.IH" Cons Cons'
-        proof (cases "gensyn_cp_next_list (a # list) (a'' # list')")
-          case None
-          then show ?thesis using 4 Cons Cons' Suc
-          proof(cases c'')
-            assume Nil'' : "c'' = []"
-            then show ?thesis using 4 Cons Cons' Suc None by auto
-          next
-            fix c''h c''t
-            assume Cons'' : "c'' = c''h#c''t"
-            then show ?thesis
-            proof(cases "c''h")
-              assume Zero' : "c''h = 0"
-              then show ?thesis using "4.prems" "4.IH" Cons Cons' Suc None Cons'' by auto
-            next
-              fix c''h'
-              assume Suc' : "c''h = Suc c''h'"
-              then show ?thesis using "4.prems" "4.IH"(2)[of "c''h'#list'" _ "c''h'#c''t" "s'"] "4.IH"(2)[of "a''#list'" _ "c''h'#c''t" "s'"] Cons Cons' Suc None Cons''
-                by (auto)
-            qed
-          qed
-        next
-          case (Some result)
-          then show ?thesis
-          proof(cases result)
-            assume Nil'' : "result = []" 
-            then show ?thesis using "4.prems" "4.IH"(2)[of "a''#list'" "[]"] Cons Cons' Suc Some
-              by auto
-          next
-            fix resh rest
-            assume Cons'' : "result = resh#rest"
-            then show ?thesis
-            proof(cases c'')
-              assume Nil''' : "c'' = []"
-              then show ?thesis using "4.prems" "4.IH"(2)[of "resh#list'" "resh#rest"] "4.IH"(2)[of "a''#list'" "resh#rest"] Cons Cons' Suc Some Cons''
-                apply(auto)
-               apply(case_tac "a'' < resh", auto)
-                done
-            next
+      apply(clarsimp)
+      apply(case_tac " gensyn_cp_next_list (a # list) (nat # lista)")
+       apply(clarsimp)
+      apply(clarsimp)
+      apply(case_tac aa) apply(clarsimp) apply(clarsimp)
+      apply(rotate_tac -3) apply(drule_tac x = "nat#lista" in spec) apply(clarsimp)
+      apply(simp split:if_split_asm) apply(clarsimp)
+       apply(case_tac c'') apply(clarsimp) apply(clarsimp)
+       apply(simp split:if_split_asm) apply(clarsimp)
+         apply(drule_tac x = "aa # listb" in spec) apply(clarsimp)
 
-              fix c''h c''t
-              assume Cons''' : "c'' = c''h#c''t"
-              then show ?thesis
-              proof(cases c''h)
-                assume Zero' : "c''h = 0"
-                thus ?thesis
-                  using "4.prems" "4.IH"(2)[of "resh#list'" "resh#rest"] "4.IH"(2)[of "a''#list'" "resh#rest"] Cons Cons' Suc Some Cons'' Cons'''
-                  apply(case_tac "a'' < resh", auto)
-                  done
+      apply(case_tac ab) apply(clarsimp) apply(clarsimp)
+        apply(drule_tac x = "nata # listb" in spec) apply(clarsimp)
 
-              next
-                fix c''h'
-                assume Suc' : "c''h = Suc c''h'"
-                then show ?thesis
-                  using "4.prems" "4.IH"(2)[of "resh#list'" "resh#rest"] "4.IH"(2)[of "a''#list'" "resh#rest" "c''h'#c''t" s'] Cons Cons' Suc Some Cons'' Cons'''
-                  apply(auto)
-                  apply(case_tac "a'' < resh", auto)
-                  apply(case_tac "a'' < resh", auto)
-                           apply(case_tac "a'' < resh", auto)
-                          apply(case_tac "c''h' < resh", auto)
-                         apply(case_tac "a'' < resh", auto)
-                        apply(case_tac "c''h' < resh", auto)
-                       apply(case_tac "resh < c''h'", auto)
-                      apply(case_tac "resh < c''h'", auto)
-                     apply(case_tac "a'' < resh", auto)
-                      apply(case_tac "resh < c''h'", auto)
-                      apply(case_tac "resh < c''h'", auto)
-                  apply(case_tac "a'' < resh", auto)
-                  done
-              qed
-            qed
-          qed
-      qed
-    qed
-  qed          
+      apply(case_tac ab) apply(clarsimp) apply(clarsimp)
+       apply(drule_tac x = "nata # listb" in spec) apply(clarsimp)
+
+       apply(case_tac c'') apply(clarsimp) apply(clarsimp)
+         apply(drule_tac x = "aa # listb" in spec) apply(clarsimp)
+      done
+  qed
 qed
-qed
+
 
 lemma cp_less_irref :
 "\<not> cp_less c c"
