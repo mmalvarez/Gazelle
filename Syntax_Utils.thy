@@ -144,7 +144,8 @@ fun deunitr :: "'a \<Rightarrow> ('a * unit)" where
 (* clone of unit,
 used instead of the empty type which we can't
 have in Isabelle. *)
-datatype Empty = emp
+datatype  (plugins del: code) Empty  = emp
+
 
 (* using these we can pretend that empty
 is the unit for sums, so long as we never

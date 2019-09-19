@@ -1,18 +1,36 @@
 theory I_Seq_Semantics
-  imports I_Semantics Seq_Semantics
+  imports I_Semantics Seq_Semantics Merge_Semantics
 begin
 
+(*
 locale I_Seq_Semantics_Sig = I_Semantics_Sig + Seq_Semantics_Sig
 
 locale I_Seq_Semantics = I_Seq_Semantics_Sig
-
+*)
 sublocale I_Semantics \<subseteq> Base_Next_Semantics
   where xr = xr
   and ms = ms
-  and base_sem = i_base_sem
+  and x_sem = x_sem_i
   done
 
+interpretation Seq_Semantics_Nop :
+  Seq_Semantics "TYPE(unit)" _ seq_nop
+  done
 
+(* no parameters... ?*)
+locale I_Seq_Semantics = I_Semantics + Seq_Semantics
+
+(* this approach will not let us do multiple merges? *)
+sublocale I_Seq_Semantics \<subseteq> Merge_Sum_Mpack_Simple
+  where
+  ms = ms
+  and x_sem_left = x_sem_next
+  and x_sem_right = x_sem_seq
+  and dummy_xs1 = "()"
+and dummy_xs2 = "()"
+  done
+
+(*
 sublocale I_Seq_Semantics \<subseteq> I_Semantics
   where xr = xr
   and ms = ms
@@ -24,33 +42,36 @@ sublocale I_Seq_Semantics \<subseteq> Seq_Semantics
   and ms = ms
   and seq_sem = seq_sem
   done
+*)
+(* we need a module to govern the merging *)
 
 (* problem now is with merging the states *)
 
-locale I_Seq_Semantics_Final = I_Seq_Semantics
-
-sublocale I_Seq_Semantics_Final \<subseteq> Gensyn_Semantics
-  where xr = xr
-  and ms = ms
-  and base_sem = base_sem_next
-  and rec_sem = seq_rec_sem
-  done
-
 print_locale I_Seq_Semantics
 
-interpretation Gensyn_Semantics_Seq_Calc :
-  I_Seq_Semantics_Final "TYPE(unit)" _ calc_semb seq_nop
-  done
-term "Gensyn_Semantics_Seq_Calc.gensyn_sem"
+locale I_Seq_Semantics_Final = I_Seq_Semantics
 
-lemma testout2 : "Gensyn_Semantics_Seq_Calc.gensyn_sem (GRec () (LSeq ()) [(GBase () (LInst AccReset))
-                                                                         ,(GBase () (LInst (AccAdd 1)))]) [] 0 43"
+
+sublocale I_Seq_Semantics_Final \<subseteq> Gensyn_Semantics
+  where ms = ms
+    and x_sem = x_sem_summed
+  done
+
+interpretation I_Seq_Semantics_FinalI
+  : I_Seq_Semantics_Final "TYPE(unit)" _ calc_semb seq_nop
+
+  done
   
-  apply(fastforce intro : Gensyn_Semantics_Seq_Calc.gensyn_sem.intros
-Gensyn_Semantics_Seq_Calc.seq_rec_sem.intros
+(* need a way to disambiguate the syntax.
+   perhaps this is why we originally wanted to use associativity? *)
+lemma testout2 : "I_Seq_Semantics_FinalI.gensyn_sem (G (LSeq (), ()) [(G (LInst AccReset, ()))
+                                                                    ,(G (LInst (AccAdd 1), ()))]) [] 0 43"
+
+  apply(fastforce intro : I_Seq_Semantics_FinalI.gensyn_sem.intros
+I_Seq_Semantics_FinalI.x_sem_summed.intros
 seq_nop.intros
-I_Semantics_Calc.base_sem_next.intros
-I_Semantics_Calc.i_base_sem.intros
+I_Semantics_Calc.x_sem_next.intros
+I_Semantics_Calc.x_sem_i.intros
 calc_semb.intros)
 
 (*  

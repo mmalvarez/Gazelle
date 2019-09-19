@@ -6,6 +6,9 @@ datatype ('x) gensyn =
 
 declare gensyn.splits [split]
 
+fun gs_map :: "('x \<Rightarrow> 'y) \<Rightarrow> 'x gensyn \<Rightarrow> 'y gensyn" where
+"gs_map f (G x l) = G (f x) (map (gs_map f) l)"
+
 (* for consistency with other syntax declarations *)
 (*
 definition LSeq :: "'g \<Rightarrow> 'r \<Rightarrow> (('b, 'r, 'g) gensyn list) \<Rightarrow> ('b, 'r, 'g) gensyn" where

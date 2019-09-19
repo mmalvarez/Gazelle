@@ -1,4 +1,4 @@
-theory I_Semantics imports "Gensyn_Semantics_TypeParam" "../Syntax/Syn_I"
+theory I_Semantics imports "Gensyn_Semantics" "../Syntax/Syn_I"
 begin
 
 (* Do we want both a regular and exec? i think so *)
@@ -21,6 +21,46 @@ instructions?
 eed
 
 *)
+
+consts Length :: "'a \<Rightarrow> nat"
+
+overloading
+  Length0 \<equiv> "Length :: unit \<Rightarrow> nat"
+begin
+
+fun Length0 :: "unit \<Rightarrow> nat" where
+  "Length0 () = 0"
+
+end
+
+value [nbe] "Length () :: nat"
+
+
+consts LInst :: "'i \<Rightarrow> 'xp \<Rightarrow> ('a, 'b, 'c) mpack"
+
+overloading
+  LInst0 \<equiv> "LInst :: 'i \<Rightarrow> 'xp \<Rightarrow> ('i, 'xp, 's) syn_i"
+begin
+
+fun LInst0 :: "'i \<Rightarrow> 'xp \<Rightarrow> ('i, 'xp, 's) mpack" where
+  "LInst0 i xp = (Inl i, xp)"
+
+end 
+
+lemma huh : "(LInst () () :: (_, _, _) syn_i)  = (Inl (), ())"
+  apply(simp)
+  done
+
+declare huh [code]
+
+
+value "LInst () () :: (unit, unit, unit) syn_i"
+
+
+value [nbe] "LInst () () :: (unit, unit, unit) syn_i"
+
+
+
 
 locale I_Semantics_Sig =
   fixes xr :: "'rs itself"
@@ -61,13 +101,12 @@ do we need another extension point to allow for this?. *)
 
 print_context
 
-inductive i_base_sem :: "'g \<Rightarrow>
-                         ('c, 'xb, 'xa) syn_i \<Rightarrow> 
+inductive x_sem_i :: "  ('c, 'xp, 'xs) syn_i \<Rightarrow> 
                          'b \<Rightarrow>
                          'b \<Rightarrow>
-                          childpath \<Rightarrow> (('c, 'xb, 'xa) syn_i, 'r, 'g) gensyn \<Rightarrow> 
+                          childpath \<Rightarrow> ('c, 'xp, 'xs) syn_i gensyn \<Rightarrow> 
                           ('a) gs_result \<Rightarrow> bool" where
-"i_sem i m m' \<Longrightarrow> i_base_sem g (LInst i) m m' cp sk GRUnhandled"
+"i_sem i m m' \<Longrightarrow> x_sem_i (LInst i xp) m m' cp t GRUnhandled"
 
 (* We still need a way to handle different kinds of gs results *)
 
@@ -82,26 +121,12 @@ locale Gensyn_Semantics_I = I_Semantics
 
 (* this seems like a bad idea unless we can make things work out
    when we combine together multiple locales *)
+(*
 sublocale Gensyn_Semantics_I \<subseteq> Gensyn_Semantics_Base_Sig
   where base_sem = i_base_sem
   done
+*)
 
-
-locale RecSem_Test
-
-sublocale RecSem_Test \<subseteq> Gensyn_Semantics_Rec_SigO
-  where rec_sem = nosem_rec_sem
-  done
-
-print_locale! RecSem_Test
-
-(* how can we fuse a base and rec sem together in a modular/separated way?
-can we?*)
-
-locale Gensyn_Semantics_Full_I' = Gensyn_Semantics_I
-
-sublocale Gensyn_Semantics_Full_I' \<subseteq> RecSem_Test
-  done
 
 (* testing out sublocales *)
 (* i think the problem with this is that we cannot further
@@ -127,57 +152,55 @@ interpretation I_Semantics_Calc :
 
 
 interpretation Gensyn_Semantics_Calc :
-  Gensyn_Semantics "TYPE(unit)" _ I_Semantics_Calc.i_base_sem nosem_rec_sem
+  Gensyn_Semantics "TYPE(unit)" _ I_Semantics_Calc.x_sem_i
   done
 
 
-locale Gensyn_Base_Override_Unhandled =
-  fixes base_sem :: "'g \<Rightarrow> 
-                          'b \<Rightarrow> 
+locale Gensyn_Base_Oneshot =
+  fixes ms :: "'mstate itself"
+  fixes x_sem :: "'x \<Rightarrow>
                            'mstate \<Rightarrow>
                            'mstate \<Rightarrow>
-                           childpath \<Rightarrow> ('b, 'r, 'g) gensyn \<Rightarrow> 
+                           childpath \<Rightarrow> ('x) gensyn \<Rightarrow> 
                            ('xrs) gs_result \<Rightarrow> bool"
 begin
 
-inductive base_sem_done :: "'g \<Rightarrow> 
-                          'b \<Rightarrow> 
+inductive x_sem_oneshot :: "'x \<Rightarrow> 
                            'mstate \<Rightarrow>
                            'mstate \<Rightarrow>
-                           childpath \<Rightarrow> ('b, 'r, 'g) gensyn \<Rightarrow> 
+                           childpath \<Rightarrow> ('x) gensyn \<Rightarrow> 
                            ('xrs) gs_result \<Rightarrow> bool"
   where
-"base_sem g b m m' cp t GRUnhandled \<Longrightarrow>
- base_sem_done g b m m' cp t GRDone"
+"x_sem x m m' cp t GRUnhandled \<Longrightarrow>
+ x_sem_oneshot x m m' cp t GRDone"
 
-| "base_sem g b m m' cp t res \<Longrightarrow>
-  base_sem_done g b m m' cp t res"
+| "x_sem x m m' cp t res \<Longrightarrow>
+  x_sem_oneshot x m m' cp t res"
 
 end
 
-locale I_Semantics_Done = Gensyn_Base_Override_Unhandled
+locale I_Semantics_Oneshot = I_Semantics
 
 
-sublocale I_Semantics \<subseteq> Gensyn_Base_Override_Unhandled
-  where base_sem = i_base_sem
+sublocale I_Semantics_Oneshot \<subseteq> Gensyn_Base_Oneshot
+  where x_sem = x_sem_i
   done
   
 
-sublocale Gensyn_Semantics_Full_I' \<subseteq> Gensyn_Semantics
-  where base_sem = base_sem_done
-  and rec_sem = rec_semO
+sublocale I_Semantics_Oneshot \<subseteq> Gensyn_Semantics
+  where x_sem = x_sem_oneshot
   done
 
-interpretation Gensyn_Semantics_Full_Calc :
-  Gensyn_Semantics_Full_I' "TYPE(unit)" _ calc_semb
+interpretation Gensyn_Semantics_Calc_Oneshot :
+  I_Semantics_Oneshot "TYPE(unit)" _ calc_semb
   done
 
 term Gensyn_Semantics_Calc.gensyn_sem
 
-lemma testout1 : "Gensyn_Semantics_Full_Calc.gensyn_sem (GBase () (LInst AccReset)) [] 0 42"
-  apply(rule Gensyn_Semantics_Full_Calc.gensyn_sem.intros) apply(auto)
-  apply(rule Gensyn_Base_Override_Unhandled.base_sem_done.intros)
-  apply(rule I_Semantics.i_base_sem.intros)
+lemma testout1 : "Gensyn_Semantics_Calc_Oneshot.gensyn_sem (G (LInst AccReset ()) []) [] 0 42"
+  apply(rule Gensyn_Semantics_Calc_Oneshot.gensyn_sem.intros) apply(auto)
+  apply(rule Gensyn_Base_Oneshot.x_sem_oneshot.intros)
+  apply(rule I_Semantics.x_sem_i.intros)
   apply(rule calc_semb.intros)
   apply(auto)
   done
