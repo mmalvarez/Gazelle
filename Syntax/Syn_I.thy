@@ -1,13 +1,76 @@
-theory Syn_I imports "MiniPack"
+theory Syn_I imports "MiniPack" "../Reify"
 begin
 (* Syntax with instructions *)
 (* This serves as a template for what
 base-case syntax instatiations look like *)
 
-type_synonym ('d, 'xp, 'xs) syn_i = "('d, 'xp, 'xs) mpack"
 
-fun snd' :: "('a * 'b) \<Rightarrow> 'b" where
-"snd' (_, b) = b"
+
+(*
+datatype ('t) reified' =
+  RR "'t"
+
+fun do_denote' :: "'a reified' \<Rightarrow> 'a" where
+"do_denote' (RR x) = x"
+
+consts reify' :: "'a \<Rightarrow> 'b reified'"
+
+adhoc_overloading reify' RR
+
+consts denote' :: "'a reified' \<Rightarrow> 'b"
+
+adhoc_overloading denote' do_denote'
+
+(* we could even encode type names as strings here. *)
+fun denNat :: "('a, 'b) reified \<Rightarrow> nat" where
+"denNat (RNat n) = n"
+| "denNat _ = undefined"
+
+fun denUnit :: "('a, 'b) reified \<Rightarrow> unit" where
+"denUnit (RUnit n) = n"
+| "denUnit _ = undefined"
+
+fun denBool :: "('a, 'b) reified \<Rightarrow> bool" where
+"denBool (RBool n) = n"
+| "denBool _ = undefined"
+
+
+term "RProd"
+
+consts reify :: "'a \<Rightarrow> ('x, 'y) reified"
+
+adhoc_overloading reify "(\<lambda> x :: nat . RNat x)"
+adhoc_overloading reify "(\<lambda> x :: unit . RUnit x)"
+adhoc_overloading reify "(\<lambda> x :: bool . RBool x)"
+adhoc_overloading reify "(\<lambda> x :: ('t1 * 't2) . (case x of
+          (a, b) \<Rightarrow> (RProd (a, b))))"
+
+consts denote :: "('x, 'y) reified \<Rightarrow> 'a"
+
+adhoc_overloading denote denNat
+adhoc_overloading denote denUnit
+adhoc_overloading denote denBool
+
+fun denProd :: "('a, 'b) reified \<Rightarrow> 'a * 'b" where
+  "denProd (RProd (r1, r2)) = (r1, r2)"
+
+adhoc_overloading denote "denProd"
+
+value "denote' (RR True) :: bool"
+
+value "denote (RBool True) :: bool"
+*)
+(*
+definition docons :: "'i itself \<Rightarrow> 
+                      'o1 itself \<Rightarrow> 'o2 itself \<Rightarrow>
+                  char list \<Rightarrow> char list \<Rightarrow> 
+                  'i \<Rightarrow> ('i \<Rightarrow> 'o1) \<Rightarrow> (char list \<Rightarrow> 'i \<Rightarrow> 'o2) \<Rightarrow>
+                  ((char list *'o1) + 'o2)" where
+"docons ti to1 to2 s1 s2 a fa fb =
+  (if s1 = s2 then (Inl (s1, fa a)) else
+      Inr (fb s2 a))"
+*)
+
 
 
 (*

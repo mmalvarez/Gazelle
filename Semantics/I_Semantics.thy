@@ -36,32 +36,81 @@ end
 value [nbe] "Length () :: nat"
 
 
-consts LInst :: "'i \<Rightarrow> 'xp \<Rightarrow> ('a, 'b, 'c) mpack"
+
+(*consts LInst :: "'full itself \<Rightarrow> 'i \<Rightarrow> 'xp \<Rightarrow> ('i, 'xp, 'a) mpack"*)
+(*
+consts LInst :: "('w, 'x, 'y) mpack itself \<Rightarrow> 'i \<Rightarrow> 'xp \<Rightarrow> ('w, 'x, 'y) mpack"
 
 overloading
-  LInst0 \<equiv> "LInst :: 'i \<Rightarrow> 'xp \<Rightarrow> ('i, 'xp, 's) syn_i"
+  LInst0 \<equiv> "LInst :: ('i, 'xp, 'a) mpack itself \<Rightarrow> 'i \<Rightarrow> 'xp \<Rightarrow> ('i, 'xp, 'a) mpack"
 begin
 
-fun LInst0 :: "'i \<Rightarrow> 'xp \<Rightarrow> ('i, 'xp, 's) mpack" where
-  "LInst0 i xp = (Inl i, xp)"
-
+fun LInst0 :: "('i, 'xp, 'a) mpack itself \<Rightarrow> 'i \<Rightarrow> 'xp \<Rightarrow> ('i, 'xp, 'a) mpack" where
+  "LInst0 tf i xp = (Inl i, xp) "
 end 
 
-lemma huh : "(LInst () () :: (_, _, _) syn_i)  = (Inl (), ())"
-  apply(simp)
-  done
 
-declare huh [code]
+
+lemmas [code] = LInst0.simps
 
 
 value "LInst () () :: (unit, unit, unit) syn_i"
 
+*)
 
-value [nbe] "LInst () () :: (unit, unit, unit) syn_i"
+(*
+declare [[coercion_enabled]]
+
+fun natid :: "nat \<Rightarrow> nat" where
+"natid x = x"
+
+fun swap :: "('a \<Rightarrow> 'b) \<Rightarrow> ('b \<Rightarrow> 'a) \<Rightarrow> ('a + 'b) \<Rightarrow> ('b + 'a)"
+  where
+"swap f g (Inl x) = Inr x"
+| "swap f g (Inr x) = Inl x"
+
+declare [[coercion_map swap]]
+*)
+
+value \<open>STR''abc'' :: string\<close>
 
 
+consts GetLen :: "'a \<Rightarrow> nat"
+overloading
+  GetLen0 \<equiv> "GetLen :: unit \<Rightarrow> nat"
+begin
 
+fun GetLen0 :: "unit \<Rightarrow> nat" where
+  "GetLen0 () = 0"
 
+end
+
+declare GetLen0.simps [simp]
+
+value [nbe] "GetLen () :: nat"
+
+consts GetNat :: "'a \<Rightarrow> nat"
+overloading
+  Get0 \<equiv> "GetNat :: nat \<Rightarrow> nat"
+begin
+
+fun Get0 :: "nat \<Rightarrow> nat" where
+  "Get0 n = n"
+
+end
+
+lemma testt : "GetNat (1 :: nat) = 1"
+  apply(simp)
+  done
+
+value [nbe] "case (GetNat (0 :: nat) :: nat) of 0 \<Rightarrow> False | _ \<Rightarrow> True"
+
+(*
+
+value "(\<lambda> (x, y) . x) (2 :: nat, undefined :: nat)"
+
+value "fst ((3, undefined) :: nat * nat)"
+*)
 locale I_Semantics_Sig =
   fixes xr :: "'rs itself"
   fixes ms :: "'mstate itself"
