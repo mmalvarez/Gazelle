@@ -2,8 +2,12 @@ theory MiniPack imports "../Syntax_Utils"
 
 begin
 
+type_synonym ('d, 'xp, 'xs) mpackf =
+  "char list * 'xp * ('d + 'xs)"
+
 type_synonym ('d, 'xp, 'xs) mpack =
   "'xp * ('d + 'xs)"
+
 
 type_synonym ('d, 'x) mmpack =
   "('d + 'x)"
@@ -17,47 +21,27 @@ type_synonym ('d, 'xp, 'xs) mmppack =
 type_synonym ('i, 'o1, 'o2) ctor =
   "('i \<Rightarrow> 'o1) + ((('i \<Rightarrow> 'o1) * ('o1 \<Rightarrow> 'o2)))"
 
-type_synonym str = String.literal
-
-(* idea: if strings match, we do Inl.
-         if strings don't match we wrap with Inr and do
-         some other constructor *)
-fun Ctor :: "String.literal \<Rightarrow> String.literal \<Rightarrow> 'xp \<Rightarrow> 'i \<Rightarrow>
-                            ('i \<Rightarrow> 'd) \<Rightarrow>
-                            (String.literal \<Rightarrow> 'i \<Rightarrow> 'xs) \<Rightarrow>
-                            ('d, 'xp, 'xs) mpack" where
-"Ctor s1 s2 xp i f1 f2 = (if s1 = s2 then (xp, Inl (f1 i))
-             else (xp, Inr (f2 s2 i)))"
-
-type_synonym ('d, 'xp, 'xs) mp_ctor' =
-  "string \<Rightarrow> 'd \<Rightarrow> 'xp \<Rightarrow> 'xs"
-
-type_synonym ('d, 'xp, 'xs) mpack_alt =
-  "('d * 'xp) + 'xs"
-
-type_synonym 'd mpack1 =
-  "('d, _, _) mpack"
 
 (* we may have subtyping issues here. *)
 type_synonym ('d, 'xp, 'xs, 'o) mp_disc =
-  "((('d * 'xp) \<Rightarrow> 'o) * (('xs * 'xp) \<Rightarrow> 'o))"
+  "((('xp * 'd) \<Rightarrow> 'o) * (('xp * 'xs) \<Rightarrow> 'o))"
 
 fun mp_constr ::
-  "'d \<Rightarrow> 'xp \<Rightarrow> ('d, 'xp, 'xs) mpack" where
-"mp_constr d xp = (Inl d, xp)"
+  "'xp \<Rightarrow> 'd \<Rightarrow> ('d, 'xp, 'xs) mpack" where
+"mp_constr xp d = (xp, Inl d)"
 
 fun mp_disc_apply ::
   "('d, 'xp, 'xs, 'o) mp_disc \<Rightarrow>
    ('d, 'xp, 'xs) mpack \<Rightarrow> 'o" where
-"mp_disc_apply (fd, fxs) (Inl d, xp) = fd (d, xp)"
-| "mp_disc_apply (fd, fxs) (Inr xs, xp) = fxs (xs, xp)"
+"mp_disc_apply (fd, fxs) (xp, Inl d) = fd (xp, d)"
+| "mp_disc_apply (fd, fxs) (xp, Inr xs) = fxs (xp, xs)"
 
-fun mp_comms:: "('d, 'xp, 'xs) mpack \<Rightarrow> ('xs + 'd) * 'xp" where
-"mp_comms (Inl d, xs) = (Inr d, xs)"
-| "mp_comms (Inr xp, xs) = (Inl xp, xs)"
+fun mp_comms:: "('d, 'xp, 'xs) mpack \<Rightarrow> 'xp * ('xs + 'd)" where
+"mp_comms (xs, Inl d) = (xs, Inr d)"
+| "mp_comms (xs, Inr xp) = (xs, Inl xp)"
 
 (* prod.swap lets us do the other swap *)
-fun mp_commp :: "('d, 'xp, 'xs) mpack \<Rightarrow> 'xp * ('d  + 'xs)" where
+fun mp_commp :: "('d, 'xp, 'xs) mpack \<Rightarrow> ('d  + 'xs) * 'xp" where
 "mp_commp x = prod.swap x"
 
 (* we need a way of adapting one mpack into another *)

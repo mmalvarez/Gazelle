@@ -3,13 +3,37 @@ begin
 
 type_synonym 'a lbd = "(char list * 'a)"
 
+(* test - small programming language for arithmetic *)
+datatype calc =
+  AccAdd nat
+  | AccSub nat
+  | AccReset
 
 datatype  reified =
   RNat nat
   | RUnit unit
   | RBool bool
+  | RCalc calc
   | RProd "reified * reified"
   | RSum "reified + reified"
+
+
+definition rpair :: "reified \<Rightarrow> reified \<Rightarrow> reified" where
+"rpair r1 r2 = RProd (r1, r2)"
+
+definition rsplit ::
+  "(reified \<Rightarrow> 'a) \<Rightarrow> (reified \<Rightarrow> 'b) \<Rightarrow> reified \<Rightarrow>
+    'a * 'b" where
+"rsplit da db r =
+  (case r of
+    RProd (a, b) \<Rightarrow> (da a, db b)
+    | _ \<Rightarrow> undefined)"
+
+definition rinl :: "reified \<Rightarrow> reified" where
+"rinl r = RSum (Inl r)"
+
+definition rinr :: "reified \<Rightarrow> reified" where
+"rinr r = RSum (Inr r)"
 
 class reified =
   fixes reify :: "'a \<Rightarrow> reified"  
@@ -29,6 +53,12 @@ end
 instantiation bool :: reified
 begin
 definition rbool_def : "reify x = RBool x"
+instance proof qed
+end
+
+instantiation calc :: reified
+begin
+definition rcalc_def : "reify x = RCalc x"
 instance proof qed
 end
 
@@ -57,6 +87,12 @@ definition dbool_def :
 instance proof qed
 end
 
+instantiation calc :: denoted
+begin
+definition dcalc_def :
+  "denote x = (case x of (RCalc n) \<Rightarrow> n | _ \<Rightarrow> undefined)"
+instance proof qed
+end
 
 instantiation prod :: (reified, reified) reified
 begin
@@ -100,12 +136,16 @@ definition dsum_def :
 instance proof qed
 end
 
-definition doconsR :: "char list \<Rightarrow> char list \<Rightarrow> 
-                  reified \<Rightarrow> (reified \<Rightarrow> 'o1) \<Rightarrow> (char list \<Rightarrow> reified \<Rightarrow> 'o2) \<Rightarrow>
-                  ((char list *'o1) + 'o2)" where
-"doconsR s1 s2 a fa fb =
-  (if s1 = s2 then (Inl (s1, fa a)) else
-      Inr (fb s2 a))"
+definition docons :: "char list \<Rightarrow> char list \<Rightarrow> 
+                  reified \<Rightarrow> (reified \<Rightarrow> 'xp * 'o1) \<Rightarrow> (char list \<Rightarrow> reified \<Rightarrow> char list * 'xp * 'o2) \<Rightarrow>
+                  (char list * 'xp * ('o1 + 'o2))" where
+"docons s1 s2 a  fa fb =
+  (if s1 = s2 then
+    (case fa a of
+      (xp, x) \<Rightarrow> (s2, xp, Inl x))
+    else
+    (case (fb s2 a) of
+      (rs, xp, rx) \<Rightarrow> (rs, xp, Inr rx)))"
 
 
 definition bail :: "'a \<Rightarrow> 'b" where
@@ -113,60 +153,26 @@ definition bail :: "'a \<Rightarrow> 'b" where
 
 (* examples/tests *)
 
-type_synonym result = "((nat lbd) + (bool lbd + unit lbd))"
+type_synonym result = "(unit * (nat + bool + unit)) lbd"
 
-term "doconsR'"
+term "docons"
 
-value "doconsR ''nat'' ''bool'' (reify (True)) (denote) 
-       (\<lambda> s r . doconsR s ''bool'' r denote bail ) :: result"
+fun uwrap :: "('a \<Rightarrow> 'b) \<Rightarrow> ('a \<Rightarrow> (unit * 'b))" where
+"uwrap f x = ((), f x)"
 
-value "doconsR ''nat'' ''bool'' (reify (True)) (denote) 
-       (\<lambda> s r . doconsR s ''bool'' r denote bail ) :: result"
+value "docons ''nat'' ''bool'' (reify (True)) (uwrap  denote) 
+       (\<lambda> s r . docons s ''bool'' r (uwrap  denote) bail ) :: result"
 
-value "doconsR ''nat'' ''nat'' (reify (0 :: nat)) (denote) 
-       (\<lambda> s r . doconsR s ''bool'' r denote bail ) :: result"
+value "docons ''nat'' ''bool'' (reify (True)) (uwrap denote) 
+       (\<lambda> s r . docons s ''bool'' r (uwrap denote) bail ) :: result"
+
+value "docons ''nat'' ''nat'' (reify (0 :: nat)) (uwrap denote) 
+       (\<lambda> s r . docons s ''bool'' r (uwrap denote) bail ) :: result"
 
 (* another option: reifying everything *)
 
 term "(\<lambda> ti to1 to2 s1 s2 x f1 f2 . docons_right ti to1 to2 s1 s2 x f2)"
 (*adhoc_overloading constr "(\<lambda> ti to1 to2 s1 s2 x f1 f2 . docons_left ti to2 s1 s2 x)"*)
-
-
-
-value "''abc''"
-
-value "constr (TYPE(nat)) (TYPE(_)) (TYPE(_))  ''abc'' ''abc'' (0 :: nat) id 
-      (\<lambda> s (_ :: nat) . undefined)  :: result"
-
-value "constr (TYPE(_)) (TYPE(_)) (TYPE(_))  ''abc'' ''abc'' (0 :: nat) id 
-      (bail :: char list \<Rightarrow> nat \<Rightarrow> _) :: result"
-
-value "constr (TYPE(_)) (TYPE(_)) (TYPE(_))  ''abc'' ''abc'' (0 :: nat) bail 
-      (\<lambda> s x . docons_left (TYPE(_)) (TYPE(_))  ''def'' s x)  :: result"
-
-value "constr (TYPE(_)) (TYPE(_)) (TYPE(_))  ''abc'' ''abc'' (0 :: nat) bail 
-      (\<lambda> s x . constr (TYPE(_)) (TYPE(_)) (TYPE(_)) ''def'' s x bail bail)  :: result"
-
-value "constr (TYPE(_)) (TYPE(_)) (TYPE(_))  ''abc'' ''def'' (True :: bool) bail
-    (\<lambda> s x . constr (TYPE(_)) (TYPE(_)) (TYPE(_)) ''def'' s x bail bail) :: result"
-
-
-term "docons_right (TYPE(_)) (TYPE(_)) (TYPE(_))  ''abc'' ''def'' (True :: bool)
-    (\<lambda> s x . docons_left (TYPE(_)) (TYPE(_)) ''def'' s x) :: result"
-
-
-value "docons_right (TYPE(_)) (TYPE(_)) (TYPE(_))  ''abc'' ''def'' (True :: bool)
-    (\<lambda> s x . docons_left (TYPE(_)) (TYPE(_)) ''def'' s x) :: result"
-
-value "constr (TYPE(_)) (TYPE(_)) (TYPE(_))  ''abc'' ''def'' (True :: bool) bail
-    (\<lambda> s x . docons_left (TYPE(_)) (TYPE(_)) ''def'' s x) :: result"
-
-value "constr (TYPE(_)) (TYPE(_)) (TYPE(_))  ''abc'' ''def'' (True :: bool) bail
-       (\<lambda> c i . docons_left (TYPE(_)) (TYPE(_))  c ''def'' i) :: result"
-
-
-value "constr (TYPE(_)) (TYPE(_)) (TYPE(_))  ''abc'' ''def'' (True :: bool) bail
-       bail :: result"
 
 
 

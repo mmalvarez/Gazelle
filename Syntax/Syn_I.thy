@@ -1,8 +1,39 @@
-theory Syn_I imports "MiniPack" "../Reify"
+theory Syn_I imports "Syntax"
 begin
 (* Syntax with instructions *)
 (* This serves as a template for what
 base-case syntax instatiations look like *)
+
+locale Syn_I =
+
+(*fixes xi :: "'i itself"
+fixes xp :: "'xp itself"
+fixes xs :: "'xs itself"*)
+fixes rxi :: "'i \<Rightarrow> reified"
+fixes dxi :: "reified \<Rightarrow> 'i"
+fixes rxp :: "'xp \<Rightarrow> reified"
+fixes dxp :: "reified \<Rightarrow> 'xp"
+(*
+fixes rxs :: "'xs \<Rightarrow> reified"
+fixes dxs :: "reified \<Rightarrow> 'xs"
+*)
+fixes othercases ::
+    "char list \<Rightarrow> reified \<Rightarrow> char list * 'xp * 'xs"
+
+begin
+
+print_context
+
+definition C ::
+  "char list \<Rightarrow> reified \<Rightarrow> reified \<Rightarrow> ('i, 'xp, 'xs) mpackf" where
+"C s p i =
+  docons ''LInst'' s (rpair p i) (rsplit dxp dxi) othercases"
+
+definition LInst :: "'xp \<Rightarrow> 'i \<Rightarrow> ('i, 'xp, 'xs) mpackf" where
+"LInst xp i = C ''LInst'' (rxp xp) (rxi i)"
+
+end
+
 
 
 
