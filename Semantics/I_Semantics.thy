@@ -63,7 +63,7 @@ print_context
 inductive x_sem_i :: "  ('a, 'b, 'c) mpackf \<Rightarrow> 
                          'e \<Rightarrow>
                          'e \<Rightarrow>
-                          childpath \<Rightarrow> ('a, 'b, 'c) mpackf gensyn \<Rightarrow> 
+                          childpath \<Rightarrow> ('a, 'b, 'c) mpackf option gensyn \<Rightarrow> 
                           ('d) gs_result \<Rightarrow> bool" where
 "i_sem i m m' \<Longrightarrow> x_sem_i (LInst xp i) m m' cp t GRUnhandled"
 
@@ -119,14 +119,14 @@ locale Gensyn_Base_Oneshot =
   fixes x_sem :: "'x \<Rightarrow>
                            'mstate \<Rightarrow>
                            'mstate \<Rightarrow>
-                           childpath \<Rightarrow> ('x) gensyn \<Rightarrow> 
+                           childpath \<Rightarrow> ('x option) gensyn \<Rightarrow> 
                            ('xrs) gs_result \<Rightarrow> bool"
 begin
 
 inductive x_sem_oneshot :: "'x \<Rightarrow> 
                            'mstate \<Rightarrow>
                            'mstate \<Rightarrow>
-                           childpath \<Rightarrow> ('x) gensyn \<Rightarrow> 
+                           childpath \<Rightarrow> ('x option) gensyn \<Rightarrow> 
                            ('xrs) gs_result \<Rightarrow> bool"
   where
 "x_sem x m m' cp t GRUnhandled \<Longrightarrow>

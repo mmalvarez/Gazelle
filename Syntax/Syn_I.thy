@@ -18,19 +18,27 @@ fixes rxs :: "'xs \<Rightarrow> reified"
 fixes dxs :: "reified \<Rightarrow> 'xs"
 *)
 fixes othercases ::
-    "char list \<Rightarrow> reified \<Rightarrow> char list * 'xp * 'xs"
+    "char list \<Rightarrow> reified \<Rightarrow> (char list * 'xp * 'xs) option"
 
 begin
 
 print_context
 
-definition C ::
-  "char list \<Rightarrow> reified \<Rightarrow> reified \<Rightarrow> ('i, 'xp, 'xs) mpackf" where
-"C s p i =
-  docons ''LInst'' s (rpair p i) (rsplit dxp dxi) othercases"
+definition C' ::
+  "char list \<Rightarrow> reified \<Rightarrow> 
+    (char list \<Rightarrow> reified \<Rightarrow> (char list * 'xp * 'xs) option) \<Rightarrow>
+    ('i, 'xp, 'xs) mpackf option" where
+"C' s xpi others =
+  docons ''Inst'' s xpi (rsplit dxp dxi) others"
 
+definition C ::
+  "char list \<Rightarrow> reified \<Rightarrow> reified \<Rightarrow> ('i, 'xp, 'xs) mpackf option"
+  where
+"C s xp i = (C' s (rpair xp i) othercases)"
+
+(* TODO: where to do force? *)
 definition LInst :: "'xp \<Rightarrow> 'i \<Rightarrow> ('i, 'xp, 'xs) mpackf" where
-"LInst xp i = C ''LInst'' (rxp xp) (rxi i)"
+"LInst xp i = force (C ''Inst'' (rxp xp) (rxi i))"
 
 end
 

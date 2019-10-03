@@ -20,7 +20,7 @@ inductive nosem_x_sem::
     'mstate \<Rightarrow> 
     'mstate \<Rightarrow> 
       childpath \<Rightarrow>
-      ('x) gensyn \<Rightarrow>  
+      ('x option) gensyn \<Rightarrow>  
       ('rx) gs_result \<Rightarrow>
       bool"
   where  "nosem_x_sem _ _ _ _ _ GRUnhandled"
@@ -34,7 +34,7 @@ locale Gensyn_Semantics_Sig =
                       'mstate \<Rightarrow> 
                       'mstate \<Rightarrow> 
                       childpath \<Rightarrow>
-                      ('x) gensyn \<Rightarrow>  
+                      ('x option) gensyn \<Rightarrow>  
                       ('xr) gs_result \<Rightarrow>
                       bool" 
 
@@ -61,12 +61,12 @@ inductive gensyn_sem ::
   where
   "\<And> t cp x l m m' .
     gensyn_get t cp = Some (G x l) \<Longrightarrow>
-    x_sem x m m' cp t GRDone \<Longrightarrow>
+    x_sem x m m' cp (gs_map Some t) GRDone \<Longrightarrow>
     gensyn_sem t cp m m'"
 
 | "\<And> t cp x l m cp' m' m'' .
     gensyn_get t cp = Some (G x l) \<Longrightarrow>
-    x_sem x m m' cp t (GRPath cp') \<Longrightarrow>
+    x_sem x m m' cp (gs_map Some t) (GRPath cp') \<Longrightarrow>
     gensyn_sem t cp' m' m'' \<Longrightarrow>
     gensyn_sem t cp m m''"
 end

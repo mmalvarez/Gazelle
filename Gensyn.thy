@@ -9,6 +9,16 @@ declare gensyn.splits [split]
 fun gs_map :: "('x \<Rightarrow> 'y) \<Rightarrow> 'x gensyn \<Rightarrow> 'y gensyn" where
 "gs_map f (G x l) = G (f x) (map (gs_map f) l)"
 
+fun gs_map_opt :: "('x \<Rightarrow> 'y option) \<Rightarrow> 'x gensyn \<Rightarrow> 'y gensyn option" where
+"gs_map_opt f (G x l) = 
+  (case (f x) of
+    None \<Rightarrow> None
+    | Some fx \<Rightarrow>
+    (case List.those (List.map (gs_map_opt f) l) of
+      None \<Rightarrow> None
+      | Some fl \<Rightarrow> Some (G fx fl)))"
+
+
 (* for consistency with other syntax declarations *)
 (*
 definition LSeq :: "'g \<Rightarrow> 'r \<Rightarrow> (('b, 'r, 'g) gensyn list) \<Rightarrow> ('b, 'r, 'g) gensyn" where

@@ -137,19 +137,25 @@ instance proof qed
 end
 
 definition docons :: "char list \<Rightarrow> char list \<Rightarrow> 
-                  reified \<Rightarrow> (reified \<Rightarrow> 'xp * 'o1) \<Rightarrow> (char list \<Rightarrow> reified \<Rightarrow> char list * 'xp * 'o2) \<Rightarrow>
-                  (char list * 'xp * ('o1 + 'o2))" where
+                  reified \<Rightarrow> (reified \<Rightarrow> ('xp * 'o1)) \<Rightarrow> 
+                  (char list \<Rightarrow> reified \<Rightarrow> (char list * 'xp * 'o2) option) \<Rightarrow>
+                  (char list * 'xp * ('o1 + 'o2)) option" where
 "docons s1 s2 a  fa fb =
   (if s1 = s2 then
     (case fa a of
-      (xp, x) \<Rightarrow> (s2, xp, Inl x))
+      (xp, x) \<Rightarrow> Some (s2, xp, Inl x))
     else
     (case (fb s2 a) of
-      (rs, xp, rx) \<Rightarrow> (rs, xp, Inr rx)))"
+      Some (rs, xp, rx) \<Rightarrow> Some (rs, xp, Inr rx)
+     | None \<Rightarrow> None))"
 
 
 definition bail :: "'a \<Rightarrow> 'b" where
 "bail x = undefined"
+
+fun force :: "'a option \<Rightarrow> 'a" where
+"force (Some a) = a"
+| "force None = undefined"
 
 (* examples/tests *)
 
@@ -160,14 +166,17 @@ term "docons"
 fun uwrap :: "('a \<Rightarrow> 'b) \<Rightarrow> ('a \<Rightarrow> (unit * 'b))" where
 "uwrap f x = ((), f x)"
 
+fun nonewrap :: "'a \<Rightarrow> 'b \<Rightarrow> 'c option" where
+"nonewrap _ _ = None"
+
 value "docons ''nat'' ''bool'' (reify (True)) (uwrap  denote) 
-       (\<lambda> s r . docons s ''bool'' r (uwrap  denote) bail ) :: result"
+       (\<lambda> s r . docons s ''bool'' r (uwrap  denote) nonewrap ) :: result option"
 
 value "docons ''nat'' ''bool'' (reify (True)) (uwrap denote) 
-       (\<lambda> s r . docons s ''bool'' r (uwrap denote) bail ) :: result"
+       (\<lambda> s r . docons s ''bool'' r (uwrap denote) nonewrap ) :: result option"
 
 value "docons ''nat'' ''nat'' (reify (0 :: nat)) (uwrap denote) 
-       (\<lambda> s r . docons s ''bool'' r (uwrap denote) bail ) :: result"
+       (\<lambda> s r . docons s ''bool'' r (uwrap denote) nonewrap ) :: result option"
 
 (* another option: reifying everything *)
 

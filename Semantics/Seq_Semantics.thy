@@ -1,12 +1,12 @@
 theory Seq_Semantics imports "Gensyn_Semantics" "../Syntax/Syn_Seq"
 begin
 
-locale Seq_Semantics_Sig =
+locale Seq_Semantics_Sig = Syn_Seq +
   fixes xr :: "'xr itself"
   fixes ms :: "'mstate itself"
-  fixes seq_sem :: "'sq \<Rightarrow> 'mstate \<Rightarrow> 'mstate \<Rightarrow> bool"
+  fixes seq_sem :: "'a \<Rightarrow> 'mstate \<Rightarrow> 'mstate \<Rightarrow> bool"
 
-inductive seq_nop :: "'sq \<Rightarrow> 'mstate \<Rightarrow> 'mstate \<Rightarrow> bool" where
+inductive seq_nop :: "'a \<Rightarrow> 'mstate \<Rightarrow> 'mstate \<Rightarrow> bool" where
 "seq_nop _ m m"
 
 locale Seq_Semantics = Seq_Semantics_Sig 
@@ -14,9 +14,9 @@ begin
 
 print_context
 
-inductive x_sem_seq :: "('c, 'xp, 'xs) syn_seq \<Rightarrow> 'b \<Rightarrow> 'b \<Rightarrow>
-  childpath \<Rightarrow> ('c, 'xp, 'xs) syn_seq gensyn \<Rightarrow> ('a) gs_result \<Rightarrow> bool" where
-"seq_sem s m m' \<Longrightarrow> x_sem_seq (LSeq s xp) m m' cp g (GRPath (cp@[0]))"
+inductive x_sem_seq :: "('a, 'b, 'c) mpackf \<Rightarrow> 'e \<Rightarrow> 'e \<Rightarrow>
+  childpath \<Rightarrow> ('a, 'b, 'c) mpackf option gensyn \<Rightarrow> ('d) gs_result \<Rightarrow> bool" where
+"seq_sem s m m' \<Longrightarrow> x_sem_seq (LSeq xp s) m m' cp g (GRPath (cp@[0]))"
 
 end
 
@@ -31,7 +31,7 @@ print_context
 
 inductive x_sem_next ::
     "'c \<Rightarrow> 'b \<Rightarrow> 'b \<Rightarrow> childpath \<Rightarrow>
-            ('c) gensyn \<Rightarrow>
+            ('c option) gensyn \<Rightarrow>
                  ('a) gs_result \<Rightarrow> bool"
     where
 "x_sem x m m' cp t GRUnhandled \<Longrightarrow>
