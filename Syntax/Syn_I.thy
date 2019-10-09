@@ -4,11 +4,12 @@ begin
 (* This serves as a template for what
 base-case syntax instatiations look like *)
 
-locale Syn_I =
+locale Syn_I = Syn_Sig
 
 (*fixes xi :: "'i itself"
 fixes xp :: "'xp itself"
 fixes xs :: "'xs itself"*)
+(*
 fixes rxi :: "'i \<Rightarrow> reified"
 fixes dxi :: "reified \<Rightarrow> 'i"
 fixes rxp :: "'xp \<Rightarrow> reified"
@@ -19,7 +20,7 @@ fixes dxs :: "reified \<Rightarrow> 'xs"
 *)
 fixes othercases ::
     "char list \<Rightarrow> reified \<Rightarrow> (char list * 'xp * 'xs) option"
-
+*)
 begin
 
 print_context

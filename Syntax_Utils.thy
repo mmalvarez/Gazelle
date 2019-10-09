@@ -364,4 +364,55 @@ fun smap3t ::
 "smap3t f (Inl a) = Inl a"
 | "smap3t f (Inr x) = Inr (smap2t f x)"
 
+
+(* useful for specifying merges *)
+fun const :: "'a \<Rightarrow> 'b \<Rightarrow> 'a" where
+"const x _ = x"
+
+fun pfan2 :: "'a \<Rightarrow> 'a * 'a" where
+"pfan2 x = (x, x)"
+
+fun pfan3 :: "'a \<Rightarrow> 'a * 'a * 'a" where
+"pfan3 x = (x, pfan2 x)"
+
+fun sfan2 :: "'a + 'a \<Rightarrow> 'a" where
+"sfan2 (Inl a) = a"
+| "sfan2 (Inr a) = a"
+
+fun sfan3 :: "'a + 'a + 'a \<Rightarrow> 'a" where
+"sfan3 (Inl a) = a"
+| "sfan3 (Inr a) = sfan2 a"
+
+fun pcomm2 :: "'a * 'b \<Rightarrow> 'b * 'a" where
+"pcomm2 (a, b) = (b, a)"
+
+fun pcomm3_1_2 :: "'a * 'b * 'c \<Rightarrow> 'b * 'a * 'c" where
+"pcomm3_1_2 (a, b, c) = (b, a, c)"
+
+fun scomm2 :: "'a + 'b \<Rightarrow> 'b + 'a" where
+"scomm2 (Inl a) = Inr a"
+| "scomm2 (Inr b) = Inl b"
+
+fun scomm3_1_2 :: "'a + 'b + 'c \<Rightarrow> 'b + 'a + 'c" where
+"scomm3_1_2 (Inl a) = Inr (Inl a)"
+| "scomm3_1_2 (Inr (Inl b)) = Inl b"
+| "scomm3_1_2 (Inr (Inr c)) = Inr (Inr c)"
+
+(* the naming here gets ambiguous with the maps defined above... *)
+fun pmap2 :: "('a1 \<Rightarrow> 'a2) * ('b1 \<Rightarrow> 'b2) \<Rightarrow> ('a1 * 'b1) \<Rightarrow> ('a2 * 'b2)" where
+"pmap2 (fa, fb) (a, b) = (fa a, fb b)"
+
+fun pmap3 :: "('a1 \<Rightarrow> 'a2) * ('b1 \<Rightarrow> 'b2) * ('c1 \<Rightarrow> 'c2) \<Rightarrow> ('a1 * 'b1 * 'c1) \<Rightarrow>
+    ('a2 * 'b2 * 'c2)" where
+"pmap3 (fa, fbs) (a, bs) = (fa a, pmap2 fbs bs)"
+
+fun smap2 :: "('a1 \<Rightarrow> 'a2) * ('b1 \<Rightarrow> 'b2) \<Rightarrow> ('a1 + 'b1) \<Rightarrow> ('a2 + 'b2)" where
+"smap2 (fa, fb) (Inl a) = Inl (fa a)"
+| "smap2 (fa, fb) (Inr b) = Inr (fb b)"
+
+fun smap3 :: "('a1 \<Rightarrow> 'a2) * ('b1 \<Rightarrow> 'b2) * ('c1 \<Rightarrow> 'c2) \<Rightarrow> ('a1 + 'b1 + 'c1) \<Rightarrow>
+    ('a2 + 'b2 + 'c2)" where
+"smap3 (fa, fbs) (Inl a) = Inl (fa a)"
+| "smap3 (fa, fbs) (Inr bs) = Inr (smap2 fbs bs)"
+
 end
