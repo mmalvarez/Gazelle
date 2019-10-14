@@ -406,6 +406,11 @@ fun pmap3 :: "('a1 \<Rightarrow> 'a2) * ('b1 \<Rightarrow> 'b2) * ('c1 \<Rightar
     ('a2 * 'b2 * 'c2)" where
 "pmap3 (fa, fbs) (a, bs) = (fa a, pmap2 fbs bs)"
 
+fun pmap4 :: "('a1 \<Rightarrow> 'a2) * ('b1 \<Rightarrow> 'b2) * ('c1 \<Rightarrow> 'c2) * ('d1 \<Rightarrow> 'd2) \<Rightarrow>
+    ('a1 * 'b1 * 'c1 * 'd1) \<Rightarrow>
+    ('a2 * 'b2 * 'c2 * 'd2)" where
+"pmap4 (fa, fbs) (a, bs) = (fa a, pmap3 fbs bs)"
+
 fun smap2 :: "('a1 \<Rightarrow> 'a2) * ('b1 \<Rightarrow> 'b2) \<Rightarrow> ('a1 + 'b1) \<Rightarrow> ('a2 + 'b2)" where
 "smap2 (fa, fb) (Inl a) = Inl (fa a)"
 | "smap2 (fa, fb) (Inr b) = Inr (fb b)"
@@ -414,5 +419,11 @@ fun smap3 :: "('a1 \<Rightarrow> 'a2) * ('b1 \<Rightarrow> 'b2) * ('c1 \<Rightar
     ('a2 + 'b2 + 'c2)" where
 "smap3 (fa, fbs) (Inl a) = Inl (fa a)"
 | "smap3 (fa, fbs) (Inr bs) = Inr (smap2 fbs bs)"
+
+fun smap4 :: "('a1 \<Rightarrow> 'a2) * ('b1 \<Rightarrow> 'b2) * ('c1 \<Rightarrow> 'c2) * ('d1 \<Rightarrow> 'd2) \<Rightarrow>
+    ('a1 + 'b1 + 'c1 + 'd1) \<Rightarrow>
+    ('a2 + 'b2 + 'c2 + 'd2)" where
+"smap4 (fa, fbs) (Inl a) = Inl (fa a)"
+| "smap4 (fa, fbs) (Inr bs) = Inr (smap3 fbs bs)"
 
 end

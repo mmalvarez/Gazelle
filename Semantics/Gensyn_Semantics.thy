@@ -28,16 +28,19 @@ inductive nosem_x_sem::
 
 
 locale Gensyn_Semantics_Sig =
-  fixes  xr :: "'xr itself"
-  fixes  ms :: "'mstate itself"
-  fixes  x_sem  :: "'x \<Rightarrow>
+  fixes  Gensyn_Semantics_parms  :: "'x \<Rightarrow>
                       'mstate \<Rightarrow> 
                       'mstate \<Rightarrow> 
                       childpath \<Rightarrow>
                       ('x option) gensyn \<Rightarrow>  
                       ('xr) gs_result \<Rightarrow>
                       bool" 
+begin
 
+definition x_sem :: _ where
+"x_sem = Gensyn_Semantics_parms"
+
+end
 
 
 locale Gensyn_Semantics =
@@ -52,7 +55,7 @@ print_context
 
 
 inductive gensyn_sem ::
-  "('c) gensyn \<Rightarrow>
+  "('a) gensyn \<Rightarrow>
    childpath \<Rightarrow>
    'b \<Rightarrow>
    'b \<Rightarrow>
@@ -75,7 +78,7 @@ print_locale Gensyn_Semantics
 
 (* we can probably get away with just an exec version of this one *)
 interpretation Gensyn_Semantics_Nosem : Gensyn_Semantics 
-  "TYPE(unit)" "TYPE(unit)" nosem_x_sem
+  nosem_x_sem
   done
 
 
