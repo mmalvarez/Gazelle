@@ -109,5 +109,6 @@ apply(insert SP1.InjCase[of c])
   apply(insert SP1.InjCase[of c]) apply(simp)
   done
 
+end
 
 end
