@@ -43,5 +43,25 @@ locale Prism_Spec = Prism +
   assumes InjCase : "\<And> c . sfan2 (smap2 (inj, id) (cases c)) = c"
   (* should be provable from the other 2 *)
   assumes CaseCase : "\<And> c . smap2 (id, cases) (cases c) = smap2 (id, Inr) (cases c)"
-    
+
+
+begin
+
+lemma CaseInr :
+  fixes c c'
+  shows "cases c = Inr c' \<Longrightarrow> c = c'"
+  apply(insert InjCase[of c])
+  apply(simp)
+  done
+
+lemma CaseInl :
+  fixes c x
+  shows "cases c = Inl x \<Longrightarrow> inj x = c"
+  apply(insert InjCase[of c])
+  apply(simp)
+  done
+  
+
+end
+
 end

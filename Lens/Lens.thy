@@ -55,6 +55,8 @@ lemma PutPut :
   apply(insert PutPut'[of "(m, m', c)"]) apply(simp)
   done  
 
+
+
 end
 
 end
