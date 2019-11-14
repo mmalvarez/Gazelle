@@ -47,20 +47,22 @@ locale Prism_Spec = Prism +
 
 begin
 
-lemma CaseInr :
-  fixes c c'
+lemma CaseInr[rule_format] :
+  fixes c :: 'b 
+  fixes c' :: 'b
   shows "cases c = Inr c' \<Longrightarrow> c = c'"
   apply(insert InjCase[of c])
   apply(simp)
   done
 
-lemma CaseInl :
-  fixes c x
+lemma CaseInl[rule_format] :
+  fixes c :: 'b
+  fixes x :: 'a
   shows "cases c = Inl x \<Longrightarrow> inj x = c"
   apply(insert InjCase[of c])
   apply(simp)
   done
-  
+
 
 end
 
