@@ -1,4 +1,4 @@
-theory Reify imports Main
+theory Reify imports Main "Prism/Prism"
 begin
 
 type_synonym 'a lbd = "(char list * 'a)"
@@ -35,11 +35,36 @@ definition rinl :: "reified \<Rightarrow> reified" where
 definition rinr :: "reified \<Rightarrow> reified" where
 "rinr r = RSum (Inr r)"
 
+
 class reiden =
   fixes reify :: "'a \<Rightarrow> reified"  
   fixes denote :: "reified \<Rightarrow> 'a option"
-  assumes rdvalid : "denote (reify x) = Some x"
-  assumes drvalid : "denote r = Some a \<Longrightarrow> reify a = r"
+  assumes HPrism : "Prism.Prism_Spec \<lparr> cases = (\<lambda> r . case (denote r) of Some x \<Rightarrow> Inl x
+                                                                         | _ \<Rightarrow> Inr r)
+                                     , inj = reify \<rparr>"
+begin
+
+
+
+definition cases where
+"cases = (\<lambda> r . case (denote r) of Some x \<Rightarrow> Inl x
+                                                                         | _ \<Rightarrow> Inr r)"
+definition inj where
+"inj = reify"
+
+lemma DRCorrect : "denote (reify x) = Some x"
+  apply(insert HPrism) apply(simp add: Prism_Spec_def) apply(safe)
+  apply(drule_tac x = x in spec) apply(case_tac "denote (reify x)")
+   apply(auto)
+  done
+
+lemma RDCorrect : "denote r = Some x \<Longrightarrow> reify x = r"
+  apply(insert HPrism) apply(simp add: Prism_Spec_def) apply(safe)
+  apply(drule_tac x = r in spec) apply(clarsimp)
+  done
+
+end
+
 
 instantiation nat :: reiden
 begin
@@ -47,11 +72,15 @@ definition rnat_def : "reify x = RNat x"
 definition dnat_def :
   "denote x = (case x of (RNat n) \<Rightarrow> Some n | _ \<Rightarrow> None)"
 instance proof
-  fix x :: nat
-  show "denote (reify x) = Some x" by (simp add:rnat_def dnat_def)
   fix r :: reified
-  fix n :: nat
-  show "denote r = Some n \<Longrightarrow> reify n = r"
+  show "Prism_Spec
+     \<lparr>prism_parms.cases =
+        \<lambda>r. case denote r of None \<Rightarrow> Inr r
+             | Some (x :: nat) \<Rightarrow> Inl x,
+        inj = reify\<rparr>"
+    apply(simp add:Prism_Spec_def) apply(safe)
+      apply(simp add:rnat_def dnat_def)
+     apply(simp add:rnat_def dnat_def split:reified.splits)
     apply(simp add:rnat_def dnat_def split:reified.splits)
     done
 qed
@@ -63,13 +92,13 @@ definition runit_def : "reify x = RUnit x"
 definition dunit_def :
   "denote x = (case x of (RUnit n) \<Rightarrow> Some n | _ \<Rightarrow> None)"
 instance proof
-  fix x :: unit
-  show "denote (reify x) = Some x" by (simp add:runit_def dunit_def)
-
-  fix r :: reified
-  fix a :: unit
-    show "denote r = Some a \<Longrightarrow> reify a = r"
-    apply(simp add:runit_def dunit_def split:reified.splits)
+  show "Prism_Spec
+     \<lparr>prism_parms.cases =
+        \<lambda>r. case denote r of None \<Rightarrow> Inr r
+             | Some (x :: unit) \<Rightarrow> Inl x,
+        inj = reify\<rparr>"
+    apply(simp add:Prism_Spec_def) 
+    apply(auto simp add:runit_def dunit_def split:reified.splits)
     done
 qed
 end
@@ -79,14 +108,14 @@ begin
 definition rbool_def : "reify x = RBool x"
 definition dbool_def : "denote x = (case x of (RBool n) \<Rightarrow> Some n | _ \<Rightarrow> None)"
 instance proof
-  fix x :: bool
-  show "denote (reify x) = Some x" by (simp add:rbool_def dbool_def)
-
-  fix r :: reified
-  fix a :: bool
-    show "denote r = Some a \<Longrightarrow> reify a = r"
-    apply(simp add:rbool_def dbool_def split:reified.splits)
-      done
+  show "Prism_Spec
+     \<lparr>prism_parms.cases =
+        \<lambda>r. case denote r of None \<Rightarrow> Inr r
+             | Some (x :: bool) \<Rightarrow> Inl x,
+        inj = reify\<rparr>"
+    apply(simp add:Prism_Spec_def) 
+    apply(auto simp add:rbool_def dbool_def split:reified.splits)
+    done
 qed
 end
 
@@ -95,13 +124,12 @@ begin
 definition rcalc_def : "reify x = RCalc x"
 definition dcalc_def : "denote x = (case x of (RCalc n) \<Rightarrow> Some n | _ \<Rightarrow> None)"
 instance proof 
-  fix x :: calc
-  show "denote (reify x) = Some x" by (simp add:rcalc_def dcalc_def)
-
-  fix r :: reified
-  fix a :: calc
-    show "denote r = Some a \<Longrightarrow> reify a = r"
-    apply(simp add:rcalc_def dcalc_def split:reified.splits)
+  show "Prism_Spec
+     \<lparr>prism_parms.cases =
+        \<lambda>r. case denote r of None \<Rightarrow> Inr r
+             | Some (x :: calc) \<Rightarrow> Inl x,
+        inj = reify\<rparr>"
+    apply(auto simp add:Prism_Spec_def rcalc_def dcalc_def split:reified.splits)
       done
 qed
 end
@@ -121,16 +149,19 @@ definition dprod_def :
       | _ \<Rightarrow> None)"
 instance proof
   fix x :: "'a * 'b"
-  show "denote (reify x) = Some x" by (simp add:rprod_def dprod_def rdvalid)
+  show "Prism_Spec
+     \<lparr>prism_parms.cases =
+        \<lambda>r. case denote r of None \<Rightarrow> Inr r
+             | Some (x :: 'a * 'b) \<Rightarrow> Inl x,
+        inj = reify\<rparr>"
 
-  fix r :: reified
-  fix a :: "'a * 'b"
-    show "denote r = Some a \<Longrightarrow> reify a = r"
-      apply(simp add:rprod_def dprod_def split:reified.splits)
-      apply(case_tac a) apply(clarsimp) 
+    apply(simp add:Prism_Spec_def) 
+      apply(auto simp add:Prism_Spec_def rprod_def dprod_def split:reified.splits)
       apply(auto split:option.splits)      
-      apply(auto simp add:drvalid)
-      done
+        apply(auto simp add:DRCorrect)
+      apply(auto simp add:Prism_Spec_def rprod_def dprod_def split:reified.splits)
+        apply(auto simp add:RDCorrect)
+    done
 qed
 end
 
@@ -153,13 +184,13 @@ definition dsum_def :
 
 instance proof 
   fix x :: "'a + 'b"
-  show "denote (reify x) = Some x"
-    apply(simp add: rsum_def dsum_def rdvalid split:sum.splits)
-    done
-  fix r :: reified
-  fix a :: "'a + 'b"
-  show "denote r = Some a \<Longrightarrow> reify a = r"
-    apply(auto simp add: rsum_def dsum_def drvalid split:reified.splits sum.splits)
+  show "Prism_Spec
+     \<lparr>prism_parms.cases =
+        \<lambda>r. case denote r of None \<Rightarrow> Inr r
+             | Some (x :: 'a + 'b) \<Rightarrow> Inl x,
+        inj = reify\<rparr>"
+    apply(simp add:Prism_Spec_def)
+    apply(auto simp add: rsum_def dsum_def RDCorrect DRCorrect split:sum.splits reified.splits option.splits)
     done
 qed
 end

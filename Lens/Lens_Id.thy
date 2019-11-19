@@ -6,7 +6,8 @@ begin
 
 abbreviation lens_id_parms :: "('a, 'a) lens_parms" where
 "lens_id_parms \<equiv> \<lparr> upd = fst
-                                , proj = id \<rparr>"
+                  , proj = id
+                  , vwb = {a . True} \<rparr>"
 
 locale Lens_Id_Spec
 

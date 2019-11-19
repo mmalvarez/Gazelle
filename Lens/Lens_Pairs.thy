@@ -5,7 +5,8 @@ begin
 abbreviation lens_fst_parms :: "('a, 'a * 'b) lens_parms" where
 "lens_fst_parms \<equiv> \<lparr> upd = (\<lambda> m1c . 
       (case m1c of (m1, c1, c2) \<Rightarrow> (m1, c2)))
-      , proj = fst \<rparr>"
+      , proj = fst
+      , vwb = {(a, b) . True} \<rparr>"
 
 locale Lens_Fst_Spec
 
@@ -19,7 +20,8 @@ interpretation Lens_Fst_Itp : Lens_Fst_Spec
 abbreviation lens_snd_parms :: "('b, 'a * 'b) lens_parms" where
 "lens_snd_parms \<equiv> \<lparr> upd = (\<lambda> m2c .
     (case m2c of (m2, c1, c2) \<Rightarrow> (c1, m2)))
-    , proj = snd \<rparr>"
+    , proj = snd
+    , vwb = {(a, b) . True} \<rparr>"
 
 locale Lens_Snd_Spec
 

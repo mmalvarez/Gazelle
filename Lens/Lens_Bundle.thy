@@ -6,7 +6,8 @@ abbreviation lens_bundle_parms ::
   where
 "lens_bundle_parms l1 l2 \<equiv>
   \<lparr> upd = (\<lambda> abxy . case abxy of ((a, b), x, y) \<Rightarrow> ((upd l1) (a, x), (upd l2) (b, y)))
-  , proj = ( \<lambda> c . ((proj l1) (fst c), (proj l2) (snd c))) \<rparr>"
+  , proj = ( \<lambda> c . ((proj l1) (fst c), (proj l2) (snd c)))
+  , vwb = {(x, y) . x \<in> (vwb l1) \<and> y \<in> (vwb l2)} \<rparr>"
 
 
 locale Lens_Bundle_Spec' =

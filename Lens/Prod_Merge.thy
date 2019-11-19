@@ -69,6 +69,7 @@ locale Prod_Merge_Spec = Prod_Merge +
   SL2 : Lens_Spec "prod_merge_parms.lens2 Prod_Merge_Parms" +
 
 (* use "total" instead? *)
+(* need to parameterize these three by "very well behaved" *)
 assumes Put12' : "\<And> m1m2cc' .
     upd1 (pmap2 (id, upd2) (pmap3 (id, id, fst) m1m2cc')) =
     upd1 (pmap2 (id, upd2) (pmap3 (id, id, snd) m1m2cc'))"

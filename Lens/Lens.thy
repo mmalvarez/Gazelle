@@ -5,6 +5,7 @@ begin
 record ('m1, 'c) lens_parms =
   upd :: "('m1 * 'c \<Rightarrow> 'c)"
   proj :: "('c \<Rightarrow> 'm1)"
+  vwb :: "'c set" (* which inputs this lens obeys the put-put law on *)
 
 declare lens_parms.defs [simp]
 
@@ -19,6 +20,9 @@ abbreviation upd :: "('m1 * 'c \<Rightarrow> 'c)" where
 
 abbreviation proj :: "('c \<Rightarrow> 'm1)" where
 "proj \<equiv> lens_parms.proj Lens_parms"
+
+abbreviation vwb :: "'c set" where
+"vwb \<equiv> lens_parms.vwb Lens_parms"
 
 definition liftp :: "('m1 \<Rightarrow> 'a) \<Rightarrow> ('c \<Rightarrow> 'a)" where
 "liftp f x = f (proj x)"
@@ -38,9 +42,10 @@ definition lowers :: "('c \<Rightarrow> 'a) \<Rightarrow> ('m1 \<Rightarrow> 'a)
 end
 
 locale Lens_Spec = Lens +
+  assumes vwb_pres : "\<And> m1 c . c \<in> vwb \<Longrightarrow> upd(m1, c) \<in> vwb"
   assumes GetPut : "\<And> m1c . proj (upd m1c) = fst m1c"
   assumes PutGet' : "\<And> c . upd (pmap2 (proj, id) (pfan2 c)) = c"
-  assumes PutPut' : "\<And> m1m1'c .
+  assumes PutPut' : "\<And> m1m1'c . (tnth2t m1m1'c :: 'b) \<in> vwb \<Longrightarrow>
                          upd (pmap2 (id, upd) m1m1'c) = upd (pmap2 (id, snd) m1m1'c)"
 
 begin
@@ -51,11 +56,9 @@ lemma PutGet : "\<And> c . upd (proj c, c) = c"
 
 lemma PutPut : 
   fixes m m' c
-  shows "upd (m, upd (m', c)) = upd( m, c)"
+  shows "c \<in> vwb \<Longrightarrow> upd (m, upd (m', c)) = upd( m, c)"
   apply(insert PutPut'[of "(m, m', c)"]) apply(simp)
   done  
-
-
 
 end
 

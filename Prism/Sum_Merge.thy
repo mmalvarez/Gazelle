@@ -31,14 +31,32 @@ abbreviation inj2 :: "('b \<Rightarrow> 'c)" where
 
 definition overlap :: "('a * 'b) set" where
   "overlap = {(a, b) . inj1 a = inj2 b}"
+(*
+definition covered :: "('c) set" where
+  "covered = {c . (\<exists> a . inj1 a = c) \<or> (\<exists> b . inj2 b = c)}"
 
+lemma CoveredE :
+  "c \<in> covered \<Longrightarrow>
+    (\<exists> a . inj1 a = c) \<or> (\<exists> b . inj2 b = c)"
+  apply(auto simp add:covered_def)
+  done
 
-lemma OverlapI : 
+lemma CoveredI1 :
+  "(inj1 a) \<in> covered"
+  apply(auto simp add:covered_def)
+  done
+
+lemma CoveredI2 :
+  "(inj2 b) \<in> covered"
+  apply(auto simp add:covered_def)
+  done
+*)
+lemma OverlapE :
   "(a, b) \<in> overlap \<Longrightarrow> inj1 a = inj2 b"
   apply(auto simp add:overlap_def)
   done
 
-lemma OverlapE :
+lemma OverlapI :
   "inj1 a = inj2 b \<Longrightarrow> (a, b) \<in> overlap"
   apply(auto simp add:overlap_def)
   done
@@ -285,10 +303,11 @@ abbreviation maparms2 :: "('b, 'c) prism_parms" where
 end
 *)
 
+
 locale Sum_Merge_Extend = Sum_Merge_Extend' +
-  SMS : Sum_Merge_Spec "Sum_Merge_Extend_parms" +
+  SMS : Sum_Merge_Spec "Sum_Merge_Extend_parms" (*+
   assumes OLCompat :
-  "SMS.overlap = overlap"
+  "SMS.overlap = overlap" *)
 
 begin
 abbreviation cases1' :: "('d \<Rightarrow> 'a + 'd)" where
@@ -305,12 +324,17 @@ abbreviation inj2' :: "('b \<Rightarrow> 'd)" where
 
 
 (* TODO: prove totality? *)
+(* idea: cases1' should have picked it up if cases1 (inj2b) = Inl *)
 definition mcases :: "'d \<Rightarrow> 'c + 'd" where
 "mcases d =
   (case cases1' d of
    (Inl a) \<Rightarrow> Inl (inj1 a)
-   | Inr d' \<Rightarrow> (case cases2' d of
-      (Inl b) \<Rightarrow> Inl (inj2 b)
+   | Inr d' \<Rightarrow> 
+      (case cases2' d of
+      (Inl b) \<Rightarrow> 
+        (case cases1 (inj2 b) of
+          Inl _ \<Rightarrow> Inr d 
+         | Inr _ \<Rightarrow> Inl (inj2 b))
       | (Inr d'') \<Rightarrow> Inr d''))"
 
 (* TODO: prove totality? *)
@@ -325,7 +349,10 @@ abbreviation prism_parms :: "('c, 'd) prism_parms" where
 "prism_parms \<equiv> \<lparr> cases = mcases, inj = minj \<rparr>"
 end
 
-sublocale Sum_Merge_Extend \<subseteq> Prism_Spec "prism_parms"
+locale Sum_Merge_Extend_Spec = Sum_Merge_Extend  +
+  assumes OCompat : "SMS.overlap \<subseteq> overlap" 
+
+sublocale Sum_Merge_Extend_Spec \<subseteq> Prism_Spec "prism_parms"
   apply(unfold_locales) apply(simp)
 
 (* law 1 *)
@@ -340,97 +367,49 @@ sublocale Sum_Merge_Extend \<subseteq> Prism_Spec "prism_parms"
       apply(frule_tac SP2.CaseInl) apply(clarify)
   apply(frule_tac SP1.CaseInr) apply(clarsimp)
       apply(frule_tac SMS.SP1.CaseInl) 
-      apply(rule_tac OverlapI) apply(drule_tac SMS.OverlapE)
-    (* regardless of totality, output overlap must be larger than input overlap *)
-  apply(simp add:OLCompat)
+      apply(drule_tac SMS.OverlapI) apply(rule_tac OverlapE)
+      apply(auto simp add: Set.subsetD[OF OCompat])
 
-  apply(drule_tac SMS.SP1.CaseInl)
-
-     apply(drule_tac Total1, clarsimp)
-
-  apply(simp add:SP2.CaseInj)
-
-    apply(split sum.split) apply(safe)
-     apply(split sum.split_asm)
-      apply(simp add: SMS.SP1.CaseInj) 
-     apply(split sum.split_asm) apply(clarsimp)
-     apply(clarsimp)
-     apply(split sum.split_asm) apply(clarsimp)
-      apply(simp add: SMS.SP2.CaseInj) apply(clarsimp)
-      apply(drule_tac SP2.CaseInl) apply(clarsimp)
-
-     apply(split sum.split_asm) apply(clarsimp)
-  apply(frule_tac SP1.CaseInr) apply(clarsimp)
      apply(drule_tac Total1) apply(clarsimp)
+     apply(simp add: SP2.CaseInj)
 
-     apply(split sum.split_asm)
-      apply(simp add: SMS.SP1.CaseInj) 
-     apply(split sum.split_asm) apply(clarsimp)
-     apply(clarsimp)
-     apply(split sum.split_asm) apply(clarsimp)
-      apply(simp add: SMS.SP2.CaseInj) apply(clarsimp)
 
-      apply(frule_tac SP1.CaseInr) apply(clarsimp)
-     apply(drule_tac Total1) apply(clarsimp)
+    apply(auto   simp add:  SP1.CaseInj SP2.CaseInj Coh12'
+              SMS.SP1.CaseInl SMS.SP2.CaseInl 
+              SMS.SP1.CaseInj SMS.SP2.CaseInj
+              split:sum.splits)  
+        apply(frule_tac SP2.CaseInl) apply(clarify) apply(clarsimp)
+       apply(frule_tac SP2.CaseInl) apply(clarify)
+  apply(drule_tac Total1) apply(clarsimp)
+     apply(simp add: SP2.CaseInj)
+  apply(drule_tac Total1) apply(clarsimp)
+     apply(simp add: SP2.CaseInj)
+  apply(frule_tac SP1.CaseInr)
+    apply(drule_tac Total1) apply(clarsimp)
+
 
 (* law 2/3 *)
 
-(* begin experiment *)
-   apply(simp add:mcases_def minj_def)
-   apply(split sum.splits) apply(safe)
-     apply(simp add:mcases_def minj_def)
-   apply(split sum.splits) apply(safe)
-     apply(simp add: SP1.CaseInj) apply(clarsimp)
-     apply(simp add: SMS.SP1.CaseInl) 
-    apply(simp add: SP1.CaseInj) 
-
-   apply(split sum.splits)
-   apply(simp add:mcases_def minj_def)
-  apply(safe)
-   apply(split sum.splits) apply(safe)
-
-     apply(frule_tac SMS.SP2.CaseInl)
-     apply(clarsimp)
-  apply(frule_tac SP1.CaseInl) 
-     apply(frule_tac Coh12')
-    
-     apply(frule_tac SMS.SP2.CaseInl)
-
-  apply(drule_tac SP1.CaseInr)
-     apply(split sum.splits) apply(safe)
-
-
-(* end experiment *)
-(*
    apply(auto simp add:mcases_def minj_def 
               SP1.CaseInj SP2.CaseInj Coh12'
               SMS.SP1.CaseInl SMS.SP2.CaseInl 
 split:sum.splits)
 
-  apply(frule_tac SMS.SP1.CaseInr) apply(clarsimp)
+       apply(frule_tac SMS.SP1.CaseInr) apply(clarsimp)
+  apply(frule_tac SMS.SP2.CaseInr) apply(clarsimp)
+
            apply(frule_tac Coh12') apply(frule_tac SMS.SP2.CaseInl)
-       apply(clarsimp)
-apply(frule_tac OverlapE)
-  apply(rule_tac SMS.OverlapI) apply(simp add:OLCompat)
+      apply(clarsimp)
+      apply(frule_tac SMS.SP2.CaseInr) apply(clarsimp)
+      apply(frule_tac SMS.SP2.CaseInr) apply(clarsimp)
+      apply(frule_tac SMS.SP2.CaseInr) apply(clarsimp)
+      apply(drule_tac SMS.SP2.CaseInr) apply(clarsimp)
+      apply(frule_tac SMS.SP1.CaseInr) apply(clarsimp)
+      apply(frule_tac SMS.SP2.CaseInr) apply(clarsimp)
+  
+      apply(frule_tac SMS.SP1.CaseInr) apply(clarsimp)
+  apply(frule_tac SMS.SP2.CaseInr) apply(clarsimp)
 
-  apply(drule_tac SMS.SP2.CaseInr)
-  apply(clarsimp)
-  apply(drule_tac SMS.SP2.CaseInr)
-     apply(clarsimp)
-
-  apply(frule_tac SMS.SP2.CaseInr)
-    apply(clarsimp)
-
-  apply(drule_tac SMS.SP2.CaseInr)
-   apply(clarsimp)
-  apply(frule_tac SMS.SP2.CaseInr)
-   apply(clarsimp)
-  apply(drule_tac SMS.SP1.CaseInr)
-  apply(drule_tac SMS.SP1.CaseInr)
-  apply(drule_tac SMS.SP2.CaseInr)
-  apply(clarsimp)
-*)
   done
-
 
 end

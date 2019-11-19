@@ -9,7 +9,8 @@ abbreviation lens_swap_parms ::
   "('a * 'b, 'c) lens_parms \<Rightarrow> ('b * 'a, 'c) lens_parms" where
 "lens_swap_parms l \<equiv>
   \<lparr> upd = (\<lambda> abc . (upd l) (prod.swap (fst abc), snd abc))
-  , proj = (\<lambda> c . prod.swap (proj l c) )\<rparr>"
+  , proj = (\<lambda> c . prod.swap (proj l c) )
+  , vwb = vwb l \<rparr>"
 
 locale Lens_Swap_Spec' =
   fixes Lens_Swap_parms :: "('a * 'b, 'c) lens_parms"
