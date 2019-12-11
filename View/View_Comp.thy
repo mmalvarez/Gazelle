@@ -90,7 +90,7 @@ end
 
 (* TODO make this proof less awful *)
 (* vertical composition of views*)
-sublocale View_Comp \<subseteq> View_Spec "vp"
+sublocale View_Comp_Spec \<subseteq> View_Spec "vp"
   apply(unfold_locales)
       apply(simp add: V1.PrjInj1 V2.PrjInj1 split: sum.splits prod.splits)
 

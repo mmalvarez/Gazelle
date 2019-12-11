@@ -7,11 +7,11 @@ locale Iso =
 
 begin
 
-definition to_r :: _ where
-"to_r = fst Iso_parm"
+abbreviation to_r :: _ where
+"to_r \<equiv> fst Iso_parm"
 
-definition to_l :: _ where
-"to_l = snd Iso_parm"
+abbreviation to_l :: _ where
+"to_l \<equiv> snd Iso_parm"
 
 fun lift_l :: "('l \<Rightarrow> 'o) \<Rightarrow> ('r \<Rightarrow> 'o)" where
   "lift_l fl = (\<lambda> r . fl (to_l r))"

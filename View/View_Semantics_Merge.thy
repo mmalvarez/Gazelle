@@ -43,6 +43,11 @@ fun sem :: "'c \<Rightarrow> 'f \<Rightarrow> 'f" where
                 Inl m2 \<Rightarrow> VMSem.V2.inj (sem2' s2 m2, m))))
     "
 
+(*
+here, we allow for success if we can parse as a syntax but not get the correct state out
+of the overall state, as long as the other one works.
+i don't know if this is what we want.
+*)
 fun sem_gen :: "'c \<Rightarrow> 'f \<Rightarrow> 'f option" where
 "sem_gen s m = 
   (case (VMSyn.V1.prj s, VMSem.V1.prj m) of
@@ -66,6 +71,26 @@ fun sem_gen_nop :: "'c \<Rightarrow> 'f \<Rightarrow> 'f" where
 end
 
 
+fun view_sem_merge_commute ::
+  "('s1, 's2, 's, 'm1, 'm2, 'm) view_semantics_merge_parms \<Rightarrow>
+   ('s2, 's1, 's, 'm2, 'm1, 'm) view_semantics_merge_parms" where
+"view_sem_merge_commute
+  \<lparr> vm_syn = mp_syn
+  , vm_sem = mp_sem
+  , sem1 = sem_left
+  , sem2 = sem_right \<rparr> =
+  \<lparr> vm_syn = view_merge_commute mp_syn
+  , vm_sem = view_merge_commute mp_sem
+  , sem1 = sem_right
+  , sem2 = sem_left \<rparr>"
 
+
+(* to do: prove
+- commutativity
+- associativity *)
+
+(*
+locale View_Semantics_Merge_Comm
+*)
 
 end

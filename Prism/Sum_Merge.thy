@@ -5,13 +5,14 @@ begin
 record ('s1, 's2, 'c) sum_merge_parms =
   prism1 :: "('s1, 'c) prism_parms"
   prism2 :: "('s2, 'c) prism_parms"
+  vwb :: "'c set"
 
 declare sum_merge_parms.defs [simp]
-locale Sum_Merge' =
+locale Sum_Merge'' =
   fixes Sum_Merge_parms :: 
       "('a, 'b, 'c) sum_merge_parms"
 
-locale Sum_Merge = Sum_Merge' +
+locale Sum_Merge' = Sum_Merge'' +
   P1 : Prism "prism1 Sum_Merge_parms" +
   P2 : Prism "prism2 Sum_Merge_parms"
 
@@ -28,6 +29,9 @@ abbreviation inj1 :: "('a \<Rightarrow> 'c)" where
 
 abbreviation inj2 :: "('b \<Rightarrow> 'c)" where
 "inj2 \<equiv> P2.inj"
+
+abbreviation vwb' :: "'c set" where
+"vwb' \<equiv> vwb Sum_Merge_parms"
 
 definition overlap :: "('a * 'b) set" where
   "overlap = {(a, b) . inj1 a = inj2 b}"
@@ -129,6 +133,10 @@ definition lower2p :: "('a \<Rightarrow> 'c) \<Rightarrow> ('a \<Rightarrow> 's2
 *)
 end
 
+locale Sum_Merge = Sum_Merge' +
+  assumes VwbInj1 : "\<And> c1 . inj1 c1 \<in> vwb'"
+  assumes VwbInj2 : "\<And> c2 . inj2 c2 \<in> vwb'"
+
 (* TODO: prove some sanity-check lemmas here *)
 locale Sum_Merge_Spec = Sum_Merge +
   SP1 : Prism_Spec "prism1 Sum_Merge_parms" +
@@ -204,56 +212,50 @@ end
 
 locale Sum_Merge_Total_Spec = Sum_Merge_Spec +
   assumes TCoh12 :
-    "\<And> c c' . 
+    "\<And> c c' . c \<in> vwb' \<Longrightarrow>
       sfan3 (smap3 (inj1, inj2, const c') (smap2 (id, cases2) (cases1 c))) = c"
 
 assumes TCoh21 : 
-    "\<And> c c' . 
+    "\<And> c c' . c \<in> vwb' \<Longrightarrow>
       sfan3 (smap3 (inj2, inj1, const c') (smap2 (id, cases1) (cases2 c))) = c"
 
+
+(*
+assumes VwbCases1 : "\<And> c2 . inj2 c2 \<in> vwb'"
+assumes VwbCases2 : "\<And> c2 . inj2 c2 \<in> vwb'"
+*)
 begin
 
 lemma Total1 :
   fixes c c'
-  shows "cases1 c = Inr c' \<Longrightarrow>
+  shows "c \<in> vwb' \<Longrightarrow> 
+    cases1 c = Inr c' \<Longrightarrow>
    (\<exists> c2 . cases2 c' = Inl c2 \<and> inj2 c2 = c)"
-  apply(insert TCoh12[of _ c]) apply(simp)
-  apply(insert TCoh21[of _ c']) 
-
-
   apply(case_tac "cases2 c'") apply(simp)
-  apply(case_tac "cases2 c") apply(simp)
-   apply(drule_tac  allI) apply(drule_tac x = c' in spec) apply(clarsimp)
-
-  apply(auto)
-  apply(case_tac "cases1 b", auto)
-  apply(drule_tac  allI) apply(drule_tac x = b in spec) apply(clarsimp)
-  apply(drule_tac allI)
-  apply(drule_tac x = "inj1 undefined" in spec)
-  apply(insert SP1.CaseInj[of _])
-  apply(fastforce)
+  apply(frule_tac SP2.CaseInl) apply(clarsimp)
+  apply(frule_tac SP1.CaseInr)
+   apply(simp)
+  apply(frule_tac SP1.CaseInr) apply(clarsimp)
+  apply(frule_tac SP2.CaseInr) apply(clarsimp)
+  apply(frule_tac c = c and c' = "inj1 undefined" in TCoh12)
+  apply(simp add: SP1.CaseInj) apply(clarsimp)
+  apply(simp add: SP1.CaseInj)
   done
   
 lemma Total2 :
-  "cases2 c = Inr c' \<Longrightarrow>
+  "c \<in> vwb' \<Longrightarrow>
+  cases2 c = Inr c' \<Longrightarrow>
    (\<exists> c1 . cases1 c' = Inl c1 \<and> inj1 c1 = c)"
-  apply(insert TCoh21[of _ c]) apply(simp)
-  apply(insert TCoh12[of _ c']) 
-
-
   apply(case_tac "cases1 c'") apply(simp)
-  apply(case_tac "cases1 c") apply(simp)
-   apply(drule_tac  allI) apply(drule_tac x = c' in spec) apply(clarsimp)
+   apply (frule_tac SP2.CaseInr) apply(clarsimp)
+   apply(frule_tac SP1.CaseInl) apply(simp)
 
-  apply(auto)
-  apply(case_tac "cases2 b", auto)
-  apply(drule_tac  allI) apply(drule_tac x = b in spec) apply(clarsimp)
-  apply(drule_tac allI)
-  apply(drule_tac x = "inj1 undefined" in spec)
-  apply(insert SP1.CaseInj[of _])
-  apply(fastforce)
+  apply(frule_tac SP1.CaseInr) apply(clarsimp)
+  apply(frule_tac SP2.CaseInr) apply(clarsimp)
+  apply(frule_tac c = c' and c' = "inj2 undefined" in TCoh21)
+  apply(simp add: SP1.CaseInj) apply(clarsimp)
+  apply(simp add: SP2.CaseInj)
   done
-
 (*
 lemma CaseInjCoh1 : 
   fixes s2 s1
@@ -349,8 +351,17 @@ abbreviation prism_parms :: "('c, 'd) prism_parms" where
 "prism_parms \<equiv> \<lparr> cases = mcases, inj = minj \<rparr>"
 end
 
+(* we can deal with extension later - perhaps we don't even need it.
+   we can either
+   - use a total lens pair
+   - have a backup lens mapping the poorly behaved sets (seems annoying)
+   - use an equivalence relation
+   - use the fact that (as in sum_merge_concrete) we can coerce a 'd out of the
+     lenses but doing so will violate the coherence law of lenses*)
+(*
 locale Sum_Merge_Extend_Spec = Sum_Merge_Extend  +
   assumes OCompat : "SMS.overlap \<subseteq> overlap" 
+
 
 sublocale Sum_Merge_Extend_Spec \<subseteq> Prism_Spec "prism_parms"
   apply(unfold_locales) apply(simp)
@@ -367,9 +378,12 @@ sublocale Sum_Merge_Extend_Spec \<subseteq> Prism_Spec "prism_parms"
       apply(frule_tac SP2.CaseInl) apply(clarify)
   apply(frule_tac SP1.CaseInr) apply(clarsimp)
       apply(frule_tac SMS.SP1.CaseInl) 
-      apply(drule_tac SMS.OverlapI) apply(rule_tac OverlapE)
+      apply(frule_tac SMS.OverlapI) apply(rule_tac OverlapE)
       apply(auto simp add: Set.subsetD[OF OCompat])
 
+     apply(frule_tac SMS.SP1.CaseInl)
+     apply(insert SMS.VwbInj1)
+  apply(drule_tac allI) apply(drule_tac x = x1 in spec)
      apply(drule_tac Total1) apply(clarsimp)
      apply(simp add: SP2.CaseInj)
 
@@ -411,5 +425,5 @@ split:sum.splits)
   apply(frule_tac SMS.SP2.CaseInr) apply(clarsimp)
 
   done
-
+*)
 end

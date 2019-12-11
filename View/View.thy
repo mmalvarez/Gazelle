@@ -60,6 +60,35 @@ lemma InjPrj2' :
   apply(frule_tac d' = d in  InjPrj2) apply(clarsimp)
   done
 
+lemma InjPrj2'' :
+  "
+(\<forall> rx r'x dx . prj rx = Inr r'x \<longrightarrow> inj (dx, rx) = rx) \<Longrightarrow>
+(\<forall> (d :: 'a) (r :: 'b) (r' :: 'b) (d' :: 'a) .
+ prj (inj (d, r)) = Inr r' \<longrightarrow>
+                 prj (inj (d', r)) = Inr r)"
+  apply(clarsimp)
+  apply(frule_tac PrjInj2) apply(clarsimp)
+  apply(case_tac "local.prj r") apply(rotate_tac -1)
+   apply(frule_tac PrjInj1) 
+   apply(drule_tac x = "inj (d, r)" in spec) apply(clarsimp)
+   apply(simp add:InjInj) apply(drule_tac x = a in spec) apply(clarsimp)
+
+  apply(drule_tac x = r in spec) apply(clarsimp)
+  done
+(*
+lemma NoRecovery :
+  "\<And> b b' a .
+      prj b = Inr b' \<Longrightarrow> prj(inj(a, b)) = Inr b"
+  apply(case_tac "local.prj (local.inj (a, b))")
+*)
+(*
+lemma InjPrj2''X :
+  "\<And> r r' d . prj r = Inr r' \<Longrightarrow> inj (d, r) = r"
+  apply(frule_tac PrjInj2) apply(clarsimp)
+  apply(case_tac "prj (inj (d, r'))") 
+  apply(frule_tac PrjInj1) apply(simp add:InjInj) 
+  apply(frule_tac InjPrj1) apply(clarify)
+  apply(rule_tac PrjInj1) apply(simp)*)
 end
 
 

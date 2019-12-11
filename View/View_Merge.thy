@@ -34,7 +34,7 @@ begin
 
 end
 
-
+(*
 record ('d, 'r1, 'r2) view_comerge_parms =
   v1 :: "('d, 'r1) view_parms"
   v2 :: "('d, 'r2) view_parms"
@@ -73,6 +73,33 @@ abbreviation vp :: "('b, 'c) view_parms" where
 "vp \<equiv> \<lparr> inj = inj', prj = prj' \<rparr>"
 
 end
+*)
+(* commutativity for view_parms *)
+fun view_merge_commute :: "('d1, 'd2, 'r) view_merge_parms \<Rightarrow> ('d2, 'd1, 'r) view_merge_parms" where
+"view_merge_commute
+  \<lparr> v1 = view1
+  , v2 = view2 \<rparr> =
+  \<lparr> v1 = view2
+  , v2 = view1 \<rparr>"
+
+sublocale View_Merge_Spec \<subseteq> VMC : View_Merge_Spec "view_merge_commute View_Merge_parms"
+  apply(insert V1.View_Spec_axioms)
+  apply(insert V2.View_Spec_axioms)
+  apply(unfold_locales)
+  apply(case_tac View_Merge_parms) apply(simp add:View_Spec_def)
+  apply(case_tac View_Merge_parms) apply(simp add:View_Spec_def)
+  apply(case_tac View_Merge_parms) apply(simp add:View_Spec_def)
+  apply(case_tac View_Merge_parms) apply(simp add:View_Spec_def)
+
+(* commutativity for view_parms *)
+
+(* show commutativity for view_merge *)
+(*
+locale View_Merge_Spec_Commute = View_Merge' +
+*)
+
+(* associativity for view_parms - requires proving
+   we can induce a view *)
 
 (* we don't actually need this for functions,
 i think *)
@@ -111,6 +138,6 @@ apply(frule_tac V2.PrjInj1)
        apply(frule_tac V1.InjPrj1) apply(clarsimp)
      apply(frule_tac V1.PrjInj1)
 
-(* idea: just like for lenses/prisms we are going to have a concerete version *)
+(* idea: just like for lenses/prisms we are going to have a concrete version *)
 *)
 end

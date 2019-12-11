@@ -30,6 +30,13 @@ abbreviation proj1 :: "('c \<Rightarrow> 'a)" where
 abbreviation proj2 :: "('c \<Rightarrow> 'b)" where
 "proj2 \<equiv> L2.proj"
 
+abbreviation vwb1 :: "'c set" where
+"vwb1 \<equiv> L1.vwb"
+
+abbreviation vwb2 :: "'c set" where
+"vwb2 \<equiv> L2.vwb"
+
+
 (*
 definition lift1p :: "('a \<Rightarrow> 'x) \<Rightarrow> ('c \<Rightarrow> 'x)" where
 "lift1p = L1.liftp"
@@ -64,56 +71,79 @@ definition lower2s :: "('c \<Rightarrow> 'a) \<Rightarrow> ('m2 \<Rightarrow> 'a
 *)
 end
 
-locale Prod_Merge_Spec = Prod_Merge +
+locale Prod_Merge_Spec' = Prod_Merge +
   SL1 : Lens_Spec "prod_merge_parms.lens1 Prod_Merge_Parms" +
-  SL2 : Lens_Spec "prod_merge_parms.lens2 Prod_Merge_Parms" +
+  SL2 : Lens_Spec "prod_merge_parms.lens2 Prod_Merge_Parms" 
+begin
 
+abbreviation vwb :: "'c set" where
+"vwb \<equiv> vwb1 \<inter> vwb2"
+
+end
+
+locale Prod_Merge_Spec = Prod_Merge_Spec' +
+(*
+assumes Coh' : "\<And> cc'c'' . 
+    upd1 (pmap2 (id, upd2) (pmap3 (proj1, proj2, id) (reassoc_prod (pmap2 (pfan2, fst) cc'c'')))) =
+    upd2 (pmap2 (id, upd1) (pmap3 (proj2, proj1, id) (reassoc_prod (pmap2 (pfan2, snd) cc'c''))))"
+*)
+  assumes Coh' : "\<And> cc' . 
+    fst cc' \<in> vwb \<Longrightarrow> snd cc' \<in> vwb \<Longrightarrow>
+    upd1 (pmap2 (id, upd2) (pmap3 (proj1, proj2, id) (reassoc_prod (pmap2 (pfan2, id) cc')))) =
+    upd2 (pmap2 (id, upd1) (pmap3 (proj2, proj1, id) (reassoc_prod (pmap2 (pfan2, id) cc'))))"
+
+begin
+lemma Coh :
+  fixes c c'
+  shows "c \<in> vwb \<Longrightarrow> c' \<in> vwb \<Longrightarrow>
+  upd1 (proj1 c, upd2 (proj2 c, c')) =
+         upd2 (proj2 c, upd1 (proj1 c, c'))"
+  apply(insert Coh'[of "(c, c')"]) apply(simp)
+  done
+
+end
+
+locale Prod_Merge_Total_Spec = Prod_Merge_Spec +
 (* use "total" instead? *)
 (* need to parameterize these three by "very well behaved" *)
-assumes Put12' : "\<And> m1m2cc' .
+  assumes Put12' : "\<And> m1m2cc' .
+    (tnth3h m1m2cc' \<in> vwb \<and> tnth3t m1m2cc' \<in> vwb) \<Longrightarrow>
     upd1 (pmap2 (id, upd2) (pmap3 (id, id, fst) m1m2cc')) =
     upd1 (pmap2 (id, upd2) (pmap3 (id, id, snd) m1m2cc'))"
 
 assumes Put21' : "\<And> m2m1cc' .
+    (tnth3h m2m1cc' \<in> vwb \<and> tnth3t m2m1cc' \<in> vwb) \<Longrightarrow>
     upd2 (pmap2 (id, upd1) (pmap3 (id, id, fst) m2m1cc')) =
     upd2 (pmap2 (id, upd1) (pmap3 (id, id, snd) m2m1cc'))"
 
-assumes Coh' : "\<And> cc'c'' . 
-    upd1 (pmap2 (id, upd2) (pmap3 (proj1, proj2, id) (reassoc_prod (pmap2 (pfan2, fst) cc'c'')))) =
-    upd2 (pmap2 (id, upd1) (pmap3 (proj2, proj1, id) (reassoc_prod (pmap2 (pfan2, snd) cc'c''))))"
+
 begin
 
-lemma Coh :
-  fixes c c' c''
-  shows "upd1 (proj1 c, upd2 (proj2 c, c')) =
-                               upd2 (proj2 c, upd1 (proj1 c, c''))"
-  apply(insert Coh'[of "(c, c', c'')"]) apply(simp)
-  done
 
 lemma Put12 :
   fixes m1 m2 c c'
-  shows "upd1 (m1, (upd2 (m2, c))) = upd1 (m1, (upd2 (m2, c')))"
+  shows "c \<in> vwb \<Longrightarrow> c' \<in> vwb \<Longrightarrow> upd1 (m1, (upd2 (m2, c))) = upd1 (m1, (upd2 (m2, c')))"
   apply(insert Put12'[of "(m1, m2, c, c')"]) apply(simp)
   done
 
 lemma Put21 :
   fixes m2 m1 c c'
-  shows  "upd2 (m2, (upd1 (m1, c))) = upd2 (m2, (upd1 (m1, c')))"
+  shows "c \<in> vwb \<Longrightarrow> c' \<in> vwb \<Longrightarrow> upd2 (m2, (upd1 (m1, c))) = upd2 (m2, (upd1 (m1, c')))"
   apply(insert Put21'[of"(m2, m1, c, c')"]) apply(simp)
   done
 
 lemma Coh_id1 :
   fixes c c'
-  shows "upd1 (proj1 c, upd2 (proj2 c, c')) = c"
-  apply(insert Put12[of "proj1 c" "proj2 c" c' c])
+  shows "c \<in> vwb \<Longrightarrow> c' \<in> vwb \<Longrightarrow> upd1 (proj1 c, upd2 (proj2 c, c')) = c"
+  apply(insert Put12[of c c' "proj1 c" "proj2 c"])
   apply(insert SL2.PutGet[of c]) apply(simp)
   apply(insert SL1.PutGet[of c]) apply(simp)
   done
 
 lemma Coh_id2 :
   fixes c c'
-  shows "upd2 (proj2 c, upd1 (proj1 c, c')) = c"
-  apply(insert Put21[of "proj2 c" "proj1 c" c' c])
+  shows "c \<in> vwb \<Longrightarrow> c' \<in> vwb \<Longrightarrow> upd2 (proj2 c, upd1 (proj1 c, c')) = c"
+  apply(insert Put21[of c c' "proj2 c" "proj1 c"])
   apply(insert SL1.PutGet[of c]) apply(simp)
   apply(insert SL2.PutGet[of c]) apply(simp)
   done
@@ -121,11 +151,12 @@ lemma Coh_id2 :
 (* TODO: use total as an axiom? *)
 lemma total :
   fixes c1 c2
-  shows "proj1 c1 = proj1 c2 \<Longrightarrow> proj2 c1 = proj2 c2 \<Longrightarrow> c1 = c2"
-  apply(insert Coh[of c1 c2 c1])
-  apply(insert Coh_id2[of c1 c1]) apply(simp)
-  apply(simp add:SL2.PutGet)
-  apply(thin_tac "upd2 (proj2 c2, upd1 (proj1 c2, c1)) = c1")
+  shows "c1 \<in> vwb \<Longrightarrow> c2 \<in> vwb \<Longrightarrow>
+    proj1 c1 = proj1 c2 \<Longrightarrow> proj2 c1 = proj2 c2 \<Longrightarrow> c1 = c2"
+  apply(insert Coh_id1[of c1 c2])
+
+  apply(clarify)
+  apply(simp add:SL2.PutGet)  
   apply(simp add:SL1.PutGet)
   done
 
