@@ -1,4 +1,4 @@
-theory View_Rep3 imports View "../Isos/Iso"
+theory View_Rep imports View "../Isos/Iso"
 
 begin
 
