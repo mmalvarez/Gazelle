@@ -96,9 +96,9 @@ sublocale View_Comp_Spec \<subseteq> View_Spec "vp"
 
      apply(simp)
 (* this is laughably inefficient *)
-    apply(simp add: V1.InjPrj1 V2.InjPrj1  V1.InjPrj2 V2.InjPrj2 V1.PrjInj1 V2.PrjInj1 V1.PrjInj2 V2.PrjInj2  split: sum.splits prod.splits)
+    apply(simp add: V1.InjPrj1 V2.InjPrj1  (*V1.InjPrj2 V2.InjPrj2*) V1.PrjInj1 V2.PrjInj1 V1.PrjInj2 V2.PrjInj2  split: sum.splits prod.splits)
 
-    apply(simp add: V1.InjPrj1 V2.InjPrj1  V1.InjPrj2 V2.InjPrj2 V1.PrjInj1 V2.PrjInj1 V1.PrjInj2 V2.PrjInj2  split: sum.splits prod.splits)
+    apply(simp add: V1.InjPrj1 V2.InjPrj1  (*V1.InjPrj2 V2.InjPrj2*) V1.PrjInj1 V2.PrjInj1 V1.PrjInj2 V2.PrjInj2  split: sum.splits prod.splits)
      apply(clarsimp)
      apply(frule_tac V2.InjPrj1) apply(clarsimp)
      apply(frule_tac V1.InjPrj1) apply(clarsimp)

@@ -89,7 +89,8 @@ sublocale View_Merge_Spec \<subseteq> VMC : View_Merge_Spec "view_merge_commute 
   apply(case_tac View_Merge_parms) apply(simp add:View_Spec_def)
   apply(case_tac View_Merge_parms) apply(simp add:View_Spec_def)
   apply(case_tac View_Merge_parms) apply(simp add:View_Spec_def)
-  apply(case_tac View_Merge_parms) apply(simp add:View_Spec_def)
+         apply(case_tac View_Merge_parms) apply(simp add:View_Spec_def)
+  apply(clarsimp)
 
 (* commutativity for view_parms *)
 
