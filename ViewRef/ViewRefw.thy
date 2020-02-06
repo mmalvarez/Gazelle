@@ -56,29 +56,21 @@ assumes RefnInjR :
   assumes RefnPrj2 :
     "\<And> (r :: 'b) (ro :: 'b) (r' :: 'b) (d :: 'a) . refnr r r' \<Longrightarrow>
         prj r' = Inr ro \<Longrightarrow>
-        (prj r = Inr r)"   
-
-(* testing out this one. it probably needs a better name. *)
-  assumes RefnPrj3 :
-    "\<And> (r :: 'b) (ro :: 'b) (r' :: 'b) (d :: 'a) (d' :: 'a) . refnr r r' \<Longrightarrow>
-        prj (inj (d, r)) = Inr ro \<Longrightarrow>
-        (prj (inj (d', r')) = Inr r')"  
+        (prj r = Inr r)"     
 
   assumes PrjInj1 :
     "\<And> (r :: 'b) (d :: 'a) . prj r = Inl d \<Longrightarrow> inj (d, r) = r"
-(*
+
   assumes PrjInj2 :
     "\<And> (r :: 'b) (r' :: 'b) . prj r = Inr r' \<Longrightarrow> r = r'"
-*)
+
   assumes InjPrj1 :
     "\<And> (d :: 'a) (r :: 'b) (d' :: 'a) . prj (inj (d, r)) = Inl d' \<Longrightarrow> refnd d d'"
 
-(* need another law characterizing "broken" domain elements d? *)
-(*
   assumes InjPrj2 :
     "\<And> (d :: 'a) (r :: 'b) (r' :: 'b) (d' :: 'a) . prj (inj (d, r)) = Inr r' \<Longrightarrow> 
                  prj (inj (d', r)) = Inr r"
-*)
+
   assumes InjInj :
     "\<And> (a :: 'a) (b :: 'a) (c :: 'b) . refnr (inj (a, c)) (inj (a, inj (b, c)))"
 
@@ -94,21 +86,6 @@ lemma RefnInj' :
    apply(auto)
   done
 
-lemma PrjInj2 :
-    "\<And> (r :: 'b) (r' :: 'b) . prj r = Inr r' \<Longrightarrow> r = r'"
-  apply(cut_tac x = r in RO.leq_refl)
-  apply(drule_tac RefnPrj2) apply(simp) apply(simp)
-  done
-
-lemma InjPrj2 :
-    "\<And> (d :: 'a) (r :: 'b) (r' :: 'b) (d' :: 'a) . prj (inj (d, r)) = Inr r' \<Longrightarrow> 
-                 prj (inj (d', r)) = Inr r"
-  apply(cut_tac x = r in RO.leq_refl)
-  apply(drule_tac RefnPrj3)
-   apply(simp) apply(simp)
-  done
-
-(*
 lemma RefnPrj2 :
     "\<And> (r :: 'b) (r' :: 'b) (d :: 'a) (d' :: 'a) . refnr r r' \<Longrightarrow>
         prj r = Inl d \<Longrightarrow>
@@ -116,7 +93,7 @@ lemma RefnPrj2 :
         (refnd d d')"  
   apply(cut_tac r = r and r' = r' and d = d in "RefnPrj") apply(auto)
   done
-*)
+
 end
 
 (* next: View_Ref_Merge

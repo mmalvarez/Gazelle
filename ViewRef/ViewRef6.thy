@@ -1,5 +1,11 @@
-theory ViewRef imports "HOL-Lattice.Orders"
+theory ViewRef6 imports "HOL-Lattice.Orders"
 begin
+
+datatype ('a, 'b) vr =
+  Full 'a
+  | Empty 'b
+  | Broken
+
 
 record ('d, 'r) view_ref_parms =
   inj :: "('d * 'r) \<Rightarrow> 'r"
@@ -40,11 +46,11 @@ locale View_Ref_Spec = View_Ref +
 assumes RefnInjD :
     "\<And> (d :: 'a) (d' :: 'a) (r :: 'b) . refnd d d' \<Longrightarrow>
         refnr (inj (d, r)) (inj (d', r))"
-
+(*
 assumes RefnInjR :
     "\<And> (r :: 'b) (r' :: 'b) (d :: 'a) . refnr r r' \<Longrightarrow>
         refnr (inj (d, r)) (inj (d, r'))"
-
+*)
 (* does having more information interact with
    brokenness?
    do we need brokenness now that we have an ordering? *)
@@ -84,6 +90,7 @@ assumes RefnInjR :
 
 begin
 
+(*
 lemma RefnInj' :
       "\<And> (d :: 'a) (d' :: 'a) (r :: 'b) (r' :: 'b) . refnd d d' \<Longrightarrow>
         refnr r r' \<Longrightarrow>
@@ -93,7 +100,7 @@ lemma RefnInj' :
   apply(drule_tac x = "local.inj (d, r)" and z = "inj (d', r')" in RO.leq_trans) 
    apply(auto)
   done
-
+*)
 lemma PrjInj2 :
     "\<And> (r :: 'b) (r' :: 'b) . prj r = Inr r' \<Longrightarrow> r = r'"
   apply(cut_tac x = r in RO.leq_refl)

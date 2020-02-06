@@ -1,4 +1,4 @@
-theory ViewRef imports "HOL-Lattice.Orders"
+theory ViewRef5 imports "HOL-Lattice.Orders"
 begin
 
 record ('d, 'r) view_ref_parms =
@@ -40,29 +40,46 @@ locale View_Ref_Spec = View_Ref +
 assumes RefnInjD :
     "\<And> (d :: 'a) (d' :: 'a) (r :: 'b) . refnd d d' \<Longrightarrow>
         refnr (inj (d, r)) (inj (d', r))"
-
+(*
 assumes RefnInjR :
     "\<And> (r :: 'b) (r' :: 'b) (d :: 'a) . refnr r r' \<Longrightarrow>
         refnr (inj (d, r)) (inj (d, r'))"
-
+*)
 (* does having more information interact with
    brokenness?
    do we need brokenness now that we have an ordering? *)
+(* LHS is good \<rightarrow> RHS is good *)
   assumes RefnPrj1 :
     "\<And> (r :: 'b) (r' :: 'b) (d :: 'a) . refnr r r' \<Longrightarrow>
         prj r = Inl d \<Longrightarrow>
         (\<exists> d' . prj r' = Inl d' \<and> refnd d d')"     
 
+(* RHS is empty/broken implies LHS is empty/broken *)
   assumes RefnPrj2 :
     "\<And> (r :: 'b) (ro :: 'b) (r' :: 'b) (d :: 'a) . refnr r r' \<Longrightarrow>
         prj r' = Inr ro \<Longrightarrow>
         (prj r = Inr r)"   
 
+(* LHS is broken implies RHS is broken *)
 (* testing out this one. it probably needs a better name. *)
+(*
   assumes RefnPrj3 :
     "\<And> (r :: 'b) (ro :: 'b) (r' :: 'b) (d :: 'a) (d' :: 'a) . refnr r r' \<Longrightarrow>
         prj (inj (d, r)) = Inr ro \<Longrightarrow>
         (prj (inj (d', r')) = Inr r')"  
+*)
+(* RHS is good implies LHS is not broken *)
+(*
+assumes RefnPrj4 :
+      "\<And> (r :: 'b) (ro :: 'b) (r' :: 'b) (d :: 'a) (d' :: 'a) (d'' :: 'a) . refnr r r' \<Longrightarrow>
+        prj (inj (d, r')) = Inl d' \<Longrightarrow>
+        (prj (inj (d', r')) = Inr r')"  
+*)
+(* this is still not quite right. What we need are the following cases for RefnPrj:
+1. LHS is good implies RHS is good
+2. RHS is empty implies LHS is empty
+3. RHS is broken implies LHS is broken (?)
+4. RHS is good implied LHS is not broken *)
 
   assumes PrjInj1 :
     "\<And> (r :: 'b) (d :: 'a) . prj r = Inl d \<Longrightarrow> inj (d, r) = r"
@@ -84,6 +101,7 @@ assumes RefnInjR :
 
 begin
 
+(*
 lemma RefnInj' :
       "\<And> (d :: 'a) (d' :: 'a) (r :: 'b) (r' :: 'b) . refnd d d' \<Longrightarrow>
         refnr r r' \<Longrightarrow>
@@ -93,7 +111,7 @@ lemma RefnInj' :
   apply(drule_tac x = "local.inj (d, r)" and z = "inj (d', r')" in RO.leq_trans) 
    apply(auto)
   done
-
+*)
 lemma PrjInj2 :
     "\<And> (r :: 'b) (r' :: 'b) . prj r = Inr r' \<Longrightarrow> r = r'"
   apply(cut_tac x = r in RO.leq_refl)
@@ -108,6 +126,18 @@ lemma InjPrj2 :
    apply(simp) apply(simp)
   done
 
+lemma InjBroken :
+  "\<And> (d :: 'a) (r :: 'b) (ro :: 'b) . prj (inj (d, r)) = Inr ro \<Longrightarrow>
+    prj r = Inr r"
+
+  apply(case_tac "prj r") 
+  apply(frule_tac PrjInj1)
+   apply(cut_tac r = r and r' = r and d' = a in RefnPrj3)
+     apply(rule_tac RO.leq_refl)
+    apply(simp)
+   apply(simp)
+  apply(frule_tac r = r in PrjInj2) apply(simp)
+  done
 (*
 lemma RefnPrj2 :
     "\<And> (r :: 'b) (r' :: 'b) (d :: 'a) (d' :: 'a) . refnr r r' \<Longrightarrow>
