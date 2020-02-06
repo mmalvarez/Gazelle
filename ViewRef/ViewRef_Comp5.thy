@@ -90,12 +90,28 @@ apply(simp add:V1.DO.leq_antisym)
 
            apply(drule_tac r = r in V2.RefnInjD)
             apply(simp)
-
+(*
            apply(drule_tac d' = d in V1.InjPrj2) apply(simp)
-          apply(drule_tac d' = d' in V1.InjPrj2) apply(simp)
+          apply(drule_tac d' = d' in V1.InjPrj2) apply(simp) *)
          apply(rule_tac V2.RO.leq_refl)
 apply(rule_tac V2.RO.leq_refl)
 
+(* RefnInjR *)
+        apply(clarsimp)
+        apply(simp split:sum.splits) apply(safe)
+          apply(rule_tac V2.RefnInj')
+             apply(rule_tac HagreeL)
+             apply(rule_tac V1.RefnInjR)
+               apply(drule_tac V2.RefnPrj1) apply(simp) apply(clarsimp)
+               apply(rule_tac HagreeR) apply(simp)
+              apply(simp)
+             apply(simp)
+            apply(simp)
+           apply(simp)
+          apply(simp)
+         apply(frule_tac V1.PrjInj2) apply(clarsimp)
+
+  apply(frule_tac V1.PrjInj2) apply(clarsimp)
 (* 
   RefnPrj1
 *)
@@ -247,13 +263,111 @@ apply(rule_tac V2.RO.leq_refl)
     apply(clarsimp)
   apply(frule_tac V2.PrjInj2) apply(clarsimp)
 
+
+(* injPrj2 *)
+   apply(simp split:sum.splits) apply(clarsimp)
+      apply(frule_tac V2.InjPrj1) 
+      apply(drule_tac HagreeR)
+      apply(frule_tac V1.RefnPrj2) apply(simp)
+      apply(frule_tac V1.InjBroken) apply(simp)
+
+  apply(clarsimp)
+     apply(rule_tac conjI) apply(clarsimp)
+     apply(clarsimp) apply(frule_tac V2.PrjInj2) apply(simp)
+
+  apply(clarsimp)
+    apply(rule_tac conjI) apply(clarsimp)
+apply(rule_tac conjI) apply(clarsimp)
+      apply(frule_tac d' = "V1.inj (d', x1)" in V2.InjPrj2) apply(simp)
+
+     apply(clarsimp)
+     apply(frule_tac V2.PrjInj2) apply(clarsimp)
+     apply(frule_tac V2.InjPrj1)
+     apply(drule_tac HagreeR)
+     apply(drule_tac V1.RefnPrj2) apply(simp)
+     apply(frule_tac V1.InjBroken) apply(simp)
+
+    apply(clarsimp)
+    apply(frule_tac r' = x2 and d' = " V1.inj (d', x1)" in V2.InjPrj2) apply(simp)
+
+   apply(clarsimp)
+  apply(frule_tac V2.PrjInj2) apply(frule_tac r = x2a in V2.PrjInj2) apply(clarsimp)
+
 (*
   InjInj
 *)
-     apply(simp split:sum.splits) apply(clarsimp)
+     apply(simp split:sum.splits)
   apply(safe)
+
+(* defer *)
+
+
+        apply(cut_tac
+a = " (V1.inj (a, x1))" and b = "V1.inj (b, x1)" and c = c in  V2.InjInj)
+        apply(rule_tac V2.RO.leq_trans)
+         apply(simp)
+
+  apply(rule_tac V2.RefnInj')
+
+    (*    apply(rule_tac V2.RefnInjD) *)
+           apply(rule_tac HagreeL)
+        apply(cut_tac a = a and b = b and c = x1 in V1.InjInj)
+           apply(frule_tac V2.InjPrj1)
+ apply(case_tac "V1.prj (V1.inj (b, x1))")
+           apply(rule_tac V1.RO.leq_trans)
+            apply(simp)
+           apply(drule_tac HagreeR)
+  apply(rule_tac V1.RefnInjR) apply(simp)
+             apply(frule_tac HagreeL) apply(simp) apply(simp)
+
+           apply(drule_tac V1.InjBroken) apply(simp)
+
+          apply(rule_tac V2.RO.leq_refl)
+         apply(simp)
+  apply(simp)
+
+  apply(drule_tac r = c in V2.RefnInjD)
+        apply(frule_tac V2.InjPrj1)
+        apply(drule_tac HagreeR)
+
+  apply(drule_tac HagreeL)
+        apply(cut_tac a = a and b = b and c = x1 in V1.InjInj)
+  apply(rotate_tac -1)
+        apply(rule_tac V1.RO.leq_trans)
+         apply(simp)
+        apply(rule_tac V1.RefnInjR)
+          apply(rule_tac HagreeR) apply(simp)
+
+  apply(case_tac "V1.prj (V1.inj (b, x1))") apply(simp) apply(simp)
+         apply(frule_tac V1.RefnPrj1) apply(simp)
+  apply(clarsimp)
+
     apply(clarsimp)
   apply(frule_tac 
+
+(* cases after the first *)
+
+        apply(drule_tac V2.InjPrj1)
+        apply(drule_tac HagreeR)
+        apply(drule_tac V1.RefnPrj2) apply(simp)
+        apply(drule_tac V1.InjBroken) apply(simp)
+
+       apply(drule_tac V2.InjBroken) apply(simp)
+
+      apply(rule_tac V2.RO.leq_refl)
+
+     apply(frule_tac V2.PrjInj2) apply(clarsimp)
+      apply(rule_tac V2.RO.leq_refl)
+
+  apply(frule_tac r = x2 in V2.PrjInj2) apply(clarsimp)
+      apply(rule_tac V2.RO.leq_refl)
+
+  apply(drule_tac V2.InjPrj2)
+
+        apply(rule_tac V2.RefnInjD)
+        apply(rule_tac HagreeL)
+        apply(rule_tac V1.RefnInjD)
+
   apply(drule_tac 
 
   apply(cut_tac d = d and r = x1a and ro = b in V1.RefnPrj3) apply(simp)

@@ -40,6 +40,16 @@ locale View_Ref_Spec = View_Ref +
 assumes RefnInjD :
     "\<And> (d :: 'a) (d' :: 'a) (r :: 'b) . refnd d d' \<Longrightarrow>
         refnr (inj (d, r)) (inj (d', r))"
+
+
+(* TODO: weaken assumptions so that we just assume they are
+valid rather than projectable? *)
+assumes RefnInjR :
+    "\<And> (r :: 'b) (r' :: 'b) (dx :: 'a) (d :: 'a) (d' :: 'a) . refnr r r' \<Longrightarrow>
+        prj r = Inl d \<Longrightarrow>
+        prj r' = Inl d' \<Longrightarrow>
+        refnr (inj (dx, r)) (inj (dx, r'))"
+
 (*
 assumes RefnInjR :
     "\<And> (r :: 'b) (r' :: 'b) (d :: 'a) . refnr r r' \<Longrightarrow>
@@ -91,11 +101,11 @@ assumes RefnPrj4 :
     "\<And> (d :: 'a) (r :: 'b) (d' :: 'a) . prj (inj (d, r)) = Inl d' \<Longrightarrow> refnd d d'"
 
 (* need another law characterizing "broken" domain elements d? *)
-(*
+
   assumes InjPrj2 :
     "\<And> (d :: 'a) (r :: 'b) (r' :: 'b) (d' :: 'a) . prj (inj (d, r)) = Inr r' \<Longrightarrow> 
                  prj (inj (d', r)) = Inr r"
-*)
+
   assumes InjInj :
     "\<And> (a :: 'a) (b :: 'a) (c :: 'b) . refnr (inj (a, c)) (inj (a, inj (b, c)))"
 
@@ -117,7 +127,7 @@ lemma PrjInj2 :
   apply(cut_tac x = r in RO.leq_refl)
   apply(drule_tac RefnPrj2) apply(simp) apply(simp)
   done
-
+(*
 lemma InjPrj2 :
     "\<And> (d :: 'a) (r :: 'b) (r' :: 'b) (d' :: 'a) . prj (inj (d, r)) = Inr r' \<Longrightarrow> 
                  prj (inj (d', r)) = Inr r"
@@ -125,19 +135,29 @@ lemma InjPrj2 :
   apply(drule_tac RefnPrj3)
    apply(simp) apply(simp)
   done
-
+*)
 lemma InjBroken :
   "\<And> (d :: 'a) (r :: 'b) (ro :: 'b) . prj (inj (d, r)) = Inr ro \<Longrightarrow>
     prj r = Inr r"
 
   apply(case_tac "prj r") 
-  apply(frule_tac PrjInj1)
-   apply(cut_tac r = r and r' = r and d' = a in RefnPrj3)
-     apply(rule_tac RO.leq_refl)
-    apply(simp)
-   apply(simp)
-  apply(frule_tac r = r in PrjInj2) apply(simp)
+   apply(frule_tac PrjInj1)
+   apply(frule_tac d' = a in InjPrj2) apply(simp) apply(clarsimp)
+  apply(frule_tac r = r in PrjInj2) apply(clarsimp)
   done
+
+lemma RefnInj' :
+      "\<And> (d :: 'a) (d' :: 'a) (r :: 'b) (r' :: 'b) (dx :: 'a) (dx' :: 'a) . refnd d d' \<Longrightarrow>
+        refnr r r' \<Longrightarrow>
+        prj r = Inl dx \<Longrightarrow>
+        prj r' = Inl dx' \<Longrightarrow>
+        refnr (inj (d, r)) (inj (d', r'))"
+  apply(frule_tac r = r in RefnInjD)
+  apply(frule_tac dx = d' in RefnInjR) apply(simp) apply(simp)
+  apply(rule_tac RO.leq_trans)
+  apply(simp)apply(simp)
+  done
+
 (*
 lemma RefnPrj2 :
     "\<And> (r :: 'b) (r' :: 'b) (d :: 'a) (d' :: 'a) . refnr r r' \<Longrightarrow>
@@ -147,6 +167,7 @@ lemma RefnPrj2 :
   apply(cut_tac r = r and r' = r' and d = d in "RefnPrj") apply(auto)
   done
 *)
+
 end
 
 (* next: View_Ref_Merge
