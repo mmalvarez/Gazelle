@@ -97,6 +97,8 @@ assumes RefnPrj4 :
   assumes PrjInj2 :
     "\<And> (r :: 'b) (r' :: 'b) . prj r = Inr r' \<Longrightarrow> r = r'"
 *)
+
+(* this one may not be necessary *)
   assumes InjPrj1 :
     "\<And> (d :: 'a) (r :: 'b) (d' :: 'a) . prj (inj (d, r)) = Inl d' \<Longrightarrow> refnd d d'"
 
