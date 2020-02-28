@@ -1,4 +1,4 @@
-theory ViewRef5 imports "HOL-Lattice.Orders"
+theory ViewRef imports "HOL-Lattice.Orders"
 begin
 
 record ('d, 'r) view_ref_parms =
