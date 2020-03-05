@@ -27,6 +27,13 @@ lemma ord_leq' : "\<And> ox oy a b .
   apply(simp add:ord_leq_def)
   done
 
+lemma ord_leq_d : "\<And> ox oy a b .
+  ox a b \<Longrightarrow>
+  ord_leq ox oy \<Longrightarrow>
+  oy a b"
+  apply(simp add:ord_leq_def)
+  done
+
 (*
 record ('a) latl_parms =
   lleq :: "'a \<Rightarrow> 'a \<Rightarrow> bool"
@@ -146,23 +153,51 @@ definition is_bub :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" w
                 LatticeLike.is_ub lleq' {a, b} s' \<longrightarrow>
                 lleq' s' s)))"
 *)
-definition is_bub :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
-"is_bub a b s =
+definition is_bub' :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
+"is_bub' a b s =
   (lleq a s \<and>
-    ((\<forall> lleq' s' . ord_leq lleq lleq' \<longrightarrow>
+    ((\<forall> lleq' . ord_leq lleq lleq' \<longrightarrow>
                 LatticeLike_Weak_Spec lleq' \<longrightarrow>
-                LatticeLike.is_sup lleq' {a, b} s' \<longrightarrow>
-                lleq' s' s)))"
+                lleq' a b \<longrightarrow>
+                (lleq' s b))))"
 
 (* lleq' b s or lleq' s b ?
    is_sup or is_ub? *)
 
+definition is_bub :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
+"is_bub a b s =
+  (lleq a s \<and>
+    ((\<forall> lleq' . ord_leq lleq lleq' \<longrightarrow>
+                LatticeLike_Weak_Spec lleq' \<longrightarrow>
+                lleq' a b \<longrightarrow>
+                (lleq' b s ))))"
+
+
+definition is_bub_weak :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
+"is_bub_weak a b s =
+  (lleq a s \<and>
+    ((\<forall> lleq' . ord_leq lleq lleq' \<longrightarrow>
+                lleq' a b \<longrightarrow>
+                (lleq' b s))))"
+
+
 (* should this be is_greatest? *)
+
+definition is_bsup' :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
+"is_bsup' a b x = is_greatest (is_bub' a b) x"
+
 definition is_bsup :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
 "is_bsup a b x = is_least (is_bub a b) x"
 
+definition is_bsup_weak :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
+"is_bsup_weak a b x = is_least (is_bub_weak a b) x"
 
+inductive clos :: "('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'a \<Rightarrow> bool)" where
+"\<And> R a . clos R a a"
+| "\<And> R a b  . R a b \<Longrightarrow> clos R a b"
+| "\<And> R a b c. clos R a b \<Longrightarrow> clos R b c \<Longrightarrow> clos R a c"
 end
+
 
 locale Mergeable =
   Mergeable' +
@@ -171,40 +206,134 @@ locale Mergeable =
 locale Mergeable_Spec =
   Mergeable +
   LatticeLike_Spec +
+
+
   assumes bsup_is_bsup:
     "\<And> a b . is_bsup a b (bsup a b)"
 
+assumes bsup_is_bsup' :
+    "\<And> a b . is_bsup' a b (bsup a b)"
+
+(*
+assumes bsup_weak_is_bsup :
+    "\<And> a b . is_bsup_weak a b (bsup_weak a b)"
+*)
 begin
 
+
+lemma bsup_sup_weak :
+  "\<And> a b x . has_sup {a, b} \<Longrightarrow> is_bsup_weak a b x \<Longrightarrow>
+             is_sup {a, b} x"
+  apply(simp add:has_sup_def is_sup_def is_bsup_def is_bub_def is_ub_def is_least_def
+        LatticeLike.is_sup_def LatticeLike.is_least_def is_greatest_def
+        is_bsup_weak_def is_bub_weak_def) apply(auto)
+   apply(drule_tac x = s in spec) apply(auto)
+    apply(simp add:ord_leq_def)
+
+(*
+   apply(drule_tac x = "\<lambda> a' b' . b' = b \<or> lleq a' b'" in spec) apply(auto)
+    apply(simp add:ord_leq_def) apply(simp add:leq_refl)
+
+  apply(drule_tac x = a' in spec) apply(auto)
+   apply(simp add:ord_leq_def)
+*)
+   apply(drule_tac x = "\<lambda> a' b' . a' = a \<or> lleq a' b'" in spec) apply(auto)
+    apply(simp add:ord_leq_def)
+
+  apply(drule_tac x = a' in spec) apply(auto)
+   apply(simp add:ord_leq_def)
+
+  done
+
+(* closure operator? *)
+  
 
 lemma bsup_sup :
   "\<And> a b . has_sup {a, b} \<Longrightarrow> is_sup {a, b} (bsup a b)"
     apply(cut_tac a = a and b = b in bsup_is_bsup)
-  apply(simp add:has_sup_def is_sup_def is_bsup_def is_bub_def is_ub_def is_least_def
-        LatticeLike.is_sup_def LatticeLike.is_least_def) apply(auto)
-  apply(drule_tac x = lleq in spec) apply(auto)
-     apply(simp add:ord_leq_refl)
-  apply(simp add: LatticeLike_Weak_Spec_axioms)
-  apply(rotate_tac -1)
+  apply(simp add: is_bsup'_def is_bub'_def has_sup_def is_sup_def is_bsup_def is_bub_def is_ub_def is_least_def
+        LatticeLike.is_sup_def LatticeLike.is_least_def is_greatest_def) apply(auto)
+
    apply(drule_tac x = s in spec) apply(auto)
-     apply(simp add:is_ub_def)
-  apply(simp add:is_ub_def)
-   apply(rule_tac leq_trans) apply(simp) apply(simp)
+    apply(simp add:ord_leq_def)
 
-  
+   apply(drule_tac x = "(\<lambda> a' b' . lleq a' b' \<or> (lleq a' a))" in spec) apply(auto)
+          apply(simp add:ord_leq_def)
+  defer
 
-  apply(rotate_tac -5)
-  apply(drule_tac x = s in spec) apply(clarsimp)
-  apply(drule_tac x = a' in spec) apply(clarsimp)
-  apply(rotate_tac 3)
-  apply(rule_tac b = s  in leq_trans)
-   apply(clarsimp)
-   apply(rotate_tac -1)
-   apply(drule_tac x=  s in spec)
-   apply(simp add:LatticeLike.is_ub_def) apply(auto)
-   apply(rule_tac ox = lleq in ord_leq') apply(simp) apply(simp)
-  apply(rule_tac ox = lleq in ord_leq') apply(simp) apply(simp)
+         apply(simp add:leq_refl)
+       apply(rule_tac leq_trans) apply(auto)
+  apply(simp add:leq_refl)
+       apply(rule_tac leq_trans) apply(auto)
+
+   apply(drule_tac x = a' in spec) apply(auto)
+   defer
+
+   apply(simp add:LatticeLike_Weak_Spec_def)
+   apply(auto)
+        apply(simp add:leq_refl)
+      apply(drule_tac a = aa and b = ba in leq_trans) apply(simp) apply(simp)
+   apply(drule_tac a = aa and b = ba in leq_trans) apply(simp) apply(simp)
+
+  apply(drule_tac a = b and b = a' in ord_leq')
+   apply(simp) apply(simp)
   done
+
+
+lemma bsup_sup :
+  "\<And> a b . has_sup {a, b} \<Longrightarrow> is_sup {a, b} (bsup a b)"
+    apply(cut_tac a = a and b = b in bsup_is_bsup')
+  apply(simp add: is_bsup'_def is_bub'_def has_sup_def is_sup_def is_bsup_def is_bub_def is_ub_def is_least_def
+        LatticeLike.is_sup_def LatticeLike.is_least_def is_greatest_def) apply(auto)
+
+   apply(drule_tac x = s in spec) apply(auto)
+    apply(drule_tac x = "bsup a b" in spec) apply(auto)
+
+  defer
+
+  apply(rule_tac leq_trans) apply(simp) apply(simp)
+
+   apply(drule_tac x = "(\<lambda> a' b' . lleq a' b' \<or> (lleq a' a))" in spec) apply(auto)
+             apply(simp add:ord_leq_def)
+            defer
+         apply(simp add:leq_refl)
+
+           apply(drule_tac x = "bsup a b" in spec) apply(auto)
+  defer
+            apply(drule_tac a = "bsup a b" and c = a' in leq_trans) apply(simp) apply(simp)
+           apply(drule_tac a = "a" and b = "bsup a b" in leq_antisym) apply(simp)
+           apply(simp)
+            apply(drule_tac a = "bsup a b" and c = a' in leq_trans) apply(simp) apply(simp)
+            apply(drule_tac a = "bsup a b" and c = a' in leq_trans) apply(simp) apply(simp)
+            apply(drule_tac a = "bsup a b" and c = a' in leq_trans) apply(simp) apply(simp)
+            apply(drule_tac a = "bsup a b" and c = a' in leq_trans) apply(simp) apply(simp)
+            apply(drule_tac a = "bsup a b" and c = a' in leq_trans) apply(simp) apply(simp)
+            apply(drule_tac a = "bsup a b" and c = a' in leq_trans) apply(simp) apply(simp)
+
+   apply(drule_tac x = "(\<lambda> a' b' . lleq' a' b' \<or> (lleq s b))" in spec) apply(auto)
+  defer defer
+(*
+   apply(drule_tac x = "(\<lambda> a' b' . lleq a' b' \<or> (lleq a' a))" in spec) apply(auto)
+          apply(simp add:ord_leq_def)
+  defer
+
+         apply(simp add:leq_refl)
+       apply(rule_tac leq_trans) apply(auto)
+  apply(simp add:leq_refl)
+       apply(rule_tac leq_trans) apply(auto)
+
+   apply(drule_tac x = a' in spec) apply(auto)
+   defer
+
+   apply(simp add:LatticeLike_Weak_Spec_def)
+   apply(auto)
+        apply(simp add:leq_refl)
+      apply(drule_tac a = aa and b = ba in leq_trans) apply(simp) apply(simp)
+   apply(drule_tac a = aa and b = ba in leq_trans) apply(simp) apply(simp)
+
+  apply(drule_tac a = b and b = a' in ord_leq')
+   apply(simp) apply(simp) *)
+  sorry
 (*
 lemma inf_assoc :
   "\<And> a b c . inf (inf a b) c = inf a (inf b c)"
@@ -219,24 +348,58 @@ lemma inf_assoc :
 end
 
 
-abbreviation test0_parms :: "(nat option) latl_parms" where
-"test0_parms \<equiv>
-\<lparr> lleq = (\<lambda> l r .
-    (case (l, r) of
-      ((None), _) \<Rightarrow> True
-       | _ \<Rightarrow> l = r))
-, bsup = (\<lambda> l r .
-    (case l of
-            (None) \<Rightarrow> (r)
-            | _ \<Rightarrow> l))
-\<rparr>"
+fun test0_lleq :: "nat option \<Rightarrow> nat option \<Rightarrow> bool" where
+"test0_lleq None _ = True"
+| "test0_lleq x y = (x = y)"
 
-value "bsup test0_parms None (Some 2)"
-value "bsup test0_parms (Some 2) (None)"
+fun test0_bsup :: "nat option \<Rightarrow> nat option \<Rightarrow> nat option" where
+"test0_bsup None r = r"
+| "test0_bsup l r = l"
+  
+
+value "test0_bsup None (Some 2)"
+value "test0_bsup (Some 2) (None)"
 
 
-interpretation Test0 : LatticeLike_Spec test0_parms
+interpretation Test0 : Mergeable_Spec test0_lleq test0_bsup
   apply(unfold_locales)
+     apply(case_tac a; clarsimp) 
+    apply(case_tac a; clarsimp)
+   apply(case_tac a; clarsimp)
+   apply(case_tac b; clarsimp)
+
+  apply(simp add:Mergeable'.is_bsup_weak_def Mergeable'.is_bsup_def Mergeable'.is_bub_def LatticeLike.is_least_def LatticeLike.is_sup_def LatticeLike.is_ub_def
+                 Mergeable'.is_bub_weak_def)
+
+  apply(auto)
+   apply(case_tac a; clarsimp)
+   apply(case_tac b; clarsimp) 
+   apply(safe)
+
+    apply(drule_tac a = "Some a" and b = "Some a" in ord_leq') apply(auto)
+  
+  apply(case_tac a') apply(auto)
+    apply(drule_tac x = test0_lleq in spec) apply(auto)
+     apply(simp add:ord_leq_refl)
+(* shouldn't need to reprove this. *)
+    apply(simp add: LatticeLike_Weak_Spec_def) apply(auto)
+    apply(case_tac a; clarsimp)
+   apply(case_tac a; clarsimp)
+
+  apply(drule_tac x = test0_lleq in spec) apply(simp) apply(auto)
+     apply(simp add:ord_leq_refl)
+(* shouldn't need to reprove this. *)
+    apply(simp add: LatticeLike_Weak_Spec_def) apply(auto)
+    apply(case_tac ab; clarsimp)
+   apply(case_tac ab; clarsimp)
+
+  apply(case_tac b; auto)
+   defer
+
+   apply(simp add:LatticeLike_Weak_Spec_def)
+  apply(auto)
+    
+    apply(simp cong:option.case_cong)
   apply(auto)
        apply(simp split:option.splits)
        apply(simp split:option.splits)
