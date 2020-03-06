@@ -172,6 +172,22 @@ definition is_bub :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" w
                 lleq' a b \<longrightarrow>
                 (lleq' b s ))))"
 
+definition is_bub3 :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
+"is_bub3 a b s =
+  (lleq a s \<and>
+    ((\<forall> lleq' . ord_leq lleq lleq' \<longrightarrow>
+                LatticeLike_Weak_Spec lleq' \<longrightarrow>
+                lleq' a b \<longrightarrow>
+                (lleq' s b \<and> lleq' b s ))))"
+
+definition is_bub4 :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
+"is_bub4 a b s =
+  (lleq a s \<and>
+    ((\<forall> lleq' . ord_leq lleq lleq' \<longrightarrow>
+                LatticeLike_Weak_Spec lleq' \<longrightarrow>
+                lleq' s b \<longleftrightarrow>
+                lleq' b s)))"
+
 
 definition is_bub_weak :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
 "is_bub_weak a b s =
@@ -185,6 +201,16 @@ definition is_bub_weak :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bo
 
 definition is_bsup' :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
 "is_bsup' a b x = is_greatest (is_bub' a b) x"
+
+definition is_bsup'' :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
+"is_bsup'' a b x = is_least (is_bub' a b) x"
+
+definition is_bsup3 :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
+"is_bsup3 a b x = is_least (is_bub3 a b) x"
+
+definition is_bsup4 :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
+"is_bsup4 a b x = is_least (is_bub4 a b) x"
+
 
 definition is_bsup :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
 "is_bsup a b x = is_least (is_bub a b) x"
@@ -208,12 +234,24 @@ locale Mergeable_Spec =
   LatticeLike_Spec +
 
 
+
   assumes bsup_is_bsup:
     "\<And> a b . is_bsup a b (bsup a b)"
 
+(*
 assumes bsup_is_bsup' :
     "\<And> a b . is_bsup' a b (bsup a b)"
 
+assumes bsup_is_bsup'' :
+    "\<And> a b . is_bsup'' a b (bsup a b)"
+
+assumes bsup_is_bsup3 :
+    "\<And> a b . is_bsup3 a b (bsup a b)"
+*)
+(*
+assumes bsup_is_bsup4 :
+  "\<And> a b . is_bsup4 a b (bsup a b)"
+*)
 (*
 assumes bsup_weak_is_bsup :
     "\<And> a b . is_bsup_weak a b (bsup_weak a b)"
@@ -252,18 +290,19 @@ lemma bsup_sup :
   "\<And> a b . has_sup {a, b} \<Longrightarrow> is_sup {a, b} (bsup a b)"
     apply(cut_tac a = a and b = b in bsup_is_bsup)
   apply(simp add: is_bsup'_def is_bub'_def has_sup_def is_sup_def is_bsup_def is_bub_def is_ub_def is_least_def
-        LatticeLike.is_sup_def LatticeLike.is_least_def is_greatest_def) apply(auto)
+        LatticeLike.is_sup_def LatticeLike.is_least_def is_greatest_def is_bsup4_def is_bub4_def) apply(auto)
 
    apply(drule_tac x = s in spec) apply(auto)
     apply(simp add:ord_leq_def)
-
    apply(drule_tac x = "(\<lambda> a' b' . lleq a' b' \<or> (lleq a' a))" in spec) apply(auto)
           apply(simp add:ord_leq_def)
   defer
 
-         apply(simp add:leq_refl)
+  apply(drule_tac x = a in spec) apply(auto)
+        apply(simp add:leq_refl)
        apply(rule_tac leq_trans) apply(auto)
-  apply(simp add:leq_refl)
+
+     apply(simp add:leq_refl)
        apply(rule_tac leq_trans) apply(auto)
 
    apply(drule_tac x = a' in spec) apply(auto)
@@ -279,8 +318,18 @@ lemma bsup_sup :
    apply(simp) apply(simp)
   done
 
+(*
+lemma bsup_sup3 :
+  "\<And> a b . has_sup {a, b} \<Longrightarrow> is_sup {a, b} (bsup a b)"
+    apply(cut_tac a = a and b = b in bsup_is_bsup3)
+  apply(simp add: is_bsup'_def is_bsup''_def is_bsup3_def is_bub3_def is_bub'_def has_sup_def is_sup_def is_bsup_def is_bub_def is_ub_def is_least_def
+        LatticeLike.is_sup_def LatticeLike.is_least_def is_greatest_def) apply(auto)
 
-lemma bsup_sup :
+   apply(drule_tac x = s in spec) apply(auto)
+    apply(simp add:ord_leq_def)
+*)
+(*
+lemma bsup_sup2 :
   "\<And> a b . has_sup {a, b} \<Longrightarrow> is_sup {a, b} (bsup a b)"
     apply(cut_tac a = a and b = b in bsup_is_bsup')
   apply(simp add: is_bsup'_def is_bub'_def has_sup_def is_sup_def is_bsup_def is_bub_def is_ub_def is_least_def
@@ -334,6 +383,7 @@ lemma bsup_sup :
   apply(drule_tac a = b and b = a' in ord_leq')
    apply(simp) apply(simp) *)
   sorry
+*)
 (*
 lemma inf_assoc :
   "\<And> a b c . inf (inf a b) c = inf a (inf b c)"
@@ -373,16 +423,17 @@ interpretation Test0 : Mergeable_Spec test0_lleq test0_bsup
 
   apply(auto)
    apply(case_tac a; clarsimp)
-   apply(case_tac b; clarsimp) 
-   apply(safe)
+   apply(case_tac a; clarsimp) 
+  apply(simp add:LatticeLike_Weak_Spec_def)
 
-    apply(drule_tac a = "Some a" and b = "Some a" in ord_leq') apply(auto)
-  
-  apply(case_tac a') apply(auto)
-    apply(drule_tac x = test0_lleq in spec) apply(auto)
-     apply(simp add:ord_leq_refl)
-(* shouldn't need to reprove this. *)
-    apply(simp add: LatticeLike_Weak_Spec_def) apply(auto)
+   apply(case_tac b; clarsimp)
+    apply(simp add:ord_leq_def)
+
+  apply(case_tac "a = aa") apply(auto)
+
+
+   apply(simp add: LatticeLike_Weak_Spec_def) apply(auto)
+  apply(case_tac "lleq' (Some a) None") 
     apply(case_tac a; clarsimp)
    apply(case_tac a; clarsimp)
 
