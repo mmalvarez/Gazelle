@@ -11,7 +11,8 @@ definition ord_extends :: "('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow
   (ord_leq o1 o2 \<and>
   (\<forall> x1 x2 . o2 x1 x2 \<longrightarrow>
       (o1 x1 x2 \<or>
-       (\<exists> x1' . o2 x1 x1' \<and> o2 x1' x1 \<and> x1 \<noteq> x1' \<and> o1 x1' x2))))"
+       ((\<exists> x1' . o2 x1 x1' \<and> o2 x1' x1 \<and> x1 \<noteq> x1' \<and> o1 x1' x2) \<and>
+        (\<exists> x2' . o2 x2' x2 \<and> o2 x2 x2' \<and> x2 \<noteq> x2' \<and> o1 x1 x2')))))"
 
 lemma ord_leq_refl : "\<And> ord . ord_leq ord ord"
   apply(simp add:ord_leq_def)
@@ -509,103 +510,319 @@ interpretation Test0 : Mergeable_Spec test0_lleq test0_bsup
   apply(rotate_tac -1)
 apply(drule_tac x = "Some a" in spec)
    apply(auto)
-  apply(case_tac x1'; auto)
 
-
-   apply(frule_tac a = "Some aa" and b = "None" and c = "Some ab" in LatticeLike_Weak_Spec.leq_trans)
-     apply(auto)
-    apply(drule_tac a = None and b = "Some ab" in ord_leq') apply(auto)
-
-   apply(rotate_tac 1)
-   apply(drule_tac x = "Some ab" in spec) apply(auto)
-  apply(simp add: LatticeLike_Weak_Spec.leq_refl)
-
-   apply(drule_tac x = "Some aa" in spec) 
-   apply(drule_tac x = "None" in spec)
-  apply(safe)
-   apply(clarsimp)
-  apply(case_tac x1'; auto)
-
-   apply(drule_tac x = "Some ab" in spec)
-  apply(rotate_tac -1)
-apply(drule_tac x = "Some a" in spec)
-   apply(auto)
-
-
-  apply(frule_tac LatticeLike_Weak_Spec.leq_trans)
-
-  apply(case_tac "a = aa") apply(auto)
-
+  apply(drule_tac x = test0_lleq in spec)
   apply(auto)
+    apply(simp add:ord_extends_def)
+    apply(simp add:ord_leq_refl)
 
-  apply(cut_tac lleq = lleq' in LatticeLike_Weak_Spec_def)
-  apply(hypsubst)
-(*
-  apply(case_tac "lleq' (Some a) None") 
-    apply(case_tac a; clarsimp)
-   apply(case_tac a; clarsimp)
+(* shouldn't need to reprove *)
+  apply(simp add:LatticeLike_Weak_Spec_def)
+     apply(case_tac a; clarsimp) 
+   apply(case_tac b; clarsimp)
+   apply(case_tac a'; clarsimp)
+    apply(auto)
+      apply(case_tac a; clarsimp)
+     apply(case_tac a; clarsimp)
+  apply(case_tac ab; clarsimp)
 
-  apply(drule_tac x = test0_lleq in spec) apply(simp) apply(auto)
-     apply(simp add:ord_leq_refl)
-(* shouldn't need to reprove this. *)
-    apply(simp add: LatticeLike_Weak_Spec_def) apply(auto)
-    apply(case_tac ab; clarsimp)
    apply(case_tac ab; clarsimp)
 
-  apply(case_tac b; auto)
-   defer
 
-   apply(simp add:LatticeLike_Weak_Spec_def)
-  apply(auto)
-    
-    apply(simp cong:option.case_cong)
-  apply(auto)
-       apply(simp split:option.splits)
-       apply(simp split:option.splits)
-      apply(simp split:option.splits)
-     apply(simp add:LatticeLike.is_bsup_def LatticeLike.is_bub_def LatticeLike.is_least_def
-                    LatticeLike.is_ub_def)
-  apply(safe)
-    apply(simp split:option.splits)
-   apply(simp split:option.splits)
-     apply(simp add:LatticeLike.is_sup_def LatticeLike.is_bsup_def LatticeLike.is_bub_def LatticeLike.is_least_def
-                    LatticeLike.is_ub_def)
-    apply(clarsimp)
-    apply(case_tac a) apply(clarsimp) apply(simp)
-     apply(simp add:LatticeLike.is_sup_def LatticeLike.is_bsup_def LatticeLike.is_bub_def LatticeLike.is_least_def
-                    LatticeLike.is_ub_def)
-   apply(clarsimp)
 
-  apply(simp split:option.splits)
-  apply(drule_tac x = b in spec) apply(clarsimp)
-     apply(simp add:LatticeLike.is_sup_def LatticeLike.is_bsup_def LatticeLike.is_bub_def LatticeLike.is_least_def
-                    LatticeLike.is_ub_def)
-*)
+
+  apply(case_tac a; auto)
+   apply(case_tac b; auto)
+
   done
 
-abbreviation test_parms :: "(nat option * nat) latl_parms" where
-"test_parms \<equiv>
-\<lparr> lleq = (\<lambda> l r .
-    (case (l, r) of
+definition test_lleq :: "(nat option * nat) \<Rightarrow> (nat option * nat) \<Rightarrow> bool" where
+(*
+"test_lleq l r =
+(case (l, r) of
          ((None, l2), (None, r2)) \<Rightarrow> l2 = r2
        | ((None, l2), (Some r1, r2)) \<Rightarrow> l2 = r2
        | ((Some _, _), (None, _)) \<Rightarrow> False
-       | ((Some l1, l2 ), (Some r1, r2)) \<Rightarrow> l1 = r1 \<and> l2 = r2))
-, bsup = (\<lambda> l r .
-    (case (l, r) of
+       | ((Some l1, l2 ), (Some r1, r2)) \<Rightarrow> l1 = r1 \<and> l2 = r2)" *)
+"test_lleq l r =
+(case (l) of
+         (None, l2) \<Rightarrow> (case r of (_, r2) \<Rightarrow> l2 = r2)
+       | ((Some l1, l2)) \<Rightarrow> (case r of (None, _) \<Rightarrow> False
+                                 | (Some r1, r2) \<Rightarrow> (l1 = r1 \<and> l2 = r2)))"
+
+definition test_bsup :: "(nat option * nat) \<Rightarrow> (nat option * nat) \<Rightarrow> (nat option * nat)" where
+(*
+"test_bsup l r =
+  (case (l, r) of
             ((None, l2), (None, r2)) \<Rightarrow> (None, l2)
             |((None, l2), (Some r1, r2)) \<Rightarrow> (Some r1, l2)
             |((Some l1, l2), (None, r2)) \<Rightarrow> (Some l1, l2)
-            |((Some l1, l2), (Some r1, r2)) \<Rightarrow> (Some l1, l2)))
-\<rparr>"
+            |((Some l1, l2), (Some r1, r2)) \<Rightarrow> (Some l1, l2))"
+*)
+"test_bsup l r =
+  (case (l) of
+         (None, l2) \<Rightarrow> (case r of (None, _) \<Rightarrow> (None, l2)
+                                  | (Some r1, _) \<Rightarrow> (Some r1, l2))
+       | ((Some l1, l2)) \<Rightarrow> (Some l1, l2))"
 
 value "bsup test_parms (None, 1) (Some 3, 2)"
 
-interpretation Test : LatticeLike_Spec test_parms
+interpretation Test : Mergeable_Spec test_lleq test_bsup
 
   apply(unfold_locales)
+  apply(simp add:test_lleq_def)
      apply(simp split:prod.splits option.splits)
-    apply(simp split:prod.splits option.splits)
+  apply(simp add:test_lleq_def)
+     apply(simp split:prod.splits option.splits)
+  apply(simp add:test_lleq_def)
+     apply(simp split:prod.splits option.splits)
+
+  apply(simp add:Mergeable'.is_bsup_weak_def Mergeable'.is_bsup_def Mergeable'.is_bub_def LatticeLike.is_least_def LatticeLike.is_sup_def LatticeLike.is_ub_def
+                 Mergeable'.is_bub_weak_def)
+
+  apply(auto)
+
+    apply(simp add:test_lleq_def test_bsup_def)
+     apply(simp split:prod.splits option.splits)
+
+   apply(simp add:ord_extends_def)
+  apply(auto)
+
+    apply(simp add:test_lleq_def test_bsup_def)
+   apply(case_tac a; clarsimp)
+apply(case_tac aa; clarsimp)
+
+     apply(rotate_tac -1)
+      apply(drule_tac x = None in spec)
+      apply(rotate_tac -1)
+  apply(drule_tac x = b in spec)
+  apply(rotate_tac -1)
+      apply(drule_tac x = ab in spec)
+     apply(rotate_tac -1)
+      apply(drule_tac x = bb in spec)
+      apply(rotate_tac -1)
+
+
+     apply(auto)
+
+         apply(drule_tac x = None in spec) apply(drule_tac x = bb in spec)
+  apply(auto)
+                      apply(simp add:LatticeLike_Weak_Spec.leq_refl)
+
+         defer
+
+         apply(case_tac a; auto)
+  apply(case_tac ab; auto)
+
+  apply(drule_tac x = None in spec) apply(drule_tac x = b in spec) apply(auto)
+
+         apply(case_tac a; auto)
+                      apply(simp add:LatticeLike_Weak_Spec.leq_refl)
+
+  apply(case_tac ab; auto)
+         apply(case_tac a; auto)
+
+
+      apply(rotate_tac -1)
+   apply(drule_tac x = bb in spec)
+      apply(drule_tac x = a in spec)
+      apply(rotate_tac -1)
+      apply(drule_tac x = b in spec)
+      apply(rotate_tac -1)
+      apply(drule_tac x = ab in spec)
+      apply(rotate_tac -1)
+   apply(drule_tac x = bb in spec)
+
+   apply(clarsimp)
+
+   apply(drule_tac R = "lleq' (ab, bb) (test_bsup (a, b) (aa, ba))" in HOL.disjE)
+     apply(drule_tac R = "lleq' (ab, bb) (test_bsup (a, b) (aa, ba))" in HOL.disjE)
+
+    apply(simp add:test_lleq_def test_bsup_def)
+     apply(simp split:prod.splits option.splits)
+  apply(clarsimp)
+
+  apply(case_tac x1a; clarsimp)
+
+      apply(drule_tac x = None in spec)
+      apply(rotate_tac -1)
+                      apply(drule_tac x = x2a in spec) apply(clarsimp)
+                      apply(simp add:LatticeLike_Weak_Spec.leq_refl)
+
+      apply(simp add:test_lleq_def test_bsup_def)
+      apply(case_tac aa; clarsimp)
+       apply(case_tac a; clarsimp)
+apply(case_tac ac; clarsimp)
+         apply(drule_tac x = None in spec) apply(drule_tac x = bd in spec) apply(clarsimp)
+                      apply(simp add:LatticeLike_Weak_Spec.leq_refl)
+apply(case_tac ab; clarsimp)
+apply(case_tac ac; clarsimp)
+apply(case_tac ad; clarsimp)
+       apply(case_tac ab; clarsimp)
+
+       apply(case_tac a; clarsimp)
+apply(case_tac ad; clarsimp)
+        apply(case_tac ab; clarsimp)
+  apply(case_tac ae; clarsimp)
+
+  apply(frule_tac a = and b = and c = in LatticeLike_Weak_Spec.leq_trans)
+apply(case_tac ac; clarsimp)
+apply(case_tac ad; clarsimp)
+apply(case_tac ab; clarsimp)
+
+     apply(simp split:prod.splits option.splits)
+        apply(clarsimp)
+  apply(case_tac x1a; clarsimp)
+
+      apply(drule_tac x = None in spec)
+      apply(rotate_tac -1)
+   apply(drule_tac x = x2b in spec)
+
+        apply(clarsimp)
+                      apply(simp add:LatticeLike_Weak_Spec.leq_refl)
+
+  apply(clarsimp)
+
+       apply(case_tac x1b; clarsimp)
+
+        apply(frule_tac a = "(Some x2d, x2a)" and b = "(None, x2b)" and c = "(Some x2d, x2b)" in LatticeLike_Weak_Spec.leq_trans)
+  apply(simp) apply(drule_tac a = "(None, x2b)" and b = "(Some x2d, x2b)" in ord_leq')
+          apply(simp add:test_lleq_def) apply(simp) apply(clarsimp)
+  apply(simp)
+  apply(safe)
+
+                      apply(simp split:option.splits) apply(clarsimp)
+                      apply(drule_tac x = None in spec) apply(drule_tac x = bb in spec)
+  apply(auto)
+apply(simp add:LatticeLike_Weak_Spec.leq_refl)
+                      apply(simp split:option.splits) apply(clarsimp)
+                      apply(drule_tac a = "(None, bb)" and b = "(Some x2a, bb)" in ord_leq')
+                      apply(simp add:test_lleq_def) apply(simp)
+
+                      apply(auto)
+  apply(drule_tac x = "None" in spec) apply(drule_tac x = "bb" in spec)
+                      apply(auto)
+apply(simp add:LatticeLike_Weak_Spec.leq_refl)
+
+
+(*
+apply(case_tac aa; auto)
+
+    
+      apply(rotate_tac -1)
+      apply(frule_tac x = None in spec)
+      apply(rotate_tac -1)
+      apply(drule_tac x = b in spec)
+      apply(rotate_tac -1)
+      apply(drule_tac x = ab in spec)
+      apply(rotate_tac -1)
+  apply(drule_tac x = bb in spec)
+
+     apply(simp add:test_lleq_def)
+
+  apply(case_tac ab; auto)
+   apply(case_tac a; auto)
+   apply(case_tac a; auto)
+   apply(case_tac a; auto)
+          apply(case_tac a; auto)
+
+      apply(rotate_tac -1)
+      apply(frule_tac x = None in spec)
+      apply(rotate_tac -1)
+      apply(drule_tac x = ba in spec)
+      apply(rotate_tac -1)
+      apply(drule_tac x = "Some a" in spec)
+      apply(rotate_tac -1)
+  apply(drule_tac x = bb in spec)
+
+         apply(auto)
+  apply(rotate_tac -1)
+  apply(drule_tac x = None in spec) 
+             apply(drule_tac x = bb in spec)
+  apply(auto)
+             apply(simp add:LatticeLike_Weak_Spec.leq_refl)
+
+            apply(case_tac aa; auto)
+            apply(case_tac ab; auto)
+
+             apply(drule_tac x = None in spec) apply(rotate_tac -1)
+             apply(drule_tac x = bc in spec)
+             apply(rotate_tac -1)
+             apply(drule_tac x = "Some a" in spec) apply(rotate_tac -1)
+             apply(drule_tac x = bb in spec)
+
+             apply(auto)
+            apply(case_tac aa; auto)
+            apply(case_tac ab; auto)
+
+
+      apply(rotate_tac -1)
+      apply(drule_tac x = None in spec)
+      apply(rotate_tac -1)
+                 apply(drule_tac x = ba in spec)
+  apply(auto)
+      apply(rotate_tac -1)
+      apply(drule_tac x = ab in spec)
+      apply(rotate_tac -1)
+  apply(drule_tac x = bb in spec)
+
+     apply(simp split:prod.splits option.splits)
+
+  apply(drule_tac x = None in spec) apply(drule_tac x = bb in spec) apply(clarsimp)
+              apply(drule_tac a = "(None, bb)" in LatticeLike_Weak_Spec.leq_refl) apply(simp)
+
+  apply(clarsimp) apply(safe)
+
+
+      apply(rotate_tac -1)
+      apply(drule_tac x = None in spec)
+      apply(rotate_tac -1)
+      apply(drule_tac x = b in spec)
+      apply(rotate_tac -1)
+      apply(drule_tac x = None in spec)
+      apply(rotate_tac -1)
+  apply(drule_tac x = bb in spec) apply(auto)
+
+           apply(simp add:test_lleq_def split:prod.splits option.splits; clarsimp)
+          apply(simp add:test_lleq_def split:prod.splits option.splits; clarsimp)
+         apply(simp add:test_lleq_def split:prod.splits option.splits; clarsimp)
+        apply(simp add:test_lleq_def split:prod.splits option.splits; clarsimp)
+       apply(simp add:test_lleq_def split:prod.splits option.splits; clarsimp)
+
+
+      apply(rotate_tac -1)
+      apply(frule_tac x = None in spec)
+      apply(rotate_tac -1)
+      apply(drule_tac x = b in spec)
+      apply(rotate_tac -1)
+      apply(drule_tac x = "Some a" in spec)
+      apply(rotate_tac -1)
+  apply(drule_tac x = bb in spec) apply(clarify) apply(safe)
+
+          apply(simp add:test_lleq_def; clarsimp)
+
+      apply(drule_tac x = None in spec)
+      apply(rotate_tac -1)
+      apply(drule_tac x = ba in spec)
+      apply(rotate_tac -1)
+      apply(drule_tac x = "Some a" in spec)
+      apply(rotate_tac -1)
+          apply(drule_tac x = bb in spec) apply(clarify) apply(safe)
+              apply(auto)
+
+              apply(drule_tac x = None in spec) apply(drule_tac x = bb in spec) apply(auto)
+  apply(drule_tac a = "(None, bb)" and b = "(None, bb)" in ord_leq') apply(auto)
+  
+          apply(simp add:test_lleq_def split:prod.splits option.splits; clarsimp)
+         apply(simp add:test_lleq_def split:prod.splits option.splits; clarsimp)
+        apply(simp add:test_lleq_def split:prod.splits option.splits; clarsimp)
+       apply(simp add:test_lleq_def split:prod.splits option.splits; clarsimp)
+
+
+         apply(simp split:prod.splits option.splits)
+        apply(simp split:prod.splits option.splits)
+       apply(simp split:prod.splits option.splits)
+
     
    apply(simp) apply(simp split:prod.splits)
    apply(case_tac x1) apply(clarsimp)
@@ -743,4 +960,5 @@ apply(simp add:LatticeLike.has_ub_def LatticeLike.is_ub_def)
   apply(simp add:LatticeLike.has_sup_def LatticeLike.is_sup_def LatticeLike.is_least_def LatticeLike.is_ub_def)
 (* first idea: use option to create a pointed datatype.
    show it obeys the laws. *)
+*)
 end
