@@ -170,6 +170,7 @@ definition is_bub :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" w
     ((\<forall> lleq' s' . ord_extends lleq lleq' \<longrightarrow>
                 LatticeLike_Weak_Spec lleq' \<longrightarrow>
                 LatticeLike.is_sup lleq' {a, b} s' \<longrightarrow>
+                lleq a s' \<longrightarrow>
                 lleq' s' s)))"
 
 (*
@@ -324,7 +325,7 @@ lemma bsup_sup :
 
   apply(drule_tac x = "lleq'" in spec) apply(rotate_tac -1) apply(auto)
   apply(simp add:LatticeLike.is_ub_def)
-  apply(rotate_tac -1)
+  apply(rotate_tac -2)
   apply(drule_tac x = a' in spec) apply(auto)
   apply(simp add:ord_extends_def) apply(clarsimp)
    apply(drule_tac ox = lleq and a = a and b = a' in ord_leq') apply(auto)
@@ -462,7 +463,7 @@ fun test0_bsup :: "nat option \<Rightarrow> nat option \<Rightarrow> nat option"
 value "test0_bsup None (Some 2)"
 value "test0_bsup (Some 2) (None)"
 
-
+(*
 interpretation Test0 : Mergeable_Spec test0_lleq test0_bsup
   apply(unfold_locales)
      apply(case_tac a; clarsimp) 
@@ -535,6 +536,7 @@ apply(drule_tac x = "Some a" in spec)
    apply(case_tac b; auto)
 
   done
+*)
 
 definition test_lleq :: "(nat option * nat) \<Rightarrow> (nat option * nat) \<Rightarrow> bool" where
 (*
@@ -565,7 +567,7 @@ definition test_bsup :: "(nat option * nat) \<Rightarrow> (nat option * nat) \<R
                                   | (Some r1, _) \<Rightarrow> (Some r1, l2))
        | ((Some l1, l2)) \<Rightarrow> (Some l1, l2))"
 
-value "bsup test_parms (None, 1) (Some 3, 2)"
+value "test_bsup (None, 1) (Some 3, 2)"
 
 interpretation Test : Mergeable_Spec test_lleq test_bsup
 
@@ -592,10 +594,12 @@ interpretation Test : Mergeable_Spec test_lleq test_bsup
    apply(case_tac a; clarsimp)
 apply(case_tac aa; clarsimp)
 
+  
+
      apply(rotate_tac -1)
-      apply(drule_tac x = None in spec)
+      apply(frule_tac x = None in spec)
       apply(rotate_tac -1)
-  apply(drule_tac x = b in spec)
+  apply(drule_tac x = ba in spec)
   apply(rotate_tac -1)
       apply(drule_tac x = ab in spec)
      apply(rotate_tac -1)
@@ -604,24 +608,712 @@ apply(case_tac aa; clarsimp)
 
 
      apply(auto)
+  apply(case_tac ab; auto)
 
          apply(drule_tac x = None in spec) apply(drule_tac x = bb in spec)
   apply(auto)
                       apply(simp add:LatticeLike_Weak_Spec.leq_refl)
 
-         defer
-
          apply(case_tac a; auto)
+        apply(case_tac ab; auto)
+        apply(case_tac aa; auto)
+
+         apply(drule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "ba" in spec) apply(rotate_tac -1)
+         apply(auto)
+
+  apply(drule_tac a = "(None, bb)" and b = "(Some a, bb)" and c = "(None, ba)"
+        in LatticeLike_Weak_Spec.leq_trans) apply(auto)
+
+            apply(case_tac aa; auto)
+apply(case_tac aa; auto)
+
+  apply(drule_tac a = "(Some a, bb)" and b = "(None, ba)" and c = "(None, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+
+apply(case_tac aa; auto)
+apply(case_tac aa; auto)
+
   apply(case_tac ab; auto)
 
-  apply(drule_tac x = None in spec) apply(drule_tac x = b in spec) apply(auto)
+  apply(drule_tac a = "(Some a, bb)" and b = "(None, ba)" and c = "(None, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
 
-         apply(case_tac a; auto)
+
+  apply(drule_tac a = "(Some a, bb)" and b = "(None, ba)" and c = "(None, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+
+         apply(frule_tac x = "Some ab" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "ba" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "Some a" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+         apply(auto)
+
+apply(case_tac aa; auto)
+            apply(case_tac ac; auto)
+
+
+  apply(drule_tac a = "(Some a, bb)" and b = "(Some aa, bc)" and c = "(None, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+
+            apply(case_tac ac; auto)
+
+         apply(drule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bc" in spec) apply(rotate_tac -1)
+         apply(auto)
+
+  apply(drule_tac a = "(None, bb)" and b = "(Some a, bb)" and c = "(None, bc)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+
+  apply(case_tac ab; auto)
+  apply(case_tac ab; auto)
+             apply(case_tac ac; auto)
+
+  apply(drule_tac x = None in spec) apply(drule_tac x = bb in spec) apply(auto)
                       apply(simp add:LatticeLike_Weak_Spec.leq_refl)
 
   apply(case_tac ab; auto)
-         apply(case_tac a; auto)
+           apply(case_tac ab; auto)
 
+  apply(drule_tac x = None in spec) apply(drule_tac x = bb in spec) apply(auto)
+                      apply(simp add:LatticeLike_Weak_Spec.leq_refl)
+           
+apply(case_tac aa; auto)
+            apply(case_tac ac; auto)
+
+  apply(frule_tac a = "(None, bb)" and b = "(Some a, bb)" and c = "(None, bc)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+
+         apply(drule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bc" in spec) apply(rotate_tac -1)
+         apply(auto)
+
+  apply(case_tac ab; auto)
+  apply(case_tac ab; auto)
+           apply(case_tac ac; auto)
+
+  apply(drule_tac x = None in spec) apply(drule_tac x = bb in spec) apply(auto)
+                      apply(simp add:LatticeLike_Weak_Spec.leq_refl)
+
+  apply(drule_tac a = "(Some a, bb)" and b = "(None, bc)" and c = "(None, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+
+           apply(case_tac ac; auto)
+
+  apply(frule_tac a = "(None, bb)" and b = "(Some a, bb)" and c = "(None, bc)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+
+         apply(drule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bc" in spec) apply(rotate_tac -1)
+         apply(auto)
+
+  apply(case_tac ab; auto)
+          apply(case_tac ab; auto)
+
+  apply(drule_tac x = None in spec) apply(drule_tac x = bb in spec) apply(auto)
+                      apply(simp add:LatticeLike_Weak_Spec.leq_refl)
+
+apply(case_tac aa; auto)
+            apply(case_tac ac; auto)
+  apply(frule_tac a = "(None, bb)" and b = "(Some a, bb)" and c = "(None, bc)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+
+         apply(drule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bc" in spec) apply(rotate_tac -1)
+         apply(auto)
+          apply(case_tac ab; auto)
+          apply(case_tac ab; auto)
+
+  apply(drule_tac x = None in spec) apply(drule_tac x = bb in spec) apply(auto)
+                      apply(simp add:LatticeLike_Weak_Spec.leq_refl)
+
+         apply(case_tac ac; auto)
+
+
+  apply(frule_tac a = "(None, bb)" and b = "(Some a, bb)" and c = "(None, bc)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+
+         apply(drule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bc" in spec) apply(rotate_tac -1)
+         apply(auto)
+
+  apply(case_tac ab; auto)
+          apply(case_tac ab; auto)
+
+  apply(drule_tac x = None in spec) apply(drule_tac x = bb in spec) apply(auto)
+                      apply(simp add:LatticeLike_Weak_Spec.leq_refl)
+
+apply(case_tac aa; auto)
+            apply(case_tac ac; auto)
+  apply(frule_tac a = "(None, bb)" and b = "(Some a, bb)" and c = "(None, bc)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+
+         apply(drule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bc" in spec) apply(rotate_tac -1)
+         apply(auto)
+          apply(case_tac ab; auto)
+          apply(case_tac ab; auto)
+
+  apply(drule_tac x = None in spec) apply(drule_tac x = bb in spec) apply(auto)
+                      apply(simp add:LatticeLike_Weak_Spec.leq_refl)
+
+            apply(case_tac ac; auto)
+
+
+  apply(frule_tac a = "(None, bb)" and b = "(Some a, bb)" and c = "(None, bc)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+
+         apply(drule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bc" in spec) apply(rotate_tac -1)
+         apply(auto)
+
+  apply(case_tac ab; auto)
+          apply(case_tac ab; auto)
+
+  apply(drule_tac x = None in spec) apply(drule_tac x = bb in spec) apply(auto)
+                      apply(simp add:LatticeLike_Weak_Spec.leq_refl)
+
+       apply(case_tac a; auto)
+
+        apply(rotate_tac 1)
+        apply(drule_tac x = None in spec) apply(rotate_tac -1)
+  apply(drule_tac x = ba in spec) apply(auto)
+                      apply(simp add:LatticeLike_Weak_Spec.leq_refl)
+
+  apply(frule_tac a = "(ab, bb)" and b = "(None, ba)" and c = "(None, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+
+       apply(case_tac ab; auto)
+
+  apply(frule_tac a = "(None, bb)" and b = "(Some a, bb)" and c = "(None, ba)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+
+         apply(drule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "ba" in spec) apply(rotate_tac -1)
+         apply(auto)
+          apply(case_tac ab; auto)
+          apply(case_tac ab; auto)
+
+  apply(drule_tac x = None in spec) apply(drule_tac x = bb in spec) apply(auto)
+                      apply(simp add:LatticeLike_Weak_Spec.leq_refl)
+
+
+
+       apply(case_tac a; auto)
+          apply(case_tac ab; auto)
+
+  apply(frule_tac a = "(None, bb)" and b = "(Some a, bb)" and c = "(None, ba)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+
+
+         apply(drule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "ba" in spec) apply(rotate_tac -1)
+      apply(auto)
+                      apply(simp add:LatticeLike_Weak_Spec.leq_refl)
+
+          apply(case_tac ab; auto)
+          apply(case_tac ab; auto)
+
+
+  apply(frule_tac a = "(Some a, bb)" and b = "(None, ba)" and c = "(None, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+
+(* 4 goals! *)
+
+       apply(case_tac a; auto)
+          apply(case_tac ab; auto)
+
+  apply(rotate_tac 1)
+      apply(drule_tac x = None in spec) apply(rotate_tac -1)
+  apply(drule_tac x = bb in spec) apply(auto)
+                      apply(simp add:LatticeLike_Weak_Spec.leq_refl)
+
+          apply(case_tac ab; auto)
+
+
+  apply(frule_tac a = "(None, bb)" and b = "(Some a, bb)" and c = "(None, ba)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+
+
+         apply(drule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "ba" in spec) apply(rotate_tac -1)
+      apply(auto)
+                      apply(simp add:LatticeLike_Weak_Spec.leq_refl)
+
+          apply(case_tac ab; auto)
+          apply(case_tac ab; auto)
+
+      apply(drule_tac x = None in spec) apply(rotate_tac -1)
+  apply(drule_tac x = bb in spec) apply(auto)
+     apply(simp add:LatticeLike_Weak_Spec.leq_refl)
+
+
+(* is this where we go off the rails? *)
+    apply(case_tac ab; auto)
+     apply(drule_tac a = "(None, bb)" and b = "(Some a, bb)" in ord_leq') apply(simp add:test_lleq_def)
+  apply(simp)
+
+(*
+    apply(drule_tac x = "(Some a)" in spec) apply(rotate_tac -1)
+    apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+    apply(auto)
+*)
+
+(*
+     apply(drule_tac a = "(None, bb)" and b = "(Some a, bb)" in ord_leq') apply(simp add:test_lleq_def)
+  apply(simp)
+*)
+
+    apply(rotate_tac -1)
+         apply(frule_tac x = "Some a" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "ba" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "Some aa" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+      apply(auto)
+
+          apply(case_tac ab; auto)
+        apply(case_tac ac; auto)
+
+
+  apply(frule_tac a = "(Some aa, bb)" and b = "(Some ab, bc)" and c = "(None, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(simp)
+          apply(simp)
+
+
+  apply(frule_tac a = "(Some aa, bb)" and b  = "(None, bb)" and c = "(Some ab, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(simp)
+            apply(frule_tac a = "(None, bb)" and b = "(Some ab, bb)" in ord_leq')
+          apply(simp add:test_lleq_def) apply(simp) apply(simp)
+
+  apply(case_tac ac; auto)
+
+  apply(frule_tac a = "(None, bb)" and b  = "(Some aa, bb)" and c = "(Some ab, bc)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(simp) apply(simp)
+
+       apply(rotate_tac 3)
+       apply(drule_tac x = "Some ab" in spec) apply(rotate_tac -1)
+  apply(drule_tac x = "bc" in spec) apply(auto)
+
+    apply(rotate_tac -1)
+         apply(frule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "Some ab" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bc" in spec) apply(rotate_tac -1)
+       apply(auto)
+
+          apply(case_tac a; auto)
+  apply(case_tac ac; auto)
+
+  apply(frule_tac a = "(Some aa, bb)" and c  = "(None, bb)" and b = "(Some ab, bc)" in
+    LatticeLike_Weak_Spec.leq_trans) 
+             apply(simp) apply(simp)
+  apply(frule_tac a = "(Some aa, bb)" and b  = "(None, bb)" and c = "(Some ab, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(simp)
+
+            apply(drule_tac a = "(None, bb)" and b = "(Some ab, bb)" in ord_leq')
+             apply(simp add:test_lleq_def) apply(simp) apply(simp)
+
+
+  apply(frule_tac a = "(Some aa, bb)" and c  = "(None, bb)" and b = "(Some ab, bc)" in
+    LatticeLike_Weak_Spec.leq_trans) 
+             apply(simp) apply(simp)
+  apply(frule_tac a = "(Some aa, bb)" and b  = "(None, bb)" and c = "(Some ab, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(simp)
+
+            apply(drule_tac a = "(None, bb)" and b = "(Some ab, bb)" in ord_leq')
+             apply(simp add:test_lleq_def) apply(simp) apply(simp)
+
+          apply(case_tac a; auto)
+          apply(case_tac ac; auto)
+
+  apply(frule_tac a = "(Some aa, bb)" and c  = "(None, bb)" and b = "(Some ab, bc)" in
+    LatticeLike_Weak_Spec.leq_trans) 
+             apply(simp) apply(simp)
+  apply(frule_tac a = "(Some aa, bb)" and b  = "(None, bb)" and c = "(Some ab, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(simp)
+
+            apply(drule_tac a = "(None, bb)" and b = "(Some ab, bb)" in ord_leq')
+             apply(simp add:test_lleq_def) apply(simp) apply(simp)
+
+
+         apply(frule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "Some a" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "ba" in spec) apply(rotate_tac -1)
+       apply(auto)
+
+
+
+             apply(case_tac ab; auto)
+  apply(case_tac ac; auto)
+
+
+  apply(frule_tac a = "(Some aa, bb)" and b = "(Some a, ba)" and c = "(None, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) 
+             apply(simp) apply(simp)
+  apply(frule_tac a = "(Some aa, bb)" and b  = "(None, bb)" and c = "(Some a, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) 
+          apply(simp)
+            apply(drule_tac a = "(None, bb)" and b = "(Some a, bb)" in ord_leq')
+          apply(simp add:test_lleq_def) apply(simp) apply(simp)
+
+
+
+  apply(frule_tac a = "(Some aa, bb)" and b = "(Some a, ba)" and c = "(None, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) 
+             apply(simp) apply(simp)
+  apply(frule_tac a = "(Some aa, bb)" and b  = "(None, bb)" and c = "(Some a, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) 
+          apply(simp)
+            apply(drule_tac a = "(None, bb)" and b = "(Some a, bb)" in ord_leq')
+          apply(simp add:test_lleq_def) apply(simp) apply(simp)
+
+             apply(case_tac ab; auto)
+  apply(case_tac ac; auto)
+
+
+
+  apply(frule_tac a = "(Some aa, bb)" and b = "(Some a, ba)" and c = "(None, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) 
+             apply(simp) apply(simp)
+  apply(frule_tac a = "(Some aa, bb)" and b  = "(None, bb)" and c = "(Some a, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) 
+          apply(simp)
+            apply(drule_tac a = "(None, bb)" and b = "(Some a, bb)" in ord_leq')
+          apply(simp add:test_lleq_def) apply(simp) apply(simp)
+
+
+  apply(frule_tac a = "(Some aa, bb)" and b = "(Some ab, bc)" and c = "(None, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) 
+             apply(simp) apply(simp)
+  apply(frule_tac a = "(Some aa, bb)" and b  = "(None, bb)" and c = "(Some ab, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) 
+          apply(simp)
+            apply(drule_tac a = "(None, bb)" and b = "(Some ab, bb)" in ord_leq')
+          apply(simp add:test_lleq_def) apply(simp) apply(simp)
+
+          apply(rotate_tac 2)
+          apply(frule_tac x = "Some a" in spec) apply(rotate_tac -1)
+apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+          apply(auto)
+
+            apply(drule_tac a = "(None, bb)" and b = "(Some a, bb)" in ord_leq')
+          apply(simp add:test_lleq_def) apply(simp)
+
+  apply(frule_tac a = "(Some a, ba)" and b = "(None, bb)" and c = "(Some a, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) 
+          apply(simp)
+            apply(drule_tac a = "(None, bb)" and b = "(Some a, bb)" in ord_leq')
+          apply(simp add:test_lleq_def) apply(simp)
+
+
+  apply(frule_tac a = "(None, bb)" and b = "(Some aa, bb)" and c = "(Some aa, bc)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+
+
+    apply(rotate_tac -1)
+         apply(frule_tac x = "Some aa" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bc" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+            apply(auto)
+
+
+
+  apply(case_tac ab; auto)
+
+ apply(case_tac ac; auto)
+
+  apply(frule_tac a = "(Some a, bb)" and b = "(Some ab, ba)" and c = "(None, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+
+  apply(frule_tac a = "(Some a, bb)" and b = "(None, bb)" and c = "(Some ab, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+           apply(frule_tac a = "(None, bb)" and b = "(Some ab, bb)" in ord_leq') apply(auto)
+           apply(simp add:test_lleq_def)
+
+
+  apply(case_tac ab; auto)
+
+ apply(case_tac ac; auto)
+
+
+  apply(frule_tac a = "(Some a, bb)" and b = "(Some ab, ba)" and c = "(None, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+
+  apply(frule_tac a = "(Some a, bb)" and b = "(None, bb)" and c = "(Some ab, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+           apply(frule_tac a = "(None, bb)" and b = "(Some ab, bb)" in ord_leq') apply(auto)
+           apply(simp add:test_lleq_def)
+
+
+  apply(case_tac ab; auto)
+
+ apply(case_tac ac; auto)
+
+
+  apply(frule_tac a = "(Some a, bb)" and b = "(Some ab, ba)" and c = "(None, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+
+  apply(frule_tac a = "(Some a, bb)" and b = "(None, bb)" and c = "(Some ab, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+           apply(frule_tac a = "(None, bb)" and b = "(Some ab, bb)" in ord_leq') apply(auto)
+         apply(simp add:test_lleq_def)
+
+  apply(case_tac ab; auto)
+
+ apply(case_tac ac; auto)
+
+
+  apply(frule_tac a = "(Some a, bb)" and b = "(Some ab, ba)" and c = "(None, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+
+  apply(frule_tac a = "(Some a, bb)" and b = "(None, bb)" and c = "(Some ab, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+           apply(frule_tac a = "(None, bb)" and b = "(Some ab, bb)" in ord_leq') apply(auto)
+        apply(simp add:test_lleq_def)
+
+  apply(case_tac ab; auto)
+
+       apply(case_tac ac; auto)
+
+(* you are here. below is chasing my tail i think *)
+
+  apply(frule_tac a = "(None, bb)" and b = "(Some aa, bb)" and c = "(Some ab, bc)"  in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+
+
+       apply(frule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "Some ab" in spec) apply(rotate_tac -1)
+       apply(drule_tac x = "bc" in spec) apply(rotate_tac -1)
+ 
+        apply(auto)
+  apply(case_tac a; auto)
+           apply(case_tac ac; auto)
+           defer (* transitivity *)
+  defer (* trans *)
+           apply(case_tac a; auto)
+           apply(case_tac ac; auto)
+             defer
+
+
+       apply(frule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "Some ab" in spec) apply(rotate_tac -1)
+       apply(drule_tac x = "bc" in spec) apply(rotate_tac -1)
+  apply(auto)
+
+           apply(case_tac ac; auto)
+              defer
+
+              apply(case_tac ac; auto)
+
+apply(case_tac ad; auto) defer
+
+         apply(drule_tac x = "Some a" in spec) apply(rotate_tac -1)
+       apply(drule_tac x = "b" in spec) apply(rotate_tac -1)
+        apply(frule_tac x = "Some ab" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bc" in spec) apply(rotate_tac -1)
+
+           defer (* transitivity *)
+
+  apply(case_tac a; auto)
+           apply(case_tac ac; auto)
+
+           defer (* transitivity *)
+
+           apply(case_tac ac; auto)
+
+
+  apply(rotate_tac 1)
+       apply(drule_tac x = "Some ab" in spec) apply(rotate_tac -1) apply(drule_tac x = bb in spec)
+       apply(auto)
+
+  defer
+
+
+  apply(rotate_tac -1)
+         apply(frule_tac x = "Some ab" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bc" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "Some aa" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+        apply(auto)
+  apply(case_tac a; auto)
+           apply(case_tac ac; auto)
+           defer (* transitivity *)
+           apply(case_tac ac; auto)
+
+         apply(frule_tac x = "Some a" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "ba" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "Some aa" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+           apply(auto)
+
+  apply(case_tac ab; auto)
+               apply(case_tac ac; auto)
+               defer (* transitivity *)
+               apply(case_tac ac; auto)
+
+(* this bit seemed promising *)
+
+         apply(frule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "Some ab" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bc" in spec) apply(rotate_tac -1)
+        apply(auto)
+
+           defer (* transitivity *)
+
+  apply(case_tac a; auto)
+
+  defer (* transitivity *)
+
+  apply(case_tac a; auto)
+            apply(case_tac ac; auto)
+
+  defer (* transitivity *)
+
+         apply(frule_tac x = "Some ab" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bc" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "Some aa" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+        apply(auto)
+
+(* end promising bit *)
+  apply(case_tac a; auto)
+
+ apply(case_tac ac; auto)
+
+  apply(frule_tac a = "(Some a, ba)" and b = "(None, bb)" and c = "(Some a, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+
+            apply(drule_tac a = "(None, bb)" and b = "(Some a, bb)" in ord_leq') apply(auto)
+  apply(simp add:test_lleq_def)
+
+  apply(frule_tac a = "(Some aa, bb)" and b = "(Some a, ba)" and c = "(None, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+
+
+  apply(frule_tac a = "(Some aa, bb)" and b = "(None, bb)" and c = "(Some a, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+
+            apply(drule_tac a = "(None, bb)" and b = "(Some a, bb)" in ord_leq') apply(auto)
+  apply(simp add:test_lleq_def)
+
+ apply(case_tac ac; auto)
+
+          apply(rotate_tac 1)
+          apply(drule_tac x = "Some a" in spec) apply(rotate_tac -1)
+          apply(drule_tac x = bb in spec) apply(auto)
+
+
+            apply(drule_tac a = "(None, bb)" and b = "(Some a, bb)" in ord_leq') apply(auto)
+  apply(simp add:test_lleq_def)
+
+         apply(frule_tac x = "Some a" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "ba" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "Some aa" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+          apply(auto)
+
+  apply(case_tac ab; auto)
+
+       apply(case_tac ac; auto)
+              defer
+
+       apply(case_tac ac; auto)
+
+
+         apply(frule_tac x = "Some ab" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bc" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "Some aa" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+          apply(auto)
+
+                 apply(case_tac a; auto)
+ apply(case_tac ac; auto)
+
+                  defer
+
+ apply(case_tac ac; auto)
+
+
+(* you are here? *)
+
+         apply(frule_tac x = "Some a" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "ba" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "Some aa" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+           apply(auto)
+
+
+  apply(case_tac ab; auto)
+
+                apply(case_tac ac; auto)
+
+  apply(frule_tac a = "(Some ab, bc)" and b = "(None, bb)" and c = "(Some ab, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto) defer (*easy*)
+
+
+
+                apply(case_tac ac; auto)
+
+         apply(frule_tac x = "Some ab" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bc" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "Some aa" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+           apply(auto)
+
+
+  apply(case_tac a; auto)
+
+                    apply(case_tac ac; auto)
+
+  apply(frule_tac a = "(Some a, ba)" and b = "(None, bb)" and c = "(Some a, bb)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto) defer (*easy*)
+
+                    apply(case_tac ac; auto)
+
+
+  apply(frule_tac a = "(None, bb)" and b = "(Some a, bb)" and c = "(Some aa, bc)" in
+    LatticeLike_Weak_Spec.leq_trans) apply(auto)
+
+         apply(drule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "bb" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "None" in spec) apply(rotate_tac -1)
+         apply(drule_tac x = "ba" in spec) apply(rotate_tac -1)
+         apply(auto)
+          apply(case_tac ab; auto)
+          apply(case_tac ab; auto)
+
+  apply(drule_tac x = None in spec) apply(drule_tac x = bb in spec) apply(auto)
+                      apply(simp add:LatticeLike_Weak_Spec.leq_refl)
+
+
+            apply(case_tac ac; auto)
 
       apply(rotate_tac -1)
    apply(drule_tac x = bb in spec)
