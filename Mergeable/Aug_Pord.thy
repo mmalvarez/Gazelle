@@ -52,7 +52,7 @@ assumes leq_aug_leq :
   "\<And> a a'. l_pleq a a' \<Longrightarrow>  pleq (aug a) (aug a')"
 
 assumes aug_leq_leq1 :
-  "\<And> b b' a . l_peq b b' \<Longrightarrow>
+  "\<And> b b' a . pleq b b' \<Longrightarrow>
               deaug b = Some a \<Longrightarrow> 
               (\<exists> a' . deaug b' = Some a' \<and> l_pleq a a')"
 
@@ -60,6 +60,11 @@ assumes aug_leq_leq2 :
   "\<And> b b' . pleq b b' \<Longrightarrow>
               deaug b' = None \<Longrightarrow> 
               deaug b = None"
+
+begin
+
+
+end
 
 (* proving that the partial order we just defined
    meets the partial order laws from Pord *)
