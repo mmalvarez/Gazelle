@@ -39,9 +39,9 @@ definition is_bsup :: "'b \<Rightarrow> 'b \<Rightarrow> 'b \<Rightarrow> bool" 
 
 end
 
-locale Aug_Pord_Spec =
+locale Aug_Pordc_Spec =
   Aug_Pord +
-  Pord_Spec pleq +
+  Pordc_Spec pleq +
   assumes aug_deaug :
   "\<And> a . deaug (aug a) = Some a"
 
@@ -68,7 +68,7 @@ end
 
 (* proving that the partial order we just defined
    meets the partial order laws from Pord *)
-sublocale Aug_Pord_Spec \<subseteq> LLl : Pord_Spec "l_pleq"
+sublocale Aug_Pordc_Spec \<subseteq> LLl : Pord_Spec "l_pleq"
   apply(unfold_locales)
     apply(simp add:l_pleq_def)
     apply(simp add:leq_refl) 

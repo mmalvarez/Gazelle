@@ -107,5 +107,22 @@ lemma is_least_unique :
   apply(auto simp add:leq_antisym)
   done
 
+lemma is_sup_unique :
+  "is_sup P x \<Longrightarrow> is_sup P y \<Longrightarrow> x = y"
+proof(auto simp add:is_sup_def is_least_unique)
+qed
+
+lemma is_sup_comm2 :
+  "is_sup {a, b} x \<Longrightarrow> is_sup {b, a} x"
+proof(auto simp add:is_sup_def is_least_def is_ub_def)
+qed
+
+
+
 end
+
+locale Pordc_Spec =
+  Pord_Spec +
+  assumes complete2: "\<And> a b . has_ub {a, b} \<Longrightarrow> has_sup {a, b}"
+
 end

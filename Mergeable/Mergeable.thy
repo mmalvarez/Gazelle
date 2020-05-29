@@ -30,9 +30,6 @@ locale Mergeable_Spec =
 
 assumes bsup_leq : "\<And> a b . pleq a (bsup a b)"
 
-(* this is not true, but perhaps the converse or a version with some
-   negations and condition that a \<noteq> a' is true. see below. *)
-
 
 assumes bsup_mono2 : 
   "\<And> b b' a .
@@ -87,7 +84,7 @@ locale Aug_Mergeable =
 
 locale Aug_Mergeable_Spec =
   Aug_Mergeable +
-  Aug_Pord_Spec +
+  Aug_Pordc_Spec +
 
 assumes bsup_spec :
   "\<And> a b . is_bsup a b (bsup a b)"
@@ -232,31 +229,39 @@ lemma sup_contr :
 proof(-)
   obtain ub1 where Is_Ub1 : "LLl.is_ub {a, b} ub1" using Hub
     by(auto simp add:LLl.has_ub_def)
-  
+*)  
   
 
 lemma sup_extend :
-  assumes Hleq : "l_pleq a x"
-  assumes Hlub : "LLl.is_sup {a, c} u1"
-  assumes Hub : "LLl.has_ub {x, c}"
-  shows "LLl.has_sup {x, c}"
-proof(rule ccontr)
-*)  
+  assumes Hleq : "pleq a x"
+  assumes Hlub1 : "is_sup {a, c} u1"
+  assumes Hlub2 : "is_sup {x, c} u2"
+  shows "pleq u1 u2"
+proof(-)
+  have 0 :  "pleq x u2" using Hlub2 by (auto simp add:is_sup_def is_ub_def is_least_def)
+  have 1 :  "pleq a u2" using leq_trans[OF Hleq 0] by auto
+  hence "is_ub {a, c} u2" using Hlub2
+    by (auto simp add:is_sup_def is_ub_def is_least_def)
 
+  thus ?thesis using Hlub1
+    by (auto simp add:is_sup_def is_ub_def is_least_def)
+qed
 (* need 2 directions.
 1 where a is lesser than a'
 1 where a is greater than a'
 ? *)
 
+(* assumes Hleqa : "l_pleq a (bsup a' b')" *)
 
 (* TODO: I think this may be insufficiently general *)
-lemma bsup_compare:
+lemma bsup_compare1:
 (*  assumes Hleq1 : " *)
-  assumes Hleqa : "l_pleq a (bsup a' b')"
+ assumes Hleqa : "l_pleq a a'"
   assumes Hleqa' : "l_pleq a' (bsup a b)"
-  assumes Hleqb : "l_pleq b b'"
+(*  assumes Hleqb : "l_pleq b b'" *)
   assumes Hdesc : "\<And> bd sd . pleq bd (aug b) \<Longrightarrow> is_sup {aug a, bd} sd \<Longrightarrow> 
-                        (pleq bd (aug b') \<and> pleq bd (aug (bsup a' b')))" (* can we get away with has_ub here? *)
+                        (pleq bd (aug b'))" (* can we get away with has_ub here? *)
+(* also used to have:  \<and> pleq bd (aug (bsup a' b')) *)
   shows "l_pleq (bsup a b) (bsup a' b')"
 proof(-)
   have Bub : "is_bub a b (bsup a' b')"
@@ -271,46 +276,148 @@ proof(-)
       by (auto simp add:is_bsup_def)
     have Hbub : "\<And> bd sd . pleq bd (aug b) \<Longrightarrow> is_sup {aug a, bd} sd \<Longrightarrow> pleq sd (aug (bsup a b))"
       using bsup_spec[of a b] by(auto simp add:bsup_spec is_bsup_def is_bub_def LLl.is_least_def l_pleq_def) 
-    have 1: "is_bsup a b (bsup a b)" using bsup_spec 
+    
+    have Hbub' : "\<And> bd sd . pleq bd (aug b') \<Longrightarrow> is_sup {aug a', bd} sd \<Longrightarrow> pleq sd (aug (bsup a' b'))"
+      using bsup_spec[of a' b'] by(auto simp add:bsup_spec is_bsup_def is_bub_def LLl.is_least_def l_pleq_def) 
+    
+    have 1: "is_bsup a b (bsup a b)" using bsup_spec
       by (auto simp add:is_bsup_def)
-(*
-    have Conc1 : "l_pleq a (bsup a' b')"
+
+    have Conc1 : "l_pleq a (bsup a' b')" using Hleqa
     proof(-)
       have in0 : "l_pleq a' (bsup a' b')" using  aug_merge_bsup_leq by auto
-      thus ?thesis using LLl.leq_trans[OF Hleq in0] by auto
+      thus ?thesis using LLl.leq_trans[OF Hleqa in0] by auto
     qed
-*)
+
     have Conc2 : "\<And> bd sd . pleq bd (aug b) \<Longrightarrow> is_sup {aug a, bd} sd \<Longrightarrow> pleq sd (aug (bsup a' b'))"
     proof(-)
       fix bd sd
       assume Hbd : "pleq bd (aug b)"
       assume Hsup : "is_sup {aug a, bd} sd"
 
-      have 0 : "pleq bd (aug b')" using Hdesc[OF Hbd Hsup] ..
-      have 1 : "pleq bd (aug (bsup a' b'))" using Hdesc[OF Hbd Hsup] ..
+      have 0 : "pleq bd (aug b')" using Hdesc[OF Hbd Hsup] by auto
+(*      have 1 : "pleq bd (aug (bsup a' b'))" using Hdesc[OF Hbd Hsup] *)
+
+      have 1 : "pleq bd sd" using Hsup 
+        by(auto simp add: is_sup_def is_ub_def is_least_def)
 
       have 2 : "pleq sd (aug (bsup a b))" using Hbub[OF Hbd Hsup] by auto
 
+      have 3 : "pleq bd (aug (bsup a b))" using leq_trans[OF 1 2] by auto 
+
       (* problem - need to show existence of least upper bound
          but we do not have (and, i think, do not want) a standard notion of completeness *)
+
+      hence 3 : "is_ub {(aug a'), bd} (aug (bsup a b))" using Hleqa'
+        by(auto simp add:is_ub_def leq_refl l_pleq_def) 
+
+      hence 4 : "has_ub {(aug a'), bd}"
+        by (auto simp add:has_ub_def)
+
+      hence 5 : "has_sup {(aug a'), bd}"
+        by (auto simp add:complete2)
+
+      then obtain sd' where Hsd' : "is_sup {aug a', bd} sd'" by (auto simp add:has_sup_def)
+
+      have 6: "pleq sd' (aug (bsup a' b'))" using Hbub'[OF 0 Hsd'] by auto
+
+      have 7 : "pleq (aug a) (aug a')" using Hleqa by (simp add:l_pleq_def)
+      have 8 : "pleq sd sd'" using sup_extend[OF 7 Hsup Hsd'] by auto
       
-      
-      show "pleq sd (aug (bsup a' b'))"
-      sorry
+      show "pleq sd (aug (bsup a' b'))" using leq_trans[OF 8 6] by auto
+    qed
+
+    then show ?thesis using Conc1 Conc2 by(simp add:is_bub_def) 
   qed
+  thus ?thesis using bsup_spec [of a b]
+    by(auto simp add:is_bsup_def LLl.is_least_def)
+qed
 
-(*
-    have Hbound : 
-        "\<And> bd sd . l_pleq bd b \<Longrightarrow> LLl.is_sup {a, bd} sd \<Longrightarrow> l_pleq sd
-*)
-    then show ?thesis using Conc1 Conc2 apply(simp add:is_bub_def) apply(blast)
+(* do we really need to prove this again?
+or can we do something more general? *)
+lemma bsup_compare2:
+ assumes Hleqa' : "l_pleq a' a"
+ assumes Hleqa : "l_pleq a (bsup a' b')" 
+(*  assumes Hleqb : "l_pleq b b'" *)
+  assumes Hdesc : "\<And> bd sd . pleq bd (aug b) \<Longrightarrow> is_sup {aug a, bd} sd \<Longrightarrow> 
+                        (pleq bd (aug b'))" (* can we get away with has_ub here? *)
+(* also used to have:  \<and> pleq bd (aug (bsup a' b')) *)
+  shows "l_pleq (bsup a b) (bsup a' b')"
+proof(-)
+  have Bub : "is_bub a b (bsup a' b')"
+  proof(-)
+(*    fix d s
+    assume d_leq : "l_pleq d b"
+    assume d_sup : "LLl.is_sup {a, d} s"
+    have 0: "l_pleq d b'" using Hdesc[OF d_leq d_sup] ..
+    have 1: "l_pleq d (bsup a' b')" using Hdesc [OF d_leq d_sup] .. *)
+    
+    have 0: "is_bsup a' b' (bsup a' b')" using bsup_spec 
+      by (auto simp add:is_bsup_def)
+    have Hbub : "\<And> bd sd . pleq bd (aug b) \<Longrightarrow> is_sup {aug a, bd} sd \<Longrightarrow> pleq sd (aug (bsup a b))"
+      using bsup_spec[of a b] by(auto simp add:bsup_spec is_bsup_def is_bub_def LLl.is_least_def l_pleq_def) 
+    
+    have Hbub' : "\<And> bd sd . pleq bd (aug b') \<Longrightarrow> is_sup {aug a', bd} sd \<Longrightarrow> pleq sd (aug (bsup a' b'))"
+      using bsup_spec[of a' b'] by(auto simp add:bsup_spec is_bsup_def is_bub_def LLl.is_least_def l_pleq_def) 
+    
+    have 1: "is_bsup a b (bsup a b)" using bsup_spec
+      by (auto simp add:is_bsup_def)
 
-    sorry
+    have Conc1 : "l_pleq a (bsup a' b')" using Hleqa by auto
+
+    have Conc2 : "\<And> bd sd . pleq bd (aug b) \<Longrightarrow> is_sup {aug a, bd} sd \<Longrightarrow> pleq sd (aug (bsup a' b'))"
+    proof(-)
+      fix bd sd
+      assume Hbd : "pleq bd (aug b)"
+      assume Hsup : "is_sup {aug a, bd} sd"
+
+      have 0 : "pleq bd (aug b')" using Hdesc[OF Hbd Hsup] by auto
+
+      have 1 : "pleq bd sd" using Hsup 
+        by(auto simp add: is_sup_def is_ub_def is_least_def)
+
+      have 2 : "pleq sd (aug (bsup a b))" using Hbub[OF Hbd Hsup] by auto
+
+
+      have 3 : "pleq bd (aug (bsup a b))" using leq_trans[OF 1 2] by auto 
+
+      (* problem - need to show existence of least upper bound
+         but we do not have (and, i think, do not want) a standard notion of completeness *)
+
+      have 4 : "l_pleq a' (bsup a b)" using LLl.leq_trans[OF Hleqa' aug_merge_bsup_leq[of a b]] 
+        by auto
+
+      hence 5 : "is_ub {(aug a'), bd} (aug (bsup a b))" using 3
+        by(auto simp add:is_ub_def leq_refl l_pleq_def)
+
+      hence 6 : "has_ub {(aug a'), bd}" by (auto simp add:has_ub_def)
+
+      have 7: "has_sup {aug a', bd}" using complete2[OF 6] by auto
+
+      have 8 : "pleq bd (aug b')" using Hdesc[OF Hbd Hsup] by auto
+
+      obtain sd' where Hsd' : "is_sup {aug a', bd} sd'" using 7 by (auto simp add:has_sup_def)
+
+      have 9 : "pleq sd' (aug (bsup a' b'))" using Hbub'[OF 8 Hsd'] by auto
+
+      have 10 : "pleq bd sd'" using Hsd' by (auto simp add:is_sup_def is_least_def is_ub_def)
+
+      have 11 : "pleq bd (aug (bsup a' b'))" using leq_trans[OF 10 9] by auto
+
+      have 12 : "is_ub {(aug a), bd} (aug (bsup a' b'))" using Hleqa 11
+        by(auto simp add:is_ub_def l_pleq_def)
+
+      show "pleq sd (aug (bsup a' b'))" using 12 Hsup
+        by(auto simp add:is_ub_def is_sup_def is_least_def)
+    qed
+
+    then show ?thesis using Conc1 Conc2 by(simp add:is_bub_def) 
   qed
   thus ?thesis using bsup_spec [of a b]
     by(auto simp add:is_bsup_def LLl.is_least_def)
   qed
-*)
+
+
 lemma assoc_fact1 :
   "bsup a (bsup b c) = (bsup (bsup a b) (bsup b c))"
 proof(-)
@@ -318,14 +425,164 @@ proof(-)
     by(simp add:aug_merge_bsup_leq)
   have 1:  "l_pleq b (bsup b c)" using bsup_spec 
     by(simp add:aug_merge_bsup_leq)
-  have 1 : "l_pleq (bsup a b) (bsup a (bsup b c))"
+  have 2 : "l_pleq (bsup a b) (bsup a (bsup b c))"
     using aug_merge_bsup_mono2[OF 1] by auto
+
+(*
+  have 3 : "\<And> bd sd. pleq bd (aug (bsup b c)) \<Longrightarrow> is_sup {aug a, bd} sd \<Longrightarrow> pleq bd (aug (bsup b c))"
+    by auto
+*)
+  have LtoR : "l_pleq (bsup a (bsup b c)) (bsup (bsup a b) (bsup b c))"
+    using bsup_compare1[OF 0 2] by auto
+
+  have RtoL : "l_pleq (bsup (bsup a b) (bsup b c)) (bsup a (bsup b c))"
+    using bsup_compare2[OF 0 2] by auto
+
+  thus ?thesis using LLl.leq_antisym[OF LtoR RtoL] by auto
+qed
+
+lemma leq_completion :
+  assumes Hleq : "pleq a a'"
+  assumes Hsup : "is_sup {a', b} x"
+
+shows "has_sup {a, b}"
+proof(-)
+  have 0 :  "pleq a' x" using Hsup by (simp add:is_sup_def is_least_def is_ub_def)
+  have 1 : "pleq a x" using leq_trans[OF Hleq 0] by auto
+  hence 2 : "is_ub {a, b} x" using Hsup by (simp add:is_sup_def is_least_def is_ub_def)
+  hence 3 : "has_ub {a, b}" by (auto simp add:has_ub_def)
+  thus ?thesis by (auto elim: complete2)
+qed
+
+(* i think we need to prove this directly. not from the other one
+also we should see if we can actually prove the real associativity using
+a slightly more general bsup_compare talking about descendents (probably not...) *)
+
+lemma assoc_fact2 :
+  "l_pleq (bsup (bsup a b) c) (bsup (bsup a b) (bsup a c))"
+proof(-)
+  have 0 : "l_pleq (bsup a b) (bsup a b)" using LLl.leq_refl by auto
+
+  have 1 : "l_pleq (bsup a b) (bsup (bsup a b) c)" using aug_merge_bsup_leq by auto
+
+  have 2 : "l_pleq (bsup a b) (bsup (bsup a b) (bsup a c))" using aug_merge_bsup_leq by auto
+
+  have 3 : "(\<And>bd sd. pleq bd (aug c) \<Longrightarrow> is_sup {aug (bsup a b), bd} sd \<Longrightarrow> pleq bd (aug (bsup a c)))"
+  proof(-)
+    fix bd sd
+    assume Hpleq : "pleq bd (aug c)"
+    assume Hsup : "is_sup {aug (bsup a b), bd} sd"
+
+    have in1 : "has_sup {aug (bsup a b), bd}" using Hsup by (auto simp add:has_sup_def)
+    have in2 : "pleq (aug a) (aug (bsup a b))" using aug_merge_bsup_leq by (auto simp add:l_pleq_def)
+    have in3 : "has_sup {aug a, bd}" using leq_completion[OF in2 Hsup] by auto
+    then obtain sd' where Hsd : "is_sup {aug a, bd} sd'"
+      by (auto simp add:has_sup_def)
+
+    have in4 : "pleq sd' (aug (bsup a c))" using Hsd Hpleq bsup_spec[of a c]
+      by(auto simp add: is_bsup_def LLl.is_least_def is_bub_def)
+
+    have in5 : "pleq bd sd'" using Hsd by (simp add:is_sup_def is_ub_def is_least_def)
+
+    show "pleq bd (aug (bsup a c))" using leq_trans[OF in5 in4] by auto
+  qed
+
+  thus ?thesis using bsup_compare1[OF 0 1 3] by auto
+qed
+
+
+(* remaining facts we want:
+has_sup a b \<Longrightarrow> (bsup a (bsup b c)) = (bsup b (bsup a c))
+has_sup a b \<Longrightarrow> (bsup (bsup a b)) c \<le> bsup a (bsup b c)
+
+*)
+
+lemma sup_assoc_fact1 :
+  fixes a b c
+  assumes Hsup : "LLl.has_sup {a, b}"
+  shows "l_pleq (bsup (bsup a b) c) (bsup a (bsup b c))"
+proof(-)
+  have 0 : "bsup (bsup a b) c = bsup (bsup b a) c"
+    using bsup_comm[OF Hsup]  by auto
+
+  have 1 : "l_pleq (bsup (bsup b a) c) (bsup (bsup b a) (bsup b c))"
+    using assoc_fact2 by auto
+
+  have 3 : "bsup (bsup b a) (bsup b c) = bsup (bsup a b) (bsup b c)"
+    using bsup_comm[OF Hsup] by auto
+
+  have 4 : "bsup (bsup a b) (bsup b c) = bsup a (bsup b c)"
+    using assoc_fact1 by auto
+
+  show ?thesis using 0 1 3 4 by auto
+qed
+
+lemma sup_assoc_fact2 :
+  fixes a b c
+  assumes Hsup : "LLl.has_sup {a, b}"
+  shows "bsup (bsup a b) c = bsup (bsup b a) c"
+  using bsup_comm[OF Hsup] by auto
+
+lemma sup_assoc_fact3 :
+  fixes a b c
+  assumes Hsup : "LLl.has_sup {a, b}"
+  shows "l_pleq (bsup (bsup a b) c) (bsup b (bsup a c))"
+proof(-)
+
+(*  have "bsup (bsup a b) c = bsup (bsup b a) c" using sup_assoc_fact2[OF Hsup] by auto *)
+
+  have 1 : "l_pleq (bsup (bsup a b) c) (bsup (bsup a b) (bsup a c))"
+    using assoc_fact2 by auto
+
+  have 2 : "bsup (bsup a b) (bsup a c) = bsup (bsup b a) (bsup a c)"
+    using bsup_comm[OF Hsup] by auto
+
+  have 3 : "bsup (bsup b a) (bsup a c) = bsup b (bsup a c)" 
+    using assoc_fact1 by auto
+
+  show ?thesis using 1 2 3 by auto
+
+qed
+
+(*
+
+lemma assoc_fact3 :
+  "\<And> a b c . bsup (bsup a b) c = (bsup (bsup a b) (bsup a c))"
+proof(-)
+  fix a b c
+  have LtoR : "l_pleq (bsup (bsup a b) c) (bsup (bsup a b) (bsup a c))" using assoc_fact2 by auto
+
+  have RtoL : "l_pleq (bsup (bsup a b) (bsup a c)) (bsup (bsup a b) c)"
+  proof(-)
+    have 0 : "l_pleq (bsup (bsup a b) (bsup a c)) (bsup (bsup (bsup a b) a) (bsup (bsup a b) c))"
+      using assoc_fact2[of a b "bsup a c"]
+
+(*
+  have 4 : "(\<And>bd sd. pleq bd (aug (bsup a c)) \<Longrightarrow> is_sup {aug (bsup a b), bd} sd \<Longrightarrow> pleq bd (aug c))"
+  proof(-)
+    fix bd sd
+    assume Hpleq : "pleq bd (aug (bsup a c))"
+    assume Hsup : "is_sup {aug (bsup a b), bd} sd"
+*)
   
-    
+  
+(*
+lemma assoc :
+(*  "bsup a (bsup b c) = bsup (bsup a b) c" *)
+"l_pleq (bsup (bsup a b) c) (bsup a (bsup b c))"
+proof(-)
+
+  have 0:  "l_pleq a (bsup a b)" using bsup_spec 
+    by(simp add:aug_merge_bsup_leq)
+
+  have 1 : "l_pleq (bsup a b) (bsup a b)" 
+    using LLl.leq_refl by auto
+
+  have 2 :
+"(\<And>cd sd. pleq cd (aug c) \<Longrightarrow> is_sup {aug (bsup a b), cd} sd \<Longrightarrow> pleq cd (aug (bsup b c)))"
+*)
 
 end
-  
-
 
 sublocale Aug_Mergeable_Spec \<subseteq> PM : Mergeable_Spec l_pleq bsup
   apply(unfold_locales)
@@ -368,6 +625,19 @@ interpretation Test0 : Aug_Mergeable_Spec test0_lleq  id Some test0_bsup
    apply(case_tac a; clarsimp)
               apply(case_tac b; clarsimp)
 
+(* completeness *)
+
+        apply(simp add:Pord.has_ub_def Pord.is_ub_def
+Pord.has_sup_def Pord.is_sup_def Pord.is_least_def)
+
+     apply(case_tac a; clarsimp) 
+    apply(case_tac b; clarsimp)
+        apply(rule_tac x = None in exI)
+        apply(simp add:All_def)
+  apply(rule_tac ext; auto)
+
+
+(* end completeness *)
 
      apply(case_tac a; clarsimp) 
     apply(case_tac a; clarsimp)
@@ -434,13 +704,26 @@ definition test_deaug :: "t1a \<Rightarrow> t1 option" where
     (x1, Some x2) \<Rightarrow> Some (x1, x2)
     | _ \<Rightarrow> None)"
 
+(*
 print_locale Aug_Mergeable_Spec
 interpretation Test : Aug_Mergeable_Spec test_lleq test_aug test_deaug test_bsup
 
   apply(unfold_locales)
               apply(simp add: test_lleq_def split:prod.splits option.splits)
   apply(simp add: test_lleq_def split:prod.splits option.splits)
-            apply(simp add: test_lleq_def split:prod.splits option.splits)
+         apply(simp add: test_lleq_def split:prod.splits option.splits)
+
+(* completeness *)
+
+        apply(simp add:Pord.has_ub_def Pord.is_ub_def
+Pord.has_sup_def Pord.is_sup_def Pord.is_least_def)
+
+        apply(clarsimp)
+        apply(simp add:test_lleq_def)
+        apply(simp split:option.splits; (clarsimp; force))
+
+(* end completeness *)
+
        apply(simp add: test_deaug_def test_aug_def test_lleq_def split:prod.splits option.splits)
       apply(simp add: test_deaug_def test_aug_def test_lleq_def split:prod.splits option.splits)
        apply(clarsimp)
@@ -549,5 +832,6 @@ apply(case_tac ad; clarsimp)
   done
 (* ok, so this seems to work - but is rather ugly. *)
 
-
+*)
+*)
 end
