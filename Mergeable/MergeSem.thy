@@ -2,16 +2,15 @@ theory MergeSem imports Mergeable
 
 begin
 
-print_locale Aug_Mergeable
-print_locale Aug_Pord
 
 (* other ingredients we need:
 
-
-
 *)
+
+print_locale Mergeable
+
 locale MergeSem =
-  Aug_Mergeable "pleq :: 'a \<Rightarrow> 'a \<Rightarrow> bool" "aug :: 'b \<Rightarrow> 'a"  deaug bsup +
+  Mergeable "pleq :: 'a \<Rightarrow> 'a \<Rightarrow> bool" "aug :: 'b \<Rightarrow> 'a"  deaug bsup +
   T1 : Aug_Pord "pleq1 :: 'a1 \<Rightarrow> 'a1 \<Rightarrow> bool" "aug1 :: 'b1 \<Rightarrow> 'a1"  deaug1  +
   T2 : Aug_Pord "pleq2 :: 'a2 \<Rightarrow> 'a2 \<Rightarrow> bool" "aug2 :: 'b2 \<Rightarrow> 'a2" deaug2 
   for  pleq aug deaug bsup

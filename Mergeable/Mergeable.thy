@@ -9,8 +9,6 @@ locale Mergeable =
   fixes bsup :: "'a \<Rightarrow> 'a \<Rightarrow> 'a"
 
 
-(* TODO: do we need to change specification of bsup so that
-    it does not use the lifted order when talking about is_sup ?*)
 locale Mergeable_Spec =
   Mergeable +
   Pordc_Spec +
@@ -132,7 +130,7 @@ proof(-)
   show ?thesis using 0 1 3 4 by auto
 qed
 
-lemma sup_assoc_lb2 :
+lemma sup_assoc_2 :
   fixes a b c
   assumes Hsup : "has_sup {a, b}"
   shows "pleq (bsup (bsup a b) c) (bsup b (bsup a c))"
