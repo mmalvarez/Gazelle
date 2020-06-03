@@ -85,6 +85,83 @@ definition is_bsup :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" 
 "is_bsup a b s =
   is_least (is_bub a b) s"
 
+lemma is_ub_intro :
+  assumes H : "\<And> x . x \<in> A \<Longrightarrow> pleq x a"
+  shows "is_ub A a" using H
+  by(auto simp add:is_ub_def)
+
+(* convenience lemmas, true by definition *)
+lemma is_ub_unfold :
+  assumes H1 : "is_ub S ub"
+  assumes H2 : "x \<in> S"
+  shows "pleq x ub"
+  using H1 H2
+  by (auto simp add: is_ub_def)
+
+lemma is_sup_intro :
+  assumes Hpleq : "\<And> x . x \<in> A \<Longrightarrow> pleq x ub"
+  assumes Hleast : "\<And> x' . is_ub A x' \<Longrightarrow> pleq ub x'"
+  shows "is_sup A ub" using Hpleq Hleast
+  by(auto simp add:is_least_def is_ub_def is_sup_def)
+
+lemma is_sup_unfold1 :
+  assumes H1 : "is_sup S ub"
+  assumes H2 : "x \<in> S"
+  shows "pleq x ub"
+  using H1 H2
+  by (auto simp add: is_ub_def is_least_def is_sup_def)
+
+lemma is_sup_unfold2 :
+  assumes H1 : "is_sup S ub"
+  assumes H2 : "is_ub S ub'"
+  shows "pleq ub ub'"
+  using H1 H2
+  by (auto simp add: is_ub_def is_least_def is_sup_def)
+
+lemma bsup_leq :
+  assumes H : "is_bsup a b x"
+  shows "pleq a x" using H
+  by (auto simp add:is_bsup_def is_bub_def is_least_def)
+
+
+lemma is_bub_unfold1 :
+  assumes H1 : "is_bub a b ub"
+  shows "pleq a ub" 
+  using H1 by (auto simp add:is_bub_def)
+
+lemma is_bub_unfold2 :
+  assumes H1 : "is_bub a b ub"
+  assumes H2 : "pleq bd (b)"
+  assumes H3 : "is_sup {a, bd} sd"
+  shows "pleq sd (ub)"
+  using H1 H2 H3 by (auto simp add:is_bub_def)
+
+lemma is_bsup_intro :
+  assumes Hpleq : "pleq a bub"
+  assumes Hbub :
+    "\<And> bd sd . pleq bd b \<Longrightarrow> is_sup {a, bd} sd \<Longrightarrow> pleq sd bub"
+  assumes Hleast : "\<And> x' . is_bub a b x' \<Longrightarrow> pleq bub x'"
+  shows "is_bsup a b bub" using Hpleq Hbub Hleast
+  by(auto simp add:is_bsup_def is_least_def is_bub_def)
+
+lemma is_bsup_unfold1 :
+  assumes H1 : "is_bsup a b ub"
+  shows "pleq a ub" 
+  using H1 by (rule bsup_leq)
+
+lemma is_bsup_unfold2 :
+  assumes H1 : "is_bsup a b ub"
+  assumes H2 : "pleq bd (b)"
+  assumes H3 : "is_sup {a, bd} sd"
+  shows "pleq sd (ub)"
+  using H1 H2 H3 by (auto simp add:is_bub_def is_bsup_def is_least_def)
+
+lemma is_bsup_unfold3 :
+  assumes H1 : "is_bsup a b ub"
+  assumes H2 : "is_bub a b ub'"
+  shows "pleq ub ub'"
+  using H1 H2 by (auto simp add:is_bsup_def is_least_def)
+
 end
 
 
@@ -145,10 +222,6 @@ proof(-)
 qed
 
 (* facts about bsup *)
-lemma bsup_leq :
-  assumes H : "is_bsup a b x"
-  shows "pleq a x" using H
-  by (auto simp add:is_bsup_def is_bub_def is_least_def)
 
 lemma bsup_unique : 
   assumes H1 : "is_bsup a b x"
@@ -179,56 +252,14 @@ locale Pordc_Spec =
   assumes complete2: "\<And> a b . has_ub {a, b} \<Longrightarrow> has_sup {a, b}"
 begin
 
-lemma is_ub_unfold :
-  assumes H1 : "is_ub S ub"
-  assumes H2 : "x \<in> S"
-  shows "pleq x ub"
-  using H1 H2
-  by (auto simp add: is_ub_def)
 
-lemma is_sup_unfold1 :
-  assumes H1 : "is_sup S ub"
-  assumes H2 : "x \<in> S"
-  shows "pleq x ub"
-  using H1 H2
-  by (auto simp add: is_ub_def is_least_def is_sup_def)
+lemma is_bub_intro :
+  assumes Hpleq : "pleq a bub"
+  assumes Hbub :
+    "\<And> bd sd . pleq bd b \<Longrightarrow> is_sup {a, bd} sd \<Longrightarrow> pleq sd bub"
+  shows "is_bub a b bub" using Hpleq Hbub
+  by(auto simp add:is_bub_def)
 
-lemma is_sup_unfold2 :
-  assumes H1 : "is_sup S ub"
-  assumes H2 : "is_ub S ub'"
-  shows "pleq ub ub'"
-  using H1 H2
-  by (auto simp add: is_ub_def is_least_def is_sup_def)
-
-lemma is_bub_unfold1 :
-  assumes H1 : "is_bub a b ub"
-  shows "pleq a ub" 
-  using H1 by (auto simp add:is_bub_def)
-
-lemma is_bub_unfold2 :
-  assumes H1 : "is_bub a b ub"
-  assumes H2 : "pleq bd (b)"
-  assumes H3 : "is_sup {a, bd} sd"
-  shows "pleq sd (ub)"
-  using H1 H2 H3 by (auto simp add:is_bub_def)
-
-lemma is_bsup_unfold1 :
-  assumes H1 : "is_bsup a b ub"
-  shows "pleq a ub" 
-  using H1 by (rule bsup_leq)
-
-lemma is_bsup_unfold2 :
-  assumes H1 : "is_bsup a b ub"
-  assumes H2 : "pleq bd (b)"
-  assumes H3 : "is_sup {a, bd} sd"
-  shows "pleq sd (ub)"
-  using H1 H2 H3 by (auto simp add:is_bub_def is_bsup_def is_least_def)
-
-lemma is_bsup_unfold3 :
-  assumes H1 : "is_bsup a b ub"
-  assumes H2 : "is_bub a b ub'"
-  shows "pleq ub ub'"
-  using H1 H2 by (auto simp add:is_bsup_def is_least_def)
 
 lemma bsup_compare1:
 (*  assumes Hleq1 : " *)
@@ -478,5 +509,16 @@ qed
 
 
 end
+
+locale Pbord' = Pord
+
+locale Pbord = Pbord' +
+  fixes bot :: "'a"
+
+locale Pbordc_Spec = Pbord +
+  Pordc_Spec +
+  assumes bot_spec :
+    "\<And> (a :: 'a) . pleq bot a"
+
 
 end
