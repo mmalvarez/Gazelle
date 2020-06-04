@@ -527,7 +527,8 @@ definition bsup :: "('a * 'b) \<Rightarrow> ('a * 'b) \<Rightarrow> ('a * 'b)" w
 end
 
 locale Mg_Pair = Mg_Pair' +
-  OM1 : Mergeable pleq1 bsup1
+  OM1 : Mergeable pleq1 bsup1 +
+  OM2 : Mergeable pleq2 bsup2
 
 locale Mg_Pair_Spec = Mg_Pair +
   Pordc_Pair_Spec +
@@ -660,5 +661,165 @@ next
     qed
   qed
 qed
+
+locale Pord_Pair_Lex' =
+  fixes pleq1 :: "'a \<Rightarrow> 'a \<Rightarrow> bool"
+  fixes pleq2 :: "'b \<Rightarrow> 'b \<Rightarrow> bool"
+begin
+definition pleq :: "('a * 'b) \<Rightarrow> ('a * 'b) \<Rightarrow> bool" where
+"pleq x y =
+  (case x of
+      (x1, x2) \<Rightarrow> (case y of
+                    (y1, y2) \<Rightarrow> (if (pleq1 x1 y1) then
+                                      (if pleq1 y1 x1 then pleq2 x2 y2 else True)
+                                    else False)))"
+
+end
+
+locale Pord_Pair_Lex = Pord_Pair_Lex' +
+  O1 : Pord pleq1 +
+  O2 : Pord pleq2
+
+sublocale Pord_Pair_Lex \<subseteq> Pord "pleq"
+  done
+
+locale Pordc_Pair_Lex_Spec = Pord_Pair_Lex +
+  OS1 : Pordc_Spec pleq1 +
+  OS2 : Pordc_Spec pleq2 
+  
+sublocale Pordc_Pair_Lex_Spec \<subseteq> Pordc_Spec "pleq"
+proof(unfold_locales)
+
+  fix a
+  show "pleq a a" by (auto simp add:pleq_def OS1.leq_refl OS2.leq_refl split:prod.splits)
+
+next
+
+  fix a :: "('a * 'b)"
+  fix b :: "('a * 'b)"
+  fix c :: "('a * 'b)"
+
+  assume H1 : "pleq a b"
+  assume H2 : "pleq b c"
+
+  obtain a1 and a2 where Ha : "a = (a1, a2)" by (cases a; auto)
+  obtain b1 and b2 where Hb : "b = (b1, b2)" by (cases b; auto)
+  obtain c1 and c2 where Hc : "c = (c1, c2)" by (cases c; auto)
+
+  show "pleq a c"
+  proof(cases "pleq1 c1 a1")
+    case False
+    then show ?thesis using H1 H2 Ha Hb Hc OS1.leq_trans[of a1 b1 c1]
+      by(auto simp add:pleq_def split:if_splits)
+  next
+    case True
+    then show ?thesis using H1 H2 Ha Hb Hc OS1.leq_trans[of a1 b1 c1] OS1.leq_trans[of c1 a1 b1] OS1.leq_trans[of b1 c1 a1] OS2.leq_trans[of a2 b2 c2]
+      by(auto simp add:pleq_def split:if_splits)
+  qed
+
+next
+
+  fix a :: "('a * 'b)"
+  fix b :: "('a * 'b)"
+  obtain a1 and a2 where Ha : "a = (a1, a2)" by (cases a; auto)
+  obtain b1 and b2 where Hb : "b = (b1, b2)" by (cases b; auto)
+
+  assume H1 : "pleq a b"
+  assume H2 : "pleq b a"
+
+  show "a = b" using H1 H2 Ha Hb OS1.leq_antisym[of a1 b1] OS2.leq_antisym[of a2 b2]
+    by(auto simp add:pleq_def split:if_splits)
+
+next
+
+  fix a :: "('a * 'b)"
+  fix b :: "('a * 'b)"
+
+  assume H : "has_ub {a, b}"
+  obtain a1 and a2 where Ha : "a = (a1, a2)" by (cases a; auto)
+  obtain b1 and b2 where Hb : "b = (b1, b2)" by (cases b; auto)
+
+  obtain c where Hub : "is_ub {a, b} c" using H by (auto simp add:has_ub_def)
+  obtain c1 and c2 where Hc : "c = (c1, c2)" by (cases c; auto)
+
+  show "has_sup {a, b}" using Hub Ha Hb Hc
+    apply(auto simp add: is_sup_def is_ub_def has_sup_def is_least_def pleq_def)
+
+qed
+
+locale Mg_Pair_Lex' = Pord_Pair_Lex +
+  fixes bsup1 :: "'a \<Rightarrow> 'a \<Rightarrow> 'a"
+  fixes bsup2 :: "'b \<Rightarrow> 'b \<Rightarrow> 'b"
+begin
+
+(*
+definition bsup :: "('a * 'b) \<Rightarrow> ('a * 'b) \<Rightarrow> ('a * 'b)" where
+"bsup a b =
+  (case a of
+    (a1, a2) \<Rightarrow> (case b of
+                  (b1, b2) \<Rightarrow> (if pleq a1 b1 then
+                                  (if pleq b1 a1 then (a1, bsup2 a2 b2)
+                                                 else (b1, b2))
+                               else (if pleq b1 a1 then (a1, a2)
+                                        else (bsup a1 b1, a2)))))"
+*)
+definition bsup :: "('a * 'b) \<Rightarrow> ('a * 'b) \<Rightarrow> ('a * 'b)" where
+"bsup a b =
+  (case a of
+    (a1, a2) \<Rightarrow> (case b of
+                  (b1, b2) \<Rightarrow> (if pleq1 a1 b1 then
+                                  (if pleq1 b1 a1 then (a1, bsup2 a2 b2)
+                                                 else (b1, b2))
+                               else (if pleq1 b1 a1 then (a1, a2)
+                                        else (bsup1 a1 b1, a2)))))"
+end
+
+locale Mg_Pair_Lex = Mg_Pair_Lex' +
+  OM1 : Mergeable pleq1 bsup1 +
+  OM2 : Mergeable pleq2 bsup2
+
+locale Mg_Pair_Lex_Spec = Mg_Pair_Lex +
+  Pordc_Pair_Lex_Spec +
+  OMS1 : Mergeable_Spec pleq1 bsup1 +
+  OMS2 : Mergeable_Spec pleq2 bsup2
+
+sublocale Mg_Pair_Lex_Spec \<subseteq> Mergeable_Spec pleq bsup
+proof(auto simp only:Mergeable_Spec_def)
+  show "Pordc_Spec pleq" by (rule local.Pordc_Spec_axioms)
+
+next
+  show "Mergeable_Spec_axioms pleq bsup"
+  proof(unfold_locales)
+    fix a :: "('a * 'b)"
+    fix b :: "('a * 'b)"
+    obtain a1 and a2 where Ha : "a = (a1, a2)" by (cases a; auto)
+    obtain b1 and b2 where Hb : "b = (b1, b2)" by (cases b; auto)
+
+    show "is_bsup a b (bsup a b)"
+    proof(rule is_bsup_intro)
+
+      show "pleq a (bsup a b)" using Ha Hb O1.bsup_leq[OF OMS1.bsup_spec[of a1 b1]] O2.bsup_leq[OF OMS2.bsup_spec[of a2 b2]]
+        by(auto simp add: pleq_def bsup_def)
+
+
+    next
+
+      fix bd :: "('a * 'b)"
+      fix sd :: "('a * 'b)"
+
+      assume H1 : "pleq bd b"
+      assume H2 : "is_sup {a, bd} sd"
+
+      show "pleq sd (bsup a b)" sorry
+
+    next
+
+      fix x :: "('a * 'b)"
+      obtain x1 and x2 where Hx : "x = (x1, x2)" by (cases x; auto)
+
+      assume H : "is_bub a b x"
+
+      show "pleq (bsup a b) x" using H Ha Hb Hx
+        apply(auto simp add:pleq_def bsup_def is_bub_def is_sup_def is_least_def is_ub_def)
 
 end
