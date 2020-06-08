@@ -508,6 +508,49 @@ proof(-)
 qed
 
 
+lemma bsup_imp_sup :
+  assumes Hbs : "is_bsup a b bs"
+  assumes H : "pleq b bs"
+  shows "is_sup {a, b} bs"
+
+proof(rule is_sup_intro)
+  fix x
+  assume Hx : "x \<in> {a, b}"
+  show "pleq x bs" using H bsup_leq[OF Hbs] Hx
+    by(auto)
+next
+  fix ub
+  assume Hi :  "is_ub {a, b} ub"
+
+  have 0 : "is_bub a b ub"
+  proof(rule is_bub_intro)
+    show "pleq a ub" using Hi by (auto simp add:is_ub_def)
+  next
+    fix bd sd
+    assume Hl : "pleq bd b"
+    assume Hs : "is_sup {a, bd} sd"
+
+    have 0 : "is_ub {a, bd} ub" using Hi Hl leq_trans[of bd b ub]
+      by(auto simp add:is_ub_def)
+
+    show "pleq sd ub" using is_sup_unfold2[OF Hs 0] by auto
+  qed
+
+  show "pleq bs ub" using is_bsup_unfold3[OF Hbs 0] by auto
+qed
+
+lemma bsup_imp_sup_conv :
+  assumes Hbs : "is_bsup a b bs"
+  assumes H : "\<not> pleq b bs"
+  assumes Hub : "is_ub {a, b} ub"
+  shows False
+proof(-)
+  obtain lub where Hlub : "is_sup {a, b} lub" using Hub complete2 by(auto simp add:has_ub_def has_sup_def)
+  have Hbub : "is_bub a b bs" using Hbs by(auto simp add:is_bsup_def is_least_def)
+  have "pleq lub bs" using is_bub_unfold2[OF Hbub leq_refl[of b] Hlub] by auto
+  hence "pleq b bs" using Hlub leq_trans[of b lub bs] by (auto simp add:is_sup_def is_least_def is_ub_def)
+  thus ?thesis using H by auto
+qed
 end
 
 locale Pbord' = Pord
