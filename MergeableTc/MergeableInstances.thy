@@ -1,4 +1,4 @@
-theory MergeableInstances imports Mergeable
+theory MergeableInstances imports Mergeable HOL.Lifting
 begin
 
 (* goal: make these proofs more manageable by generalizing
@@ -978,5 +978,66 @@ instance proof
   qed
 qed
 end
+
+datatype 'a md_wrap =
+  mdw 'a
+
+definition md_wrap_get :: "'a md_wrap \<Rightarrow> 'a" where
+"md_wrap_get x = (case x of (mdw x') \<Rightarrow> x')"
+(*
+declare md_wrap_get_def [simp]
+
+instantiation md_wrap :: (Pord_Weak) Pord_Weak begin
+definition wrap_pleq :
+  "pleq x y = pleq (md_wrap_get x) (md_wrap_get y)"
+
+
+instance proof
+  fix a :: "'a md_wrap"
+  show "a <[ a"
+    by(auto simp add: wrap_pleq leq_refl split:md_wrap.splits)
+next
+  fix a b c :: "'a md_wrap"
+  show "a <[ b \<Longrightarrow> b <[ c \<Longrightarrow> a <[ c"
+    by(auto simp add: wrap_pleq elim: leq_trans split:md_wrap.splits)
+qed
+end
+
+instantiation md_wrap :: (Pord) Pord begin
+instance proof
+  fix a b :: "'a md_wrap"
+  show "a <[ b \<Longrightarrow> b <[ a \<Longrightarrow> a = b"
+    by(auto simp add:wrap_pleq elim: leq_antisym split:md_wrap.splits)
+qed
+end
+
+instantiation md_wrap :: (Pordc) Pordc begin
+instance proof
+  fix a b :: "'a md_wrap"
+  assume H : "has_ub {a, b}" 
+
+  show "has_sup {a, b}" using H
+        apply(auto simp add:wrap_pleq has_ub_def has_sup_def is_ub_def is_sup_def is_least_def ) 
+
+
+  obtain a' where Ha : "a = mdw a'" by(cases a; auto)
+  obtain b' where Hb : "b = mdw b'" by(cases b; auto)
+  obtain ub where Hub : "is_ub {a, b} ub" using H
+    by(auto simp add:has_ub_def)
+  obtain ub' where Hub' : "ub = mdw ub'" by(cases ub; auto)
+
+  have "is_ub {a', b'} ub'" using Ha Hb Hub Hub'
+    by(auto simp add:has_ub_def is_ub_def wrap_pleq split:md_wrap.splits)
+
+  hence "has_sup {a', b'}" using complete2
+    by(auto simp add:has_ub_def)
+
+  then obtain sup' where Hsup' : "is_sup {a', b'} sup'" by(auto simp add:has_sup_def)
+
+  hence "is_sup {a, b} (mdw sup')" using is_sup_unfold1[OF Hsup']
+    apply(auto simp add:wrap_pleq has_ub_def has_sup_def is_ub_def is_sup_def is_least_def split:md_wrap.splits) 
+qed
+end
+*)
 
 end
