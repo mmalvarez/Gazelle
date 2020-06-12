@@ -44,6 +44,27 @@ definition triv_pleq : "(a :: 'a md_triv) <[ b = (a = b)"
   qed
 end
 
+instantiation md_triv :: (_) Pord
+begin
+instance proof
+  fix a b :: "'a md_triv"
+  show "a <[ b \<Longrightarrow> b <[ a \<Longrightarrow> a = b"
+    unfolding triv_pleq by auto
+qed
+end
+
+instantiation md_triv :: (_) Pordc
+begin
+instance proof
+ fix a b :: "'a md_triv"
+    assume "has_ub {a, b :: 'a md_triv}"
+    show "has_ub {a, b} \<Longrightarrow> has_sup {a, b}" unfolding triv_pleq
+      by(auto simp add:
+    has_ub_def is_ub_def
+    has_sup_def is_sup_def is_least_def triv_pleq)
+  qed
+end
+
 instantiation md_triv :: (_) Mergeable 
 begin
 
@@ -51,17 +72,6 @@ definition triv_bsup : "[^(a :: 'a md_triv), b^] = a"
 
 declare [[show_types]]
 instance proof
-  fix a b :: "'a md_triv"
-  show "a <[ b \<Longrightarrow> b <[ a \<Longrightarrow> a = b"
-    unfolding triv_pleq by auto
-  next
-    fix a b :: "'a md_triv"
-    assume "has_ub {a, b :: 'a md_triv}"
-    show "has_ub {a, b} \<Longrightarrow> has_sup {a, b}" unfolding triv_pleq
-      by(auto simp add:
-    Pord.has_ub_def Pord.is_ub_def
-    Pord.has_sup_def Pord.is_sup_def Pord.is_least_def triv_pleq)
-  next
     fix a b :: "'a md_triv"
     show "is_bsup a b (bsup a b)" unfolding triv_pleq triv_bsup
       by( simp only:
@@ -130,13 +140,13 @@ instance proof
       show "a = None \<Longrightarrow> b = None \<Longrightarrow> has_sup {a, b}"      
         by(auto simp add:
               option_pleq
-              Pord.has_ub_def  Pord.is_ub_def
-              Pord.has_sup_def Pord.is_sup_def Pord.is_least_def All_def split:option.splits)
+              has_ub_def  is_ub_def
+              has_sup_def is_sup_def is_least_def All_def split:option.splits)
       show " \<And>aa::'a. a = None \<Longrightarrow> b = Some aa \<Longrightarrow> has_sup {a, b}" using H leq_refl
         by(auto simp add:
               option_pleq
-              Pord.has_ub_def  Pord.is_ub_def
-              Pord.has_sup_def Pord.is_sup_def Pord.is_least_def All_def split:option.splits) 
+              has_ub_def  is_ub_def
+              has_sup_def is_sup_def is_least_def All_def split:option.splits) 
       qed
     next
     case (Some a')
@@ -145,8 +155,8 @@ instance proof
       show "a = Some a' \<Longrightarrow> b = None \<Longrightarrow> has_sup {a, b}" using H leq_refl
       by(auto simp add:
               option_pleq
-              Pord.has_ub_def  Pord.is_ub_def
-              Pord.has_sup_def Pord.is_sup_def Pord.is_least_def All_def split:option.splits) 
+              has_ub_def  is_ub_def
+              has_sup_def is_sup_def is_least_def All_def split:option.splits) 
 
       show "\<And>aa::'a. a = Some a' \<Longrightarrow> b = Some aa \<Longrightarrow> has_sup {a, b}"
         proof(-)
@@ -155,9 +165,9 @@ instance proof
         assume Hi2 : "b = Some aa"
         
         have OUb : "has_ub {a', aa}"  using H Hi1 Hi2
-          by(auto simp add:option_pleq Pord.is_ub_def Pord.has_ub_def split:option.splits)
+          by(auto simp add:option_pleq is_ub_def has_ub_def split:option.splits)
         obtain x where OSup : "is_sup {a', aa} x" using complete2[OF OUb]
-          by(auto simp add:option_pleq Pord.has_sup_def)
+          by(auto simp add:option_pleq has_sup_def)
 
         have "is_sup  {a, b} (Some x)" 
         proof(rule is_sup_intro)
@@ -177,7 +187,7 @@ instance proof
             by(auto simp add:
                 option_pleq is_ub_def is_sup_def is_least_def split:option.splits)
         qed
-        thus "has_sup {a, b}" by (auto simp add:Pord.has_sup_def)
+        thus "has_sup {a, b}" by (auto simp add:has_sup_def)
       qed
     qed
   qed
@@ -984,9 +994,9 @@ datatype 'a md_wrap =
 
 definition md_wrap_get :: "'a md_wrap \<Rightarrow> 'a" where
 "md_wrap_get x = (case x of (mdw x') \<Rightarrow> x')"
-(*
-declare md_wrap_get_def [simp]
 
+declare md_wrap_get_def [simp]
+(*
 instantiation md_wrap :: (Pord_Weak) Pord_Weak begin
 definition wrap_pleq :
   "pleq x y = pleq (md_wrap_get x) (md_wrap_get y)"

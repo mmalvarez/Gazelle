@@ -1,20 +1,17 @@
-theory Mergeable imports Pord 
+theory Mergeable imports Pord
 
 begin
 
 (* mergeable is a type with an ordering, as well as a way to
   "naturally" (-ish) merge elements that may not have a LUB *)
 class Mergeable =
-  Pordc + (* TODO: do we want to allow defining mergeables that have no Bot? *)
-  fixes bsup :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" ("[^ _, _ ^]")
-
+  Pordc + 
+  fixes bsup :: "('a :: Pordc) \<Rightarrow> 'a \<Rightarrow> 'a" ("[^ _, _ ^]")
 assumes bsup_spec :
   "\<And> a b . is_bsup a b (bsup a b)"
 
-begin
-declare [[show_types]]
 lemma bsup_comm :
-
+  fixes a b :: "'a :: Mergeable"
   assumes H : "has_sup {a, b}"
   shows "bsup a b = bsup b a"
 proof -
@@ -38,7 +35,8 @@ qed
 
 
 lemma bsup_assoc_fact1 :
-  "bsup a (bsup b c) = (bsup (bsup a b) (bsup b c))"
+  fixes a b c :: "'a :: Mergeable"
+  shows "bsup a (bsup b c) = (bsup (bsup a b) (bsup b c))"
 proof(-)
   have 0:  "pleq a (bsup a b)" using 
         bsup_leq[OF bsup_spec [of "a" "b"]]
@@ -59,7 +57,8 @@ qed
 
 
 lemma bsup_assoc_fact2 :
-  "pleq (bsup (bsup a b) c) (bsup (bsup a b) (bsup a c))"
+  fixes a b c :: "'a :: Mergeable"
+  shows "pleq (bsup (bsup a b) c) (bsup (bsup a b) (bsup a c))"
 proof(-)
   have 0 : "pleq (bsup a b) (bsup a b)" using leq_refl by auto
 
@@ -92,21 +91,14 @@ proof(-)
   thus ?thesis using bsup_compare1[OF bsup_spec bsup_spec 0 1 3] by auto
 qed
 
-
-(* remaining facts we want:
-has_sup a b \<Longrightarrow> (bsup a (bsup b c)) = (bsup b (bsup a c))
-has_sup a b \<Longrightarrow> (bsup (bsup a b)) c \<le> bsup a (bsup b c)
-
-*)
-
 lemma sup_assoc1 :
-  fixes a b c
+  fixes a b c :: "'a :: Mergeable"
   assumes Hsup : "has_sup {a, b}"
   shows "bsup (bsup a b) c = bsup (bsup b a) c"
   using bsup_comm[OF Hsup] by auto
 
 lemma sup_assoc_lb1 :
-  fixes a b c
+  fixes a b c :: "'a :: Mergeable"
   assumes Hsup : "has_sup {a, b}"
   shows "pleq (bsup (bsup a b) c) (bsup a (bsup b c))"
 proof(-)
@@ -119,14 +111,16 @@ proof(-)
   have 3 : "bsup (bsup b a) (bsup b c) = bsup (bsup a b) (bsup b c)"
     using bsup_comm[OF Hsup] by auto
 
+
   have 4 : "bsup (bsup a b) (bsup b c) = bsup a (bsup b c)"
-    using bsup_assoc_fact1 by auto
+    using bsup_assoc_fact1[of a b c]
+    by auto
 
   show ?thesis using 0 1 3 4 by auto
 qed
 
 lemma sup_assoc_2 :
-  fixes a b c
+  fixes a b c :: "'a :: Mergeable"
   assumes Hsup : "has_sup {a, b}"
   shows "pleq (bsup (bsup a b) c) (bsup b (bsup a c))"
 proof(-)
@@ -140,13 +134,12 @@ proof(-)
     using bsup_comm[OF Hsup] by auto
 
   have 3 : "bsup (bsup b a) (bsup a c) = bsup b (bsup a c)" 
-    using bsup_assoc_fact1 by auto
+    using bsup_assoc_fact1[of b a c] by auto
 
   show ?thesis using 1 2 3 by auto
 
 qed
 
-end
 
 class Mergeableb = Mergeable +
   Pordb

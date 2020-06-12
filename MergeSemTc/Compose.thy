@@ -1,5 +1,5 @@
 theory Compose
-  imports "../MergeableTc/Mergeable" "../MergeableTc/Pord"
+  imports "../MergeableTc/Mergeable" "../MergeableTc/Pord2"
 begin
 
 (* idea. for composition we need
@@ -22,8 +22,10 @@ for the Views will need to be ordered *)
 
 *)
 
+class_deps Pord_Weak
+
 class Comp = Mergeableb +
-  fixes dom1 :: "'a set"
+  fixes dom1 :: "('a :: Pordb) set"
   fixes dom2 :: "'a set"
   fixes sem1 :: "'a \<Rightarrow> 'a"
   fixes sem2 :: "'a \<Rightarrow> 'a"
@@ -35,24 +37,24 @@ class Comp = Mergeableb +
   "x1 \<in> dom1 \<Longrightarrow> x2 \<in> dom2 \<Longrightarrow>
    has_sup {x1, x2} \<Longrightarrow>
    has_sup {sem1 x1, sem2 x2}"
-begin
+
 (* parallel composition *)
-definition pcomp :: "'a \<Rightarrow> 'a" where
+definition pcomp :: "('a :: Comp) \<Rightarrow> 'a" where
 "pcomp x =
   [^ [^ sem1 x, sem2 x ^], x ^]"
 
-definition pcomp' :: "'a \<Rightarrow> 'a" where
+definition pcomp' :: "('a :: Comp) \<Rightarrow> 'a" where
 "pcomp' x =
   [^ [^ sem2 x, sem1 x ^], x ^]"
 
 (* "real" parallel semantics, which may contain more information *)
-definition pcomp_real :: "'a \<Rightarrow> 'a" where
+definition pcomp_real :: "('a :: Comp) \<Rightarrow> 'a" where
 "pcomp_real x =
   [^ sem1 x, [^ sem2 x, x ^]^]"
 
-definition pcomp_real' :: "'a \<Rightarrow> 'a" where
+definition pcomp_real' :: "('a :: Comp) \<Rightarrow> 'a" where
 "pcomp_real' x =
   [^ sem2 x, [^ sem1 x, x ^]^]"
-end
+
 
 end

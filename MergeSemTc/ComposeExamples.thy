@@ -1,53 +1,13 @@
-theory ComposeExamples imports Compose "../MergeableTc/MergeableInstances" HOL.Lifting
+theory ComposeExamples imports Compose "../MergeableTc/MergeableInstances" HOL.Lifting HOL.Lifting_Set
 
 begin
 
-(* state for calc language: 
-   int (current accumulator value)  
-*)
-global_interpretation MGT_int : Mg_Trivial "TYPE(int)"
-  defines MGT_int_bsup = MGT_int.bsup
-  and     MGT_int_pleq = MGT_int.pleq
-  done
-
-global_interpretation PBO_int : Pbord_Option "MGT_int_pleq"
-  defines PBO_int_bot = PBO_int.bot
-  and     PBO_int_pleq = PBO_int.pleq
-  done
-
-global_interpretation MGO_int : Mg_Option "MGT_int_pleq" "MGT_int_bsup"
-  defines MGO_int_bsup = MGO_int.bsup
-  done
-
-global_interpretation MGOP_int : Mg_Priority "PBO_int_pleq" PBO_int_bot "MGO_int_bsup"
-  defines MGOP_int_bsup = MGOP_int.bsup
-  and     MGOP_int_bot  = MGOP_int.bot
-  and     MGOP_int_pleq = MGOP_int.pleq
-  done
-
-global_interpretation MGT_intl : Mg_Trivial "TYPE(int list)"
-  defines MGT_intl_pleq = MGT_intl.pleq
-  and     MGT_intl_bsup = MGT_intl.bsup
-  done
-
-global_interpretation PBO_intl : Pbord_Option "MGT_intl_pleq"
-  defines PBO_intl_bot = PBO_intl.bot
-  and     PBO_intl_pleq = PBO_intl.pleq
-  done
-
-global_interpretation MGO_intl : Mg_Option "MGT_intl_pleq" "MGT_intl_bsup"
-  defines MGO_intl_bsup = MGO_intl.bsup
-  done
-
-global_interpretation MG_r : Mg_Pair MGOP_int_pleq PBO_intl_pleq MGOP_int_bot PBO_intl_bot MGOP_int_bsup MGO_intl_bsup
-  defines MG_r_pleq = MG_r.pleq
-  and     MG_r_bsup = MG_r.bsup
-  done
-
 type_synonym ex_syn = "(int md_triv option md_prio * int list md_triv option)"
+
 
 typedef example = "UNIV :: ex_syn set"
   by auto
+
 
 setup_lifting type_definition_example
 
@@ -115,7 +75,7 @@ lift_definition pleq_e :: "example \<Rightarrow> example \<Rightarrow> bool" is 
 definition bsup' :: "ex_syn \<Rightarrow> ex_syn \<Rightarrow> ex_syn" where
 "bsup' = bsup"
 
-lift_definition bsup_e :: "example \<Rightarrow> example \<Rightarrow> example" is bsup' .
+lift_definition bsup_e :: "example \<Rightarrow> example \<Rightarrow> example" is bsup .
 
 declare dom1'_def and dom1_e_def and dom2'_def and dom2_e_def and
         seml'_def and seml_e_def and semr'_def and semr_e_def and
@@ -123,17 +83,22 @@ declare dom1'_def and dom1_e_def and dom2'_def and dom2_e_def and
 
 declare pleq'_def [simp]
 
+lift_definition is_least_e :: "(example \<Rightarrow> bool) \<Rightarrow> example \<Rightarrow> bool"
+is is_least .
+
+lift_definition is_ub_e :: "example set \<Rightarrow> example \<Rightarrow> bool"
+  is is_ub.
+
+lift_definition has_ub_e :: "example set \<Rightarrow> bool"
+is has_ub .
+
 lift_definition is_sup_e :: "example set \<Rightarrow> example \<Rightarrow> bool"
-  is is_sup.
+  is is_sup .
 
 lift_definition has_sup_e :: "example set \<Rightarrow> bool"
   is has_sup.
 
-lift_definition is_ub_e :: "example set \<Rightarrow> example \<Rightarrow> bool"
-  is is_sup.
 
-lift_definition has_ub_e :: "example set \<Rightarrow> bool"
-is has_ub .
 
 (* Goal: make it so we don't have to reprove everything here *)
 instantiation example :: Pord_Weak begin
@@ -142,6 +107,7 @@ definition example_pleq :
 instance proof
   fix a :: example
   show "a <[ a" unfolding example_pleq
+(* apply(transfer_start)  *)
     by(transfer; rule leq_refl)
 next
   show 
@@ -151,23 +117,82 @@ next
 qed
 end
 
+
+context includes lifting_syntax
+begin
+
+
+end
+
+(* lift in the other direction? *)
+
 instantiation example :: "Pord" begin
 instance proof
   show
 "\<And>(a::example) b::example.
        a <[ b \<Longrightarrow> b <[ a \<Longrightarrow> a = b" unfolding example_pleq
+
     by(transfer;  rule leq_antisym; auto)
 qed
 end
 
+lemma thing' :
+  fixes S 
+  shows "(has_ub :: example set \<Rightarrow> bool) S = has_ub_e S" unfolding has_ub_e.rep_eq has_ub_def is_ub_def example_pleq pleq_e.rep_eq
+apply(transfer)
+  apply(fold is_ub_def) apply(fold has_ub_def)
+  apply(auto)
+  done
 
-instantiation example :: Pordc
-begin
+
+instantiation example :: "Pordc" begin
 instance proof
-  show "\<And>(a::example) b::example.
-       has_ub {a, b} \<Longrightarrow> has_sup {a, b}"
+  fix a b :: example
+  assume H : "has_ub {a, b}"
+  show "has_sup {a, b}" using H
+    unfolding has_ub_def is_ub_def has_sup_def is_sup_def is_least_def example_pleq
+      
     apply(transfer)
+    apply(fold is_ub_def; fold has_ub_def; 
+          fold is_least_def; fold is_sup_def; fold has_sup_def)
+    apply(rule_tac complete2; auto)
+    done
+qed
 
+end
+
+instantiation example :: Pordb begin
+
+definition example_bot :
+  "bot = bot_e"
+instance proof
+  fix a :: example
+  show "\<bottom> <[ a" unfolding example_pleq example_bot
+    apply(transfer)
+    apply(rule bot_spec)
+    done
+qed
+end
+
+instantiation example :: Mergeable begin
+definition example_bsup :
+  "bsup = bsup_e"
+
+instance proof
+  show
+"\<And>(a::example) b::example. is_bsup a b [^ a, b ^]" 
+    unfolding is_bsup_def is_sup_def is_least_def is_bub_def is_ub_def example_pleq example_bsup
+    
+    apply(transfer)
+    apply(fold is_ub_def; fold is_least_def; fold is_sup_def; fold is_bub_def)
+    apply(fold is_least_def) apply(fold is_bsup_def) apply(rule bsup_spec)
+    done
+qed
+end
+
+instantiation example :: Mergeableb begin
+instance proof qed
+end
 
 instantiation example :: Comp begin
 definition example_dom1 :
@@ -178,41 +203,63 @@ definition example_sem1 :
   "sem1 = seml_e"
 definition example_sem2 :
   "sem2 = semr_e"
-definition example_bot :
-  "bot = bot_e"
-definition example_bsup :
-  "bsup = bsup_e"
-definition example_pleq :
-  "pleq = pleq_e"
 
 instance proof
-  show
-"\<And>(a::example) b::example.
-       a <[ b \<Longrightarrow> b <[ a \<Longrightarrow> a = b" unfolding example_pleq
-    by(transfer; unfold pleq'_def; rule leq_antisym; auto)
-next 
-  show "\<And>(a::example) b::example.
-       has_ub {a, b} \<Longrightarrow> has_sup {a, b}"
-    apply(simp add:has_ub has_sup)
+  show "(\<bottom> :: example) \<in> dom1"
+    unfolding example_dom1 example_bot
+    apply(transfer)
+    apply(simp add:prio_bot prod_bot option_bot)
+    done
+next
+  show "(\<bottom> :: example) \<in> dom2"
+    unfolding example_dom2 example_bot
+    apply(transfer)
+    apply(simp add:prio_bot prod_bot option_bot)
+    done
+next
+  fix x :: example
+  assume H1 : "x \<in> dom1"
+  show "sem1 x \<in> dom1" using H1
+    apply(simp add:example_sem1 example_dom1)
+    apply(transfer)
+    apply(simp add:seml'' seml'_def split:prod.splits option.splits md_triv.splits md_prio.splits)
+    apply(auto)
+    done
+next
+  fix x :: example
+  assume H1 : "x \<in> dom2"
+  show "sem2 x \<in> dom2" using H1
+    apply(simp add:example_sem2 example_dom2)
+    apply(transfer)
+    apply(simp add:seml'' seml'_def split:prod.splits option.splits md_triv.splits md_prio.splits)
+    done
+next
 
+  fix x1 x2 :: example
+  assume H1 : "x1 \<in> dom1"
+  assume H2 : "x2 \<in> dom2"
+  assume Hsup : "has_sup {x1, x2}"
+
+  have Hub : "has_ub {x1, x2}" sorry
+
+  have "has_ub {sem1 x1, sem2 x2}" using H1 H2 Hub sorry
 (*
-global_interpretation C_pa: SemComp
-  _ _ _
-  MG_r_pleq MG_r_bsup injl prjl injr prjr seml' semr'
-  defines C_pa_pcomp = C_pa.pcomp
-  and     C_pa_pcomp' = C_pa.pcomp'
-  and     C_pa_seml_l = C_pa.seml_l
-  and     C_pa_liftl1 = C_pa.liftl1
-  and     C_pa_semr_l = C_pa.semr_l
-  and     C_pa_liftr1 = C_pa.liftr1
-  done
+    unfolding has_sup_def has_ub_def is_sup_def is_least_def is_ub_def example_sem1 example_sem2 example_dom1 example_dom2 example_pleq
+    apply(transfer)
+    apply(auto simp add:seml''  semr'_def seml'_def prio_pleq prod_pleq option_pleq triv_pleq split:
+md_prio.splits md_triv.splits option.splits prod.splits)
 
-global_interpretation C_pas : SemComp_Spec
-  _ _ _
-  MG_r_pleq MG_r_bsup injl prjl injr prjr seml' semr'
+    apply( simp add:seml''  semr'_def seml'_def prio_pleq prod_pleq triv_pleq split:
+md_prio.splits md_triv.splits option.splits prod.splits split:if_splits)
+    apply(auto)
 *)
-
-value  "C_pa_pcomp ((0, Some 2), Some [1, 2, 3])
-= C_pa_pcomp' ((0, Some 2), Some [1, 2, 3])"
-
+  show "has_sup {sem1 x1, sem2 x2}" using H1 H2 Hsup sorry
+(*
+    unfolding has_sup_def is_sup_def is_least_def is_ub_def example_sem1 example_sem2 example_dom1 example_dom2 example_pleq
+    apply(transfer)
+    apply(auto simp add:seml''  semr'_def seml'_def prio_pleq split:
+md_prio.splits md_triv.splits option.splits prod.splits)
+*)
+qed
+end
 end

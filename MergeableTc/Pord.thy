@@ -42,61 +42,61 @@ class Pord_Weak =
      we instantiate this locale *)
   fixes pleq :: "'a \<Rightarrow> 'a \<Rightarrow> bool" (infixl \<open><[\<close> 71)
   assumes
-    leq_refl : "\<And> a . pleq a a"
+    leq_refl : "pleq a a"
   assumes
-    leq_trans : "\<And> a b c . pleq a b \<Longrightarrow> pleq b c \<Longrightarrow> pleq a c"
+    leq_trans : "pleq a b \<Longrightarrow> pleq b c \<Longrightarrow> pleq a c"
 
-begin
 
-definition is_lb :: "'a set \<Rightarrow> 'a \<Rightarrow> bool" where
+(* helpful lemmas about Pord_Weak *)
+definition is_lb :: "('a :: Pord_Weak) set \<Rightarrow> 'a \<Rightarrow> bool" where
 "is_lb A a =
   (\<forall> x \<in> A . a <[ x)"
 
-definition is_greatest :: "('a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> bool" where
+definition is_greatest :: "(('a :: Pord_Weak) \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> bool" where
 "is_greatest P a =
   (P a \<and>
    (\<forall> a' . P a' \<longrightarrow> pleq a' a))"
 
-definition is_inf :: "'a set \<Rightarrow> 'a \<Rightarrow> bool" where
+definition is_inf :: "('a :: Pord_Weak) set \<Rightarrow> 'a \<Rightarrow> bool" where
 "is_inf A a = is_greatest (is_lb A) a"
 
-definition is_ub :: "'a set \<Rightarrow> 'a \<Rightarrow> bool" where
+definition is_ub :: "('a :: Pord_Weak) set \<Rightarrow> 'a \<Rightarrow> bool" where
 "is_ub A a =
   (\<forall> x \<in> A . pleq x a)"
 
-definition is_least :: "('a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> bool" where
+definition is_least :: "(('a :: Pord_Weak) \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> bool" where
 "is_least P a =
   (P a \<and>
    (\<forall> a' . P a' \<longrightarrow> pleq a a'))"
 
-definition is_sup :: "'a set \<Rightarrow> 'a \<Rightarrow> bool" where
+definition is_sup :: "('a :: Pord_Weak) set \<Rightarrow> 'a \<Rightarrow> bool" where
 "is_sup A a =
   is_least (is_ub A) a"
 
-definition has_sup :: "'a set \<Rightarrow> bool" where
+definition has_sup :: "('a :: Pord_Weak) set \<Rightarrow> bool" where
 "has_sup A = (\<exists> s . is_sup A s)"
 
-definition has_ub :: "'a set \<Rightarrow> bool" where
+definition has_ub :: "('a :: Pord_Weak) set \<Rightarrow> bool" where
 "has_ub A = (\<exists> s . is_ub A s)"
 
-definition is_bub :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
+definition is_bub :: "('a :: Pord_Weak) \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
 "is_bub a b s =
   (pleq a s \<and>
     ((\<forall> bd sd . pleq bd (b) \<longrightarrow>
                 is_sup {a, bd} sd \<longrightarrow>
                 pleq sd (s))))"
 
-definition is_bsup :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
+definition is_bsup :: "('a :: Pord_Weak) \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
 "is_bsup a b s =
   is_least (is_bub a b) s"
 
 (* monotonicity of predicates
    useful for reasoning about semantics  *)
-definition is_monop1 :: "('a \<Rightarrow> bool) \<Rightarrow> bool" where
+definition is_monop1 :: "(('a :: Pord_Weak) \<Rightarrow> bool) \<Rightarrow> bool" where
 "is_monop1 P =
   (\<forall> a b . pleq a b \<longrightarrow> P a \<longrightarrow> P b)"
 
-definition is_monop2 :: "('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> bool" where
+definition is_monop2 :: "(('a :: Pord_Weak) \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> bool" where
 "is_monop2 P =
   (\<forall> a1 b1 a2 b2 .
     pleq a1 b1 \<longrightarrow>
@@ -105,7 +105,7 @@ definition is_monop2 :: "('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> 
     P b1 b2)"
 
 (* "contravariant" version *)
-definition is_monop2' :: "('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> bool" where
+definition is_monop2' :: "(('a :: Pord_Weak) \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> bool" where
 "is_monop2' P =
   (\<forall> a1 b1 a2 b2 .
     pleq a1 b1 \<longrightarrow>
@@ -114,7 +114,7 @@ definition is_monop2' :: "('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow>
     P b1 b2)"
 
 (* monotonicity for functions *)
-definition is_mono :: "('a \<Rightarrow> 'a) \<Rightarrow> bool" where
+definition is_mono :: "(('a :: Pord_Weak) \<Rightarrow> 'a) \<Rightarrow> bool" where
 "is_mono f =
   (\<forall> a b .
      pleq a b \<longrightarrow>
@@ -197,33 +197,49 @@ lemma is_bsup_unfold3 :
   shows "pleq ub ub'"
   using H1 H2 by (auto simp add:is_bsup_def is_least_def)
 
-end
-
 class Pord =
     Pord_Weak +
-    assumes
-    leq_antisym : "\<And> a b . pleq a b \<Longrightarrow> pleq b a \<Longrightarrow> a = b"
+    assumes leq_antisym : "pleq a b \<Longrightarrow> pleq b a \<Longrightarrow> a = b"
 
-begin
 
+(* facts about Pord *)
+declare[[show_types]]
 lemma is_greatest_unique :
-  "\<And> P a b . is_greatest P a \<Longrightarrow> is_greatest P b \<Longrightarrow> a = b"
-  apply(auto simp add:is_greatest_def)
-  apply(drule_tac x = b in spec) apply(drule_tac x = a in spec)
-  apply(auto simp add:leq_antisym)
-  done
+  fixes P :: "('a :: Pord) \<Rightarrow> bool"
+  fixes a b :: "('a :: Pord)"
+  assumes H1 : "is_greatest P a"
+  assumes H2 : "is_greatest P b"
+  shows "a = b"
+proof(-)
+  have 0 :  "a <[ b" using H2 H1
+    by(auto simp add:is_greatest_def)
+  have 1 : "b <[ a" using H1 H2
+    by(auto simp add:is_greatest_def)
+
+  thus "a = b" using 0 1 by (auto intro: leq_antisym)
+qed
 
 lemma is_least_unique :
-  "\<And> P a b . is_least P a \<Longrightarrow> is_least P b \<Longrightarrow> a = b"
-  apply(auto simp add:is_least_def)
-  apply(drule_tac x = b in spec) apply(drule_tac x = a in spec)
-  apply(auto simp add:leq_antisym)
-  done
+  fixes P :: "('a :: Pord) \<Rightarrow> bool"
+  fixes a b :: "('a :: Pord)"
+  assumes H1 : "is_least P a"
+  assumes H2 : "is_least P b"
+  shows "a = b"
+proof(-)
+  have 0 :  "a <[ b" using H2 H1
+    by(auto simp add:is_least_def)
+  have 1 : "b <[ a" using H1 H2
+    by(auto simp add:is_least_def)
+
+  thus "a = b" using 0 1 by (auto intro: leq_antisym)
+qed
 
 (* facts about sup *)
 
 lemma is_sup_unique :
-  "is_sup P x \<Longrightarrow> is_sup P y \<Longrightarrow> x = y"
+  fixes P :: "('a :: Pord) set"
+  fixes x y :: "'a"
+  shows "is_sup P x \<Longrightarrow> is_sup P y \<Longrightarrow> x = y"
 proof(auto simp add:is_sup_def is_least_unique)
 qed
 
@@ -250,6 +266,7 @@ qed
 (* facts about bsup *)
 
 lemma bsup_unique : 
+  fixes a b x :: "'a :: Pord"
   assumes H1 : "is_bsup a b x"
   assumes H2 : "is_bsup a b x'"
   shows "x = x'"
@@ -270,14 +287,10 @@ proof(-)
   show ?thesis using leq_antisym 1 3 by auto
 qed
 
-end
-
 
 class Pordc =
   Pord +
-  assumes complete2: "\<And> a b . has_ub {a, b} \<Longrightarrow> has_sup {a, b}"
-begin
-
+  assumes complete2: "has_ub {a, b} \<Longrightarrow> has_sup {a, b}"
 
 lemma is_bub_intro :
   assumes Hpleq : "pleq a bub"
@@ -288,29 +301,18 @@ lemma is_bub_intro :
 
 
 lemma bsup_compare1:
-(*  assumes Hleq1 : " *)
+  fixes a b bs_ab a' b' bs_a'b :: "'a :: Pordc"
   assumes Hbsup1 : "is_bsup a b bs_ab"
   assumes Hbsup2 : "is_bsup a' b' bs_a'b'"
   assumes Hleqa : "pleq a a'"
   assumes Hleqa' : "pleq a' bs_ab"
-(*  assumes Hleqb : "l_pleq b b'" *)
   assumes Hdesc : "\<And> bd sd . pleq bd b \<Longrightarrow> is_sup {a, bd} sd \<Longrightarrow> 
                         (pleq bd (b'))" (* can we get away with has_ub here? *)
-(* also used to have:  \<and> pleq bd (aug (bsup a' b')) *)
   shows "pleq (bs_ab) (bs_a'b')"
 proof(-)
   have Bub : "is_bub a b bs_a'b'"
   proof(-)
-(*    fix d s
-    assume d_leq : "l_pleq d b"
-    assume d_sup : "LLl.is_sup {a, d} s"
-    have 0: "l_pleq d b'" using Hdesc[OF d_leq d_sup] ..
-    have 1: "l_pleq d (bsup a' b')" using Hdesc [OF d_leq d_sup] .. *)
 
-(*
-    have 0: "is_bsup a' b' bs_a'b'" 
-      by (auto simp add:is_bsup_def)
-*)
     have Hbub : "\<And> bd sd . pleq bd b \<Longrightarrow> is_sup {a, bd} sd \<Longrightarrow> pleq sd (bs_ab)" using Hbsup1
       by(auto simp add:is_bsup_def is_bub_def is_least_def) 
     
@@ -366,6 +368,7 @@ qed
 (* do we really need to prove this again?
 or can we do something more general? *)
 lemma bsup_compare2:
+  fixes a b bs_ab a' b' bs_a'b :: "'a :: Pordc"
   assumes Hbsup1 : "is_bsup a' b' bs_a'b'"
  assumes Hbsup2 : "is_bsup a b bs_ab"
  assumes Hleqa' : "pleq a' a"
@@ -436,6 +439,7 @@ proof(-)
 qed
 
 lemma bsup_mono2 :
+  fixes a b bs_ab a' b' bs_ab' :: "'a :: Pordc"
   assumes H: "pleq b b'"
   assumes Hbsup1 : "is_bsup a b bs_ab"
   assumes Hbsup2 : "is_bsup a b' bs_ab'"
@@ -457,7 +461,7 @@ proof(-)
 qed
 
 lemma bsup_sup :
-  fixes a b :: 'a
+  fixes a b bs_ab :: "'a :: Pordc"
   assumes Hsup : "is_sup {a, b} s_ab" 
   assumes Hbsup : "is_bsup a b bs_ab"
   shows "is_sup {a, b} bs_ab"
@@ -521,6 +525,7 @@ qed
 
 
 lemma leq_completion :
+  fixes a a' b x :: "'a :: Pordc"
   assumes Hleq : "pleq a a'"
   assumes Hsup : "is_sup {a', b} x"
 
@@ -566,6 +571,7 @@ next
 qed
 
 lemma bsup_imp_sup_conv :
+  fixes a b bs ub :: "'a :: Pordc"
   assumes Hbs : "is_bsup a b bs"
   assumes H : "\<not> pleq b bs"
   assumes Hub : "is_ub {a, b} ub"
@@ -577,11 +583,12 @@ proof(-)
   hence "pleq b bs" using Hlub leq_trans[of b lub bs] by (auto simp add:is_sup_def is_least_def is_ub_def)
   thus ?thesis using H by auto
 qed
-end
 
-class Pordb = Pordc +
-fixes bot :: "'a" ("\<bottom>")
-  assumes bot_spec :
-    "\<And> (a :: 'a) . pleq bot a"
+(* TODO: figure out why we need this annotation *)
+class Pordb =  Pordc +
+fixes bot :: "'a :: Pord_Weak" ("\<bottom>")
+assumes bot_spec :
+  "\<And> (a :: 'a ) .  pleq bot a"
+
 
 end
