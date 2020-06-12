@@ -21,8 +21,8 @@ definition seml' :: "int md_triv option md_prio \<Rightarrow> int md_triv option
     | mdp n None \<Rightarrow> mdp n None)"
 
 definition seml'' :
-  "seml'' x = 
-  (case x of (x', y') \<Rightarrow> (seml' x', y'))"
+  "seml'' (x :: ex_syn) = 
+  (case x of (x', y') \<Rightarrow> ((seml' x', None) :: ex_syn))"
 
 lift_definition seml_e :: "example \<Rightarrow> example" is seml'' .
 
@@ -36,7 +36,7 @@ definition semr' :: "(int md_triv option md_prio * int list md_triv option) \<Ri
 "semr' x =
 (case x of
   (mdp n (Some (mdt i)), Some (mdt ints)) \<Rightarrow> (mdp n (Some (mdt i)), Some (mdt (ints @ [i])))
-  | ((mdp n x'1), x'2) \<Rightarrow> (mdp n None, None))"
+  | ((mdp n x'1), x'2) \<Rightarrow> (mdp n x'1, x'2))"
 
 lift_definition semr_e :: "example \<Rightarrow> example" is semr' .
 
@@ -60,7 +60,7 @@ lift_definition dom1_e :: "example set" is "{x . \<exists> n x' . x = (mdp n x',
 definition dom2' :: "(int md_triv option md_prio * int list md_triv option) set"
   where "dom2' = {x . \<exists> l r' . x = (l, Some r')}"
 
-lift_definition dom2_e :: "example set" is "{x . True}" .
+lift_definition dom2_e :: "example set" is "UNIV" .
 
 definition bot' :: "(int md_triv option md_prio * int list md_triv option)" where
 "bot' = (bot, bot)"
@@ -98,6 +98,8 @@ lift_definition is_sup_e :: "example set \<Rightarrow> example \<Rightarrow> boo
 lift_definition has_sup_e :: "example set \<Rightarrow> bool"
   is has_sup.
 
+lift_definition is_bsup_e :: "example \<Rightarrow> example \<Rightarrow> example \<Rightarrow> bool"
+  is is_bsup.
 
 
 (* Goal: make it so we don't have to reprove everything here *)
@@ -139,8 +141,7 @@ end
 lemma thing' :
   fixes S 
   shows "(has_ub :: example set \<Rightarrow> bool) S = has_ub_e S" unfolding has_ub_e.rep_eq has_ub_def is_ub_def example_pleq pleq_e.rep_eq
-apply(transfer)
-  apply(fold is_ub_def) apply(fold has_ub_def)
+  apply(transfer)
   apply(auto)
   done
 
@@ -149,7 +150,7 @@ instantiation example :: "Pordc" begin
 instance proof
   fix a b :: example
   assume H : "has_ub {a, b}"
-  show "has_sup {a, b}" using H
+  show "has_sup {a, b}" using H 
     unfolding has_ub_def is_ub_def has_sup_def is_sup_def is_least_def example_pleq
       
     apply(transfer)
@@ -174,10 +175,11 @@ instance proof
 qed
 end
 
+declare is_ub_e.transfer [Transfer.transferred, transfer_rule]
+
 instantiation example :: Mergeable begin
 definition example_bsup :
   "bsup = bsup_e"
-
 instance proof
   show
 "\<And>(a::example) b::example. is_bsup a b [^ a, b ^]" 
@@ -223,7 +225,6 @@ next
     apply(simp add:example_sem1 example_dom1)
     apply(transfer)
     apply(simp add:seml'' seml'_def split:prod.splits option.splits md_triv.splits md_prio.splits)
-    apply(auto)
     done
 next
   fix x :: example
@@ -248,7 +249,7 @@ next
    proof(transfer)
      fix x1 x2 ub :: ex_syn
      assume H1t : "x1 \<in> {x. \<exists>n x'. x = (mdp n x', None)}"
-     assume H2t : "x2 \<in> {x. True}"
+     assume H2t : "x2 \<in> UNIV"
      assume "\<forall>x\<in>{x1, x2}. x <[ ub"
      hence  Hubt : "is_ub {x1, x2} ub" by(auto simp add:is_ub_def)
 
@@ -259,7 +260,7 @@ next
      obtain ubl and ubr where "ub = (ubl, ubr)" by (cases ub; auto)
      then obtain ubp and ub' where Hub' : "ub = (mdp ubp ub', ubr)" by (cases ubl; auto)
 
-     obtain x1'l and x1'r where "seml'' x1 = (x1'l, x1'r)" by (cases "seml'' x1"; auto)
+     obtain x1'l and x1'r where "seml'' x1 = (x1'l, x1'r)" by(cases "seml'' x1"; auto) 
      then obtain x1'p and x1'' where Hx1' : "seml'' x1 = (mdp x1'p x1'', x1'r)" by (cases x1'l; auto)
 
      obtain x2'l and x2'r where "semr' x2 = (x2'l, x2'r)" by (cases "semr' x2"; auto)
