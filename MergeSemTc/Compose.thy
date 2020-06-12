@@ -1,5 +1,5 @@
 theory Compose
-  imports "../MergeableTc/Mergeable" "../MergeableTc/Pord2"
+  imports "../MergeableTc/Mergeable" "../MergeableTc/Pord"
 begin
 
 (* idea. for composition we need
