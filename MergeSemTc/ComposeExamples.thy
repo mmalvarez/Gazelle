@@ -36,7 +36,7 @@ definition semr' :: "(int md_triv option md_prio * int list md_triv option) \<Ri
 "semr' x =
 (case x of
   (mdp n (Some (mdt i)), Some (mdt ints)) \<Rightarrow> (mdp n (Some (mdt i)), Some (mdt (ints @ [i])))
-  | ((mdp n None), None) \<Rightarrow> (mdp n None, None))"
+  | ((mdp n x'1), x'2) \<Rightarrow> (mdp n None, None))"
 
 lift_definition semr_e :: "example \<Rightarrow> example" is semr' .
 
@@ -58,7 +58,7 @@ definition dom1' :: "(int md_triv option md_prio * int list md_triv option) set"
 lift_definition dom1_e :: "example set" is "{x . \<exists> n x' . x = (mdp n x', None)}" .
 
 definition dom2' :: "(int md_triv option md_prio * int list md_triv option) set"
-  where "dom2' = {x . True}"
+  where "dom2' = {x . \<exists> l r' . x = (l, Some r')}"
 
 lift_definition dom2_e :: "example set" is "{x . True}" .
 
@@ -240,26 +240,53 @@ next
   assume H2 : "x2 \<in> dom2"
   assume Hsup : "has_sup {x1, x2}"
 
-  have Hub : "has_ub {x1, x2}" sorry
+  have "has_ub {x1, x2}" using Hsup by(auto simp add:has_sup_def is_least_def has_ub_def is_sup_def)
+  then obtain ub  where Hub :  "is_ub {x1, x2} ub" by (auto simp add:has_ub_def)
 
-  have "has_ub {sem1 x1, sem2 x2}" using H1 H2 Hub sorry
-(*
-    unfolding has_sup_def has_ub_def is_sup_def is_least_def is_ub_def example_sem1 example_sem2 example_dom1 example_dom2 example_pleq
-    apply(transfer)
-    apply(auto simp add:seml''  semr'_def seml'_def prio_pleq prod_pleq option_pleq triv_pleq split:
-md_prio.splits md_triv.splits option.splits prod.splits)
+  have "has_ub {sem1 x1, sem2 x2}" using H1 H2 Hub
+     unfolding has_sup_def has_ub_def is_sup_def is_least_def is_ub_def example_sem1 example_sem2 example_dom1 example_dom2 example_pleq
+   proof(transfer)
+     fix x1 x2 ub :: ex_syn
+     assume H1t : "x1 \<in> {x. \<exists>n x'. x = (mdp n x', None)}"
+     assume H2t : "x2 \<in> {x. True}"
+     assume "\<forall>x\<in>{x1, x2}. x <[ ub"
+     hence  Hubt : "is_ub {x1, x2} ub" by(auto simp add:is_ub_def)
 
-    apply( simp add:seml''  semr'_def seml'_def prio_pleq prod_pleq triv_pleq split:
-md_prio.splits md_triv.splits option.splits prod.splits split:if_splits)
-    apply(auto)
-*)
-  show "has_sup {sem1 x1, sem2 x2}" using H1 H2 Hsup sorry
-(*
-    unfolding has_sup_def is_sup_def is_least_def is_ub_def example_sem1 example_sem2 example_dom1 example_dom2 example_pleq
-    apply(transfer)
-    apply(auto simp add:seml''  semr'_def seml'_def prio_pleq split:
-md_prio.splits md_triv.splits option.splits prod.splits)
-*)
-qed
+     obtain x1l and x1r where "x1 = (x1l, x1r)" by (cases x1; auto)
+     then obtain x1p and x1' where Hx1 : "x1 = (mdp x1p x1', x1r)" by (cases x1l; auto)
+     obtain x2l and x2r where "x2 = (x2l, x2r)" by (cases x2; auto)
+     then obtain x2p and x2' where Hx2 : "x2 = (mdp x2p x2', x2r)" by (cases x2l; auto)
+     obtain ubl and ubr where "ub = (ubl, ubr)" by (cases ub; auto)
+     then obtain ubp and ub' where Hub' : "ub = (mdp ubp ub', ubr)" by (cases ubl; auto)
+
+     obtain x1'l and x1'r where "seml'' x1 = (x1'l, x1'r)" by (cases "seml'' x1"; auto)
+     then obtain x1'p and x1'' where Hx1' : "seml'' x1 = (mdp x1'p x1'', x1'r)" by (cases x1'l; auto)
+
+     obtain x2'l and x2'r where "semr' x2 = (x2'l, x2'r)" by (cases "semr' x2"; auto)
+     then obtain x2'p and x2'' where Hx2' : "semr' x2 = (mdp x2'p x2'', x2'r)" by (cases x2'l; auto)
+
+     have 0 : "ubp \<ge> x1p" using Hx1 Hubt Hub'
+       by(auto simp add:is_ub_def prod_pleq prio_pleq triv_pleq split:md_prio.splits if_splits)
+
+     have 1 : "ubp \<ge> x2p" using Hx2 Hubt Hub'
+       by(auto simp add:is_ub_def prod_pleq prio_pleq triv_pleq split:md_prio.splits if_splits)
+
+     have Conc'1 : "seml'' x1 <[ (mdp (2 + ubp) None, x2'r)" using Hx1 Hx2 Hx1' Hx2' Hubt Hub' H1t 0
+       apply(auto simp add:seml'' semr'_def seml'_def prod_pleq prio_pleq triv_pleq leq_refl option_pleq option_bot is_ub_def split:option.splits md_triv.splits)
+       done
+
+     have Conc'2 : "semr' x2 <[ (mdp (2 + ubp) None, x2'r)" using Hx1 Hx2 Hx1' Hx2' Hubt Hub' H1t 1
+       by(auto simp add:seml'' semr'_def seml'_def prod_pleq prio_pleq triv_pleq leq_refl option_pleq option_bot split:option.splits md_triv.splits)
+
+     show "\<exists>a. \<forall>x\<in>{seml'' x1, semr' x2}. x <[ a" using Conc'1 Conc'2 by auto
+   qed
+
+   thus "has_sup {sem1 x1, sem2 x2}" using complete2 by auto
+
+ qed
 end
+
+
+value [simp] "pcomp (exi (mdp (0 :: nat) (Some (mdt (5 :: int))), Some (mdt [])))"
+
 end

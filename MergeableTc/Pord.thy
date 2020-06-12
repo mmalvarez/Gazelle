@@ -203,7 +203,6 @@ class Pord =
 
 
 (* facts about Pord *)
-declare[[show_types]]
 lemma is_greatest_unique :
   fixes P :: "('a :: Pord) \<Rightarrow> bool"
   fixes a b :: "('a :: Pord)"

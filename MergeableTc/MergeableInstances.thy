@@ -70,7 +70,6 @@ begin
 
 definition triv_bsup : "[^(a :: 'a md_triv), b^] = a"
 
-declare [[show_types]]
 instance proof
     fix a b :: "'a md_triv"
     show "is_bsup a b (bsup a b)" unfolding triv_pleq triv_bsup
