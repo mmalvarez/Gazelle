@@ -1355,4 +1355,6 @@ instance proof
   qed
 qed
 end
+
+(* TODO: need an instance for fun? *)
 end

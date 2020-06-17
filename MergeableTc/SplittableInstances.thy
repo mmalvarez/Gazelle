@@ -5,13 +5,14 @@ instantiation md_triv :: (_) Splittable
 begin
 definition triv_projs :
 "projs =
-  [(Set.UNIV :: 'a md_triv set, id :: ('a md_triv \<Rightarrow> 'a md_triv))]"
+  [(''triv'', Set.UNIV :: 'a md_triv set, id :: ('a md_triv \<Rightarrow> 'a md_triv))]"
 
 instance proof
   fix d :: "'a md_triv set"
   fix f :: "'a md_triv \<Rightarrow> 'a md_triv"
   fix x :: "'a md_triv"
-  assume H : "(d, f) \<in> set projs"
+  fix s :: "char list"
+  assume H : "(s, d, f) \<in> set projs"
 
   consider (1)  "d = UNIV" "f = id" using H
     by(auto simp add:triv_projs)
@@ -21,25 +22,40 @@ instance proof
     show "is_project x d (f x)" using 1 
       by(auto simp add:is_project_def is_greatest_def leq_refl)
   qed
+
+next
+  show "distinct (map fst (projs :: 'a md_triv projs_t))"
+    by(auto simp add:triv_projs)
+
 qed
 end
 
+lemma app_inj :
+  fixes s1
+  shows "inj (\<lambda> s2 . s1 @ s2)"
+  by(auto simp add: inj_def)
+
+ 
 instantiation option :: (Splittable) Splittableb
 begin
 (* TODO: make sure this is really what we want *)
-definition option_projs :
+(*definition option_projs :
 "projs =
   (map (\<lambda> df . 
-              case df of (d, f) \<Rightarrow> 
-                   ((Some ` d) \<union> {None}, map_option f)) projs)"
- 
+              case df of (s, d, f) \<Rightarrow> 
+                   (''some.''@ s, (Some ` d) \<union> {None}, map_option f)) projs)"
+ *)
+definition option_projs :
+"projs =
+  map (map_prod (\<lambda> s . ''some.''@ s) (map_prod (\<lambda> d . (Some ` d) \<union> {None}) map_option)) projs"
 instance proof
   fix d :: "'a option set"
   fix f :: "'a option \<Rightarrow> 'a option"
   fix x :: "'a option"
-  assume H : "(d, f) \<in> set projs"
+  fix s :: "char list"
+  assume H : "(s, d, f) \<in> set projs"
 
-  obtain d' and f' where Hd' : "d = Some ` d' \<union> {None}" and Hf' : "f = map_option f'" and Hprojs' : "(d', f') \<in> set projs" using H
+  obtain d' and f' and s' where Hd' : "d = Some ` d' \<union> {None}" and Hf' : "f = map_option f'" and "s = ''some.''@s'" and Hprojs' : "(s', d', f') \<in> set projs" using H
     by(auto simp add:option_projs)
 
   show "is_project x d (f x)"
@@ -91,6 +107,11 @@ instance proof
       thus "xa <[ f x" using Hf' 3 by(auto simp add:option_pleq bot_spec split:option.splits)
     qed
   qed
+
+next
+  show "distinct (map fst (projs :: 'a option projs_t))"
+    using projs_distinct'[of "(projs :: 'a projs_t)"] app_inj
+    by(auto simp add:option_projs distinct_map inj_def inj_on_def)
 qed
 end
 
@@ -101,18 +122,25 @@ definition md_prio_map :: "('a \<Rightarrow> 'b) \<Rightarrow> ('a md_prio) \<Ri
 
 instantiation md_prio :: (Splittableb) Splittableb
 begin
+(*
 definition prio_projs :
 "projs = 
-  map (\<lambda> df . case df of (d, f) \<Rightarrow> 
-          ({p . \<exists> i x . x \<in> d \<and> p = mdp i x }, map_md_prio f)) projs"
-
+  map (\<lambda> df . case df of (s, d, f) \<Rightarrow> 
+          (''prio.''@s, {p . \<exists> i x . x \<in> d \<and> p = mdp i x }, map_md_prio f)) projs"
+*)
+definition prio_projs :
+"projs = 
+  map (map_prod
+          (\<lambda> s . ''prio.''@s) (map_prod (\<lambda> d .  {p . \<exists> i x . x \<in> d \<and> p = mdp i x }) map_md_prio)) projs"
 instance proof
   fix d :: "'a md_prio set"
   fix f :: "'a md_prio \<Rightarrow> 'a md_prio"
   fix x :: "'a md_prio"
-  assume H : "(d, f) \<in> set projs"
+  fix s :: "char list"
+  assume H : "(s, d, f) \<in> set projs"
 
-  obtain d' and f' where Hd' : "d = {p . \<exists> i x . x \<in> d' \<and> p = mdp i x }" and Hf' : "f = map_md_prio f'" and Hprojs' : "(d', f') \<in> set projs" using H
+  obtain d' and f' and s' where Hd' : "d = {p . \<exists> i x . x \<in> d' \<and> p = mdp i x }" and Hf' : "f = map_md_prio f'" and Hs' : "s = ''prio.''@s'"
+    and Hprojs' : "(s', d', f') \<in> set projs" using H
     by(auto simp add:prio_projs)
 
   obtain ix and x' where Hx : "x = mdp ix x'" by(cases x; auto)
@@ -156,31 +184,49 @@ instance proof
       thus "xa <[ f x" using Hf' 3 Hxa Hfx Hf' Hx by(auto simp add:prio_pleq bot_spec split:md_prio.splits)
     qed
   qed
+
+next
+  show "distinct (map fst (projs :: 'a md_prio projs_t))"
+    using projs_spec'[of "(projs :: 'a projs_t)"] app_inj
+    by(auto simp add:prio_projs distinct_map inj_def inj_on_def)
 qed
 end
 
 
 instantiation prod :: (Splittableb, Splittableb) Splittableb
 begin
+(*
 definition prod_projs :
 "projs =
-  (map (\<lambda> (df :: 'a set * ('a \<Rightarrow> 'a)) . 
-              case df of (d, f) \<Rightarrow> 
-                   ({ ab . \<exists> a . ab = (a, \<bottom>) \<and> a \<in> d}, map_prod f (\<lambda> _ . \<bottom>))) projs) @
-  (map (\<lambda> (df :: 'b set * ('b \<Rightarrow> 'b)) .
-              case df of (d, f) \<Rightarrow>
-                   ({ ab . \<exists> b . ab = (\<bottom>, b) \<and> b \<in> d}, map_prod (\<lambda> _ . \<bottom>) f)) projs)"
+  (''fst'', { ab . \<exists> a . ab = (a, \<bottom>)}, map_prod id (\<lambda> _ . \<bottom>)) #
+  (''snd'', { ab . \<exists> b . ab = (\<bottom>, b)}, map_prod (\<lambda> _ . \<bottom>) id) #
+  (map (\<lambda> (sdf :: char list * 'a set * ('a \<Rightarrow> 'a)) . 
+              case sdf of (s, d, f) \<Rightarrow> 
+                   (''fst.'' @ s, { ab . \<exists> a . ab = (a, \<bottom>) \<and> a \<in> d}, map_prod f (\<lambda> _ . \<bottom>))) projs) @
+  (map (\<lambda> (sdf :: char list * 'b set * ('b \<Rightarrow> 'b)) .
+              case sdf of (s, d, f) \<Rightarrow>
+                   (''snd.'' @ s, { ab . \<exists> b . ab = (\<bottom>, b) \<and> b \<in> d}, map_prod (\<lambda> _ . \<bottom>) f)) projs)"
+*)
+definition prod_projs :
+"projs =
+  (''fst'', { ab . \<exists> a . ab = (a, \<bottom>)}, map_prod id (\<lambda> _ . \<bottom>)) #
+  (''snd'', { ab . \<exists> b . ab = (\<bottom>, b)}, map_prod (\<lambda> _ . \<bottom>) id) #
+  (map (map_prod (\<lambda> s . ''fst.'' @ s) (map_prod (\<lambda> d . { ab . \<exists> a . ab = (a, \<bottom>) \<and> a \<in> d}) (\<lambda> f . map_prod f (\<lambda> _ . \<bottom>)))) projs) @
+  (map (map_prod (\<lambda> s . ''snd.'' @ s) (map_prod (\<lambda> d . { ab . \<exists> b . ab = (\<bottom>, b) \<and> b \<in> d}) (\<lambda> f . map_prod (\<lambda> _ . \<bottom>) f))) projs)"
 
 instance proof
   fix d :: "('a * 'b) set"
   fix f :: "('a * 'b \<Rightarrow> 'a * 'b)"
   fix x :: "'a * 'b"
-  assume Hproj : "(d, f) \<in> set projs"
+  fix s :: "char list"
+  assume Hproj : "(s, d, f) \<in> set projs"
 
   obtain xa and xb where Hx : "x = (xa, xb)" by(cases x; auto)
 
-  consider (1) d' f' where "d = { ab . \<exists> a . ab = (a, \<bottom>) \<and> a \<in> d'}" and "f = map_prod f' (\<lambda> _ . \<bottom>)" and "(d', f') \<in> set projs" |
-           (2) d' f' where "d = { ab . \<exists> b . ab = (\<bottom>, b) \<and> b \<in> d'}" and "f = map_prod (\<lambda> _ . \<bottom>) f'" and "(d', f') \<in> set projs"
+  consider (1) s' d' f' where "d = { ab . \<exists> a . ab = (a, \<bottom>) \<and> a \<in> d'}" and "f = map_prod f' (\<lambda> _ . \<bottom>)" and "s = ''fst.''@ s'" and "(s', d', f') \<in> set projs" |
+           (2) s' d' f' where "d = { ab . \<exists> b . ab = (\<bottom>, b) \<and> b \<in> d'}" and "f = map_prod (\<lambda> _ . \<bottom>) f'" and "s = ''snd.''@ s'" and "(s', d', f') \<in> set projs" |
+           (3) "s = ''fst''" and "d = { ab . \<exists> a . ab = (a, \<bottom>)}" and "f = map_prod id (\<lambda> _ . \<bottom>)" |
+           (4) "s = ''snd''" and "d = { ab . \<exists> b . ab = (\<bottom>, b)}" and "f = map_prod (\<lambda> _ . \<bottom>) id"
     using Hproj
     by(auto simp add:prod_projs)
 
@@ -189,7 +235,7 @@ instance proof
     case 1
     assume Hd' : "d = { ab . \<exists> a . ab = (a, \<bottom>) \<and> a \<in> d'}"
     assume Hf' : "f = map_prod f' (\<lambda> _ . \<bottom>)"
-    assume Hproj' : "(d', f') \<in> set projs"
+    assume Hproj' : "(s', d', f') \<in> set projs"
 
     have Hproject' : "is_project xa d' (f' xa)" using projs_spec[OF Hproj'] by auto
 
@@ -219,7 +265,7 @@ instance proof
     case 2
     assume Hd' : "d = { ab . \<exists> b . ab = (\<bottom>, b) \<and> b \<in> d'}"
     assume Hf' : "f = map_prod (\<lambda> _ . \<bottom>) f'"
-    assume Hproj' : "(d', f') \<in> set projs"
+    assume Hproj' : "(s', d', f') \<in> set projs"
 
     have Hproject' : "is_project xb d' (f' xb)" using projs_spec[OF Hproj'] by auto
 
@@ -244,7 +290,57 @@ instance proof
       have "yb <[ f' xb" using is_project_unfold3[OF H3a H3b H3c] by auto
       thus "y <[ f x" using Hi1 Hf' Hx Hy Hd' by(auto simp add:prod_pleq bot_spec)
     qed
+
+  next
+    case 3
+    assume Hd : "d = { ab . \<exists> a . ab = (a, \<bottom>)}"
+    assume Hf : "f = map_prod id (\<lambda> _ . \<bottom>)"
+
+    show "is_project x d (f x)"
+    proof(rule is_project_intro)
+      show "f x \<in> d" using Hd Hf Hx by(auto)
+
+    next
+      show "f x <[ x" using Hd Hf Hx 
+        by(auto simp add:prod_pleq leq_refl bot_spec)
+
+    next
+      fix y :: "'a * 'b"
+      assume Hi1 : "y \<in> d"
+      assume Hi2 : "y <[ x"
+
+      show "y <[ f x" using Hi1 Hi2 Hd Hf Hx
+        by(auto simp add:is_project_def prod_pleq leq_refl)
+    qed
+
+  next
+    case 4
+    assume Hd : "d = { ab . \<exists> b . ab = (\<bottom>, b)}"
+    assume Hf : "f = map_prod (\<lambda> _ . \<bottom>) id"
+
+    show "is_project x d (f x)"
+    proof(rule is_project_intro)
+      show "f x \<in> d" using Hd Hf Hx by(auto)
+
+    next
+      show "f x <[ x" using Hd Hf Hx 
+        by(auto simp add:prod_pleq leq_refl bot_spec)
+
+    next
+      fix y :: "'a * 'b"
+      assume Hi1 : "y \<in> d"
+      assume Hi2 : "y <[ x"
+
+      show "y <[ f x" using Hi1 Hi2 Hd Hf Hx
+        by(auto simp add:is_project_def prod_pleq leq_refl)
+    qed
   qed
+
+next
+  show "distinct (map fst (projs :: ('a * 'b) projs_t))"
+    using projs_spec'[of "(projs :: 'a projs_t)"]
+          projs_spec'[of "(projs :: 'b projs_t)"] app_inj
+    by(auto simp add:prod_projs distinct_map inj_def inj_on_def)
 qed
 end
       

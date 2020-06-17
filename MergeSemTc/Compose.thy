@@ -1,5 +1,5 @@
 theory Compose
-  imports "../MergeableTc/Mergeable" "../MergeableTc/Pord"
+  imports "../MergeableTc/Mergeable" "../MergeableTc/Pord" "../MergeableTc/Splittable"
 begin
 
 (* idea. for composition we need
@@ -22,22 +22,64 @@ for the Views will need to be ordered *)
 
 *)
 
-class_deps Pord_Weak
 
-class Comp = Mergeableb +
-  fixes dom1 :: "('a :: Pordb) set"
-  fixes dom2 :: "'a set"
-  fixes sem1 :: "'a \<Rightarrow> 'a"
+class Comp = Mergeableb + Splittableb +
+  fixes sem1 :: "('a :: Splittable) \<Rightarrow> 'a"
   fixes sem2 :: "'a \<Rightarrow> 'a"
-  assumes Dom1 : "bot \<in> dom1"
-  assumes Dom2 : "bot \<in> dom2"
-  assumes Sem1 : "x \<in> dom1 \<Longrightarrow> sem1 x \<in> dom1"
-  assumes Sem2 : "x \<in> dom2 \<Longrightarrow> sem2 x \<in> dom2"
+  fixes sem1_name :: "'a itself \<Rightarrow> char list"
+  fixes sem2_name :: "'a itself \<Rightarrow> char list"
+  assumes Proj_Wf1 : "sem1_name t \<in> projs_names (t)"
+  assumes Proj_Wf2 : "sem2_name t \<in> projs_names (t)"
+  assumes Sem1_Dom : "x \<in> (sdom (sem1_name t)) \<Longrightarrow> sem1 x \<in> (sdom (sem1_name t))"
+  assumes Sem2_Dom : "x \<in> (sdom (sem2_name t)) \<Longrightarrow> sem2 x \<in> (sdom (sem2_name t))"
   assumes Pres :
-  "x1 \<in> dom1 \<Longrightarrow> x2 \<in> dom2 \<Longrightarrow>
+  "x1 \<in> (sdom (sem1_name t)) \<Longrightarrow> x2 \<in> (sdom (sem2_name t)) \<Longrightarrow>
    has_sup {x1, x2} \<Longrightarrow>
    has_sup {sem1 x1, sem2 x2}"
 
+definition cdom_l :: "('a :: Comp) set" where
+"cdom_l = (sdom (sem1_name (TYPE('a))))"
+
+definition cdom_r :: "('a :: Comp) set" where
+"cdom_r = (sdom (sem2_name (TYPE('a))))"
+
+
+typedef (overloaded) 'a cdom1t = "cdom_l :: ('a :: Comp) set"
+proof(-)
+
+  obtain d and f where Hdf : "Some (d, f) = map_of (projs :: ('a projs_t)) (sem1_name (TYPE('a)))"
+      using Proj_Wf1[of "(TYPE('a))"]
+            projs_distinct'[of "projs :: 'a projs_t"]
+      by(auto simp add:projs_names_def)
+    
+
+  hence "(sem1_name (TYPE('a)), d, f) \<in> set (projs :: 'a projs_t)"
+    by(auto intro:map_of_SomeD)
+
+  hence "\<bottom> \<in> d" by (auto elim:projs_bot)
+
+  thus ?thesis using Hdf by(cases "map_of (projs :: 'a projs_t) (sem1_name (TYPE('a)))"; auto simp add:cdom_l_def sdom_def sdom'_def)
+qed
+
+typedef (overloaded) 'a cdom2t = "cdom_r :: ('a :: Comp) set"
+proof(-)
+  obtain d and f where Hdf : "Some (d, f) = map_of (projs :: ('a projs_t)) (sem2_name (TYPE('a)))"
+      using Proj_Wf2[of "(TYPE('a))"]
+            projs_distinct'[of "projs :: 'a projs_t"]
+      by(auto simp add:projs_names_def)
+    
+
+  hence "(sem2_name (TYPE('a)), d, f) \<in> set (projs :: 'a projs_t)"
+    by(auto intro:map_of_SomeD)
+
+  hence "\<bottom> \<in> d" by (auto elim:projs_bot)
+
+  thus ?thesis using Hdf by(cases "map_of (projs :: 'a projs_t) (sem2_name (TYPE('a)))"; auto simp add:cdom_r_def sdom_def sdom'_def)
+qed
+
+(*
+typedef (overloaded) 'a dom2 = "cdom_r :: ('a :: Comp) set"
+*)
 (* parallel composition *)
 definition pcomp :: "('a :: Comp) \<Rightarrow> 'a" where
 "pcomp x =
@@ -56,5 +98,9 @@ definition pcomp_real' :: "('a :: Comp) \<Rightarrow> 'a" where
 "pcomp_real' x =
   [^ sem2 x, [^ sem1 x, x ^]^]"
 
+
+(* next: extend this with syntaxes
+   idea: we now have 4 domains. syntax1, syntax2, semantics1, semantics2
+   6, if we count full syntax and full semantics *)
 
 end
