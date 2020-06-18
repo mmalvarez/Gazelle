@@ -187,7 +187,7 @@ instance proof
 
 next
   show "distinct (map fst (projs :: 'a md_prio projs_t))"
-    using projs_spec'[of "(projs :: 'a projs_t)"] app_inj
+    using projs_distinct'[of "(projs :: 'a projs_t)"] app_inj
     by(auto simp add:prio_projs distinct_map inj_def inj_on_def)
 qed
 end
@@ -338,8 +338,8 @@ instance proof
 
 next
   show "distinct (map fst (projs :: ('a * 'b) projs_t))"
-    using projs_spec'[of "(projs :: 'a projs_t)"]
-          projs_spec'[of "(projs :: 'b projs_t)"] app_inj
+    using projs_distinct'[of "(projs :: 'a projs_t)"]
+          projs_distinct'[of "(projs :: 'b projs_t)"] app_inj
     by(auto simp add:prod_projs distinct_map inj_def inj_on_def)
 qed
 end
