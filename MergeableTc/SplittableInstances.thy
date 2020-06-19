@@ -343,6 +343,14 @@ next
     by(auto simp add:prod_projs distinct_map inj_def inj_on_def)
 qed
 end
-      
-
+(*
+instantiation sum :: (Splittableb, Splittableb) Splittableb
+begin
+definition sum_projs :
+"projs =
+  (''inl'', { ab . \<exists> a . ab = Inl a} \<union> {Inr \<bottom>}, map_sum id (\<lambda> _ . \<bottom>)) #
+  (''inr'', { ab . \<exists> b . ab = Inr b} \<union> {Inl \<bottom>}, map_sum (\<lambda> _ . \<bottom>) id) #
+  (map (map_prod (\<lambda> s . ''inl.'' @ s) (map_prod (\<lambda> d . { ab . \<exists> a . ab = Inl a \<and> a \<in> d} \<union> {Inr \<bottom>}) (\<lambda> f . map_sum f (\<lambda> _ . \<bottom>)))) projs) @
+  (map (map_prod (\<lambda> s . ''inr.'' @ s) (map_prod (\<lambda> d . { ab . \<exists> b . ab = Inr b\<and> b \<in> d} \<union> {Inl \<bottom>}) (\<lambda> f . map_sum (\<lambda> _ . \<bottom>) f))) projs)"
+*)
 end

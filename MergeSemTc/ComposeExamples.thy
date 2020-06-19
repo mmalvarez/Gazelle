@@ -1,15 +1,283 @@
-theory ComposeExamples imports Compose "../MergeableTc/MergeableInstances" HOL.Lifting HOL.Lifting_Set
+theory ComposeExamples imports Compose "../MergeableTc/MergeableInstances" "../MergeableTc/SplittableInstances" HOL.Lifting HOL.Lifting_Set
 
 begin
 
-type_synonym ex_syn = "(int md_triv option md_prio * int list md_triv option)"
+(* new approach
+   - define syntax, semantics as normal
+   - define a combined representation using Mergeable+Splittable
+   - ** use "lifting" to translate semantics into the projected version
+*)
 
+datatype calc =
+  Cadd int
+  | Csub int
+  | Cmul int
+  | Cdiv int
+  | Creset int
 
-typedef example = "UNIV :: ex_syn set"
+(*
+datatype calc_st = CSi int
+*)
+definition calc_sem :: "calc \<Rightarrow> int \<Rightarrow> int" where
+"calc_sem syn st = 
+  (case syn of
+     (Cadd i) \<Rightarrow> st + i
+    |(Csub i) \<Rightarrow> st - i
+    |(Cmul i) \<Rightarrow> st * i
+    |(Cdiv i) \<Rightarrow> divide_int_inst.divide_int st i)"
+
+definition syn_lift_triv :: "('a \<Rightarrow> 'b \<Rightarrow> 'c) \<Rightarrow> 'a md_triv \<Rightarrow> ('b \<Rightarrow> 'c)" where
+"syn_lift_triv = case_md_triv"
+
+(* here we are assuming no syntax = no-op
+   another option would be to return \<bottom> (b, c different; c being a Pordb) *)
+definition syn_lift_option :: "('a \<Rightarrow> 'b \<Rightarrow> 'b) \<Rightarrow> 'a option \<Rightarrow> ('b \<Rightarrow> 'b)" where
+"syn_lift_option =
+  case_option id"
+                              
+definition sem_lift_triv :: "('a \<Rightarrow> 'a) \<Rightarrow> ('a md_triv \<Rightarrow> 'a md_triv)" where
+"sem_lift_triv = map_md_triv"
+
+definition sem_lift_option :: "('a \<Rightarrow> 'a) \<Rightarrow> ('a option \<Rightarrow> 'a option)" where
+"sem_lift_option = map_option"
+
+definition sem_lift_prio_keep :: "('a \<Rightarrow> 'a) \<Rightarrow> ('a md_prio \<Rightarrow> 'a md_prio)" where
+"sem_lift_prio_keep = map_md_prio"
+
+definition prio_inc :: "'a md_prio \<Rightarrow> 'a md_prio" where
+"prio_inc = case_md_prio (\<lambda> n x . mdp (1 + n) x)"
+
+definition sem_lift_prio_inc :: "('a \<Rightarrow> 'a) \<Rightarrow> ('a md_prio \<Rightarrow> 'a md_prio)" where
+"sem_lift_prio_inc f = prio_inc o map_md_prio f"
+
+term "(\<lambda> p . map_prod ((sem_lift_prio_keep o sem_lift_option o sem_lift_triv) id) ((sem_lift_option o sem_lift_triv) id) p)"
+
+definition splittable_td ::
+  "char list \<Rightarrow>
+   ('a \<Rightarrow> ('b :: Splittable)) \<Rightarrow>
+   ('b \<Rightarrow> 'a) \<Rightarrow>
+   bool" where
+"splittable_td s Rep Abs =
+  (\<exists> S . sdom' s = Some S \<and>
+  type_definition Rep Abs S)"
+
+lemma splittable_td_unfold :
+  fixes s :: "char list"
+  fixes Rep :: "('a \<Rightarrow> ('b :: Splittable))" 
+  fixes Abs :: "('b \<Rightarrow> 'a)"
+  assumes H : "splittable_td s Rep Abs"
+  shows
+   "(\<exists> S . sdom' s = Some S \<and>
+    type_definition Rep Abs S)" using H
+  by(auto simp add:splittable_td_def)
+
+lemma splittable_td_unfold' :
+  fixes s :: "char list"
+  fixes Rep :: "('a \<Rightarrow> ('b :: Splittable))" 
+  fixes Abs :: "('b \<Rightarrow> 'a)"
+  assumes H : "splittable_td s Rep Abs"
+  shows
+  "type_definition Rep Abs (sdom s)" using H
+  by(auto simp add:splittable_td_def sdom_def)
+
+lemma splittable_td_unfold1 :
+  fixes s :: "char list"
+  fixes Rep :: "('a \<Rightarrow> ('b :: Splittable))" 
+  fixes Abs :: "('b \<Rightarrow> 'a)"
+  assumes Htd : "splittable_td s Rep Abs"
+  assumes Hdom : "sdom' s = Some S"
+  shows "type_definition Rep Abs S" using Htd Hdom
+  by(auto simp add:splittable_td_def)
+
+lemma splittable_td_unfold2 :
+  fixes s :: "char list"
+  fixes Rep :: "('a \<Rightarrow> ('b :: Splittable))" 
+  fixes Abs :: "('b \<Rightarrow> 'a)"
+  assumes Htd : "splittable_td s Rep Abs"
+  assumes Hdom : "sdom' s = (None :: 'b set option)"
+  shows "False" using Htd Hdom
+  by(auto simp add:splittable_td_def)
+
+lemma splittable_td_intro :
+  fixes s :: "char list"
+  fixes Rep :: "('a \<Rightarrow> ('b :: Splittable))" 
+  fixes Abs :: "('b \<Rightarrow> 'a)"
+  fixes S :: "'b set"
+  assumes Htd : "type_definition Rep Abs S"
+  assumes Hdom : "sdom' s = Some S"
+  shows "splittable_td s Rep Abs" using Htd Hdom
+  by(auto simp add:splittable_td_def)
+
+lemma splittable_td_intro' :
+  fixes s :: "char list"
+  fixes Rep :: "('a \<Rightarrow> ('b :: Splittable))" 
+  fixes Abs :: "('b \<Rightarrow> 'a)"
+  fixes S :: "'b set"
+  assumes Htd : "type_definition Rep Abs (sdom s)"
+  assumes Hdom : "sdom' s = (Some (sdom s) :: 'b set option)"
+  shows "splittable_td s Rep Abs" using Htd Hdom
+  by(simp add:splittable_td_def)
+
+lemma triv_td :
+  "splittable_td ''triv'' (mdt :: 'a \<Rightarrow> 'a md_triv) (case_md_triv id)"
+proof(rule splittable_td_intro')
+  show "type_definition mdt (case_md_triv id) (sdom ''triv'')"
+    by(auto intro: type_definition.intro simp add:sdom_def triv_projs sdom'_def split:md_triv.splits)
+next
+  show "sdom' ''triv'' = (Some (sdom ''triv'') :: 'a md_triv set option)"
+    by(auto simp add:sdom_def sdom'_def triv_projs )
+qed
+
+(*
+lemma option_td :
+  "splittable_td ''some
+*)
+definition is_inject_ext :: "char list \<Rightarrow> ('a \<Rightarrow> ('b :: Splittable)) \<Rightarrow> bool" where
+"is_inject_ext s f = 
+  (\<exists> S . sdom' s = Some S \<and> (\<forall> x . f x \<in> S))"
+
+definition is_project_ext :: "char list \<Rightarrow> (('a :: Splittable) \<Rightarrow> 'b) \<Rightarrow> bool" where
+"is_project_ext s f =
+  (\<exists> S . sdom' s = Some S \<and> (\<forall> sp . sp \<in> S \<longrightarrow> f sp = )
+
+definition sem_lift_prio_inc' :: "('a \<Rightarrow> 'a) \<Rightarrow> ('a md_prio \<Rightarrow> 'a md_prio)" where
+"sem_lift_prio_inc' = map_fun prio_inc o map_md_prio f"
+
+declare syn_lift_triv_def syn_lift_option_def sem_lift_triv_def
+        sem_lift_option_def sem_lift_prio_keep_def
+        prio_inc_def sem_lift_prio_inc_def [simp]
+
+(*
+definition sem_lift_prod :: " ('a1 \<Rightarrow> 'a2) \<Rightarrow> ('b1 \<Rightarrow> 'b2) \<Rightarrow>
+                              (('a * 'b) \<Rightarrow> ('a * 'b)) \<Rightarrow>
+                              ('a
+*)                             
+
+term "sem_lift_prio_inc o sem_lift_option o sem_lift_triv o ((syn_lift_option o syn_lift_triv) calc_sem)"
+
+term "map_fun ((syn_lift_option o syn_lift_triv))"
+
+term " ((syn_lift_option o syn_lift_triv) calc_sem)"
+
+term "sem_lift_prio_inc o sem_lift_option o sem_lift_triv"
+
+(* need "liftable" typeclass"? *)
+definition calc_sem' :: "calc md_triv option \<Rightarrow> int md_triv option md_prio \<Rightarrow> int md_triv option md_prio" where
+"calc_sem' =
+  sem_lift_prio_inc o sem_lift_option o sem_lift_triv o ((syn_lift_option o syn_lift_triv) calc_sem)"
+
+datatype print =
+  Pprint
+  | Preset
+
+type_synonym print_st = "(int * int list)"
+print_classes
+definition print_sem :: "print \<Rightarrow> print_st \<Rightarrow> print_st" where
+"print_sem syn st =
+  (case st of
+    (sti, stl) \<Rightarrow>
+      (case syn of
+         Pprint \<Rightarrow> (sti, stl @ [sti])
+       | Preset \<Rightarrow> (sti, [])))"
+  
+term "(sem_lift_prio_inc o sem_lift_option o sem_lift_triv) id"
+
+term "(map_prod ((sem_lift_prio_keep o sem_lift_option o sem_lift_triv))
+                ((sem_lift_option o sem_lift_triv)))"
+term "(syn_lift_option o syn_lift_triv) print_sem"
+
+term "(case_prod (\<lambda> a b . ((sem_lift_prio_keep o sem_lift_option o sem_lift_triv) id,
+                           (sem_lift_option o sem_lift_triv) id )))"
+
+term "(map_prod ((sem_lift_prio_keep o sem_lift_option o sem_lift_triv) id)
+                ((sem_lift_option o sem_lift_triv) id)) :: (('a * 'b) \<Rightarrow> ('a * 'b)) \<Rightarrow> (('a md_triv option md_prio * 'b list md_triv option))"
+
+(*
+definition print_sem' :: "print md_triv option \<Rightarrow> 
+                          (int md_triv option md_prio * int list md_triv option) \<Rightarrow>
+                          (int md_triv option md_prio * int list md_triv option)"
+  where
+"print_sem' = 
+  (map_prod ((sem_lift_prio_keep o sem_lift_option o sem_lift_triv) id)
+                ((sem_lift_option o sem_lift_triv) id)) o
+    ((syn_lift_option o syn_lift_triv) print_sem)"
+*)
+
+definition print_sem' :: "print md_triv option \<Rightarrow> 
+                          (int md_triv option md_prio * int list md_triv option) \<Rightarrow>
+                          (int md_triv option md_prio * int list md_triv option)"
+  where
+"print_sem' = 
+  (map_prod ((sem_lift_prio_keep o sem_lift_option o sem_lift_triv) id)
+                ((sem_lift_option o sem_lift_triv) id)) o
+    ((syn_lift_option o syn_lift_triv) print_sem)"
+
+(*
+definition sem_lift_triv_prod1 :: "(('a * 'b) \<Rightarrow> ('a * 'b)) \<Rightarrow>
+                                   (('a triv * 'b) \<Rightarrow> ('a triv * 'b))" where
+"sem_lift_triv_prod1 =
+  "
+*)
+
+(*
+definition print_sem' :: "print md_triv option \<Rightarrow> (int md_triv option md_prio * int list md_triv option)" where
+"print_sem'
+*)
+
+(* Here the user has to specify the combined state explicitly. I wonder if
+  there is a way to avoid even this. *)
+(*
+   I also wonder if there is a nicer way to specify the overlap.
+*)
+(* define subtype, 
+*)
+type_synonym ex_st_t = "(int md_triv option md_prio * int list md_triv option)"
+type_synonym ex_syn_t = "(calc md_triv option)"
+type_synonym ex_t = "(ex_syn_t * ex_st_t)"
+
+typedef example = "UNIV :: ex_t set"
   by auto
-
-
 setup_lifting type_definition_example
+
+lemma prio_inc_Q :
+  "Quotient (\<lambda> (a :: int md_triv option md_prio) b . 
+                    (case (a, b) of
+                         (mdp ai a', mdp bi b') \<Rightarrow> a' = b'))
+                (\<lambda> x . case (x) of (mdp xi x') \<Rightarrow> x')
+                (\<lambda> x . mdp 1 x)
+                (\<lambda> x x' . (case x of mdp xi x'' \<Rightarrow> x' = x''))"
+  apply(rule QuotientI)
+     apply(simp split:md_prio.splits)
+  apply(simp split:md_prio.splits)
+   apply(simp split:md_prio.splits)
+  apply(simp split:md_prio.splits)
+  apply(rule ext)
+apply(rule ext)
+  apply(auto)
+  done
+(*
+declare prio_inc_Q [lifting_restore prio_inc_Q]
+*)
+declare md_triv.Quotient [quot_map]
+
+print_quotients
+
+definition map_md_prio_inc :: "('a \<Rightarrow> 'b) \<Rightarrow> ('a md_prio) \<Rightarrow> ('b md_prio)" where
+"map_md_prio_inc f =
+  (case_md_prio (\<lambda> n a . mdp (1 + n) (f a)))"
+
+lift_definition calc_sem' :: "calc \<Rightarrow> int md_triv option md_prio \<Rightarrow> int md_triv option md_prio" is calc_sem
+
+definition ex_calc_sem :: "ex_t \<Rightarrow> ex_t \<Rightarrow> ex_t" where
+"ex_calc_sem =
+  map_fun (map_prod (map_md_prio o map_option o fst))"
+
+
+(* next interesting thing: finding a convenient way to respect the md_prio
+   when combining together these semantics *)
+
+
+
 
 definition exi :: "(int md_triv option md_prio * int list md_triv option) \<Rightarrow> example"
   where "exi = Abs_example"
