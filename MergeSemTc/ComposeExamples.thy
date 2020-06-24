@@ -84,6 +84,129 @@ definition splittable_td ::
   type_definition Rep Abs S)"
 *)
 
+(* do we also need a "re-merge" here?
+   (basically taking returned result from a semantics over a,
+    and merging it back into b, taking into account the data that may
+    have been lost)?
+   is bsup enough? *)
+
+(*
+type_synonym ('a, 'b) ptd = 
+"char list * ('a \<Rightarrow> 'b) * ('b \<Rightarrow> 'a option) * ('b set)"
+
+definition precomp_td ::
+  "('a, 'b :: Splittableb) ptd \<Rightarrow>
+   bool" where
+"precomp_td ptd =
+  (case ptd of
+    (s, ToC, OfC, Dom') \<Rightarrow>
+      (\<exists> S . sdom' s = Some S \<and>
+       Dom' \<subseteq> S \<and>
+       (\<forall> a . ToC a \<in> Dom') \<and>
+       (\<forall> b . b \<in> Dom' \<longrightarrow>
+              (\<exists> b' . OfC b = Some b' \<and> ToC b' <[ b)) \<and>
+       (\<forall> a . OfC (ToC a) = Some a)))"
+*)
+
+(* idea: need to augment this with a way to keep data *)
+type_synonym ('a, 'b) ptd' = 
+"('a \<Rightarrow> 'b) * ('b \<Rightarrow> 'a option)"
+
+record ('a, 'b) lifting =
+  LIn :: "('a \<Rightarrow> 'b \<Rightarrow> 'b)"
+  LOut :: "('b \<Rightarrow> 'a option)"
+
+
+(* supply a default value?
+   this feels like we're just redefining option though.
+   is \<bottom> always what we want?
+   i think maybe this should be identity when we can't translate it *)
+(*
+definition ptd_map ::
+  "('a, 'b) ptd \<Rightarrow>
+   ('a \<Rightarrow> 'a) \<Rightarrow>
+   ('b :: {Mergeableb, Splittableb} \<Rightarrow> 'b)" where
+"ptd_map ptd sem b =
+  (case ptd of
+      (s, ToC, OfC, _) \<Rightarrow>
+        (case OfC b of
+          None \<Rightarrow> b
+          | Some b' \<Rightarrow> bsup (ToC (sem (b'))) b))"
+
+definition ptd_map2 ::
+    "('a1, 'b :: {Mergeableb, Splittableb}) ptd \<Rightarrow>
+     ('a2, 'b) ptd \<Rightarrow>
+     ('a1 \<Rightarrow> 'a2 \<Rightarrow> 'a2) \<Rightarrow>
+     ('b \<Rightarrow> 'b \<Rightarrow> 'b)" where
+"ptd_map2 ptd1 ptd2 sem syn st =
+  (case ptd1 of
+    (s1, ToC1, OfC1, _) \<Rightarrow>
+      (case ptd2 of
+        (s2, ToC2, OfC2, _) \<Rightarrow>
+          (case OfC1 syn of
+            None \<Rightarrow> st
+            | Some syn' \<Rightarrow>
+              (case OfC2 st of
+                None \<Rightarrow> st
+                | Some st' \<Rightarrow>
+                  bsup (ToC2 (sem syn' st')) st))))"
+  *)
+definition ptd_map ::
+  "('a, 'b) ptd' \<Rightarrow>
+   ('a \<Rightarrow> 'a) \<Rightarrow>
+   ('b \<Rightarrow> 'b)" where
+"ptd_map ptd sem b =
+  (case ptd of
+      (ToC, OfC) \<Rightarrow>
+        (case OfC b of
+          None \<Rightarrow> b
+          | Some b' \<Rightarrow> (ToC (sem (b')))))"
+
+definition l_map ::
+  "('a, 'b) lifting \<Rightarrow>
+   ('a \<Rightarrow> 'a) \<Rightarrow>
+   ('b \<Rightarrow> 'b)" where
+"l_map l sem b =
+  (case (LOut l) b of
+    None \<Rightarrow> b
+    | Some b' \<Rightarrow> 
+      (LIn l) (sem b') b)"
+
+definition ptd_map2 ::
+    "('a1, 'b ) ptd' \<Rightarrow>
+     ('a2, 'b) ptd' \<Rightarrow>
+     ('a1 \<Rightarrow> 'a2 \<Rightarrow> 'a2) \<Rightarrow>
+     ('b \<Rightarrow> 'b \<Rightarrow> 'b)" where
+"ptd_map2 ptd1 ptd2 sem syn st =
+  (case ptd1 of
+    (ToC1, OfC1) \<Rightarrow>
+      (case ptd2 of
+        (ToC2, OfC2) \<Rightarrow>
+          (case OfC1 syn of
+            None \<Rightarrow> st
+            | Some syn' \<Rightarrow>
+              (case OfC2 st of
+                None \<Rightarrow> st
+                | Some st' \<Rightarrow>
+                  (ToC2 (sem syn' st'))))))"
+
+definition l_map2 ::
+  "('a1, 'b) lifting \<Rightarrow>
+   ('a2, 'b) lifting \<Rightarrow>
+   ('a1 \<Rightarrow> 'a2 \<Rightarrow> 'a2) \<Rightarrow>
+   ('b \<Rightarrow> 'b \<Rightarrow> 'b)" where
+"l_map2 l1 l2 sem syn st =
+  (case (LOut l1) syn of
+    None \<Rightarrow> st
+    | Some syn' \<Rightarrow> (case (LOut l2) st of
+                    None \<Rightarrow> st
+                    | Some st' \<Rightarrow>
+                      (LIn l2 (sem syn' st') st)))"
+
+(*
+definition
+*)
+(*
 definition splittable_td ::
   "char list \<Rightarrow>
    ('b ::  Splittable \<Rightarrow> 'a) \<Rightarrow>
@@ -92,303 +215,151 @@ definition splittable_td ::
 "splittable_td s Rep Abs =
   (\<exists> S . sdom' s = Some S \<and>
   type_definition Rep Abs (Rep ` S))"
-
-
-(* problem: we need to deal with
-   - option type: can't project all values
-   - but maybe this is ok, since we don't need to pull things out. just need to map.
-
-So. We need a way to inject, which should always be in the domain
-And we need a way to project, which is only guaranteed to be well-defined
-in certain cases.
-  (or we need a sensible default for what to do if we fail, e.g. for option)
-
 *)
 
 (*
-definition splittable_td ::
-  "char list \<Rightarrow>
-   ('a \<Rightarrow> ('b :: Splittable)) \<Rightarrow>
-   ('b \<Rightarrow> 'a) \<Rightarrow>
-   ('a set) \<Rightarrow>
-   bool" where
-"splittable_td ToS OfS s A =
-  (\<exists> S . sdom' s = Some S \<and>
-   (\<forall> b . ToS b \<in> S \<and>
-   ))"
+definition triv_td ::
+  "('a, 'a md_triv) ptd'" where
+"triv_td =
+  (''triv'', mdt, Some o (case_md_triv id), UNIV)"
+
+definition option_td ::
+  "('a, 'b) ptd \<Rightarrow>
+   ('a, 'b option) ptd" where
+"option_td t =
+  (case t of
+    (s, ToC, OfC, Dom) \<Rightarrow>
+      (''some.''[@]s, Some o ToC, (case_option undefined OfC), Some ` Dom))"
 *)
 
-lemma splittable_td_unfold :
-  fixes s :: "char list"
-  fixes Rep :: "('b :: Splittable \<Rightarrow> 'a)" 
-  fixes Abs :: "('a \<Rightarrow> 'b)"
-  assumes H : "splittable_td s Rep Abs"
-  shows
-   "(\<exists> S . sdom' s = Some S \<and>
-    type_definition Rep Abs (Rep ` S))" using H
-  by(auto simp add:splittable_td_def)
+definition id_td ::
+  "('a, 'a) ptd'" where
+"id_td =
+  (id, Some)"
 
-lemma splittable_td_unfold' :
-  fixes s :: "char list"
-  fixes Rep :: "('b :: Splittable \<Rightarrow> 'a)" 
-  fixes Abs :: "('a \<Rightarrow> 'b)"
-  assumes H : "splittable_td s Rep Abs"
-  shows
-  "type_definition Rep Abs (Rep ` (sdom s))" using H
-  by(auto simp add:splittable_td_def sdom_def)
+definition triv_td ::
+  "('a, 'b) ptd' \<Rightarrow> ('a, 'b md_triv) ptd'" where
+"triv_td t =
+  (case t of
+    (ToC, OfC) \<Rightarrow>
+      (mdt o ToC, (case_md_triv OfC)))"
 
-lemma splittable_td_unfold1 :
-  fixes s :: "char list"
-  fixes Rep :: "('b :: Splittable \<Rightarrow> 'a)" 
-  fixes Abs :: "('a \<Rightarrow> 'b)"
-  assumes Htd : "splittable_td s Rep Abs"
-  assumes Hdom : "sdom' s = Some S"
-  shows "type_definition Rep Abs (Rep ` S)" using Htd Hdom
-  by(auto simp add:splittable_td_def)
-
-lemma splittable_td_unfold2 :
-  fixes s :: "char list"
-  fixes Rep :: "('b :: Splittable \<Rightarrow> 'a)" 
-  fixes Abs :: "('a \<Rightarrow> 'b)"
-  assumes Htd : "splittable_td s Rep Abs"
-  assumes Hdom : "sdom' s = (None :: 'b set option)"
-  shows "False" using Htd Hdom
-  by(auto simp add:splittable_td_def)
-
-lemma splittable_td_intro :
-  fixes s :: "char list"
-  fixes Rep :: "('b :: Splittable \<Rightarrow> 'a)" 
-  fixes Abs :: "('a \<Rightarrow> 'b)"
-  fixes S :: "'b set"
-  assumes Htd : "type_definition Rep Abs (Rep ` S)"
-  assumes Hdom : "sdom' s = Some S"
-  shows "splittable_td s Rep Abs" using Htd Hdom
-  by(auto simp add:splittable_td_def)
-
-lemma splittable_td_intro' :
-  fixes s :: "char list"
-  fixes Rep :: "('b :: Splittable \<Rightarrow> 'a)" 
-  fixes Abs :: "('a \<Rightarrow> 'b)"
-  fixes S :: "'b set"
-  assumes Htd : "type_definition Rep Abs (Rep ` (sdom s))"
-  assumes Hdom : "sdom' s = (Some (sdom s) :: 'b set option)"
-  shows "splittable_td s Rep Abs" using Htd Hdom
-  by(simp add:splittable_td_def)
-
-lemma triv_td :
-  "splittable_td ''triv'' (case_md_triv id) (mdt :: 'a \<Rightarrow> 'a md_triv)"
-proof(rule splittable_td_intro')
-  show "type_definition (case_md_triv id) mdt (case_md_triv id ` sdom ''triv'')"
-    by(auto intro: type_definition.intro simp add:sdom_def triv_projs sdom'_def split:md_triv.splits)
-next
-  show "sdom' ''triv'' = (Some (sdom ''triv'') :: 'a md_triv set option)"
-    by(auto simp add:sdom_def sdom'_def triv_projs )
-qed
-
-
-(* now we need to figure out how to use these to do lifting in a nicer way. *)
-(* goals: liftings for
-    (int \<Rightarrow> int) \<Rightarrow> (int option \<Rightarrow> int option) 
-    (int option \<Rightarrow> int option) \<Rightarrow> (int option md_prio \<Rightarrow> int option md_prio) 
-*)
-
-lemma map_of_inj_None : "map_of m k = None \<Longrightarrow>
-                         inj f \<Longrightarrow>
-                         map_of (map (map_prod f f') m) (f k) = None"
-proof(induction m)
-  case Nil
-  then show ?case by auto
-next
-  case (Cons a m)
-  then show ?case
-    by(auto simp add:inj_def split:if_splits)
-qed
-
-lemma map_of_inj_Some : "map_of m k = Some v \<Longrightarrow>
-                         inj f \<Longrightarrow>
-                         map_of (map (map_prod f f') m) (f k) = Some (f' v)"
-proof(induction m)
-  case Nil
-  then show ?case by auto
-next
-  case (Cons a m)
-  then show ?case
-    by(auto simp add:inj_def split:if_splits)
-qed
-
-
-lemma option_td :
-  assumes H : "splittable_td s1 Rep1 Abs1"
-  shows "splittable_td (''some.''[@]s1) (map_option Rep1) (map_option Abs1)"
-proof(rule splittable_td_intro')
-  show "type_definition (map_option Rep1) (map_option Abs1) (map_option Rep1 ` sdom (''some.''[@]s1))"
-  proof(rule type_definition.intro)
-    fix x :: "'a option"
-    show "map_option Rep1 x \<in> map_option Rep1 ` sdom (''some.'' [@] s1)"
-    proof(cases "sdom' (s1) :: 'a set option")
-      assume Hi : "sdom' (s1::char list) = (None :: 'a set option)"
-      thus ?thesis using splittable_td_unfold2[OF H]
-        by(auto)
-    next
-      fix A :: "'a set"
-      assume Hi : "sdom' (s1::char list) = Some (A::'a set)"
-      obtain p where Hp : "Map.map_of (projs :: 'a projs_t) s1 = Some(A, p)" using Hi
-        by(auto simp add:sdom'_def option_projs)
-
-      have 0 : "sdom (''some.'' [@] s1) = (Some ` A) \<union> {None}"
-        using map_of_inj_Some[OF Hp str_app_inj[of "''some.''"],
-              of "(map_prod (\<lambda>d::'a set. (Some ` d) \<union> {None}) map_option)"]
-        by(auto simp add:sdom'_def sdom_def option_projs)
-
-      thus ?thesis 
-      proof(cases x)
-        assume Hii : "x = None"
-        thus ?thesis using 0 by auto
-      next
-        fix a :: "'a"
-        assume Hii : "x = Some a"
-
-        thus ?thesis using 0
-            type_definition.Rep[OF splittable_td_unfold1[OF H Hi], of a]
-          by(auto simp add: Set.image_iff)
-      qed
-    qed
-  next
-    fix x :: "'a option"
-
-    show "map_option Abs1 (map_option Rep1 x) = x"
-    proof(cases "sdom' (s1) :: 'a set option")
-      assume Hi : "sdom' (s1::char list) = (None :: 'a set option)"
-      thus ?thesis using splittable_td_unfold2[OF H]
-        by(auto)
-    next
-      fix A :: "'a set"
-      assume Hi : "sdom' (s1::char list) = Some (A::'a set)"
-      obtain p where Hp : "Map.map_of (projs :: 'a projs_t) s1 = Some(A, p)" using Hi
-        by(auto simp add:sdom'_def option_projs)
-
-      have 0 : "sdom (''some.'' [@] s1) = (Some ` A) \<union> {None}"
-        using map_of_inj_Some[OF Hp str_app_inj[of "''some.''"],
-              of "(map_prod (\<lambda>d::'a set. (Some ` d) \<union> {None}) map_option)"]
-        by(auto simp add:sdom'_def sdom_def option_projs)
-
-      thus ?thesis 
-      proof(cases x)
-        assume Hii : "x = None"
-        thus ?thesis using 0 by auto
-      next
-        fix a :: "'a"
-        assume Hii : "x = Some a"
-
-        thus ?thesis using 0
-            type_definition.Rep_inverse[OF splittable_td_unfold1[OF H Hi], of a]
-          by(auto)
-      qed
-    qed
-  next
-    fix y :: "'b option"
-    assume Helem : " y \<in> map_option Rep1 ` sdom (''some.'' [@] s1)"
-
-    show "map_option Rep1 (map_option Abs1 y) = y"
-    proof(cases "sdom' (s1) :: 'a set option")
-      assume Hi : "sdom' (s1::char list) = (None :: 'a set option)"
-      thus ?thesis using splittable_td_unfold2[OF H]
-        by(auto)
-    next
-      fix A :: "'a set"
-      assume Hi : "sdom' (s1::char list) = Some (A::'a set)"
-      obtain p where Hp : "Map.map_of (projs :: 'a projs_t) s1 = Some(A, p)" using Hi
-        by(auto simp add:sdom'_def option_projs)
-
-      have 0 : "sdom (''some.'' [@] s1) = (Some ` A) \<union> {None}"
-        using map_of_inj_Some[OF Hp str_app_inj[of "''some.''"],
-              of "(map_prod (\<lambda>d::'a set. (Some ` d) \<union> {None}) map_option)"]
-        by(auto simp add:sdom'_def sdom_def option_projs)
-
-      thus ?thesis
-      proof(cases y)
-        assume Hii : "y = None"
-        thus ?thesis using 0 by auto
-      next
-        fix b :: "'b"
-        assume Hii : "y = Some b"
-
-        thus ?thesis using 0 Helem
-            type_definition.Abs_inverse[OF splittable_td_unfold1[OF H Hi], of b]
-          by(auto)
-      qed
-    qed
-  qed
-next
-  show "sdom' (''some.'' [@] s1) = Some (sdom (''some.'' [@] s1) :: 'a option set)"
-  proof(cases "sdom' (s1) :: 'a set option")
-    assume Hi : "sdom' (s1::char list) = (None :: 'a set option)"
-    thus ?thesis using splittable_td_unfold2[OF H]
-      by(auto)
-  next
-    fix A :: "'a set"
-    assume Hi : "sdom' (s1::char list) = Some (A::'a set)"
-    obtain p where Hp : "Map.map_of (projs :: 'a projs_t) s1 = Some(A, p)" using Hi
-      by(auto simp add:sdom'_def option_projs)
-
-     have 0 : "sdom' (''some.'' [@] s1) = Some ((Some ` A) \<union> {None})"
-      using map_of_inj_Some[OF Hp str_app_inj[of "''some.''"],
-            of "(map_prod (\<lambda>d::'a set. (Some ` d) \<union> {None}) map_option)"]
-      by(auto simp add:sdom'_def sdom_def option_projs)
-
-    thus ?thesis by (auto simp add:sdom_def split:option.splits)
-  qed
-qed
-
-(* TODO: repeat this for prod and prio *)
+(* another option would be to require a second mergeable
+   dealing with conversion from unit to a *)
+definition option_td ::
+  "('a, 'b) ptd' \<Rightarrow>
+   ('a, 'b option) ptd'" where
+"option_td t =
+  (case t of
+    (ToC, OfC) \<Rightarrow>
+      (Some o ToC, (case_option None OfC)))"
 
 (*
-      proof(cases "sdom' (''some.''[@]s1) :: 'a option set option")
-        assume Hi2 : "sdom' (''some.''[@]s1)  = (None :: 'a option set option)"
-        hence 0 : "map_of (projs :: 'a option projs_t) (''some.'' [@] s1) = None" by(auto simp add:sdom'_def)
-        thus ?thesis using map_of_inj_Some[OF Hp str_app_inj[of "''some.''"],
-              of "(map_prod (\<lambda>d::'a set. (Some ` d) \<union> {None}) map_option)"] Hi
-          by(auto simp add:sdom'_def option_projs)
-      next
-        fix AO :: "'a option set"
-        assume Hi2 : "sdom' (''some.'' [@] s1) = Some AO"
+definition prod_td ::
+  "('a1, 'b :: Mergeable) ptd' \<Rightarrow>
+   ('a2, 'b) ptd' \<Rightarrow>
+   ('a1 * 'a2, 'b) ptd'" where
+"prod_td t1 t2 =
+  (case t1 of
+    (ToC1, OfC1) \<Rightarrow>
+      (case t2 of
+        (ToC2, OfC2) \<Rightarrow>
+          (\<lambda> x . (case x of (x1, x2) \<Rightarrow> [^ToC1 x1, ToC2 x2^]),
+          (\<lambda> x .
+            case (OfC1 x) of
+              None \<Rightarrow> None
+              | Some x1 \<Rightarrow> 
+                (case (OfC2 x) of 
+                  None \<Rightarrow> None
+                  | Some x2 \<Rightarrow> Some (x1,x2))))))"
+*)
 
-        thus ?thesis using map_of_inj_Some[OF Hp str_app_inj[of "''some.''"],
-              of "(map_prod (\<lambda>d::'a set. (Some ` d) \<union> {None}) map_option)"] Hi
-              type_definition.Rep[OF splittable_td_unfold1[OF H Hi]]
-          apply(auto simp add:sdom_def sdom'_def option_projs)
-          apply(case_tac x; auto)
-      next
-        fix AO :: "'a option set"
-        assume Hi2 : "sdom' (''some.'' @ s1) = Some AO"
-        thus ?thesis using Hi H
-*)
-(*           projs_distinct'[of "(projs :: ('a option) projs_t)", OF refl]
-*)
+(* need to find a way to somehow save the priority value *)
+definition prio_td ::
+  "('a, 'b) ptd' \<Rightarrow>
+   ('a, 'b md_prio) ptd'" where
+"prio_td t =
+  (case t of
+    (ToC, OfC) \<Rightarrow> 
+      (mdp 0 o ToC, 
+       (\<lambda> x . case (OfC x) of None \<Rightarrow> None
+                              | Some x' \<Rightarrow> Some (case_md_prio (\<lambda> _ . OfC ) x))))"
+      
+
+definition fst_td ::
+  "('a, 'b1 :: Pordb) ptd' \<Rightarrow>
+   ('a, 'b1 * ('b2 :: Pordb)) ptd'" where
+"fst_td t =
+  (case t of
+    (ToC, OfC) \<Rightarrow>
+          ((\<lambda> x . (ToC x, \<bottom>)),
+          (\<lambda> x . (OfC (fst x)))))"
+
+definition snd_td ::
+  "('a, 'b2 :: Pordb) ptd' \<Rightarrow>
+   ('a, ('b1 :: Pordb) * 'b2) ptd'" where
+"snd_td t =
+  (case t of
+    (ToC, OfC) \<Rightarrow>
+          ((\<lambda> x . (\<bottom>, ToC x)),
+          (\<lambda> x . (OfC (snd x)))))"
+
+definition prod_td ::
+  "('a1, 'b1) ptd' \<Rightarrow>
+   ('a2, 'b2) ptd' \<Rightarrow>
+   ('a1 * 'a2, 'b1 * 'b2) ptd'" where
+"prod_td t1 t2 =
+  (case t1 of
+    (ToC1, OfC1) \<Rightarrow>
+      (case t2 of
+        (ToC2, OfC2) \<Rightarrow>
+          (\<lambda> x . (case x of (x1, x2) \<Rightarrow> (ToC1 x1, ToC2 x2)),
+          (\<lambda> x . (case x of (x1, x2) \<Rightarrow>
+                    (case (OfC1 x1) of
+                       None \<Rightarrow> None
+                       | Some x1' \<Rightarrow> 
+                         (case (OfC2 x2) of 
+                           None \<Rightarrow> None
+                           | Some x2' \<Rightarrow> Some (x1',x2'))))))))"
 (*
-        apply(auto simp add:map_of_eq_None_iff)
+definition sum_td ::
+  "('a1, 'b1) ptd' \<Rightarrow>
+   ('a2, 'b2) ptd' \<Rightarrow>
+   ('a1 + 'a2, 'b1 + 'b2) ptd'" where
+"sum_td t1 t2 =
+  (case t1 of
+    (ToC1, OfC1) \<Rightarrow>
+      (case t2 of
+        (ToC2, OfC2) \<Rightarrow>
+          (\<lambda> x . (case x of (Inl x1) \<Rightarrow> Inl (ToC1 x1)
+                            | (Inr x2) \<Rightarrow> Inr (ToC2 x2)))
+          (\<lambda> x . (case x of
+                    Inl x1 \<Rightarrow> (case (OfC1 x1) of None \<Rightarrow> None | Some x1' \<Rightarrow> Some (Inl x1'))
+                    | Inr x2 \<Rightarrow> (case (OfC2 x2) of None \<Rightarrow> None | Some x2' \<Rightarrow> Some (Inr x2'))))))"
 *)
-(*
-definition is_inject_ext :: "char list \<Rightarrow> ('a \<Rightarrow> ('b :: Splittable)) \<Rightarrow> bool" where
-"is_inject_ext s f = 
-  (\<exists> S . sdom' s = Some S \<and> (\<forall> x . f x \<in> S))"
+value "ptd_map
+          (triv_td (id_td))
+          (\<lambda> x . x + 1 :: int)
+          (mdt (1 :: int))"
 
-definition is_project_ext :: "char list \<Rightarrow> (('a :: Splittable) \<Rightarrow> 'b) \<Rightarrow> bool" where
-"is_project_ext s f =
-  (\<exists> S . sdom' s = Some S \<and> (\<forall> sp . sp \<in> S \<longrightarrow> f sp = )
+value "ptd_map
+        (option_td (triv_td (id_td)))
+        (\<lambda> x . x + 1)
+        (Some (mdt (1 :: int)))"
 
-definition sem_lift_prio_inc' :: "('a \<Rightarrow> 'a) \<Rightarrow> ('a md_prio \<Rightarrow> 'a md_prio)" where
-"sem_lift_prio_inc' = map_fun prio_inc o map_md_prio f"
+(* something is off here. *)
+term "
+        (prod_td (option_td (triv_td (id_td))) (option_td (triv_td (id_td))))"
 
-declare syn_lift_triv_def syn_lift_option_def sem_lift_triv_def
-        sem_lift_option_def sem_lift_prio_keep_def
-        prio_inc_def sem_lift_prio_inc_def [simp]
-*)
-(*
-definition sem_lift_prod :: " ('a1 \<Rightarrow> 'a2) \<Rightarrow> ('b1 \<Rightarrow> 'b2) \<Rightarrow>
-                              (('a * 'b) \<Rightarrow> ('a * 'b)) \<Rightarrow>
-                              ('a
-*)                             
+term "ptd_map
+        (prod_td (option_td (triv_td (id_td))) (option_td (triv_td (id_td))))
+        (\<lambda> x . case x of (x1, x2) \<Rightarrow> (x1 + 1, x2 + 1))"
+
+value "ptd_map
+        (prod_td (option_td (triv_td (id_td))) (option_td (triv_td (id_td))))
+        (\<lambda> x . case x of (x1, x2) \<Rightarrow> (x1 + 1, x2 + 1))
+        (Some (mdt (1 :: int)), Some (mdt (2 :: int)))"
+
 
 term "sem_lift_prio_inc o sem_lift_option o sem_lift_triv o ((syn_lift_option o syn_lift_triv) calc_sem)"
 
@@ -406,6 +377,77 @@ definition calc_sem' :: "calc md_triv option \<Rightarrow> int md_triv option md
 datatype print =
   Pprint
   | Preset
+
+datatype  reified =
+  RNat nat
+  | RInt int
+  | RUnit unit
+  | RTriv "reified md_triv"
+  | RPrio "reified md_prio"
+  | RList "reified list"
+  | RBool bool
+  | RCalc calc
+  | RPrint print
+  | ROption "reified option"
+  | RProd "reified * reified"
+  | RSum "reified + reified"
+
+definition ptd_lift :: "('a, 'b) ptd' \<Rightarrow> 'a \<Rightarrow> 'b" where
+"ptd_lift t = fst t"
+
+(*
+definition calc_sem_l where
+  "calc_sem_l = ptd_map2 (fst_td (option_td (triv_td (id_td)))) 
+                         (snd_td (option_td (triv_td (id_td)))) calc_sem"
+*)
+term "calc_sem_l"
+
+type_synonym synsem =
+  "calc option * print option * (int md_triv option md_prio * int list md_triv option)"
+
+definition calc_sem_l :: "synsem \<Rightarrow> synsem \<Rightarrow> synsem" where
+  "calc_sem_l = ptd_map2 ((fst_td (option_td (triv_td (id_td)))))
+                         (snd_td (snd_td (fst_td (option_td (triv_td (id_td)))))) calc_sem"
+
+
+class reified_td =
+  fixes rei_t :: "('a, reified) ptd'"
+
+instantiation nat :: reified_td begin
+definition nat_rei_t: 
+  "rei_t = (RNat, (\<lambda> x . case x of RNat x' \<Rightarrow> Some x' | _ \<Rightarrow> None))"
+instance proof qed
+end
+
+instantiation int :: reified_td begin
+definition int_rei_t:
+  "rei_t = (RInt, (\<lambda> x . case x of RInt x' \<Rightarrow> Some x' | _ \<Rightarrow> None))"
+instance proof qed
+end
+
+datatype 'a weakr =
+  WR 'a
+
+(*
+definition reified_td ::
+  "('a :: reified_td, 'b) ptd'" where
+"
+*)
+
+class wr_td =
+  fixes wrei_t :: "('a, 'a weakr) ptd'"
+
+term "triv_td"
+
+instantiation md_triv :: (wr_td)wr_td begin
+definition triv_rei_t:
+  "wrei_t = triv_td wrei_t"
+instance proof qed
+end
+
+class GetTd =
+  fixes rget :: "reified \<Rightarrow> ('a, synsem) ptd'"
+
 
 type_synonym print_st = "(int * int list)"
 print_classes

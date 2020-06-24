@@ -22,8 +22,10 @@ for the Views will need to be ordered *)
 
 *)
 
+class PreComp = Mergeableb + Splittableb
+
 (* TODO: make this n-ary instead of binary? *)
-class Comp = Mergeableb + Splittableb +
+class Comp = PreComp +
   (* idea: we call these with
      - an 'a \<in> syn1 representing the syntax
      - an 'a \<in> st1 representing the state *)
