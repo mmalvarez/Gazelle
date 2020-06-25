@@ -141,7 +141,7 @@ definition scomp_real' :: "'c \<Rightarrow> 'c" where
 
 end
 
-print_locale! SemComp
+print_locale SemComp
 
 locale SemComp_Spec = SemComp +
   assumes lool : True

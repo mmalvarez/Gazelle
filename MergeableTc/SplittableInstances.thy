@@ -35,6 +35,16 @@ lemma app_inj :
   shows "inj (\<lambda> s2 . s1 @ s2)"
   by(auto simp add: inj_def)
 
+
+definition str_app :: "char list \<Rightarrow> char list \<Rightarrow> char list"
+  (infixl "[@]" 50)
+  where
+"str_app a b = a @ b"
+
+lemma str_app_inj :
+  fixes s1
+  shows "inj (\<lambda> s2 . s1 [@] s2)"
+  by(auto simp add: inj_def str_app_def)
  
 instantiation option :: (Splittable) Splittableb
 begin
@@ -47,7 +57,7 @@ begin
  *)
 definition option_projs :
 "projs =
-  map (map_prod (\<lambda> s . ''some.''@ s) (map_prod (\<lambda> d . (Some ` d) \<union> {None}) map_option)) projs"
+  map (map_prod (\<lambda> s . ''some.''[@] s) (map_prod (\<lambda> d . (Some ` d) \<union> {None}) map_option)) projs"
 instance proof
   fix d :: "'a option set"
   fix f :: "'a option \<Rightarrow> 'a option"
@@ -56,7 +66,7 @@ instance proof
   assume H : "(s, d, f) \<in> set projs"
 
   obtain d' and f' and s' where Hd' : "d = Some ` d' \<union> {None}" and Hf' : "f = map_option f'" and "s = ''some.''@s'" and Hprojs' : "(s', d', f') \<in> set projs" using H
-    by(auto simp add:option_projs)
+    by(auto simp add: str_app_def option_projs)
 
   show "is_project x d (f x)"
   proof(rule is_project_intro)
@@ -111,7 +121,7 @@ instance proof
 next
   show "distinct (map fst (projs :: 'a option projs_t))"
     using projs_distinct'[of "(projs :: 'a projs_t)"] app_inj
-    by(auto simp add:option_projs distinct_map inj_def inj_on_def)
+    by(auto simp add:option_projs distinct_map inj_def inj_on_def str_app_def)
 qed
 end
 
@@ -131,7 +141,7 @@ definition prio_projs :
 definition prio_projs :
 "projs = 
   map (map_prod
-          (\<lambda> s . ''prio.''@s) (map_prod (\<lambda> d .  {p . \<exists> i x . x \<in> d \<and> p = mdp i x }) map_md_prio)) projs"
+          (\<lambda> s . ''prio.''[@]s) (map_prod (\<lambda> d .  {p . \<exists> i x . x \<in> d \<and> p = mdp i x }) map_md_prio)) projs"
 instance proof
   fix d :: "'a md_prio set"
   fix f :: "'a md_prio \<Rightarrow> 'a md_prio"
@@ -141,7 +151,7 @@ instance proof
 
   obtain d' and f' and s' where Hd' : "d = {p . \<exists> i x . x \<in> d' \<and> p = mdp i x }" and Hf' : "f = map_md_prio f'" and Hs' : "s = ''prio.''@s'"
     and Hprojs' : "(s', d', f') \<in> set projs" using H
-    by(auto simp add:prio_projs)
+    by(auto simp add:prio_projs str_app_def)
 
   obtain ix and x' where Hx : "x = mdp ix x'" by(cases x; auto)
 
@@ -188,7 +198,7 @@ instance proof
 next
   show "distinct (map fst (projs :: 'a md_prio projs_t))"
     using projs_distinct'[of "(projs :: 'a projs_t)"] app_inj
-    by(auto simp add:prio_projs distinct_map inj_def inj_on_def)
+    by(auto simp add:prio_projs distinct_map inj_def inj_on_def str_app_def)
 qed
 end
 
@@ -211,8 +221,8 @@ definition prod_projs :
 "projs =
   (''fst'', { ab . \<exists> a . ab = (a, \<bottom>)}, map_prod id (\<lambda> _ . \<bottom>)) #
   (''snd'', { ab . \<exists> b . ab = (\<bottom>, b)}, map_prod (\<lambda> _ . \<bottom>) id) #
-  (map (map_prod (\<lambda> s . ''fst.'' @ s) (map_prod (\<lambda> d . { ab . \<exists> a . ab = (a, \<bottom>) \<and> a \<in> d}) (\<lambda> f . map_prod f (\<lambda> _ . \<bottom>)))) projs) @
-  (map (map_prod (\<lambda> s . ''snd.'' @ s) (map_prod (\<lambda> d . { ab . \<exists> b . ab = (\<bottom>, b) \<and> b \<in> d}) (\<lambda> f . map_prod (\<lambda> _ . \<bottom>) f))) projs)"
+  (map (map_prod (\<lambda> s . ''fst.'' [@] s) (map_prod (\<lambda> d . { ab . \<exists> a . ab = (a, \<bottom>) \<and> a \<in> d}) (\<lambda> f . map_prod f (\<lambda> _ . \<bottom>)))) projs) @
+  (map (map_prod (\<lambda> s . ''snd.'' [@] s) (map_prod (\<lambda> d . { ab . \<exists> b . ab = (\<bottom>, b) \<and> b \<in> d}) (\<lambda> f . map_prod (\<lambda> _ . \<bottom>) f))) projs)"
 
 instance proof
   fix d :: "('a * 'b) set"
@@ -228,7 +238,7 @@ instance proof
            (3) "s = ''fst''" and "d = { ab . \<exists> a . ab = (a, \<bottom>)}" and "f = map_prod id (\<lambda> _ . \<bottom>)" |
            (4) "s = ''snd''" and "d = { ab . \<exists> b . ab = (\<bottom>, b)}" and "f = map_prod (\<lambda> _ . \<bottom>) id"
     using Hproj
-    by(auto simp add:prod_projs)
+    by(auto simp add:prod_projs str_app_def)
 
   then show "is_project x d (f x)"
   proof cases
@@ -340,7 +350,7 @@ next
   show "distinct (map fst (projs :: ('a * 'b) projs_t))"
     using projs_distinct'[of "(projs :: 'a projs_t)"]
           projs_distinct'[of "(projs :: 'b projs_t)"] app_inj
-    by(auto simp add:prod_projs distinct_map inj_def inj_on_def)
+    by(auto simp add:prod_projs distinct_map inj_def inj_on_def str_app_def)
 qed
 end
 (*
