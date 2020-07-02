@@ -32,8 +32,12 @@ lemma is_project_intro :
   shows "is_project a A a'" using Hin Hless Hgreatest
   by(auto simp add:is_greatest_def is_project_def)
 
+
 type_synonym 'a projs_t = "(char list * ('a) set * ('a \<Rightarrow> 'a)) list"
 
+(* idea: change this spec so that we can talk about
+   not all x, but all x in a certain subset (?)
+*)   
 class Splittable = Pordc +
   fixes projs :: "('a :: Pordc) projs_t"
   assumes projs_spec :
@@ -76,6 +80,12 @@ definition sprj' :: "char list \<Rightarrow> ('a :: Splittable \<Rightarrow> 'a)
 definition sprj :: "char list \<Rightarrow> ('a :: Splittable \<Rightarrow> 'a)" where
 "sprj x = (case sprj' x of Some x' \<Rightarrow> x')"
 
+definition sdp' :: "char list \<Rightarrow> (('a :: Splittable) set * ('a \<Rightarrow> 'a)) option" where
+"sdp' = map_of projs"
+
+definition sdp :: "char list \<Rightarrow> (('a :: Splittable) set * ('a \<Rightarrow> 'a))" where
+"sdp x = (case sdp' x of Some x' \<Rightarrow> x')"
+
 lemma projs_bot :
   fixes d :: "('a :: Splittableb) set"
   fixes f :: "'a \<Rightarrow> 'a"
@@ -101,6 +111,15 @@ lemma sdom_defined :
   shows "sdom s = d" using map_of_is_SomeI[OF projs_distinct H]
     by(auto simp add:sdom_def sdom'_def)
 
+lemma sdom'_defined :
+  fixes d :: "('a :: Splittableb) set"
+  fixes f :: "'a \<Rightarrow> 'a"
+  fixes s :: "char list"
+  assumes H : "(s, d, f) \<in> set projs"
+
+  shows "sdom' s = Some d" using map_of_is_SomeI[OF projs_distinct H]
+    by(auto simp add:sdom_def sdom'_def)
+
 lemma sprj_defined :
   fixes d :: "('a :: Splittableb) set"
   fixes f :: "'a \<Rightarrow> 'a"
@@ -108,6 +127,43 @@ lemma sprj_defined :
   assumes H : "(s, d, f) \<in> set projs"
 
   shows "sprj s = f" using map_of_is_SomeI[OF projs_distinct H]
-    by(auto simp add:sprj_def sprj'_def)
+  by(auto simp add:sprj_def sprj'_def)
 
+lemma sprj'_defined :
+  fixes d :: "('a :: Splittableb) set"
+  fixes f :: "'a \<Rightarrow> 'a"
+  fixes s :: "char list"
+  assumes H : "(s, d, f) \<in> set projs"
+
+  shows "sprj' s = Some f" using map_of_is_SomeI[OF projs_distinct H]
+  by(auto simp add:sprj_def sprj'_def)
+
+lemma sdp_defined :
+  fixes d :: "('a :: Splittableb) set"
+  fixes f :: "'a \<Rightarrow> 'a"
+  fixes s :: "char list"
+  assumes H : "(s, d, f) \<in> set projs"
+
+  shows "sdp s = (d, f)" using map_of_is_SomeI[OF projs_distinct H]
+  by(auto simp add:sdp_def sdp'_def)
+
+lemma sdp'_defined :
+  fixes d :: "('a :: Splittableb) set"
+  fixes f :: "'a \<Rightarrow> 'a"
+  fixes s :: "char list"
+  assumes H : "(s, d, f) \<in> set projs"
+
+  shows "sdp' s = Some (d, f)" using map_of_is_SomeI[OF projs_distinct H]
+  by(auto simp add:sdp_def sdp'_def)
+
+
+lemma s_name_lookup :
+  fixes s :: "char list"
+  assumes H : "s \<in> projs_names (TYPE('a :: Splittable))"
+  shows "\<exists> d f . (s, d, f) \<in> (set (projs :: 'a projs_t))"
+proof(-)
+  obtain d and f where HP: "(s, d, f) \<in> set (projs :: 'a projs_t)" using H
+    by(auto simp add:projs_names_def)
+  thus ?thesis by auto
+qed
 end

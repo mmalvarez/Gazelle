@@ -1,5 +1,7 @@
 theory Compose
   imports "../MergeableTc/Mergeable" "../MergeableTc/Pord" "../MergeableTc/Splittable"
+  "../MergeableTc/MergeableInstances"
+  "../MergeableTc/SplittableInstances"
 begin
 
 (* idea. for composition we need
@@ -10,19 +12,87 @@ begin
 
 *)
 
-(* NOTE: while we don't require the Mergeable instance here
-to have a least element, it very likely will need one to
-make the injections/projections work. Likewise, the "source" types
-for the Views will need to be ordered *)
+class PreComp = Mergeableb + Splittableb +
+  assumes projs_orth :
+    "\<And> s1 s2 .
+      s1 \<in> projs_names (TYPE('a)) \<Longrightarrow>
+      s2 \<in> projs_names (TYPE('a)) \<Longrightarrow>
+      s1 \<noteq> s2 \<Longrightarrow>
+      sdom s1 \<inter> sdom s2 = {\<bottom> :: ('a :: {Mergeableb, Splittableb})}"
 
-(* TODO: do we need ordering on domains? or can we get away with just
-   ordering on range? *)
+lemma projs_orth' :
+  fixes projs' :: "('a :: PreComp) projs_t"
+  fixes s1 s2 :: "char list"
+  assumes Hp : "projs' = projs"
+  assumes Hs1 : "s1 \<in> projs_names (TYPE('a))"
+  assumes Hs2 : "s2 \<in> projs_names (TYPE('a))"
+  assumes Hneq : "s1 \<noteq> s2"
+  shows "sdom s1 \<inter> sdom s2 = {\<bottom> :: ('a :: {PreComp})}" using 
+    projs_orth[OF Hs1 Hs2 Hneq]
+  by(auto)
 
-(* TODO: is what follows sufficient?
+(* problem: this can be Some (None) e.g. (for the option option case) *)
+instantiation option :: (PreComp) PreComp begin
+instance proof
+  fix s1 s2 :: "char list"
+  assume Hs1 : "s1 \<in> projs_names (TYPE('a option))"
+  assume Hs2 : "s2 \<in> projs_names (TYPE('a option))"
+  assume Hneq : "s1 \<noteq> s2"
+  show "sdom s1 \<inter> sdom s2 = {\<bottom> :: 'a option}"
+  proof(-)
+    obtain d1 and f1 where Hl1 : "(s1, d1, f1) \<in> set (projs :: 'a option projs_t)" 
+      using s_name_lookup[OF Hs1] by auto
+    obtain d2 and f2 where Hl2 : "(s2, d2, f2) \<in> set (projs :: 'a option projs_t)"
+      using s_name_lookup[OF Hs2] by auto
 
-*)
+    have Hsdom'1 : "sdom' s1 = Some d1" using sdom'_defined[OF Hl1] by auto
+    have Hsdom'2 : "sdom' s2 = Some d2" using sdom'_defined[OF Hl2] by auto
 
-class PreComp = Mergeableb + Splittableb
+    obtain d1' and f1' and s1' where Hd1' : "d1 = Some ` d1' \<union> {None}" and Hf1' : "f1 = map_option f1'" and Hs1' : "s1 = ''some.''@s1'" and Hprojs1' : "(s1', d1', f1') \<in> set projs" using Hl1
+      by(auto simp add: str_app_def option_projs)
+  
+    obtain d2' and f2' and s2' where Hd2' : "d2 = Some ` d2' \<union> {None}" and Hf' : "f2 = map_option f2'" and Hs2': "s2 = ''some.''@s2'" and Hprojs2' : "(s2', d2', f2') \<in> set projs" using Hl2
+      by(auto simp add: str_app_def option_projs)
+
+    have Hsdom'1' : "sdom' s1' = Some d1'" using sdom'_defined[OF Hprojs1'] by auto
+    have Hsdom'2' : "sdom' s2' = Some d2'" using sdom'_defined[OF Hprojs2'] by auto
+
+
+    have Hneq' : "s1' \<noteq> s2'" using Hs1' Hs2' Hneq by auto
+  
+    have Hname1' : "s1' \<in> projs_names (TYPE('a))" using Hprojs1' imageI[OF Hprojs1', of fst]
+      by(auto simp add:projs_names_def option_projs )
+  
+    have Hname2' : "s2' \<in> projs_names (TYPE('a))" using Hprojs1' imageI[OF Hprojs2', of fst]
+      by(auto simp add:projs_names_def option_projs )
+  
+    have Conc' : "sdom s1' \<inter> sdom s2' = {\<bottom> :: 'a}" using
+        projs_orth[OF Hname1' Hname2' Hneq'] by auto
+
+    hence Conc' : "d1' \<inter> d2' = {\<bottom> :: 'a}" using Hsdom'1' Hsdom'2' 
+      by(simp add: sdom_def)
+
+    thus ?thesis using Hd1' Hd2' Hsdom'1 Hsdom'2
+
+      apply(auto simp add: option_bot sdom_def)
+      apply(auto simp add: sdom_def sdom'_def)
+
+(* union = bsup (?)
+   intersection = project into each other *)
+fun pr_opD :: "('a :: PreComp) itself \<Rightarrow> pr_op \<Rightarrow> ('a set * ('a \<Rightarrow> 'a)) option" where
+"pr_opD _ (pr_s s) = map_of (projs :: 'a projs_t) s"
+| "pr_opD t (pr_union o1 o2) =
+   (case (pr_opD t o1) of
+      None \<Rightarrow> None
+      | Some (s1, f1) \<Rightarrow>
+        (case (pr_opD t o2) of
+          None \<Rightarrow> None
+          | Some (s2, f2) \<Rightarrow>
+              Some ({ x . \<exists> x1 x2 . x1 \<in> s1 \<and> x2 \<in> s2 \<and>
+                      x = bsup x1 x2},
+                    (\<lambda> x . bsup (f1 x) (f2 x)))))"
+| "pr_opD _ _ = None"
+
 
 (* TODO: make this n-ary instead of binary? *)
 class Comp = PreComp +

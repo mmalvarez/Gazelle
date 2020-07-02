@@ -122,8 +122,11 @@ next
   show "distinct (map fst (projs :: 'a option projs_t))"
     using projs_distinct'[of "(projs :: 'a projs_t)"] app_inj
     by(auto simp add:option_projs distinct_map inj_def inj_on_def str_app_def)
+
+
 qed
 end
+
 
 definition md_prio_map :: "('a \<Rightarrow> 'b) \<Rightarrow> ('a md_prio) \<Rightarrow> ('b md_prio)" where
 "md_prio_map f p =
@@ -219,8 +222,6 @@ definition prod_projs :
 *)
 definition prod_projs :
 "projs =
-  (''fst'', { ab . \<exists> a . ab = (a, \<bottom>)}, map_prod id (\<lambda> _ . \<bottom>)) #
-  (''snd'', { ab . \<exists> b . ab = (\<bottom>, b)}, map_prod (\<lambda> _ . \<bottom>) id) #
   (map (map_prod (\<lambda> s . ''fst.'' [@] s) (map_prod (\<lambda> d . { ab . \<exists> a . ab = (a, \<bottom>) \<and> a \<in> d}) (\<lambda> f . map_prod f (\<lambda> _ . \<bottom>)))) projs) @
   (map (map_prod (\<lambda> s . ''snd.'' [@] s) (map_prod (\<lambda> d . { ab . \<exists> b . ab = (\<bottom>, b) \<and> b \<in> d}) (\<lambda> f . map_prod (\<lambda> _ . \<bottom>) f))) projs)"
 

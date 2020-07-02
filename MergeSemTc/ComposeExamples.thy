@@ -1,4 +1,4 @@
-theory ComposeExamples imports Compose "../MergeableTc/MergeableInstances" "../MergeableTc/SplittableInstances" HOL.Lifting HOL.Lifting_Set LiftUtils
+theory ComposeExamples imports  "../MergeableTc/Mergeable" "../MergeableTc/MergeableInstances" "../MergeableTc/SplittableInstances" HOL.Lifting HOL.Lifting_Set LiftUtils
 
 begin
 
@@ -24,7 +24,8 @@ definition calc_sem :: "calc \<Rightarrow> int \<Rightarrow> int" where
      (Cadd i) \<Rightarrow> st + i
     |(Csub i) \<Rightarrow> st - i
     |(Cmul i) \<Rightarrow> st * i
-    |(Cdiv i) \<Rightarrow> divide_int_inst.divide_int st i)"
+    |(Cdiv i) \<Rightarrow> divide_int_inst.divide_int st i
+    |(Creset i) \<Rightarrow> i)"
 
 
 
@@ -35,7 +36,33 @@ datatype print =
   | Preset
 
 
-type_synonym synsem = "calc md_triv option * print md_triv option * int md_triv option md_prio * int list md_triv option"
+type_synonym state = "int md_triv option md_prio * int list md_triv option"
+
+datatype syn =
+  Sadd int
+  | Ssub int
+  | Smul int
+  | Sdiv int
+  | Sreset int
+  | Sseq
+
+definition print_trans :: "syn \<Rightarrow> print option" where
+"print_trans c = 
+  (case c of
+    Sreset _ \<Rightarrow> Some Preset
+    | Sseq \<Rightarrow> None
+    | _ \<Rightarrow> Some Pprint)"
+
+definition calc_trans :: "syn \<Rightarrow> calc option" where
+"calc_trans c =
+  (case c of
+    Sadd i \<Rightarrow> Some (Cadd i)
+    | Ssub i \<Rightarrow> Some (Csub i)
+    | Smul i \<Rightarrow> Some (Cmul i)
+    | Sdiv i \<Rightarrow> Some (Cdiv i)
+    | Sreset i \<Rightarrow> Some (Creset i)
+    | _ \<Rightarrow> None)"
+    
 
 type_synonym print_st = "(int * int list)"
 definition print_sem :: "print \<Rightarrow> print_st \<Rightarrow> print_st" where
@@ -43,30 +70,210 @@ definition print_sem :: "print \<Rightarrow> print_st \<Rightarrow> print_st" wh
   (case st of
     (sti, stl) \<Rightarrow>
       (case syn of
-         Pprint \<Rightarrow> (sti, stl @ [sti])))"
+         Pprint \<Rightarrow> (sti, stl @ [sti])
+         | Preset \<Rightarrow> (sti, [])))"
 
-term "(snd_l (fst_l (option_l (triv_l (id_l)))))"
-term "(snd_l (snd_l (fst_l (prio_l_zero (option_l (triv_l (id_l)))))))"
 
-term
-"l_map2 (snd_l (fst_l (option_l (triv_l (id_l)))))
-            (prod_l (snd_l (snd_l (fst_l (prio_l_zero (option_l (triv_l (id_l)))))))
-                    (snd_l (snd_l (snd_l (option_l (triv_l (id_l)))))))"
 
-definition print_sem_l :: "synsem \<Rightarrow> synsem \<Rightarrow> synsem" where
+(*
+definition print_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
   "print_sem_l = 
-    l_map2 (snd_l (fst_l (option_l (triv_l (id_l)))))
-            (prod_lm (snd_l (snd_l (fst_l (prio_l_zero (option_l (triv_l (id_l)))))))
-                     (snd_l (snd_l (snd_l (option_l (triv_l (id_l))))))) print_sem"
+    l_map2' (print_trans)
+            (prod_lm ((fst_l (prio_l_zero (option_l (triv_l (id_l))))))
+                     ((snd_l (option_l (triv_l (id_l)))))) print_sem"
+*)
+definition print_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
+  "print_sem_l = 
+    l_map2' (print_trans)
+            (prod_l ((prio_l_zero (option_l (triv_l (id_l)))))
+                    ((option_l (triv_l (id_l))))) print_sem"
 
-value
-  "print_sem_l (l_val (snd_l (fst_l (option_l (triv_l (id_l))))) Pprint)
-               (\<bottom>, \<bottom>, mdp 1 (Some (mdt 1)), Some (mdt []))"
+
+term "(prod_lm ((fst_l (prio_l_zero (option_l (triv_l (id_l))))))
+                     ((snd_l (option_l (triv_l (id_l))))))"
+term "(prod_l ((prio_l_zero (option_l (triv_l (id_l)))))
+                     ((option_l (triv_l (id_l)))))"
+term "(fst_l (prio_l_zero (option_l (triv_l (id_l)))))"
+term "(snd_l (option_l (triv_l (id_l))))"
+
+value "print_sem_l (Sreset 0)
+               (mdp 1 (Some (mdt 1)), Some (mdt []))"
+
+definition calc_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
+"calc_sem_l =
+  l_map2' calc_trans
+    (fst_l (prio_l_inc (option_l (triv_l (id_l))))) calc_sem"
+
+value "calc_sem_l (Sreset 0)
+(mdp 1 (Some (mdt 1)), Some (mdt []))"
+
+record ('a, 'b) langcomp =
+  Sem1 :: "'a \<Rightarrow> 'b \<Rightarrow> 'b"
+  Sem2 :: "'a \<Rightarrow> 'b \<Rightarrow> 'b"
+
+definition sup_pres ::
+  "('a \<Rightarrow> ('b :: Mergeable) \<Rightarrow> 'b) \<Rightarrow>
+   ('a \<Rightarrow> 'b \<Rightarrow> 'b) \<Rightarrow> bool" where
+"sup_pres f1 f2 =
+ (\<forall> syn :: 'a .
+   \<forall> st1 st2 :: 'b .
+     has_sup {st1, st2} \<longrightarrow>
+     has_sup {f1 syn st1, f2 syn st2})"
+
+definition sup_pres' ::
+  "(('a :: Mergeable) \<Rightarrow> ('b :: Mergeable) \<Rightarrow> 'b) \<Rightarrow>
+   ('a \<Rightarrow> 'b \<Rightarrow> 'b) \<Rightarrow> bool" where
+"sup_pres' f1 f2 =
+ (\<forall> syn1 syn2 :: 'a .
+   \<forall> st1 st2 :: 'b .
+     has_sup {st1, st2} \<longrightarrow>
+     has_sup {syn1, syn2} \<longrightarrow>
+     has_sup {f1 syn1 st1, f2 syn2 st2})"
+
+(* LIn1 vs LIn2 *)
+definition sup_l ::
+  "('a1, ('b :: Mergeable)) lifting \<Rightarrow>
+   ('a2, ('b :: Mergeable)) lifting \<Rightarrow>
+   bool" where
+"sup_l l1 l2 =
+  (\<forall> a1 a2 b .
+    has_sup {LIn1 l1 a1, LIn1 l2 a2} \<and>
+    has_sup {LIn2 l1 a1 b, LIn2 l2 a2 b})"
+
+lemma sup_l_intros :
+  fixes l1 :: "('a1, 'b :: Mergeable) lifting"
+  fixes l2 :: "('a2, 'b :: Mergeable) lifting"
+  assumes H1 : "\<And> a1 a2 . has_sup {LIn1 l1 a1, LIn1 l2 a2}"
+  assumes H2 : "\<And> a1 a2 b . has_sup {LIn2 l1 a1 b, LIn2 l2 a2 b}"
+  shows "sup_l l1 l2" using H1 H2
+  by(auto simp add:sup_l_def)
+
+lemma sup_l_unfold1 :
+  fixes l1 :: "('a1, 'b :: Mergeable) lifting"
+  fixes l2 :: "('a2, 'b :: Mergeable) lifting"
+  assumes H : "sup_l l1 l2"
+  shows "has_sup {LIn1 l1 a1, LIn1 l2 a2}"
+  using H   by(auto simp add:sup_l_def)
+
+lemma sup_l_unfold2 :
+  fixes l1 :: "('a1, 'b :: Mergeable) lifting"
+  fixes l2 :: "('a2, 'b :: Mergeable) lifting"
+  assumes H : "sup_l l1 l2"
+  shows "has_sup {LIn2 l1 a1 b, LIn2 l2 a2 b}"
+  using H by(auto simp add:sup_l_def)
 
 
-typedef synsem_t = "UNIV :: synsem set"
-  by auto
+lemma sup_l_prod_fst :
+  assumes H : "sup_l l1 l1'"
+  shows "sup_l (prod_l l1 l2) (fst_l l1')"
+proof(rule sup_l_intros)
+  fix a1 :: "('a \<times> 'd)" 
+  fix a2 :: "'c"
+  obtain x1 and x2 where Hx : "a1 = (x1, x2)" by (cases a1; auto)
+  obtain ub where Hub : "is_sup {LIn1 l1 x1, LIn1 l1' a2} ub"
+      using sup_l_unfold1[OF H] Hx
+      by(auto simp add:prod_l_def fst_l_def has_sup_def split:prod.splits)
+  
+    have "is_sup {LIn1 (prod_l l1 l2) a1, LIn1 (fst_l l1') a2} (ub, x2)" using sup_l_unfold1[OF H]
+    apply(auto simp add:prod_l_def fst_l_def split:prod.splits)
 
+      apply(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def
+          prod_pleq prod_l_def fst_l_def bot_spec split:prod.splits)
+
+  have "LIn1 (fst_l l1') a2 <[ LIn1 (prod_l l1 l2) a1" using sup_l_unfold1[OF H]
+      apply(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def
+          prod_pleq prod_l_def fst_l_def bot_spec split:prod.splits)
+
+  have "is_ub {LIn1 (prod_l l1 l2) a1, LIn1 (fst_l l1) a2} (LIn1 (prod_l l1 l2) a1)"
+  proof(rule is_ub_intro)
+  show "has_sup {LIn1 (prod_l l1 l2) a1, LIn1 (fst_l l1) a2}" using sup_l_unfold1[OF H]
+    apply(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def
+          prod_pleq prod_l_def fst_l_def bot_spec split:prod.splits)
+
+(* TODO: could generalize this to talk about syntaxes having supremum *)
+definition lc_valid :: "('a, 'b :: Mergeable) langcomp \<Rightarrow> bool" where
+"lc_valid l =
+  sup_pres (Sem1 l) (Sem2 l)"
+
+definition lc_valid' :: "('a :: Mergeable, 'b :: Mergeable) langcomp \<Rightarrow> bool" where
+"lc_valid' l =
+  sup_pres' (Sem1 l) (Sem2 l)"
+
+
+lemma lc_valid_intro :
+  fixes l :: "('a, 'b :: Mergeable) langcomp"
+  assumes H: "\<And> syn st1 st2 . has_sup {st1, st2} \<Longrightarrow> has_sup {Sem1 l syn st1, Sem2 l syn st2}"
+  shows "lc_valid l" using H
+  by(auto simp add:lc_valid_def)
+
+lemma lc_valid_unfold :
+  fixes l :: "('a, 'b :: Mergeable) langcomp"
+  fixes syn :: 'a
+  fixes st1 st2 :: 'b
+  assumes H : "lc_valid l"
+  assumes Hsup : "has_sup {st1, st2}"
+  shows "has_sup {Sem1 l syn st1, Sem2 l syn st2}"
+  using H Hsup
+  by(auto simp add:lc_valid_def)
+
+definition pcomp :: "('a, 'b :: Mergeable) langcomp \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> 'b)" where
+"pcomp l a b =
+  [^ [^ Sem1 l a b, Sem2 l a b ^], b ^]"
+
+definition pcomp' :: "('a, 'b :: Mergeable) langcomp \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> 'b)" where
+"pcomp' l a b =
+  [^ [^ Sem2 l a b, Sem1 l a b ^], b ^]"
+
+lemma lc_valid_comp :
+  fixes l :: "('a, 'b :: Mergeable) langcomp"
+  assumes Hv : "lc_valid l"
+  shows "pcomp l = pcomp' l"
+proof(-)
+  have Conc' : "\<And> (b :: 'b ::Mergeable) (a :: 'a) . pcomp l a b = pcomp' l a b"
+  proof(-)
+    fix a :: 'a
+    fix b :: "'b :: Mergeable"
+    have "is_sup {b} b"
+      using leq_refl by(auto simp add:is_sup_def has_sup_def is_least_def is_ub_def)
+    hence 0 : "has_sup {b, b}" by (auto simp add:has_sup_def)
+    thus  "pcomp l a b = pcomp' l a b"
+      using bsup_comm[OF lc_valid_unfold[OF Hv 0]]
+      by(simp add:pcomp_def pcomp'_def)
+  qed
+  
+  thus ?thesis
+    by auto
+qed
+    
+
+definition example_lc :: "(syn, state) langcomp" where
+"example_lc =
+  \<lparr> Sem1 = calc_sem_l
+  , Sem2 = print_sem_l \<rparr>"
+
+value "pcomp example_lc (Smul 9) (mdp 3 (Some (mdt 1)), Some (mdt []))"
+value "pcomp' example_lc (Smul 2) (mdp 1 (Some (mdt 1)), Some (mdt []))"
+
+definition lift_pres_sup ::
+  "('a, 'b :: Pord) lifting \<Rightarrow> bool"
+  where
+  "lift_pres l =
+    
+
+(* need lemmas to help us talk about sup's with lifting
+   the main thing here is priority guaranteeing existence of
+   sup *)
+lemma ex_lc_valid :
+  "lc_valid example_lc"
+proof(rule lc_valid_intro)
+  fix syn :: syn
+  fix st1 st2 :: state
+  assume H : "has_sup {st1, st2}"
+  show "has_sup {Sem1 example_lc syn st1, Sem2 example_lc syn st2}" using H
+    apply(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def 
+          example_lc_def)
+
+(*
 setup_lifting type_definition_synsem_t
 
 lift_definition print_sem_l_t :: "synsem_t \<Rightarrow> synsem_t \<Rightarrow> synsem_t" is print_sem_l
@@ -188,7 +395,7 @@ next
     done
 qed
 end
-
+*)
 
 (*
 definition sem_lift_triv_prod1 :: "(('a * 'b) \<Rightarrow> ('a * 'b)) \<Rightarrow>

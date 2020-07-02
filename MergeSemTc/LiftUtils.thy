@@ -1,4 +1,4 @@
-theory LiftUtils imports Compose "../MergeableTc/MergeableInstances" 
+theory LiftUtils imports  "../MergeableTc/MergeableInstances" 
 
 begin
 
@@ -6,7 +6,9 @@ begin
    be able to compose we need 1 and 2-argument versions
    of LIn. This feels ugly but I will try to revisit this
    later if I have time. *)
-  
+
+type_synonym ('a, 'b) lifting' = "('b \<Rightarrow> 'a option)"
+
 record ('a, 'b) lifting =
   LIn1 :: "('a \<Rightarrow> 'b)"
   LIn2 :: "('a \<Rightarrow> 'b \<Rightarrow> 'b)"
@@ -19,6 +21,10 @@ definition id_l ::
   , LIn2 = (\<lambda> x y . id x)
   , LOut = Some\<rparr>" 
 
+definition id_l' ::
+  "('a, 'a) lifting'" where
+  "id_l' = Some"
+
 
 definition triv_l ::
   "('a, 'b) lifting \<Rightarrow> ('a, 'b md_triv) lifting" where
@@ -27,6 +33,10 @@ definition triv_l ::
   , LIn2 = (\<lambda> a b . (case b of (mdt b') \<Rightarrow> (mdt ( (LIn2 t a b')))))
   , LOut = (case_md_triv (LOut t))\<rparr>"
 
+definition triv_l' ::
+  "('a, 'b) lifting' \<Rightarrow> ('a, 'b md_triv) lifting'" where
+"triv_l' t' =
+  (case_md_triv t')"
 
 definition option_l ::
   "('a, 'b) lifting \<Rightarrow>
@@ -37,6 +47,11 @@ definition option_l ::
                     | Some b' \<Rightarrow> Some (LIn2 t a b')))
   , LOut = case_option None (LOut t) \<rparr>"
 
+definition option_l' ::
+  "('a, 'b) lifting' \<Rightarrow>
+   ('a, 'b option) lifting'" where
+"option_l' t =
+  case_option None t "
 
 definition prio_l ::
   "nat \<Rightarrow>
@@ -50,6 +65,13 @@ definition prio_l ::
   , LOut =
       (\<lambda> p . (case p of
               mdp m b \<Rightarrow> LOut t b))\<rparr>"
+
+definition prio_l' ::
+  "('a, 'b) lifting' \<Rightarrow>
+   ('a, 'b md_prio) lifting'" where
+"prio_l' t =
+  (\<lambda> p . (case p of
+              mdp m b \<Rightarrow> t b))"
 
 definition prio_l_keep :: "('a, 'b) lifting \<Rightarrow> ('a, 'b md_prio) lifting" where
 "prio_l_keep =
@@ -83,15 +105,26 @@ definition fst_l ::
                       (b1, b2) \<Rightarrow> ((LIn2 t a b1), \<bottom>)))
   , LOut = (\<lambda> x . (LOut t (fst x))) \<rparr>"
 
-
 definition snd_l ::
   "('a, 'b2) lifting \<Rightarrow>
-   ('a, ('b1 :: Pordb) * 'b2) lifting" where
+   ('a, ('b1 :: Pordb) * ('b2)) lifting" where
 "snd_l t =
   \<lparr> LIn1 = (\<lambda> x . (\<bottom>, LIn1 t x))
   , LIn2 = (\<lambda> a b . (case b of
                       (b1, b2) \<Rightarrow> (\<bottom>, (LIn2 t a b2))))
   , LOut = (\<lambda> x . (LOut t (snd x))) \<rparr>"
+
+definition fst_l' ::
+  "('a, 'b1) lifting' \<Rightarrow>
+   ('a, 'b1 * 'b2) lifting'" where
+"fst_l' t =
+  (\<lambda> x . t (fst x))"
+
+definition snd_l' ::
+  "('a, 'b2) lifting' \<Rightarrow>
+   ('a, 'b1 * 'b2) lifting'" where
+"snd_l' t =
+  (\<lambda> x . (t (snd x)))"
 
 (* unclear to me how useful this is *)
 definition prod_l ::
@@ -113,6 +146,20 @@ definition prod_l ::
                   (case (LOut t2 x2) of
                     None \<Rightarrow> None
                     | Some x2' \<Rightarrow> Some (x1', x2'))))) \<rparr>"
+
+definition prod_l' ::
+  "('a1, 'b1) lifting' \<Rightarrow>
+   ('a2, 'b2) lifting' \<Rightarrow>
+   ('a1 * 'a2, 'b1 * 'b2) lifting'" where
+"prod_l' t1 t2 =
+  (\<lambda> x . (case x of (x1, x2) \<Rightarrow>
+              (case (t1 x1) of
+                None \<Rightarrow> None
+                | Some x1' \<Rightarrow>
+                  (case (t2 x2) of
+                    None \<Rightarrow> None
+                    | Some x2' \<Rightarrow> Some (x1', x2')))))"
+
 
 (* this biases toward the first component. *)
 definition prod_lm ::
@@ -144,10 +191,10 @@ definition l_map ::
       (LIn2 l) (sem b') b)"
 
 definition l_map2 ::
-  "('a1, 'b) lifting \<Rightarrow>
-   ('a2, 'b) lifting \<Rightarrow>
+  "('a1, 'b1) lifting \<Rightarrow>
+   ('a2, 'b2) lifting \<Rightarrow>
    ('a1 \<Rightarrow> 'a2 \<Rightarrow> 'a2) \<Rightarrow>
-   ('b \<Rightarrow> 'b \<Rightarrow> 'b)" where
+   ('b1 \<Rightarrow> 'b2 \<Rightarrow> 'b2)" where
 "l_map2 l1 l2 sem syn st =
   (case (LOut l1) syn of
     None \<Rightarrow> st
@@ -156,12 +203,33 @@ definition l_map2 ::
                     | Some st' \<Rightarrow>
                       (LIn2 l2 (sem syn' st') st)))"
 
+definition l_map2' ::
+  "('a1, 'b1) lifting' \<Rightarrow>
+   ('a2, 'b2) lifting \<Rightarrow>
+   ('a1 \<Rightarrow> 'a2 \<Rightarrow> 'a2) \<Rightarrow>
+   ('b1 \<Rightarrow> 'b2 \<Rightarrow> 'b2)" where
+"l_map2' l1 l2 sem syn st =
+  (case l1 syn of
+    None \<Rightarrow> st
+    | Some syn' \<Rightarrow> (case (LOut l2) st of
+                    None \<Rightarrow> st
+                    | Some st' \<Rightarrow>
+                      (LIn2 l2 (sem syn' st') st)))"
+
+
 (* is False the right default here? *)
 definition l_pred :: "('a, 'b) lifting \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('b \<Rightarrow> bool)" where
 "l_pred t P =
   (\<lambda> b . (case LOut t b of
           None \<Rightarrow> False
           | Some a \<Rightarrow> P a))"
+
+definition l_pred' :: "('a, 'b) lifting' \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('b \<Rightarrow> bool)" where
+"l_pred' t P =
+  (\<lambda> b . (case t b of
+          None \<Rightarrow> False
+          | Some a \<Rightarrow> P a))"
+
 
 (* we also want 2 notions of lifting preds over functions
    (1 for semantics only; 1 for syntax) *)
@@ -178,13 +246,25 @@ definition l_pred_step ::
                     | Some st2' \<Rightarrow>
                       (P st1' st2')))"
 
+definition l_pred_step' ::
+  "('a, 'b) lifting' \<Rightarrow>
+   ('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow>
+   ('b \<Rightarrow> 'b \<Rightarrow> bool)" where
+"l_pred_step' l P st1 st2 =
+  (case l st1 of
+    None \<Rightarrow> False
+    | Some st1' \<Rightarrow> (case l st2 of
+                    None \<Rightarrow> False
+                    | Some st2' \<Rightarrow>
+                      (P st1' st2')))"
+
 (* Is False the right default for "couldn't find syntax"?
    In this case I think so... *)
 definition l_pred_step2 ::
-  "('a1, 'b) lifting \<Rightarrow>
-   ('a2, 'b) lifting \<Rightarrow>
+  "('a1, 'b1) lifting \<Rightarrow>
+   ('a2, 'b2) lifting \<Rightarrow>
    ('a1 \<Rightarrow> 'a2 \<Rightarrow> 'a2 \<Rightarrow> bool) \<Rightarrow>
-   ('b \<Rightarrow> 'b \<Rightarrow> 'b \<Rightarrow> bool)" where
+   ('b1 \<Rightarrow> 'b2 \<Rightarrow> 'b2 \<Rightarrow> bool)" where
 "l_pred_step2 l1 l2 P syn st1 st2 =
   (case (LOut l1) syn of
     None \<Rightarrow> False
@@ -195,6 +275,45 @@ definition l_pred_step2 ::
             (case (LOut l2) st2 of
               None \<Rightarrow> False
               | Some st2' \<Rightarrow> P syn' st1' st2')))"
+
+definition l_pred_step2' ::
+  "('a1, 'b1) lifting' \<Rightarrow>
+   ('a2, 'b2) lifting \<Rightarrow>
+   ('a1 \<Rightarrow> 'a2 \<Rightarrow> 'a2 \<Rightarrow> bool) \<Rightarrow>
+   ('b1 \<Rightarrow> 'b2 \<Rightarrow> 'b2 \<Rightarrow> bool)" where
+"l_pred_step2' l1 l2 P syn st1 st2 =
+  (case l1 syn of
+    None \<Rightarrow> False
+    | Some syn' \<Rightarrow>
+       (case (LOut l2) st1 of
+          None \<Rightarrow> False
+          | Some st1' \<Rightarrow>
+            (case (LOut l2) st2 of
+              None \<Rightarrow> False
+              | Some st2' \<Rightarrow> P syn' st1' st2')))"
+
+(* probably less useful *)
+definition l_pred_step2'' ::
+  "('a1, 'b1) lifting' \<Rightarrow>
+   ('a2, 'b2) lifting' \<Rightarrow>
+   ('a1 \<Rightarrow> 'a2 \<Rightarrow> 'a2 \<Rightarrow> bool) \<Rightarrow>
+   ('b1 \<Rightarrow> 'b2 \<Rightarrow> 'b2 \<Rightarrow> bool)" where
+"l_pred_step2'' l1 l2 P syn st1 st2 =
+  (case l1 syn of
+    None \<Rightarrow> False
+    | Some syn' \<Rightarrow>
+       (case l2 st1 of
+          None \<Rightarrow> False
+          | Some st1' \<Rightarrow>
+            (case l2 st2 of
+              None \<Rightarrow> False
+              | Some st2' \<Rightarrow> P syn' st1' st2')))"
+
+
+definition l_val ::
+  "('a, 'b) lifting \<Rightarrow>
+   'a \<Rightarrow> 'b" where
+"l_val l a = LIn1 l a"
 
 (* I am not sure if this one is useful. *)
 (*
@@ -256,6 +375,16 @@ lemma pred_lift2 :
            lifting_valid_unfold1[OF Hv2] lifting_valid_unfold2[OF Hv2]
   by(cases l1; cases l2; auto simp add:l_pred_step2_def l_map2_def split:option.splits)
 
+(* problem: with our syntax thing we can't inject back
+   we need some kind of way to solve this *)
+
+lemma pred_lift2' :
+  assumes Hv : "lifting_valid l2"
+  assumes Hout : "l1 x1' = Some x1"
+  assumes HP : "P x1 x2 (f x1 x2)"
+  shows "l_pred_step2' l1 l2 P (x1') (LIn2 l2 x2 y2) (l_map2' l1 l2 f (x1') (LIn2 l2 x2 y2))"
+  using HP Hout lifting_valid_unfold1[OF Hv] lifting_valid_unfold2[OF Hv]
+  by(cases l2; auto simp add:l_pred_step2'_def l_map2'_def split:option.splits)
 
 lemma id_l_valid : "lifting_valid (id_l)"
   by (rule lifting_valid_intro; auto simp add:id_l_def)
@@ -335,5 +464,22 @@ next
     using lifting_valid_unfold2[OF H] by(auto simp add:snd_l_def split:prod.splits)
 qed
 
-
+lemma prod_l_valid :
+  fixes l1 :: "('a1, 'b1) lifting"
+  fixes l2 :: "('a2, 'b2) lifting"
+  assumes H1 : "lifting_valid l1"
+  assumes H2 : "lifting_valid l2"
+  shows "lifting_valid (prod_l l1 l2)"
+proof(rule lifting_valid_intro)
+  fix a :: "'a1 * 'a2"
+  show "LOut (prod_l l1 l2) (LIn1 (prod_l l1 l2) a) = Some a"
+    using lifting_valid_unfold1[OF H1, of "fst a"] lifting_valid_unfold1[OF H2, of "snd a"]
+    by(auto simp add:prod_l_def split:prod.splits)
+next
+  fix a :: "'a1 * 'a2"
+  fix b :: "'b1 * 'b2"
+  show "LOut (prod_l l1 l2) (LIn2 (prod_l l1 l2) a b) = Some a"
+    using lifting_valid_unfold2[OF H1] lifting_valid_unfold2[OF H2]
+    by(auto simp add:prod_l_def split:prod.splits)
+qed
 end
