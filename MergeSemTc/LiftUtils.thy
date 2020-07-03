@@ -334,6 +334,10 @@ definition l_pred_sem ::
   this last one doesn't really work - see for instance prio
 *)
 
+(* for things with \<bottom>
+   we could also have LIn1 l a = LIn2 l a \<bottom>
+   this may become useful/necessary at some point
+*)
 definition lifting_valid ::
   "('a, 'b) lifting \<Rightarrow> bool" where
 "lifting_valid l =
