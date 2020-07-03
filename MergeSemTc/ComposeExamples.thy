@@ -14,6 +14,7 @@ datatype calc =
   | Cmul int
   | Cdiv int
   | Creset int
+  | Cskip
 
 (*
 datatype calc_st = CSi int
@@ -25,7 +26,8 @@ definition calc_sem :: "calc \<Rightarrow> int \<Rightarrow> int" where
     |(Csub i) \<Rightarrow> st - i
     |(Cmul i) \<Rightarrow> st * i
     |(Cdiv i) \<Rightarrow> divide_int_inst.divide_int st i
-    |(Creset i) \<Rightarrow> i)"
+    |(Creset i) \<Rightarrow> i
+    | Cskip \<Rightarrow> st)"
 
 
 
@@ -34,6 +36,7 @@ definition calc_sem :: "calc \<Rightarrow> int \<Rightarrow> int" where
 datatype print =
   Pprint
   | Preset
+  | Pskip
 
 
 type_synonym state = "int md_triv option md_prio * int list md_triv option"
@@ -46,22 +49,22 @@ datatype syn =
   | Sreset int
   | Sseq
 
-definition print_trans :: "syn \<Rightarrow> print option" where
+definition print_trans :: "syn \<Rightarrow> print" where
 "print_trans c = 
   (case c of
-    Sreset _ \<Rightarrow> Some Preset
-    | Sseq \<Rightarrow> None
-    | _ \<Rightarrow> Some Pprint)"
+    Sreset _ \<Rightarrow> Preset
+    | Sseq \<Rightarrow> Pskip
+    | _ \<Rightarrow> Pprint)"
 
-definition calc_trans :: "syn \<Rightarrow> calc option" where
+definition calc_trans :: "syn \<Rightarrow> calc" where
 "calc_trans c =
   (case c of
-    Sadd i \<Rightarrow> Some (Cadd i)
-    | Ssub i \<Rightarrow> Some (Csub i)
-    | Smul i \<Rightarrow> Some (Cmul i)
-    | Sdiv i \<Rightarrow> Some (Cdiv i)
-    | Sreset i \<Rightarrow> Some (Creset i)
-    | _ \<Rightarrow> None)"
+    Sadd i \<Rightarrow> (Cadd i)
+    | Ssub i \<Rightarrow> (Csub i)
+    | Smul i \<Rightarrow> (Cmul i)
+    | Sdiv i \<Rightarrow> (Cdiv i)
+    | Sreset i \<Rightarrow> (Creset i)
+    | _ \<Rightarrow> Cskip)"
     
 
 type_synonym print_st = "(int * int list)"
@@ -152,15 +155,15 @@ definition sup_l ::
    ('a2, ('b :: Mergeable)) lifting \<Rightarrow>
    bool" where
 "sup_l l1 l2 =
-  (\<forall> a1 a2 b .
+  (\<forall> a1 a2 b1 b2 .
     has_sup {LIn1 l1 a1, LIn1 l2 a2} \<and>
-    has_sup {LIn2 l1 a1 b, LIn2 l2 a2 b})"
+    (has_sup {b1, b2} \<longrightarrow> has_sup {LIn2 l1 a1 b1, LIn2 l2 a2 b2}))"
 
-lemma sup_l_intros :
+lemma sup_l_intro :
   fixes l1 :: "('a1, 'b :: Mergeable) lifting"
   fixes l2 :: "('a2, 'b :: Mergeable) lifting"
   assumes H1 : "\<And> a1 a2 . has_sup {LIn1 l1 a1, LIn1 l2 a2}"
-  assumes H2 : "\<And> a1 a2 b . has_sup {LIn2 l1 a1 b, LIn2 l2 a2 b}"
+  assumes H2 : "\<And> a1 a2 b1 b2 . has_sup {b1, b2} \<Longrightarrow> has_sup {LIn2 l1 a1 b1, LIn2 l2 a2 b2}"
   shows "sup_l l1 l2" using H1 H2
   by(auto simp add:sup_l_def)
 
@@ -175,8 +178,10 @@ lemma sup_l_unfold2 :
   fixes l1 :: "('a1, 'b :: Mergeable) lifting"
   fixes l2 :: "('a2, 'b :: Mergeable) lifting"
   assumes H : "sup_l l1 l2"
-  shows "has_sup {LIn2 l1 a1 b, LIn2 l2 a2 b}"
-  using H by(auto simp add:sup_l_def)
+  assumes Hb : "has_sup {b1, b2}"
+  shows "has_sup {LIn2 l1 a1 b1, LIn2 l2 a2 b2}"
+    using H Hb
+  by(auto simp add:sup_l_def)
 
 
 lemma sup_l_prod_fst :
@@ -185,7 +190,7 @@ lemma sup_l_prod_fst :
   fixes l2  :: "('a3, 'b2 :: Mergeableb) lifting"
   assumes H : "sup_l l1 l1'"
   shows "sup_l (prod_l l1 l2) (fst_l l1')"
-proof(rule sup_l_intros)
+proof(rule sup_l_intro)
   fix a1 :: "('a1 \<times> 'a3)" 
   fix a2 :: "'a2"
   obtain x1 and x2 where Hx : "a1 = (x1, x2)" by (cases a1; auto)
@@ -200,24 +205,30 @@ proof(rule sup_l_intros)
 next
   fix a1::"'a1 \<times> 'a3"
   fix a2::"'a2"
-  fix b:: "'b1 \<times> 'b2"
+  fix b1 b2:: "'b1 \<times> 'b2"
+  assume Hb : "has_sup {b1, b2}"
   obtain x1 and x2 where Hx : "a1 = (x1, x2)" by (cases a1; auto)
-  obtain y1 and y2 where Hy : "b = (y1, y2)" by (cases b; auto)
-  obtain ub where Hub : "is_sup {LIn2 l1 x1 y1, LIn2 l1' a2 y1} ub"
-      using sup_l_unfold2[OF H, of x1 y1] Hx
+  obtain y1 and y2 where Hy : "b1 = (y1, y2)" by (cases b1; auto)
+  obtain z1 and z2 where Hz : "b2 = (z1, z2)" by (cases b2; auto)
+
+  have Hub1 : "has_sup {y1, z1}" using Hy Hz Hb
+    by(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def prod_pleq)
+
+  obtain ub where Hub : "is_sup {LIn2 l1 x1 y1, LIn2 l1' a2 z1} ub"
+      using sup_l_unfold2[OF H Hub1] Hx Hy Hz
       by(auto simp add:prod_l_def fst_l_def has_sup_def split:prod.splits)
 
-  have "is_sup {LIn2 (prod_l l1 l2) a1 b, LIn2 (fst_l l1') a2 b} (ub, LIn2 l2 x2 y2)" using  Hub Hx Hy
+  have "is_sup {LIn2 (prod_l l1 l2) a1 b1, LIn2 (fst_l l1') a2 b2} (ub, LIn2 l2 x2 y2)" using  Hub Hx Hy Hz
     by(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def
         prod_pleq prod_l_def fst_l_def bot_spec leq_refl split:prod.splits)
-  thus "has_sup {LIn2 (prod_l l1 l2) a1 b, LIn2 (fst_l l1') a2 b}" by (auto simp add:has_sup_def)
+  thus "has_sup {LIn2 (prod_l l1 l2) a1 b1, LIn2 (fst_l l1') a2 b2}" by (auto simp add:has_sup_def)
 qed
 
 lemma sup_l_inc_zero :
   fixes l1 :: "('a1, 'b :: Mergeableb) lifting"
   fixes l2:: "('a2, 'b :: Mergeableb) lifting"
   shows "sup_l (prio_l_zero l1) (prio_l_inc l2)"
-proof(rule sup_l_intros)
+proof(rule sup_l_intro)
   fix a1 :: "'a1"
   fix a2 :: "'a2"
 
@@ -239,21 +250,24 @@ proof(rule sup_l_intros)
 next
   fix a1 :: "'a1"
   fix a2 :: "'a2"
-  fix b :: "'b md_prio"
+  fix b1 :: "'b md_prio"
+  fix b2 :: "'b md_prio"
+  assume Hsup : "has_sup {b1, b2}"
 
-  have "is_ub {LIn2 (prio_l_zero l1) a1 b, LIn2 (prio_l_inc l2) a2 b} (LIn2 (prio_l_inc l2) a2 b)"
+
+  have "is_ub {LIn2 (prio_l_zero l1) a1 b1, LIn2 (prio_l_inc l2) a2 b2} (LIn2 (prio_l_inc l2) a2 b2)"
     by(auto simp add:prio_l_zero_def prio_l_const_def prio_l_def prio_l_inc_def
             leq_refl
             has_sup_def is_sup_def is_least_def is_ub_def prio_pleq bot_spec split:md_prio.splits)
 
-  hence 0 : "has_ub  {LIn2 (prio_l_zero l1) a1 b, LIn2 (prio_l_inc l2) a2 b}"
+  hence 0 : "has_ub  {LIn2 (prio_l_zero l1) a1 b1, LIn2 (prio_l_inc l2) a2 b2}"
     by(auto simp add:has_ub_def)
 
   obtain lub where
-    "is_sup {LIn2 (prio_l_zero l1) a1 b, LIn2 (prio_l_inc l2) a2 b} lub"
+    "is_sup {LIn2 (prio_l_zero l1) a1 b1, LIn2 (prio_l_inc l2) a2 b2} lub"
     using complete2[OF 0] by(auto simp add:has_sup_def)
 
-  thus "has_sup {LIn2 (prio_l_zero l1) a1 b, LIn2 (prio_l_inc l2) a2 b}"
+  thus "has_sup {LIn2 (prio_l_zero l1) a1 b1, LIn2 (prio_l_inc l2) a2 b2}"
     by(auto simp add:has_sup_def)
 qed
 
@@ -285,13 +299,15 @@ lemma lc_valid_unfold :
   by(auto simp add:lc_valid_def sup_pres_def)
 
 
-(* this only works if syn_trans are both Some
-   or are both None *)
+(* new issue: we need to deal with the disconnect between
+- sup_l: assumes same initial state
+- sup_pres: doesn't
+*)
 lemma sup_l_pres :
   fixes l1 :: "('a1, 'b :: Mergeable) lifting"
   fixes l2 :: "('a2, 'b :: Mergeable) lifting"
-  fixes syn_trans1 :: "'syn \<Rightarrow> 'syn1 option"
-  fixes syn_trans2 :: "'syn \<Rightarrow> 'syn2 option"
+  fixes syn_trans1 :: "'syn \<Rightarrow> 'syn1"
+  fixes syn_trans2 :: "'syn \<Rightarrow> 'syn2"
   fixes f1 :: "'syn1 \<Rightarrow> 'a1 \<Rightarrow> 'a1"
   fixes f2 :: "'syn2 \<Rightarrow> 'a2 \<Rightarrow> 'a2"
   assumes Hsl : "sup_l l1 l2"
@@ -305,7 +321,8 @@ proof(rule sup_pres_intro)
   assume Hsup : "has_sup {st1, st2}"
   show "has_sup {l_map2' syn_trans1 l1 f1 syn st1, l_map2' syn_trans2 l2 f2 syn st2}"
     using Hsup sup_l_unfold2[OF Hsl]
-    apply(auto simp add: l_map2'_def)
+    by(auto simp add: l_map2'_def split:option.splits)
+qed
 
 definition pcomp :: "('a, 'b :: Mergeable) langcomp \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> 'b)" where
 "pcomp l a b =
@@ -359,18 +376,57 @@ shows "l_map2' syn_trans l1 f1
 - figure otu an ergonomic way to apply this to our semantics
 - make sure syntax translation doesn't cause headaches *)
 
+lemma lc_valid_lift :
+  assumes Hlc : "lc = \<lparr> Sem1 = (l_map2' syn_trans1 l1 f1)
+                      , Sem2 = (l_map2' syn_trans2 l2 f2) \<rparr>" 
+  assumes Hsl : "sup_l l1 l2"
+  shows "lc_valid lc"
+proof(-)
+  have "sup_pres
+    (l_map2' syn_trans1 l1 f1)
+    (l_map2' syn_trans2 l2 f2)" using sup_l_pres[OF Hsl] by auto
+
+  thus "lc_valid lc" by(auto simp add:Hlc lc_valid_def)
+qed
+
+
+lemma sup_l_comm :
+  fixes l1  :: "('a1, 'b :: Mergeableb) lifting"
+  fixes l2 :: "('a2, 'b :: Mergeableb) lifting"
+  assumes H : "sup_l l1 l2"
+  shows "sup_l l2 l1"
+proof(rule sup_l_intro)
+  fix a2 :: 'a2
+  fix a1 :: "'a1"
+  have "{LIn1 l2 a2, LIn1 l1 a1} = {LIn1 l1 a1, LIn1 l2 a2}" by auto
+  thus "has_sup {LIn1 l2 a2, LIn1 l1 a1}" using sup_l_unfold1[OF H, of a1 a2] by auto
+next
+  fix a2 :: 'a2
+  fix a1 :: 'a1
+  fix b1 b2 :: 'b
+  assume Hs : "has_sup {b1, b2}"
+
+  have "{b2, b1} = {b1, b2}" by auto
+  hence Hs' : "has_sup {b2, b1}" using Hs by auto
+  have "{LIn2 l1 a1 b2, LIn2 l2 a2 b1} = {LIn2 l2 a2 b1, LIn2 l1 a1 b2}" by auto
+
+  thus "has_sup {LIn2 l2 a2 b1, LIn2 l1 a1 b2}"
+    using sup_l_unfold2[OF H Hs', of a1 a2] by auto
+qed
+
 (* need lemmas to help us talk about sup's with lifting
    the main thing here is priority guaranteeing existence of
    sup *)
 lemma ex_lc_valid :
-  "lc_valid example_lc"
-proof(rule lc_valid_intro)
-  fix syn :: syn
-  fix st1 st2 :: state
-  assume H : "has_sup {st1, st2}"
-  show "has_sup {Sem1 example_lc syn st1, Sem2 example_lc syn st2}" using H
-    apply(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def 
-          example_lc_def)
+  "lc_valid example_lc" 
+  apply(rule lc_valid_lift)
+   apply(simp add: example_lc_def calc_sem_l_def print_sem_l_def)
+  apply(rule sup_l_comm)
+  apply(rule sup_l_prod_fst)
+  apply(rule sup_l_inc_zero)
+  done
+  
+
 
 (*
 setup_lifting type_definition_synsem_t
