@@ -4,6 +4,11 @@ begin
 datatype ('x) gensyn =
   G "'x" "(('x) gensyn) list"
 
+type_synonym gensyn_skel = "(unit) gensyn"
+
+type_synonym param_gensyn = "(_) gensyn"
+
+
 declare gensyn.splits [split]
 
 fun gs_map :: "('x \<Rightarrow> 'y) \<Rightarrow> 'x gensyn \<Rightarrow> 'y gensyn" where
@@ -18,6 +23,15 @@ fun gs_map_opt :: "('x \<Rightarrow> 'y option) \<Rightarrow> 'x gensyn \<Righta
       None \<Rightarrow> None
       | Some fl \<Rightarrow> Some (G fx fl)))"
 
+type_synonym childpath = "nat list"
+
+datatype ('x) gs_result =
+  GRPath childpath
+  | GRCrash
+  | GRDone
+  | GRUnhandled
+  | GRSync "'x gs_result"
+  | GROther 'x
 
 (* for consistency with other syntax declarations *)
 (*

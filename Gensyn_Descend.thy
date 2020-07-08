@@ -1,7 +1,6 @@
 theory Gensyn_Descend imports Gensyn
 begin
 
-type_synonym childpath = "nat list"
 
 inductive gensyn_descend ::
   "('x) gensyn \<Rightarrow> 
