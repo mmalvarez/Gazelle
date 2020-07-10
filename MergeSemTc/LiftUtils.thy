@@ -23,6 +23,15 @@ record ('syn, 'a, 'b) lifting_gen =
   LIn2_g :: "('syn \<Rightarrow> 'a \<Rightarrow> 'b \<Rightarrow> 'b)"
   LOut_g :: "('b \<Rightarrow> 'a)"
 
+definition lg_l' ::
+  "('s1, 's2) lifting' \<Rightarrow>
+   ('s1, 'a, 'b) lifting_gen \<Rightarrow>
+   ('s2, 'a, 'b) lifting_gen" where
+"lg_l' l' l =
+  \<lparr> LIn1_g = (\<lambda> s a . LIn1_g l (l' s) a)
+  , LIn2_g = (\<lambda> s a b . LIn2_g l (l' s) a b)
+  , LOut_g = LOut_g l \<rparr>"
+
 definition id_l ::
   "('a, 'a) lifting" where
 "id_l =
@@ -37,8 +46,8 @@ definition id_l' ::
 definition id_lg ::
   "('x, 'a, 'a) lifting_gen" where
 "id_lg =
-  \<lparr> LIn1_g = (\<lambda> s x . x)
-  , LIn2_g = (\<lambda> s x y . x)
+  \<lparr> LIn1_g = (\<lambda> s a . a)
+  , LIn2_g = (\<lambda> s a a' . a)
   , LOut_g = id\<rparr>" 
 
 definition triv_l ::
@@ -51,7 +60,7 @@ definition triv_l ::
 definition triv_lg ::
   "('x, 'a, 'b) lifting_gen \<Rightarrow> ('x, 'a, 'b md_triv) lifting_gen" where
 "triv_lg t =
-  \<lparr> LIn1_g = (\<lambda> s x . mdt ( LIn1_g t s x))
+  \<lparr> LIn1_g = (\<lambda> s a . mdt ( LIn1_g t s a))
   , LIn2_g = (\<lambda> s a b . (case b of (mdt b') \<Rightarrow> (mdt ( (LIn2_g t s a b')))))
   , LOut_g = (case_md_triv (LOut_g t))\<rparr>"
 
@@ -68,6 +77,15 @@ definition option_l ::
   , LIn2 = (\<lambda> a b . (case b of None \<Rightarrow> Some (LIn1 t a)
                     | Some b' \<Rightarrow> Some (LIn2 t a b')))
   , LOut = case_option undefined (LOut t) \<rparr>"
+
+definition option_lg ::
+  "('x, 'a, 'b) lifting_gen \<Rightarrow> ('x, 'a, 'b option) lifting_gen" where
+"option_lg t =
+  \<lparr> LIn1_g = (\<lambda> s a . Some ( LIn1_g t s a))
+  , LIn2_g = (\<lambda> s a b . (case b of None \<Rightarrow> Some (LIn1_g t s a)
+                                   | Some b' \<Rightarrow> (Some ( (LIn2_g t s a b')))))
+  , LOut_g = (case_option undefined (LOut_g t))\<rparr>"
+
 
 definition option_l' ::
   "('a, 'b) lifting' \<Rightarrow>
@@ -87,6 +105,20 @@ definition prio_l ::
   , LOut =
       (\<lambda> p . (case p of
               mdp m b \<Rightarrow> LOut t b))\<rparr>"
+
+definition prio_lg ::
+  "('x \<Rightarrow> nat) \<Rightarrow>
+  ('x \<Rightarrow> nat \<Rightarrow> nat) \<Rightarrow>
+  ('x, 'a, 'b) lifting_gen \<Rightarrow>
+  ('x, 'a, 'b md_prio) lifting_gen" where
+"prio_lg f0 f1 t =
+  \<lparr> LIn1_g = (\<lambda> s a . mdp (f0 s) (LIn1_g t s a))
+  , LIn2_g = (\<lambda> s a b . (case b of
+                         mdp m b' \<Rightarrow> mdp (f1 s m) (LIn2_g t s a b')))
+  , LOut_g =
+      (\<lambda> p . (case p of
+              mdp m b \<Rightarrow> LOut_g t b))\<rparr>"
+
 
 definition prio_l' ::
   "('a, 'b) lifting' \<Rightarrow>
@@ -127,6 +159,14 @@ definition fst_l ::
                       (b1, b2) \<Rightarrow> ((LIn2 t a b1), \<bottom>)))
   , LOut = (\<lambda> x . (LOut t (fst x))) \<rparr>"
 
+definition fst_lg ::
+  "('x, 'a, 'b1) lifting_gen \<Rightarrow>
+   ('x, 'a, 'b1 * ('b2 :: Pordb)) lifting_gen" where
+"fst_lg t =
+  \<lparr> LIn1_g = (\<lambda> s a . (LIn1_g t s a, \<bottom>))
+  , LIn2_g = (\<lambda> s a b . (case b of (b1, b2) \<Rightarrow> (LIn2_g t s a b1, \<bottom>)))
+  , LOut_g = (\<lambda> x . (LOut_g t (fst x))) \<rparr>"
+
 definition snd_l ::
   "('a, 'b2) lifting \<Rightarrow>
    ('a, ('b1 :: Pordb) * ('b2)) lifting" where
@@ -135,6 +175,14 @@ definition snd_l ::
   , LIn2 = (\<lambda> a b . (case b of
                       (b1, b2) \<Rightarrow> (\<bottom>, (LIn2 t a b2))))
   , LOut = (\<lambda> x . (LOut t (snd x))) \<rparr>"
+
+definition snd_lg ::
+  "('x, 'a, 'b2) lifting_gen \<Rightarrow>
+   ('x, 'a, ('b1 :: Pordb) * 'b2) lifting_gen" where
+"snd_lg t =
+  \<lparr> LIn1_g = (\<lambda> s a . (\<bottom>, LIn1_g t s a))
+  , LIn2_g = (\<lambda> s a b . (case b of (b1, b2) \<Rightarrow> (\<bottom>, LIn2_g t s a b2)))
+  , LOut_g = (\<lambda> x . (LOut_g t (snd x))) \<rparr>"
 
 definition fst_l' ::
   "('a, 'b1) lifting' \<Rightarrow>
@@ -164,12 +212,29 @@ definition prod_l ::
     (\<lambda> x . (case x of (x1, x2) \<Rightarrow>
               (LOut t1 x1, LOut t2 x2)))\<rparr>"
 
+
 definition prod_l' ::
   "('a1, 'b1) lifting' \<Rightarrow>
    ('a2, 'b2) lifting' \<Rightarrow>
    ('a1 * 'a2, 'b1 * 'b2) lifting'" where
 "prod_l' t1 t2 =
   (\<lambda> x . (case x of (x1, x2) \<Rightarrow> (t1 x1, t2 x2)))"
+
+definition prod_lg ::
+  "('x, 'a1, 'b1) lifting_gen \<Rightarrow>
+   ('x, 'a2, 'b2) lifting_gen \<Rightarrow>
+   ('x, 'a1 * 'a2, 'b1 * 'b2) lifting_gen" where
+"prod_lg t1 t2 =
+  \<lparr> LIn1_g =
+    (\<lambda> s a . (case a of (a1, a2) \<Rightarrow> (LIn1_g t1 s a1, LIn1_g t2 s a2)))
+  , LIn2_g =
+    (\<lambda> s a b . (case a of (a1, a2) \<Rightarrow>
+                  (case b of (b1, b2) \<Rightarrow>
+                    (LIn2_g t1 s a1 b1, LIn2_g t2 s a2 b2))))
+  , LOut_g =
+    (\<lambda> b . (case b of (b1, b2) \<Rightarrow>
+                (LOut_g t1 b1, LOut_g t2 b2))) \<rparr>"
+                  
 
 (* this may not be that useful
    also, do we want this to be more like option? (or prod_lm?) *)
@@ -277,6 +342,14 @@ definition l_map2' ::
 "l_map2' l1 l2 sem syn st =
     (LIn2 l2 (sem (l1 syn) (LOut l2 st)) st)"
 
+definition lg_map2' ::
+    "('a1, 'b1) lifting' \<Rightarrow>
+     ('a1, 'a2, 'b2) lifting_gen \<Rightarrow>
+     ('a1 \<Rightarrow> 'a2 \<Rightarrow> 'a2) \<Rightarrow>
+     ('b1 \<Rightarrow> 'b2 \<Rightarrow> 'b2)" where
+"lg_map2' l' l sem syn st =
+  (LIn2_g l (l' syn) (sem (l' syn) (LOut_g l st)) st)"
+
 
 (* is False the right default here? *)
 definition l_pred :: "('a, 'b) lifting \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('b \<Rightarrow> bool)" where
@@ -322,6 +395,15 @@ definition l_pred_step2' ::
    ('b1 \<Rightarrow> 'b2 \<Rightarrow> 'b2 \<Rightarrow> bool)" where
 "l_pred_step2' l1 l2 P syn st1 st2 =
    (P (l1 syn) (LOut l2 st1) (LOut l2 st2))"
+
+
+definition lg_pred_step2' ::
+  "('a1, 'b1) lifting' \<Rightarrow>
+   ('a1, 'a2, 'b2) lifting_gen \<Rightarrow>
+   ('a1 \<Rightarrow> 'a2 \<Rightarrow> 'a2 \<Rightarrow> bool) \<Rightarrow>
+   ('b1 \<Rightarrow> 'b2 \<Rightarrow> 'b2 \<Rightarrow> bool)" where
+"lg_pred_step2' l' l P syn st1 st2 =
+   (P (l' syn) (LOut_g l st1) (LOut_g l st2))"
 
 (* probably less useful *)
 (*
@@ -393,6 +475,30 @@ lemma lifting_valid_unfold2 :
   shows "LOut l (LIn2 l a b) = a"
   using H by (auto simp add:lifting_valid_def)
 
+
+definition lifting_valid_gen ::
+  "('x, 'a, 'b) lifting_gen \<Rightarrow> bool" where
+"lifting_valid_gen l =
+ ((\<forall> x a .  LOut_g l (LIn1_g l x a) = a) \<and>
+  (\<forall> x a b . LOut_g l (LIn2_g l x a b) = a))"
+
+lemma lifting_valid_gen_intro :
+  assumes H1 : "\<And> s a . LOut_g l (LIn1_g l s a) = a"
+  assumes H2 : "\<And> s a b . LOut_g l (LIn2_g l s a b) = a"
+  shows "lifting_valid_gen l"
+  using H1 H2
+  by(auto simp add:lifting_valid_gen_def)
+
+lemma lifting_valid_gen_unfold1 :
+  assumes H : "lifting_valid_gen l"
+  shows "LOut_g l (LIn1_g l s a) = a"
+  using H by (auto simp add:lifting_valid_gen_def)
+
+lemma lifting_valid_gen_unfold2 :
+  assumes H : "lifting_valid_gen l"
+  shows "LOut_g l (LIn2_g l s a b) = a"
+  using H by (auto simp add:lifting_valid_gen_def)
+
 (* need to universally quantify over x? *)
 (* prove versions for all 4 combinations In1/In2?*)
 lemma pred_lift :
@@ -436,6 +542,9 @@ lemma pred_lift_out2 :
 lemma id_l_valid : "lifting_valid (id_l)"
   by (rule lifting_valid_intro; auto simp add:id_l_def)
 
+lemma id_lg_valid: "lifting_valid_gen id_lg"
+  by (rule lifting_valid_gen_intro; auto simp add:id_lg_def)
+
 lemma triv_l_valid :
   assumes H : "lifting_valid l"
   shows "lifting_valid (triv_l l)"
@@ -449,6 +558,23 @@ next
   show "LOut (triv_l l) (LIn2 (triv_l l) a b) = a"
     using lifting_valid_unfold2[OF H]
     by(auto simp add:triv_l_def split:md_triv.splits)
+qed
+
+lemma triv_lg_valid :
+  assumes H : "lifting_valid_gen l"
+  shows "lifting_valid_gen (triv_lg l)"
+proof(rule lifting_valid_gen_intro)
+  fix s :: 'a
+  fix a :: 'b
+  show "LOut_g (triv_lg l) (LIn1_g (triv_lg l) s a) = a" using lifting_valid_gen_unfold1[OF H]
+    by(auto simp add:triv_lg_def)
+next
+  fix s :: 'a
+  fix a :: 'b
+  fix b :: "'c md_triv"
+  show "LOut_g (triv_lg l) (LIn2_g (triv_lg l) s a b) = a"
+    using lifting_valid_gen_unfold2[OF H]
+    by(auto simp add:triv_lg_def split:md_triv.splits)
 qed
 
 lemma option_l_valid :
@@ -466,9 +592,23 @@ next
     by(auto simp add:option_l_def split:option.splits)
 qed
 
-(* next up:
-   - prio (prove general one)
-   - fst, snd *)
+lemma option_lg_valid :
+  assumes H : "lifting_valid_gen l"
+  shows "lifting_valid_gen (option_lg l)"
+proof(rule lifting_valid_gen_intro)
+  fix s :: 'a
+  fix a :: 'b
+  show "LOut_g (option_lg l) (LIn1_g (option_lg l) s a) = a" using lifting_valid_gen_unfold1[OF H]
+    by(auto simp add:option_lg_def)
+next
+  fix s :: 'a
+  fix a :: 'b
+  fix b :: "'c option"
+  show "LOut_g (option_lg l) (LIn2_g (option_lg l) s a b) = a"
+    using lifting_valid_gen_unfold2[OF H] lifting_valid_gen_unfold1[OF H]
+    by(auto simp add:option_lg_def split:option.splits)
+qed
+
 lemma prio_l_valid :
   assumes H : "lifting_valid l"
   shows "lifting_valid (prio_l n f l)"
@@ -481,6 +621,22 @@ next
   fix b :: "'b md_prio"
   show "LOut (prio_l n f l) (LIn2 (prio_l n f l) a b) = a"
     using lifting_valid_unfold2[OF H] by(auto simp add:prio_l_def split:md_prio.splits)
+qed
+
+lemma prio_lg_valid :
+  assumes H : "lifting_valid_gen l"
+  shows "lifting_valid_gen (prio_lg f0 f1 l)"
+proof(rule lifting_valid_gen_intro)
+  fix s :: 'a
+  fix a :: 'b
+  show "LOut_g (prio_lg f0 f1 l) (LIn1_g (prio_lg f0 f1 l) s a) = a"
+    using lifting_valid_gen_unfold1[OF H] by(auto simp add:prio_lg_def)
+next
+  fix s :: 'a
+  fix a :: 'b
+  fix b :: "'c md_prio"
+  show "LOut_g (prio_lg f0 f1 l) (LIn2_g (prio_lg f0 f1 l) s a b) = a"
+    using lifting_valid_gen_unfold2[OF H] by(auto simp add:prio_lg_def split:md_prio.splits)
 qed
 
 lemma fst_l_valid :
@@ -497,6 +653,24 @@ next
     using lifting_valid_unfold2[OF H] by(auto simp add:fst_l_def split:prod.splits)
 qed
 
+lemma fst_lg_valid :
+  assumes H : "lifting_valid_gen l"
+  shows "lifting_valid_gen (fst_lg l)"
+proof(rule lifting_valid_gen_intro)
+  fix s :: 'a 
+  fix a :: 'b
+  fix b :: 'c
+  show "LOut_g (fst_lg l) (LIn1_g (fst_lg l) s a) = a"
+    using lifting_valid_gen_unfold1[OF H] by(auto simp add:fst_lg_def)
+next
+  fix s :: 'a
+  fix a :: 'b
+  fix b :: "('c * 'd)"
+  show "LOut_g (fst_lg l) (LIn2_g (fst_lg l) s a b) = a"
+    using lifting_valid_gen_unfold2[OF H] by(auto simp add:fst_lg_def split:prod.splits)
+qed
+
+
 lemma snd_l_valid :
   assumes H : "lifting_valid l"
   shows "lifting_valid (snd_l l)"
@@ -510,6 +684,23 @@ next
   show "LOut (snd_l l) (LIn2 (snd_l l) a b) = a"
     using lifting_valid_unfold2[OF H] by(auto simp add:snd_l_def split:prod.splits)
 qed
+
+lemma snd_lg_valid :
+  assumes H : "lifting_valid_gen l"
+  shows "lifting_valid_gen (snd_lg l)"
+proof(rule lifting_valid_gen_intro)
+  fix s :: 'a
+  fix a :: 'b
+  show "LOut_g (snd_lg l) (LIn1_g (snd_lg l) s a) = a"
+    using lifting_valid_gen_unfold1[OF H] by(auto simp add:snd_lg_def)
+next
+  fix s :: 'a
+  fix a :: 'b
+  fix b :: "('d * 'c)"
+  show "LOut_g (snd_lg l) (LIn2_g (snd_lg l) s a b) = a"
+    using lifting_valid_gen_unfold2[OF H] by(auto simp add:snd_lg_def split:prod.splits)
+qed
+
 
 lemma prod_l_valid :
   fixes l1 :: "('a1, 'b1) lifting"
@@ -530,12 +721,27 @@ next
     by(auto simp add:prod_l_def split:prod.splits)
 qed
 
+lemma prod_lg_valid :
+  fixes l1 :: "('x, 'a1, 'b1) lifting_gen"
+  fixes l2 :: "('x, 'a2, 'b2) lifting_gen"
+  assumes H1 : "lifting_valid_gen l1"
+  assumes H2 : "lifting_valid_gen l2"
+  shows "lifting_valid_gen (prod_lg l1 l2)"
+proof(rule lifting_valid_gen_intro)
+  fix s :: 'x
+  fix a :: "'a1 * 'a2"
+  show "LOut_g (prod_lg l1 l2) (LIn1_g (prod_lg l1 l2) s a) = a"
+    using lifting_valid_gen_unfold1[OF H1, of s "fst a"] lifting_valid_gen_unfold1[OF H2, of s "snd a"]
+    by(auto simp add:prod_lg_def split:prod.splits)
+next
+  fix s :: 'x
+  fix a :: "'a1 * 'a2"
+  fix b :: "'b1 * 'b2"
+  show "LOut_g (prod_lg l1 l2) (LIn2_g (prod_lg l1 l2) s a b) = a"
+    using lifting_valid_gen_unfold2[OF H1] lifting_valid_gen_unfold2[OF H2]
+    by(auto simp add:prod_lg_def split:prod.splits)
+qed
 
-definition lifting_valid_gen ::
-  "('x, 'a, 'b) lifting_gen \<Rightarrow> bool" where
-"lifting_valid_gen l =
- ((\<forall> s a .  LOut_g l (LIn1_g l s a) = a) \<and>
-  (\<forall> s a b . LOut_g l (LIn2_g l s a b) = a))"
 
 
 record ('a, 'b) langcomp =
@@ -611,6 +817,40 @@ lemma sup_l_unfold2 :
     using H Hb
   by(auto simp add:sup_l_def)
 
+(* same syntax ("pointwise")? or all syntaxes? *)
+definition sup_lg ::
+  "('x, 'a1, ('b :: Pord)) lifting_gen \<Rightarrow>
+   ('x, 'a2, ('b :: Pord)) lifting_gen \<Rightarrow>
+   bool" where
+"sup_lg l1 l2 =
+  (\<forall> s a1 a2 b1 b2 .
+    has_sup {LIn1_g l1 s a1, LIn1_g l2 s a2} \<and>
+    (has_sup {b1, b2} \<longrightarrow> has_sup {LIn2_g l1 s a1 b1, LIn2_g l2 s a2 b2}))"
+
+lemma sup_lg_intro :
+  fixes l1 :: "('x, 'a1, 'b :: Pord) lifting_gen"
+  fixes l2 :: "('x, 'a2, 'b :: Pord) lifting_gen"
+  assumes H1 : "\<And> s a1 a2 . has_sup {LIn1_g l1 s a1, LIn1_g l2 s a2}"
+  assumes H2 : "\<And> s a1 a2 b1 b2 . has_sup {b1, b2} \<Longrightarrow> has_sup {LIn2_g l1 s a1 b1, LIn2_g l2 s a2 b2}"
+  shows "sup_lg l1 l2" using H1 H2
+  by(auto simp add:sup_lg_def)
+
+lemma sup_lg_unfold1 :
+  fixes l1 :: "('x, 'a1, 'b :: Pord) lifting_gen"
+  fixes l2 :: "('x, 'a2, 'b :: Pord) lifting_gen"
+  assumes H : "sup_lg l1 l2"  
+  shows "has_sup {LIn1_g l1 s a1, LIn1_g l2 s a2}"
+  using H   by(auto simp add:sup_lg_def)
+
+lemma sup_lg_unfold2 :
+  fixes l1 :: "('x, 'a1, 'b :: Pord) lifting_gen"
+  fixes l2 :: "('x, 'a2, 'b :: Pord) lifting_gen"
+  assumes H : "sup_lg l1 l2"
+  assumes Hb : "has_sup {b1, b2}"
+  shows "has_sup {LIn2_g l1 s a1 b1, LIn2_g l2 s a2 b2}"
+    using H Hb
+  by(auto simp add:sup_lg_def)
+
 
 lemma sup_l_prod_fst :
   fixes l1  :: "('a1, 'b1 :: Mergeableb) lifting"
@@ -652,6 +892,129 @@ next
   thus "has_sup {LIn2 (prod_l l1 l2) a1 b1, LIn2 (fst_l l1') a2 b2}" by (auto simp add:has_sup_def)
 qed
 
+lemma sup_lg_prod_fst :
+  fixes l1  :: "('x, 'a1, 'b1 :: Mergeableb) lifting_gen"
+  fixes l1' :: "('x, 'a2, 'b1 :: Mergeableb) lifting_gen"
+  fixes l2  :: "('x, 'a3, 'b2 :: Mergeableb) lifting_gen"
+  assumes H : "sup_lg l1 l1'"
+  shows "sup_lg (prod_lg l1 l2) (fst_lg l1')"
+proof(rule sup_lg_intro)
+  fix s :: "'x"
+  fix a1 :: "('a1 \<times> 'a3)" 
+  fix a2 :: "'a2"
+  obtain x1 and x2 where Hx : "a1 = (x1, x2)" by (cases a1; auto)
+  obtain ub where Hub : "is_sup {LIn1_g l1 s x1, LIn1_g l1' s a2} ub"
+      using sup_lg_unfold1[OF H, of s x1] Hx
+      by(auto simp add:prod_lg_def fst_lg_def has_sup_def split:prod.splits)
+  
+  have "is_sup {LIn1_g (prod_lg l1 l2) s a1, LIn1_g (fst_lg l1') s a2} (ub, LIn1_g l2 s x2)" using  Hub Hx
+    by(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def
+        prod_pleq prod_lg_def fst_lg_def bot_spec leq_refl split:prod.splits)
+  thus "has_sup {LIn1_g (prod_lg l1 l2) s a1, LIn1_g (fst_lg l1') s a2}" by (auto simp add:has_sup_def)
+next
+  fix s :: "'x"
+  fix a1::"'a1 \<times> 'a3"
+  fix a2::"'a2"
+  fix b1 b2:: "'b1 \<times> 'b2"
+  assume Hb : "has_sup {b1, b2}"
+  obtain x1 and x2 where Hx : "a1 = (x1, x2)" by (cases a1; auto)
+  obtain y1 and y2 where Hy : "b1 = (y1, y2)" by (cases b1; auto)
+  obtain z1 and z2 where Hz : "b2 = (z1, z2)" by (cases b2; auto)
+
+  have Hub1 : "has_sup {y1, z1}" using Hy Hz Hb
+    by(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def prod_pleq)
+
+  obtain ub where Hub : "is_sup {LIn2_g l1 s x1 y1, LIn2_g l1' s a2 z1} ub"
+      using sup_lg_unfold2[OF H Hub1, of s x1] Hx Hy Hz
+      by(auto simp add:prod_lg_def fst_lg_def has_sup_def split:prod.splits)
+
+  have "is_sup {LIn2_g (prod_lg l1 l2) s a1 b1, LIn2_g (fst_lg l1') s a2 b2} (ub, LIn2_g l2 s x2 y2)" using  Hub Hx Hy Hz
+    by(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def
+        prod_pleq prod_lg_def fst_lg_def bot_spec leq_refl split:prod.splits)
+  thus "has_sup {LIn2_g (prod_lg l1 l2) s a1 b1, LIn2_g (fst_lg l1') s a2 b2}" by (auto simp add:has_sup_def)
+qed
+
+lemma sup_lg_prod_snd :
+  fixes l1  :: "('x, 'a1, 'b1 :: Mergeableb) lifting_gen"
+  fixes l2  :: "('x, 'a2, 'b2 :: Mergeableb) lifting_gen"
+  fixes l2' :: "('x, 'a3, 'b2 :: Mergeableb) lifting_gen"
+  assumes H : "sup_lg l2 l2'"
+  shows "sup_lg (prod_lg l1 l2) (snd_lg l2')"
+proof(rule sup_lg_intro)
+  fix s :: "'x"
+  fix a1 :: "('a1 \<times> 'a2)" 
+  fix a2 :: "'a3"
+  obtain x1 and x2 where Hx : "a1 = (x1, x2)" by (cases a1; auto)
+  obtain ub :: 'b2 where Hub : "is_sup {LIn1_g l2 s x2, LIn1_g l2' s a2} ub"
+      using sup_lg_unfold1[OF H, of s x2] Hx
+      by(auto simp add:prod_lg_def fst_lg_def has_sup_def split:prod.splits)
+  
+  have "is_sup {LIn1_g (prod_lg l1 l2) s a1, LIn1_g (snd_lg l2') s a2} (LIn1_g l1 s x1, ub)" using  Hub Hx
+    by(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def
+        prod_pleq prod_lg_def snd_lg_def bot_spec leq_refl split:prod.splits)
+  thus "has_sup {LIn1_g (prod_lg l1 l2) s a1, LIn1_g (snd_lg l2') s a2}" by (auto simp add:has_sup_def)
+next
+  fix s :: "'x"
+  fix a1::"'a1 \<times> 'a2"
+  fix a2::"'a3"
+  fix b1 b2:: "'b1 \<times> 'b2"
+  assume Hb : "has_sup {b1, b2}"
+  obtain x1 and x2 where Hx : "a1 = (x1, x2)" by (cases a1; auto)
+  obtain y1 and y2 where Hy : "b1 = (y1, y2)" by (cases b1; auto)
+  obtain z1 and z2 where Hz : "b2 = (z1, z2)" by (cases b2; auto)
+
+  have Hub2 : "has_sup {y2, z2}" using Hy Hz Hb
+    by(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def prod_pleq)
+
+  obtain ub where Hub : "is_sup {LIn2_g l2 s x2 y2, LIn2_g l2' s a2 z2} ub"
+      using sup_lg_unfold2[OF H Hub2, of s x2] Hx Hy Hz
+      by(auto simp add:prod_lg_def fst_lg_def has_sup_def split:prod.splits)
+
+  have "is_sup {LIn2_g (prod_lg l1 l2) s a1 b1, LIn2_g (snd_lg l2') s a2 b2} (LIn2_g l1 s x1 y1, ub)" using  Hub Hx Hy Hz
+    by(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def
+        prod_pleq prod_lg_def snd_lg_def bot_spec leq_refl split:prod.splits)
+  thus "has_sup {LIn2_g (prod_lg l1 l2) s a1 b1, LIn2_g (snd_lg l2') s a2 b2}" by (auto simp add:has_sup_def)
+qed
+
+lemma prio_sup :
+  fixes b1 b2 :: "('b :: Pordb) md_prio"
+  shows "has_sup {b1, b2}"
+proof-
+  obtain b1p and b1' where Hb1 : "b1 = mdp b1p b1'" by(cases b1; auto)
+  obtain b2p and b2' where Hb2 : "b2 = mdp b2p b2'" by (cases b2; auto)
+
+  have "is_ub {b1, b2} (mdp ((max b1p b2p) + 1) \<bottom>)"
+    using Hb1 Hb2
+    by(auto simp  add: is_ub_def prio_pleq prio_bot)
+
+  hence "has_ub {b1, b2}" by (auto simp add:has_ub_def)
+
+  thus "has_sup {b1, b2}" by(rule complete2; auto)
+qed
+
+lemma sup_lg_prio :
+  fixes l1 :: "('x, 'a1, 'b :: Pordb) lifting_gen"
+  fixes l2 :: "('x, 'a2, 'b :: Pordb) lifting_gen"
+  shows "sup_lg (prio_lg f0_1 f1_1 l1) (prio_lg f0_2 f1_2 l2)"
+proof(rule sup_lg_intro)
+  fix s :: "'x"
+  fix a1 :: "'a1"
+  fix a2 :: "'a2"
+  show "has_sup {LIn1_g (prio_lg f0_1 f1_1 l1) s a1, LIn1_g (prio_lg f0_2 f1_2 l2) s a2}"
+    by(rule prio_sup)
+next
+  fix s :: "'x"
+  fix a1 :: "'a1"
+  fix a2 :: "'a2"
+  fix b1 b2 :: "'b md_prio"
+  assume H : "has_sup {b1, b2}"
+  show "has_sup {LIn2_g (prio_lg f0_1 f1_1 l1) s a1 b1, LIn2_g (prio_lg f0_2 f1_2 l2) s a2 b2}"
+    by(rule prio_sup)
+qed
+
+(* prios = sort of different
+   we probably need to relate the details of the functions?
+   (or do we not? md_prio always has an upper bound *)
 lemma sup_l_inc_zero :
   fixes l1 :: "('a1, 'b :: Mergeableb) lifting"
   fixes l2:: "('a2, 'b :: Mergeableb) lifting"
@@ -751,6 +1114,20 @@ proof(rule sup_pres_intro)
     using Hsup sup_l_unfold2[OF Hsl]
     by(auto simp add: l_map2'_def split:option.splits)
 qed
+
+(* this isn't quite right
+   is the idea that we can actually simplify lg_map2'? *)
+lemma sup_lg_pres :
+  fixes l1 :: "('syn1, 'a1, 'b :: Mergeable) lifting_gen"
+  fixes l2 :: "('syn2, 'a2, 'b :: Mergeable) lifting_gen"
+  fixes syn_trans1 :: "'x \<Rightarrow> 'syn1"
+  fixes syn_trans2 :: "'x \<Rightarrow> 'syn2"
+  fixes f1 :: "'syn1 \<Rightarrow> 'a1 \<Rightarrow> 'a1"
+  fixes f2 :: "'syn2 \<Rightarrow> 'a2 \<Rightarrow> 'a2"
+  assumes Hsl : "sup_lg l1 l2"
+  shows "sup_pres
+    (lg_map2' syn_trans1 l1 f1)
+    (lg_map2' syn_trans2 l2 f2)"
 
 definition pcomp :: "('a, 'b :: Mergeable) langcomp \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> 'b)" where
 "pcomp l a b =
