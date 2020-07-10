@@ -18,11 +18,23 @@ record ('a, 'b) lifting =
 (* idea: tailor the exact lifting we use based on the syntax.
    this is useful if e.g. we want to use different priority values
    in different cases *)
+
 record ('syn, 'a, 'b) lifting_gen =
   LIn1_g :: "('syn \<Rightarrow> 'a \<Rightarrow> 'b)"
   LIn2_g :: "('syn \<Rightarrow> 'a \<Rightarrow> 'b \<Rightarrow> 'b)"
   LOut_g :: "('b \<Rightarrow> 'a)"
 
+
+(* key question: do we need/want to index on both
+   syntax types? *)
+(*
+record ('sa, 'sb, 'a, 'b) lifting_gen = 
+  LSyn_g :: "('sb \<Rightarrow> 'sa)"
+  LIn1_g :: "('sa \<Rightarrow> 'a \<Rightarrow> 'b)"
+  LIn2_g :: "('sa \<Rightarrow> 'a \<Rightarrow> 'b \<Rightarrow> 'b)"
+  LOut_g :: "('b \<Rightarrow> 'a)"
+*)
+(*
 definition lg_l' ::
   "('s1, 's2) lifting' \<Rightarrow>
    ('s1, 'a, 'b) lifting_gen \<Rightarrow>
@@ -31,7 +43,7 @@ definition lg_l' ::
   \<lparr> LIn1_g = (\<lambda> s a . LIn1_g l (l' s) a)
   , LIn2_g = (\<lambda> s a b . LIn2_g l (l' s) a b)
   , LOut_g = LOut_g l \<rparr>"
-
+*)
 definition id_l ::
   "('a, 'a) lifting" where
 "id_l =
@@ -326,6 +338,13 @@ definition l_map ::
 "l_map l sem b =
   (LIn2 l (sem (LOut l b)) b)"
 
+definition lg_map ::
+  "('x, 'a, 'b) lifting_gen \<Rightarrow>
+    ('x \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow>
+    ('x \<Rightarrow> 'b \<Rightarrow> 'b)" where
+"lg_map l sem syn st =
+  (LIn2_g l syn (sem syn (LOut_g l st)) st)"
+
 definition l_map2 ::
   "('a1, 'b1) lifting \<Rightarrow>
    ('a2, 'b2) lifting \<Rightarrow>
@@ -370,6 +389,14 @@ definition l_pred_step ::
    ('b \<Rightarrow> 'b \<Rightarrow> bool)" where
 "l_pred_step l P st1 st2 =
         (P (LOut l st1) (LOut l st2))"
+
+definition lg_pred_step ::
+  "('x, 'a, 'b) lifting_gen \<Rightarrow>
+    ('x \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow>
+    ('x \<Rightarrow> 'b \<Rightarrow> 'b \<Rightarrow> bool)" where
+"lg_pred_step l P syn st1 st2 =
+  (P syn (LOut_g l st1) (LOut_g l st2))"
+  
 
 definition l_pred_step' ::
   "('a, 'b) lifting' \<Rightarrow>
@@ -1115,19 +1142,26 @@ proof(rule sup_pres_intro)
     by(auto simp add: l_map2'_def split:option.splits)
 qed
 
-(* this isn't quite right
-   is the idea that we can actually simplify lg_map2'? *)
 lemma sup_lg_pres :
-  fixes l1 :: "('syn1, 'a1, 'b :: Mergeable) lifting_gen"
-  fixes l2 :: "('syn2, 'a2, 'b :: Mergeable) lifting_gen"
-  fixes syn_trans1 :: "'x \<Rightarrow> 'syn1"
-  fixes syn_trans2 :: "'x \<Rightarrow> 'syn2"
-  fixes f1 :: "'syn1 \<Rightarrow> 'a1 \<Rightarrow> 'a1"
-  fixes f2 :: "'syn2 \<Rightarrow> 'a2 \<Rightarrow> 'a2"
+  fixes l1 :: "('x, 'a1, 'b :: Mergeable) lifting_gen"
+  fixes l2 :: "('x, 'a2, 'b :: Mergeable) lifting_gen"
+  fixes f1 :: "'x \<Rightarrow> 'a1 \<Rightarrow> 'a1"
+  fixes f2 :: "'x \<Rightarrow> 'a2 \<Rightarrow> 'a2"
   assumes Hsl : "sup_lg l1 l2"
   shows "sup_pres
-    (lg_map2' syn_trans1 l1 f1)
-    (lg_map2' syn_trans2 l2 f2)"
+    (lg_map l1 f1)
+    (lg_map l2 f2)"
+proof(rule sup_pres_intro)
+  fix syn :: 'x
+  fix st1 :: 'b
+  fix st2 :: 'b
+  assume Hsup : "has_sup {st1, st2}"
+  show "has_sup {lg_map l1 f1 syn st1, lg_map l2 f2 syn st2}"
+      using Hsup sup_lg_unfold2[OF Hsl]
+      by(auto simp add: lg_map_def split:option.splits)
+  qed
+
+
 
 definition pcomp :: "('a, 'b :: Mergeable) langcomp \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> 'b)" where
 "pcomp l a b =
@@ -1196,6 +1230,33 @@ next
   thus "has_sup {LIn2 l2 a2 b1, LIn2 l1 a1 b2}"
     using sup_l_unfold2[OF H Hs', of a1 a2] by auto
 qed
+
+lemma sup_lg_comm :
+  fixes l1  :: "('x, 'a1, 'b :: Mergeableb) lifting_gen"
+  fixes l2 :: "('x, 'a2, 'b :: Mergeableb) lifting_gen"
+  assumes H : "sup_lg l1 l2"
+  shows "sup_lg l2 l1"
+proof(rule sup_lg_intro)
+  fix s :: "'x"
+  fix a2 :: 'a2
+  fix a1 :: "'a1"
+  have "{LIn1_g l2 s a2, LIn1_g l1 s a1} = {LIn1_g l1 s a1, LIn1_g l2 s a2}" by auto
+  thus "has_sup {LIn1_g l2 s a2, LIn1_g l1 s a1}" using sup_lg_unfold1[OF H, of s a1 a2] by auto
+next
+  fix s :: "'x"
+  fix a2 :: 'a2
+  fix a1 :: 'a1
+  fix b1 b2 :: 'b
+  assume Hs : "has_sup {b1, b2}"
+
+  have "{b2, b1} = {b1, b2}" by auto
+  hence Hs' : "has_sup {b2, b1}" using Hs by auto
+  have "{LIn2_g l1 s a1 b2, LIn2_g l2 s a2 b1} = {LIn2_g l2 s a2 b1, LIn2_g l1 s a1 b2}" by auto
+
+  thus "has_sup {LIn2_g l2 s a2 b1, LIn2_g l1 s a1 b2}"
+    using sup_lg_unfold2[OF H Hs', of s a1 a2] by auto
+qed
+
 
 
 end
