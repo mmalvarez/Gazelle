@@ -1,4 +1,4 @@
-theory MergeableAList imports MergeableInstances HOL.List "HOL-Library.DAList"
+theory MergeableAList imports MergeableInstances HOL.List 
 begin
 
 (* TODO:
@@ -439,7 +439,6 @@ proof(-)
   assume H : "strict_order (map fst l)"
   show "strict_order (map fst (str_ord_delete k l))" using str_ord_delete_correct[OF H] by auto
 qed
-value "DAList.update (3 :: nat) True DAList.empty"
 
 fun to_oalist :: "(('a :: linorder) * 'b) list \<Rightarrow> ('a, 'b) oalist" where
 "to_oalist [] = empty"
@@ -494,6 +493,24 @@ next
     by(auto split:option.splits)  
 qed
 
+
+lemma list_leqD :
+  fixes l1 l2 :: "(('a :: linorder) * 'b :: Pord) list"
+  fixes a :: "'a"
+  fixes b :: "'b"
+  assumes H : "list_leq l1 l2"
+  assumes Hk : "(a, b) \<in> set l1"
+  shows "\<exists> b' . b <[ b' \<and> (a, b') \<in> set l2"
+  using H Hk
+proof(induction l1 arbitrary:l2 a b)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons x l1)
+  then show ?case
+    by(cases x; auto split:option.splits elim:map_of_SomeD)
+qed
+(*
 lemma list_leqD :
   assumes Hord1 : "strict_order (map fst l1)"
   assumes Hord2 : "strict_order (map fst l2)"
@@ -535,7 +552,7 @@ next
     show ?thesis using HI1[OF HI2' HI3 HI4' HFalse'] by auto
   qed
 qed
-
+*)
 lemma strict_order_set_eq :
   assumes H1 : "strict_order (map fst l1)"
   assumes H2 : "strict_order (map fst l2)"
@@ -628,6 +645,7 @@ next
     by(cases x; auto split:option.splits)
 qed
 
+(*
 lemma list_leq_keys :
   fixes l1 l2 :: "(('a :: linorder) * 'b :: Pord) list"
   fixes a :: "'a"
@@ -644,7 +662,7 @@ next
   then show ?case
     by(cases x; auto split:option.splits elim:map_of_SomeD)
 qed
-
+*)
 lift_definition oalist_leq ::
   "('a :: linorder, 'b :: Pord) oalist \<Rightarrow> ('a, 'b) oalist \<Rightarrow> bool"
 is list_leq .
@@ -706,7 +724,7 @@ next
               map_of_SomeD [of l2 a1k]
         by(auto split:option.splits elim:map_of_SomeD) 
       obtain a3v where Ha3v : "(a1k, a3v) \<in> set l3" and Ha3vl : "a2v <[ a3v"
-        using Cons Ha list_leq_keys[OF HI6 Ha2v]
+        using Cons Ha list_leqD[OF HI6 Ha2v]
         by(auto split:option.splits)
       have Hav13 : "a1v <[ a3v" using leq_trans[OF Ha2vl Ha3vl] by auto
       have sto1 : "strict_order (map fst l1)" using strict_order_tl[of a1k "map fst l1"] Ha HI2 by(auto)
@@ -734,8 +752,8 @@ next
       obtain xk and xv where Hx: "x = (xk, xv)" by(cases x; auto)
       assume H : "x \<in> set l1'"
       hence H' : "(xk, xv) \<in> set l1'" using Hx by auto
-      obtain v' where  Elv' : "(xk, v') \<in> set l2'" and Leqv' : "xv <[ v'" using list_leqD[OF Hord1 Hord2 Hleq1 H'] by auto
-      obtain v'' where Elv'' : "(xk, v'') \<in> set l1'" and Leqv'' : "v' <[ v''" using list_leqD[OF Hord2 Hord1 Hleq2 Elv'] by auto
+      obtain v' where  Elv' : "(xk, v') \<in> set l2'" and Leqv' : "xv <[ v'" using list_leqD[OF (*Hord1 Hord2*) Hleq1 H'] by auto
+      obtain v'' where Elv'' : "(xk, v'') \<in> set l1'" and Leqv'' : "v' <[ v''" using list_leqD[OF (*Hord2 Hord1*) Hleq2 Elv'] by auto
       have Hord1_d : "distinct (map fst l1')" using strict_order_distinct[OF Hord1] by auto
       have H'' : "xk \<in> set (map fst l1')" using H' imageI[OF H', of fst] by(auto)
       obtain i1 where Hi11 : "i1 < length l1'" and Hi12 : "l1' ! i1 = (xk, xv)" using H' List.in_set_conv_nth[of "(xk, xv)" "l1'"] by auto 
@@ -751,8 +769,8 @@ next
       obtain xk and xv where Hx: "x = (xk, xv)" by(cases x; auto)
       assume H : "x \<in> set l2'"
       hence H' : "(xk, xv) \<in> set l2'" using Hx by auto
-      obtain v' where  Elv' : "(xk, v') \<in> set l1'" and Leqv' : "xv <[ v'" using list_leqD[OF Hord2 Hord1 Hleq2 H'] by auto
-      obtain v'' where Elv'' : "(xk, v'') \<in> set l2'" and Leqv'' : "v' <[ v''" using list_leqD[OF Hord1 Hord2 Hleq1 Elv'] by auto
+      obtain v' where  Elv' : "(xk, v') \<in> set l1'" and Leqv' : "xv <[ v'" using list_leqD[OF Hleq2 H'] by auto
+      obtain v'' where Elv'' : "(xk, v'') \<in> set l2'" and Leqv'' : "v' <[ v''" using list_leqD[OF Hleq1 Elv'] by auto
       have Hord1_d : "distinct (map fst l2')" using strict_order_distinct[OF Hord2] by auto
       have H'' : "xk \<in> set (map fst l2')" using H' imageI[OF H', of fst] by(auto)
       obtain i1 where Hi11 : "i1 < length l2'" and Hi12 : "l2' ! i1 = (xk, xv)" using H' List.in_set_conv_nth[of "(xk, xv)" "l2'"] by auto 
@@ -769,29 +787,714 @@ next
   qed
 qed
 end
-(*
-lemma list_complete
-  fixes l1 l2 :: "('a :: linorder * 'b :: Pordc) list"
-  
 
-declare [[show_types]]
-*)
+lemma distinct_unique_value :
+  assumes Hd : "distinct (map fst l1)"
+  assumes Hv : "(k, v) \<in> set l1"
+  assumes Hv' : "(k, v') \<in> set l1"
+  shows "v = v'"
+proof(-)
+  obtain i1 where Hi11 : "i1 < length l1" and Hi12 : "l1 ! i1 = (k, v)"
+    using List.in_set_conv_nth[of "(k, v)" l1] Hv by auto
+  obtain i1' where Hi1'1 : "i1' < length l1" and Hi1'2 : "l1 ! i1' = (k, v')"
+    using List.in_set_conv_nth[of "(k, v')" l1] Hv' by auto
+  have Hk : "k \<in> set (map fst l1)" using imageI[OF Hv, of fst] by auto
+  hence "i1 = i1'" using List.distinct_Ex1[OF Hd Hk] Hi11 Hi1'1 Hi12 Hi1'2 by(auto)
+  thus "v = v'" using Hi12 Hi1'2 by auto
+qed
+
+lemma concretize_alist :
+  fixes S :: "('a :: linorder * 'b) set"
+  assumes Hfin : "finite S"
+  assumes Nodup : 
+     "\<And> k1 v1 v2 . (k1, v1) \<in> S \<Longrightarrow> (k1, v2) \<in> S \<Longrightarrow> v1 = v2"
+   shows "\<exists> l . strict_order (map fst l) \<and> set l = S" using Hfin Nodup
+proof(induction "card (S :: ('a * 'b) set)" arbitrary: S)
+  case 0
+  then show ?case by(auto simp add:strict_order_def)
+next
+  fix x :: nat
+  fix S :: "('a :: linorder * 'b) set"
+  assume IH :
+  "(\<And>(S :: ('a * 'b) set). x = card S \<Longrightarrow> finite S \<Longrightarrow> (\<And>k1 v1 v2. (k1, v1) \<in> S \<Longrightarrow> (k1, v2) \<in> S \<Longrightarrow> v1 = v2) \<Longrightarrow>
+    \<exists>l. strict_order (map fst l) \<and> set l = S)"
+  assume Hsuc : "Suc x = card S"
+  hence Nonemp : "S \<noteq> {}" by auto
+  hence Nonemp' : "(fst ` S) \<noteq> {}" by auto
+  assume Hfin: "finite S"
+  hence Hfin' : "finite (fst ` S)" by auto
+  assume Hnodup : "(\<And>k1 v1 v2. (k1, v1) \<in> S \<Longrightarrow> (k1, v2) \<in> S \<Longrightarrow> v1 = v2)"
+
+  obtain kl vl where Hkvl : "(kl,vl) \<in> S" and Hkl_min : "kl = Min (fst ` S)" 
+    using linorder_class.Min_in[OF Hfin' Nonemp']
+    by(auto)
+
+  have Hkl_in : "kl \<in> (fst ` S)" using Hkvl imageI[OF Hkvl, of fst] by auto
+
+  have Hcard : "x = card (S - {(kl, vl)})" using card_Diff_singleton[OF Hfin Hkvl] Hsuc by auto
+  have Hfin'' : "finite (S - {(kl, vl)})" using Hfin by auto
+  have Hnodup' : "(\<And>k1 v1 v2. (((k1, v1) \<in> S - {(kl, vl)}) \<Longrightarrow> ((k1, v2) \<in> S - {(kl, vl)}) \<Longrightarrow> v1 = v2))"
+    using Hnodup
+    by(auto)
+
+  obtain tl where
+    Hord_tl : "strict_order (map fst tl)" and Hset_tl : "set tl = (S - {(kl, vl)})"
+    using IH[of "S - {(kl, vl)}", OF Hcard Hfin'' Hnodup'] by(fastforce)
+
+  have Conc1 : "strict_order (map fst ((kl, vl) # tl))"
+  proof(rule strict_order_intro)
+    fix i j
+    assume Hlen : "j < length (map fst ((kl, vl) # tl))"
+    assume Hij : "i < j"
+    obtain j' where Hj' : "j = 1 + j'" using Hij by (cases j; auto)
+
+    have In_j1 : "tl ! j' \<in> set tl" using Hj' Hlen
+      by(auto)
+    hence In_j2 : "tl ! j' \<in> S" using Hset_tl
+      by(auto)
+    obtain k' v' where Hk'v': "tl ! j' = (k', v')" by (cases "tl ! j'"; auto)
+    have In_j2_fst : "k' \<in> fst ` S" using imageI[OF In_j2, of fst] Hk'v' by auto
+    have Kl_leq : "kl \<le> k'" using Hkl_min Min_le[OF Hfin' In_j2_fst] by(auto)
+    have Kl_neq : "kl \<noteq> k'"
+    proof(cases "kl = k'")
+      case False thus ?thesis by auto next
+      case True
+      hence "(kl, vl) = (k', v')" using Hnodup[OF Hkvl, of v'] Hk'v' In_j2 by(auto)
+      hence False using Hset_tl In_j1 Hk'v' by(auto)
+      thus ?thesis by auto
+    qed
+
+    show "map fst ((kl, vl) # tl) ! i < map fst ((kl, vl) # tl) ! j"
+    proof(cases i)
+      case 0
+      hence Conc1' : "kl < k'" using Kl_leq Kl_neq by auto
+      have Conc2' : "map fst tl ! j' = k'" using Hj' Hk'v' Hlen by(auto)
+      thus ?thesis using 0 Conc1' Hk'v' Hj'  by(auto)
+    next
+      fix i'
+      assume Hi' : "i = Suc i'"
+      hence Hlen_i' : "i' < length tl" using Hij Hlen by auto
+      have Hi'j' : "i' < j'" using Hij Hi' Hj' by auto
+      obtain k'i v'i where Hk'iv'i: "tl ! i' = (k'i, v'i)" by (cases "tl ! i'"; auto)
+      have Hlen' : "j' < length (map fst tl)" using Hj' Hlen by auto
+      have Conc' : "map fst (tl) ! i' < map fst (tl)! j'"
+        using strict_order_unfold[OF Hord_tl Hlen' Hi'j'] by auto
+      thus "map fst ((kl, vl) # tl) ! i < map fst ((kl, vl) # tl) ! j" using Hi' Hj' by auto
+    qed
+  qed
+
+  have Conc2 : "set ((kl, vl) # tl) = S" using Hset_tl Set.insert_absorb[OF Hkvl] by auto
+
+  have Conc : "strict_order (map fst ((kl, vl) # tl) ) \<and> set ((kl, vl) # tl)  = S"
+    using Conc1 Conc2 by auto
+
+  thus "\<exists>l. strict_order (map fst l) \<and> set l = S" by blast
+qed
+    
 (*
+lemma list_leq_head_cases :
+  fixes l1 l2 :: "('a :: linorder * 'b :: Pordc) list"
+  assumes Hord1 : "strict_order (map fst l1)"
+  assumes Hord2 : "strict_order (map fst ((h2k, h2v)#l2))"
+  assumes Hleq : "list_leq l1 ((h2k, h2v)#l2)"
+  shows "(\<exists>  h1v l1' . l1 = (h2k, h1v)#l1' \<and> h1v <[ h2v \<and> list_leq l1' l2) \<or>
+         (list_leq l1 l2)" using Hord1 Hord2 Hleq
+proof(induction l1)
+  case Nil
+  then show ?case by auto
+next
+  fix h1' :: "'a * 'b"
+  obtain h1'k h1'v where Hh1' : "h1' = (h1'k, h1'v)" by (cases h1'; auto)
+  fix l1 :: "('a * 'b) list"
+  assume HI :
+    "(strict_order (map fst l1) \<Longrightarrow>
+        strict_order (map fst ((h2k, h2v) # l2)) \<Longrightarrow> list_leq l1 ((h2k, h2v) # l2) \<Longrightarrow>
+      (\<exists>h1v l1'. l1 = (h2k, h1v) # l1' \<and> h1v <[ h2v \<and> list_leq l1' l2) \<or> list_leq l1 l2)"
+  assume Hord1 : "strict_order (map fst (h1' # l1))"
+  assume Hord2 : "strict_order (map fst ((h2k, h2v) # l2))"
+  assume Hleq' : "list_leq (h1' # l1) ((h2k, h2v) # l2)"
+
+  have Hh1'_in : "(h1'k, h1'v) \<in> set (h1' # l1)" using Hh1' by auto
+
+  consider (1) "h1'k < h2k" |
+           (2) "h1'k = h2k" |
+           (3) "h2k < h1'k"
+    using less_linear[of h1'k h2k] by auto
+  then show "(\<exists> h1v l1'. h1' # l1 = (h2k, h1v) # l1' \<and> h1v <[ h2v \<and> list_leq l1' l2) \<or> list_leq (h1' # l1) l2"
+  proof cases
+    case 1
+    hence "h1'k \<noteq> h2k" by auto
+    then obtain bad where Bad1 : "h1'v <[ bad" and Bad2 : "(h1'k, bad) \<in> set l2"
+      using list_leqD[OF Hleq' Hh1'_in] by(auto)
+    obtain badi where Badi: "l2 ! badi = (h1'k, bad)" and Badi_len : "badi < length l2"
+      using in_set_conv_nth[of "(h1'k, bad)" l2] Bad2 by auto
+    hence Badi' : "(map fst l2) ! badi = h1'k" by auto
+    hence "h2k < h1'k" using strict_order_unfold[OF Hord2, of "1 + badi" 0] Badi' Badi_len
+      by(auto)
+    hence False using order.asym[OF 1] by auto
+    then show ?thesis ..
+  next
+    case 2 (* this case will be the LHS of the or *)
+
+    obtain b' where Hb'_leq : "h1'v <[ b'" and Hb'_in : "(h1'k, b') \<in> set ((h2k, h2v) # l2)" using list_leqD[OF Hleq' Hh1'_in] Hh1' by(auto)
+    have H2_v : "h2v = b'" using 
+      distinct_unique_value[OF strict_order_distinct[OF Hord2] Hb'_in] 2 by(auto)
+
+    have "list_leq l1 l2"
+    proof(rule list_leqI)
+      show "strict_order (map fst l1)" using Hord1 Hh1' strict_order_tl[of h1'k "map fst l1"] by auto next
+      show "strict_order (map fst l2)" using Hord2 strict_order_tl[of h2k "map fst l2"] by auto next
+
+      fix k :: 'a
+      fix v :: 'b
+      assume Hkv_in : "(k, v) \<in> set l1"
+      show "\<exists>v'. (k, v') \<in> set l2 \<and> v <[ v'"
+      proof(cases "k = h1'k")
+        case True
+        hence "h1'k \<in> set (map fst l1)" using imageI[OF Hkv_in, of "fst"] by auto
+        hence False using strict_order_distinct[OF Hord1] Hh1' Hkv_in True by(auto)
+        then show ?thesis by auto
+      next
+        case False
+        have Hkv_in' : "(k, v) \<in> set (h1' # l1)" using Hkv_in by auto
+        obtain v' where V'leq : "v <[ v'" and V'in : "(k, v') \<in> set ((h2k, h2v) # l2)"
+          using list_leqD[OF Hleq' Hkv_in'] by auto
+        have V'in' : "(k, v') \<in> set (l2)" using V'in False 2 by auto
+        then show ?thesis using V'leq V'in' by auto
+      qed
+    qed
+
+    hence Conc' : "(\<exists>h1v l1'. h1' # l1 = (h2k, h1v) # l1' \<and> h1v <[ h2v \<and> list_leq l1' l2)" using 2 Hb'_leq Hh1' H2_v by(auto)
+    thus ?thesis by auto
+  next
+    case 3 (* this case will be the RHS of the or *)
+    hence Neq : "h1'k \<noteq> h2k" by auto
+
+    have Conc'_leq : "list_leq (h1' # l1) l2"
+    proof(rule list_leqI[OF Hord1])
+      have "strict_order (h2k # map fst l2)" using Hord2 by auto
+      thus "strict_order (map fst l2)" using strict_order_tl by auto
+    next
+      fix k :: 'a
+      fix v :: 'b
+      assume Hkv_in : "(k, v) \<in> set (h1' # l1)"
+      then obtain v' where Hkv_in2 : "(k, v') \<in> set ((h2k, h2v)# l2)" and Hv'_leq : "v <[ v'" 
+        using list_leqD[OF Hleq' Hkv_in] Neq Hh1' by(auto)
+      have Hkv'_in2tl : "(k, v') \<in> set l2"
+      proof(cases "k = h2k")
+        case True
+        hence Hkv_in1tl : "(k, v) \<in> set l1" using Hkv_in Hh1' Neq by(auto)
+        then obtain badi where Badi: "l1 ! badi = (k, v)" and Badi_len : "badi < length l1"
+          using in_set_conv_nth[of "(k, v)" l1]  by auto
+        hence Badi' : "(map fst l1) ! badi = k" by auto
+        hence "h1'k < h2k"
+          using strict_order_unfold[OF Hord1, of "1 + badi" 0] True Hh1' Badi' Badi_len
+          by(auto)
+        hence False using order.asym[OF 3] by auto
+        then show ?thesis by auto
+      next
+        case False
+        then show ?thesis using Hkv_in2 by auto
+      qed
+
+      show "\<exists>v'. (k, v') \<in> set l2 \<and> v <[ v'" using Hkv'_in2tl Hv'_leq by auto
+    qed
+
+    then show ?thesis by auto
+  qed
+qed
+*)
+declare [[show_types]]
+
+lemma list_complete :
+  fixes l1 l2 ub :: "('a :: linorder * 'b :: Pordc) list"
+  assumes Hord1 : "strict_order (map fst l1)"
+  assumes Hord2 : "strict_order (map fst l2)"
+  assumes Hordub : "strict_order (map fst ub)"
+  assumes Hlt_1 : "list_leq l1 ub"
+  assumes Hlt_2 : "list_leq l2 ub"
+  shows "\<exists> sup . list_leq l1 sup \<and> list_leq l2 sup \<and> strict_order (map fst sup) \<and>
+           (\<forall> ub' . strict_order (map fst ub') \<longrightarrow> list_leq l1 ub' \<longrightarrow> list_leq l2 ub' \<longrightarrow> list_leq sup ub')" using Hord1 Hord2 Hordub Hlt_1 Hlt_2
+proof -
+
+  (* we either want sets of keys, or we need to do the is_sup thing (completeness) right here *)
+  obtain S1 :: "('a * 'b) set" where S1def : "S1 = { kv . kv \<in> set (l1) \<and> fst kv \<notin> set (map fst l2) }"
+    by auto
+  obtain S2 :: "('a * 'b) set" where S2def : "S2 = { kv . fst kv \<notin> set (map fst l1) \<and> kv \<in> set (l2) }"
+    by auto
+
+
+  have Sups : "\<And> k v1 v2 .
+                (k, v1) \<in> set l1 \<Longrightarrow>
+                (k, v2) \<in> set l2 \<Longrightarrow>
+                (\<exists>! sup . is_sup {v1, v2} sup)"
+  proof(-)
+    fix k v1 v2
+    assume H1 : "(k, v1) \<in> set l1"
+    assume H2 : "(k, v2) \<in> set l2"
+    obtain vub where Hvub : "v1 <[ vub" and Helm : "(k, vub) \<in> set ub"
+      using list_leqD[OF Hlt_1 H1] by auto
+    obtain vub' where Hvub' : "v2 <[ vub'" and Helm' : "(k, vub') \<in> set ub"
+      using list_leqD[OF Hlt_2 H2] by auto
+    have "vub = vub'" using
+      distinct_unique_value[OF strict_order_distinct[OF Hordub] Helm Helm'] by auto
+    hence "has_ub {v1, v2}" using Hvub Hvub' by(auto simp add: is_ub_def has_ub_def)
+    then obtain vsup where Hvsup : "is_sup {v1, v2} vsup" using complete2[of v1 v2]
+      by (auto simp add:has_sup_def)
+
+    hence "\<exists> sup . is_sup {v1, v2} sup" by auto
+
+    thus "\<exists>!sup. is_sup {v1, v2} sup" using is_sup_unique[of "{v1, v2}", OF Hvsup] by(auto)
+  qed
+
+  (* derive a function from sups *)
+  obtain f :: "'a \<Rightarrow> ('a * 'b)" where
+    Hf : "f = (\<lambda> a . (a, THE b . (\<forall> v1 v2 . ((a, v1) \<in> set l1 \<longrightarrow> (a, v2) \<in> set l2 \<longrightarrow> is_sup {v1, v2} b))))"
+    by(auto)
+
+  obtain S12k :: "'a set" where S12kdef :
+      "S12k = { k . k \<in> set (map fst l1) \<and> k \<in> set (map fst l2) }" by auto
+
+  hence Fin12k : "finite S12k" by auto
+
+  obtain S12 :: "('a * 'b) set" where
+    S12def : "S12 = f ` S12k"  by auto
+
+  have Fin12 : "finite S12"  unfolding S12def
+  proof(rule finite_imageI)
+    show "finite S12k" using Fin12k by auto
+  qed
+
+  have Fin1 : "finite S1" using S1def by(auto)
+  have Fin2 : "finite S2" using S2def by(auto)
+
+  have Fin : "finite (S1 \<union> S2 \<union> S12)" using Fin12 Fin1 Fin2 by auto
+
+  have l1dist : "distinct (map fst l1)" using strict_order_distinct[OF Hord1] by auto
+  have l2dist : "distinct (map fst l2)" using strict_order_distinct[OF Hord2] by auto
+  have ubdist : "distinct (map fst ub)" using strict_order_distinct[OF Hordub] by auto
+
+  have Nodup :
+     "\<And> k1 v1 v2 . (k1, v1) \<in> S1 \<union> S2 \<union> S12 \<Longrightarrow> (k1, v2) \<in> S1 \<union> S2 \<union> S12 \<Longrightarrow> v1 = v2"
+  proof -
+    fix k1 :: 'a
+    fix v1 v2 :: 'b
+    assume Hin1 : "(k1, v1) \<in> S1 \<union> S2 \<union> S12"
+    assume Hin2 : "(k1, v2) \<in> S1 \<union> S2 \<union> S12"
+
+    consider (1) "(k1, v1) \<in> S1" "(k1, v2) \<in> S1" |
+             (2) "(k1, v1) \<in> S1" "(k1, v2) \<in> S2" |
+             (3) "(k1, v1) \<in> S1" "(k1, v2) \<in> S12" |
+             (4) "(k1, v1) \<in> S2" "(k1, v2) \<in> S1" |
+             (5) "(k1, v1) \<in> S2" "(k1, v2) \<in> S2" |
+             (6) "(k1, v1) \<in> S2" "(k1, v2) \<in> S12" |
+             (7) "(k1, v1) \<in> S12" "(k1, v2) \<in> S1" |
+             (8) "(k1, v1) \<in> S12" "(k1, v2) \<in> S2" |
+             (9) "(k1, v1) \<in> S12" "(k1, v2) \<in> S12" using Hin1 Hin2 by auto
+    then show "v1 = v2"
+    proof cases
+      case 1
+      then show ?thesis unfolding S1def using distinct_unique_value[OF l1dist, of k1 v1 v2] by auto
+    next
+      case 2
+      then show ?thesis unfolding S1def S2def using imageI[of "(k1, v1)" "set l1" fst] by(auto)
+    next
+      case 3
+      then show ?thesis unfolding S1def S12def S12kdef Hf by(auto)
+    next
+      case 4
+      then show ?thesis unfolding S1def S2def using imageI[of "(k1, v2)" "set l1" fst] by(auto)
+    next
+      case 5
+      then show ?thesis unfolding S2def using distinct_unique_value[OF l2dist, of k1 v1 v2] by auto
+    next
+      case 6
+      then show ?thesis unfolding S2def S12def S12kdef Hf by(auto)
+    next
+      case 7
+      then show ?thesis unfolding S1def S12def S12kdef Hf by(auto)
+    next
+      case 8
+      then show ?thesis unfolding S2def S12def S12kdef Hf by(auto)
+    next
+      case 9
+      then show ?thesis unfolding S1def S12def S12kdef Hf by(auto)
+    qed
+  qed
+
+  obtain lsup where Hlsup_ord : "strict_order (map fst lsup)" and Hlsup_S : "set lsup = S1 \<union> S2 \<union> S12"
+    using concretize_alist[OF Fin Nodup] by fastforce
+
+  have Conc1 : "list_leq l1 lsup"
+  proof(rule list_leqI[OF Hord1 Hlsup_ord])
+    fix k :: 'a
+    fix v :: 'b
+    assume H : "(k, v) \<in> set l1"
+    consider
+      (1) "(k) \<in> fst ` S1" | (2) "k \<in> S12k" unfolding S1def S12kdef using imageI[OF H, of fst] by(auto)
+    then show "\<exists>v'::'b. (k, v') \<in> set lsup \<and> v <[ v'"
+    proof cases
+      case 1
+      hence Conc1 : "(k, v) \<in> set lsup" using H by(auto simp add:Hlsup_S S1def S12def S12kdef Hf)
+      have Conc2 : "v <[ v" by(simp add:leq_refl)
+      then show ?thesis using Conc1 by auto
+    next
+      case 2
+      then obtain v' where Hv' : "(k, v') \<in>  S12" by(auto simp add:Hlsup_S S1def S12def S12kdef Hf)
+      obtain v2 where Hv2 : "(k, v2) \<in> set l2" using 2 by(auto simp add:Hlsup_S S2def S1def S12def S12kdef Hf)
+      have Conc1 : "(k, v') \<in> set lsup" using Hv' by(auto simp add:Hlsup_S S1def S12def S12kdef Hf)
+      obtain sup  where Hsup : "is_sup {v, v2} sup" using Sups[OF H Hv2] by auto
+
+      have Char1 : "\<And> sup' . (\<And> vc1 vc2. (k, vc1) \<in> set l1 \<Longrightarrow>  (k, vc2) \<in> set l2 \<Longrightarrow> is_sup {vc1, vc2} sup') \<Longrightarrow> sup' = sup"
+      proof-
+        fix sup' 
+        assume CH :"(\<And> vc1 vc2. (k, vc1) \<in> set l1 \<Longrightarrow>  (k, vc2) \<in> set l2 \<Longrightarrow> is_sup {vc1, vc2} sup')"
+        show "sup' = sup" using is_sup_unique[OF Hsup, of sup'] CH[OF H Hv2] by auto
+      qed
+
+      hence Char1' : "\<And> sup' . (\<forall>v1::'b. (k, v1) \<in> set l1 \<longrightarrow> (\<forall>v2::'b. (k, v2) \<in> set l2 \<longrightarrow> is_sup {v1, v2} sup')) \<Longrightarrow> sup' = sup"
+        by( auto)
+
+      have Char2 : "\<And> vc1 vc2 . (k, vc1) \<in> set l1 \<Longrightarrow> (k, vc2) \<in> set l2 \<Longrightarrow> is_sup {vc1, vc2} sup"
+      proof-
+        fix vc1 vc2
+        assume CH1 : "(k, vc1) \<in> set l1"
+        have CC1 : "vc1 = v" using distinct_unique_value[OF l1dist H CH1] by auto
+        assume CH2 : "(k, vc2) \<in> set l2"
+        have CC2 : "vc2 = v2" using distinct_unique_value[OF l2dist Hv2 CH2] by auto
+        thus "is_sup {vc1, vc2} sup" using Hsup CC1 CC2 by auto
+      qed
+
+      have Char2' : "\<forall>v1::'b. (k, v1) \<in> set l1 \<longrightarrow> (\<forall>v2::'b. (k, v2) \<in> set l2 \<longrightarrow> is_sup {v1, v2} sup)" using Char2
+        by(auto)
+
+      have "v' = sup" using 
+        the_equality[of "\<lambda> sup' . \<forall>v1::'b. (k, v1) \<in> set l1 \<longrightarrow> (\<forall>v2::'b. (k, v2) \<in> set l2 \<longrightarrow> is_sup {v1, v2} sup')" sup
+                    , OF Char2' Char1'] 2 H Hv' Hv2
+        by(auto simp add:Hlsup_S S1def S12def S12kdef Hf)
+
+      hence Conc2 : "v <[ v'" using Hsup by(auto simp add:is_sup_def is_least_def is_ub_def)
+
+      thus ?thesis using Conc1 by auto
+    qed
+  qed
+
+  have Conc2 : "list_leq l2 lsup"
+  proof(rule list_leqI[OF Hord2 Hlsup_ord])
+    fix k :: 'a
+    fix v :: 'b
+    assume H : "(k, v) \<in> set l2"
+    consider
+      (1) "(k) \<in> fst ` S2" | (2) "k \<in> S12k" unfolding S2def S12kdef using imageI[OF H, of fst] by(auto)
+    then show "\<exists>v'::'b. (k, v') \<in> set lsup \<and> v <[ v'"
+    proof cases
+      case 1
+      hence Conc1 : "(k, v) \<in> set lsup" using H by(auto simp add:Hlsup_S S2def S12def S12kdef Hf)
+      have Conc2 : "v <[ v" by(simp add:leq_refl)
+      then show ?thesis using Conc1 by auto
+    next
+      case 2
+      then obtain v' where Hv' : "(k, v') \<in>  S12" by(auto simp add:Hlsup_S S1def S12def S12kdef Hf)
+      obtain v1 where Hv1 : "(k, v1) \<in> set l1" using 2 by(auto simp add:Hlsup_S S2def S1def S12def S12kdef Hf)
+      have Conc1 : "(k, v') \<in> set lsup" using Hv' by(auto simp add:Hlsup_S S1def S12def S12kdef Hf)
+      obtain sup  where Hsup : "is_sup {v1, v} sup" using Sups[OF Hv1 H] by auto
+
+      have Char1 : "\<And> sup' . (\<And> vc1 vc2. (k, vc1) \<in> set l1 \<Longrightarrow>  (k, vc2) \<in> set l2 \<Longrightarrow> is_sup {vc1, vc2} sup') \<Longrightarrow> sup' = sup"
+      proof-
+        fix sup' 
+        assume CH :"(\<And> vc1 vc2. (k, vc1) \<in> set l1 \<Longrightarrow>  (k, vc2) \<in> set l2 \<Longrightarrow> is_sup {vc1, vc2} sup')"
+        show "sup' = sup" using is_sup_unique[OF Hsup, of sup'] CH[OF Hv1 H] by auto
+      qed
+
+      hence Char1' : "\<And> sup' . (\<forall>v1::'b. (k, v1) \<in> set l1 \<longrightarrow> (\<forall>v2::'b. (k, v2) \<in> set l2 \<longrightarrow> is_sup {v1, v2} sup')) \<Longrightarrow> sup' = sup"
+        by( auto)
+
+      have Char2 : "\<And> vc1 vc2 . (k, vc1) \<in> set l1 \<Longrightarrow> (k, vc2) \<in> set l2 \<Longrightarrow> is_sup {vc1, vc2} sup"
+      proof-
+        fix vc1 vc2
+        assume CH1 : "(k, vc1) \<in> set l1"
+        have CC1 : "vc1 = v1" using distinct_unique_value[OF l1dist Hv1 CH1] by auto
+        assume CH2 : "(k, vc2) \<in> set l2"
+        have CC2 : "vc2 = v" using distinct_unique_value[OF l2dist H CH2] by auto
+        thus "is_sup {vc1, vc2} sup" using Hsup CC1 CC2 by auto
+      qed
+
+      have Char2' : "\<forall>v1::'b. (k, v1) \<in> set l1 \<longrightarrow> (\<forall>v2::'b. (k, v2) \<in> set l2 \<longrightarrow> is_sup {v1, v2} sup)" using Char2
+        by(auto)
+
+      have "v' = sup" using 
+        the_equality[of "\<lambda> sup' . \<forall>v1::'b. (k, v1) \<in> set l1 \<longrightarrow> (\<forall>v2::'b. (k, v2) \<in> set l2 \<longrightarrow> is_sup {v1, v2} sup')" sup
+                    , OF Char2' Char1'] 2 H Hv' Hv1
+        by(auto simp add:Hlsup_S S1def S12def S12kdef Hf)
+
+      hence Conc2 : "v <[ v'" using Hsup by(auto simp add:is_sup_def is_least_def is_ub_def)
+
+      thus ?thesis using Conc1 by auto
+    qed
+  qed
+
+  have Conc3 : "strict_order (map fst lsup)" using Hlsup_ord by auto
+
+  have Conc4 : "\<And> ub' . strict_order (map fst ub') \<Longrightarrow> list_leq l1 ub' \<Longrightarrow> list_leq l2 ub' \<Longrightarrow> list_leq lsup ub'"
+  proof -
+    fix ub' :: "('a * 'b) list"
+    assume Hordub' : "strict_order (map fst ub')"
+    assume Hl1 : "list_leq l1 ub'"
+    assume Hl2 : "list_leq l2 ub'"
+    show "list_leq lsup ub'"
+    proof(rule list_leqI[OF Hlsup_ord Hordub'])
+      fix k :: 'a
+      fix v :: 'b
+      assume Hkvin : "(k, v) \<in> set lsup"
+      then consider (1) "(k, v) \<in> S1" |
+                    (2) "(k, v) \<in> S2" |
+                    (3) "(k, v) \<in> S12" using Hlsup_S by auto
+      then show "\<exists>v'::'b. (k, v') \<in> set ub' \<and> v <[ v'"
+      proof cases
+        case 1
+        then show ?thesis using list_leqD[OF Hl1, of k v] by(auto simp add:S1def)
+      next
+        case 2
+        then show ?thesis using list_leqD[OF Hl2, of k v] by(auto simp add:S2def)
+      next
+        case 3
+        obtain v1 where Hv1 : "(k, v1) \<in> set l1"  using 3 by(auto simp add:Hlsup_S S2def S1def S12def S12kdef Hf)
+        obtain v2 where Hv2 : "(k, v2) \<in> set l2" using 3 by(auto simp add:Hlsup_S S2def S1def S12def S12kdef Hf)
+
+        obtain v'1 where Conc1 : "(k, v'1) \<in> set ub'" and V'_gt_1 : "v1 <[ v'1" using list_leqD[OF Hl1 Hv1] by(auto)
+        obtain v'2 where Conc1' : "(k, v'2) \<in> set ub'" and V'_gt_2 : "v2 <[ v'2" using list_leqD[OF Hl2 Hv2] by(auto)
+
+        have Hv'1v'2 : "v'1 = v'2" using 
+          distinct_unique_value[OF strict_order_distinct[OF Hordub'] Conc1 Conc1'] by auto
+
+        have Hub : "is_ub {v1, v2} v'1" using Conc1 V'_gt_1 V'_gt_2 Hv'1v'2 by(auto simp add:is_ub_def)
+
+        obtain sup  where Hsup : "is_sup {v1, v2} sup" using Sups[OF Hv1 Hv2] by auto
+  
+        have Char1 : "\<And> sup' . (\<And> vc1 vc2. (k, vc1) \<in> set l1 \<Longrightarrow>  (k, vc2) \<in> set l2 \<Longrightarrow> is_sup {vc1, vc2} sup') \<Longrightarrow> sup' = sup"
+        proof-
+          fix sup' 
+          assume CH :"(\<And> vc1 vc2. (k, vc1) \<in> set l1 \<Longrightarrow>  (k, vc2) \<in> set l2 \<Longrightarrow> is_sup {vc1, vc2} sup')"
+          show "sup' = sup" using is_sup_unique[OF Hsup, of sup'] CH[OF Hv1 Hv2] by auto
+        qed
+  
+        hence Char1' : "\<And> sup' . (\<forall>v1::'b. (k, v1) \<in> set l1 \<longrightarrow> (\<forall>v2::'b. (k, v2) \<in> set l2 \<longrightarrow> is_sup {v1, v2} sup')) \<Longrightarrow> sup' = sup"
+          by( auto)
+  
+        have Char2 : "\<And> vc1 vc2 . (k, vc1) \<in> set l1 \<Longrightarrow> (k, vc2) \<in> set l2 \<Longrightarrow> is_sup {vc1, vc2} sup"
+        proof-
+          fix vc1 vc2
+          assume CH1 : "(k, vc1) \<in> set l1"
+          have CC1 : "vc1 = v1" using distinct_unique_value[OF l1dist Hv1 CH1] by auto
+          assume CH2 : "(k, vc2) \<in> set l2"
+          have CC2 : "vc2 = v2" using distinct_unique_value[OF l2dist Hv2 CH2] by auto
+          thus "is_sup {vc1, vc2} sup" using Hsup CC1 CC2 by auto
+        qed
+  
+        have Char2' : "\<forall>v1::'b. (k, v1) \<in> set l1 \<longrightarrow> (\<forall>v2::'b. (k, v2) \<in> set l2 \<longrightarrow> is_sup {v1, v2} sup)" using Char2
+          by(auto)
+  
+        have "v = sup" using 
+          the_equality[of "\<lambda> sup' . \<forall>v1::'b. (k, v1) \<in> set l1 \<longrightarrow> (\<forall>v2::'b. (k, v2) \<in> set l2 \<longrightarrow> is_sup {v1, v2} sup')" sup
+                      , OF Char2' Char1'] 3 Hv1 Hv2
+          by(auto simp add:Hlsup_S S1def S12def S12kdef Hf)
+  
+        hence Conc2 : "v <[ v'1" using is_sup_unfold2[OF Hsup Hub] by(auto)
+  
+        thus ?thesis using Conc1 by auto
+      qed
+    qed
+  qed
+
+  show " \<exists>sup::('a \<times> 'b) list. list_leq l1 sup \<and> list_leq l2 sup \<and> strict_order (map fst sup) \<and> (\<forall>ub'::('a \<times> 'b) list. strict_order (map fst ub') \<longrightarrow> list_leq l1 ub' \<longrightarrow> list_leq l2 ub' \<longrightarrow> list_leq sup ub')"
+    using Conc1 Conc2 Conc3 Conc4 by auto
+qed
+
+(*
+lemma list_complete :
+  fixes l1 l2 ub :: "('a :: linorder * 'b :: Pordc) list"
+  assumes Hord1 : "strict_order (map fst l1)"
+  assumes Hord2 : "strict_order (map fst l2)"
+  assumes Hordub : "strict_order (map fst ub)"
+  assumes Hlt_1 : "list_leq l1 ub"
+  assumes Hlt_2 : "list_leq l2 ub"
+  shows "\<exists> sup . list_leq l1 sup \<and> list_leq l2 sup \<and>
+           (\<forall> ub' . list_leq l1 ub' \<longrightarrow> list_leq l2 ub' \<longrightarrow> list_leq sup ub')" using Hord1 Hord2 Hordub Hlt_1 Hlt_2
+proof(induction ub arbitrary: l1 l2)
+  case Nil
+  then show ?case by(auto)
+next
+  fix a :: "('a * 'b)"
+  obtain ak and av where Ha : "a = (ak, av)" by(cases a; auto)
+  fix ub l1 l2:: "('a * 'b) list"
+  assume HI: "(\<And>l1 l2.
+           strict_order (map fst l1) \<Longrightarrow>
+           strict_order (map fst l2) \<Longrightarrow>
+           strict_order (map fst ub) \<Longrightarrow>
+           list_leq l1 ub \<Longrightarrow>
+           list_leq l2 ub \<Longrightarrow>
+           \<exists>sup. list_leq l1 sup \<and>
+                 list_leq l2 sup \<and>
+                 (\<forall>ub'. list_leq l1 ub' \<longrightarrow> list_leq l2 ub' \<longrightarrow> list_leq sup ub'))"
+  assume Hord1' : "strict_order (map fst l1)"
+  assume Hord2' : "strict_order (map fst l2)"
+  assume Hordub' : "strict_order (map fst (a # ub))"
+  then have Hordub_tail : "strict_order (map fst ub)" using strict_order_tl[of ak "map fst ub"] using Ha by auto
+  assume Hlt_1' : "list_leq l1 (a # ub)" 
+  assume Hlt_2' : "list_leq l2 (a # ub)"
+
+  consider (1) "ak \<notin> set (map fst l1)" "ak \<notin> set (map fst l2)" |
+           (2) "ak \<in> set (map fst l1)" "ak \<notin> set (map fst l2)" |
+           (3) "ak \<notin> set (map fst l1)" "ak \<in> set (map fst l2)" |
+           (4) "ak \<in> set (map fst l1)" "ak \<in> set (map fst l2)" by auto
+  then show "\<exists>sup. list_leq l1 sup \<and> list_leq l2 sup \<and> 
+              (\<forall>ub'. list_leq l1 ub' \<longrightarrow> list_leq l2 ub' \<longrightarrow> list_leq sup ub')"
+  proof cases
+    case 1
+    have Leq1ub : "list_leq l1 ub"
+    proof(rule list_leqI[OF Hord1' Hordub_tail])
+      fix k :: 'a
+      fix v :: 'b
+      assume H : "(k, v) \<in> set l1"
+      obtain v' where Hv' : "(k, v') \<in> set (a#ub) \<and> v <[ v'"
+        using list_leqD[OF Hlt_1' H] by auto
+      have "k \<noteq> ak" using 1 H imageI[OF H, of fst] by(auto)
+      hence "(k, v') \<in> set ub" using Hv' Ha by auto
+      thus "\<exists>v'. (k, v') \<in> set ub \<and> v <[ v'" using Hv' by auto
+    qed
+    have Leq2ub : "list_leq l2 ub"
+    proof(rule list_leqI[OF Hord2' Hordub_tail])
+      fix k :: 'a
+      fix v :: 'b
+      assume H : "(k, v) \<in> set l2"
+      obtain v' where Hv' : "(k, v') \<in> set (a#ub) \<and> v <[ v'"
+        using list_leqD[OF Hlt_2' H] by auto
+      have "k \<noteq> ak" using 1 H imageI[OF H, of fst] by(auto)
+      hence "(k, v') \<in> set ub" using Hv' Ha by auto
+      thus "\<exists>v'. (k, v') \<in> set ub \<and> v <[ v'" using Hv' by auto
+    qed
+    show ?thesis
+      using HI[OF Hord1' Hord2' Hordub_tail Leq1ub Leq2ub] by auto
+  next
+    case 2
+    have Leq2ub : "list_leq l2 ub"
+    proof(rule list_leqI[OF Hord2' Hordub_tail])
+      fix k :: 'a
+      fix v :: 'b
+      assume H : "(k, v) \<in> set l2"
+      obtain v' where Hv' : "(k, v') \<in> set (a#ub) \<and> v <[ v'"
+        using list_leqD[OF Hlt_2' H] by auto
+      have "k \<noteq> ak" using `ak \<notin> set (map fst l2)` H imageI[OF H, of fst] by(auto)
+      hence "(k, v') \<in> set ub" using Hv' Ha by auto
+      thus "\<exists>v'. (k, v') \<in> set ub \<and> v <[ v'" using Hv' by auto
+    qed
+
+    (* i think we need a slightly different approach here. in order to use the
+       inductive hypothesis we need to show that _some_ l1 is <[ ub
+       might need a lemma saying that (ak, v1) will be the head of l1
+ *)
+    obtain v1 where Hv1 : "(ak, v1) \<in> set l1" using `ak \<in> set (map fst l1)` by(auto)
+    have Leq1ub : "list_leq l1 ((ak, v1)#ub)"
+    proof(rule list_leqI[OF Hord1'])
+      show  "strict_order (map fst ((ak, v1) # ub))" using Hordub' Ha by auto
+    next
+      fix k :: 'a
+      fix v :: 'b
+      assume H : "(k, v) \<in> set l1"
+      show "\<exists>v'. (k, v') \<in> set ((ak, v1) # ub) \<and> v <[ v'"
+      proof(cases "k = ak")
+        case True
+        hence H' : "(ak, v) \<in> set l1" using H by auto
+        have Vv1_eq : "v = v1" using 
+             distinct_unique_value[OF strict_order_distinct[OF Hord1'] H' Hv1]  by(auto)
+        have Conc1 : "(k, v1) \<in> set ((ak, v1) # ub)" using True by auto
+        have Conc2 : "v <[ v1" using leq_refl[of v] Vv1_eq by auto
+        show "\<exists>v'. (k, v') \<in> set ((ak, v1) # ub) \<and> v <[ v'" using Conc1 Conc2 by auto
+      next
+        case False
+        thus "\<exists>v'. (k, v') \<in> set ((ak, v1) # ub) \<and> v <[ v'"
+          using list_leqD[OF Hlt_1' H] Ha by(auto)
+      qed
+    qed
+    have Hordub'' : "strict_order (map fst ((ak, v1) # ub))" using Hordub' Ha by auto
+
+    consider (Sub1) h1vx l1'x where "l1 = (ak, h1vx) # l1'x"  "h1vx <[ v1" "list_leq l1'x ub" |
+             (Sub2) "list_leq l1 ub"
+      using list_leq_head_cases[OF Hord1' Hordub'' Leq1ub] by auto
+    then show ?thesis
+    proof cases
+      case Sub1
+      hence Hord_l1'x : "strict_order (map fst l1'x)" using Hord1' strict_order_tl[of ak "map fst l1'x"] by auto
+      obtain sup where Hsup :
+          "list_leq l1'x sup \<and>
+            list_leq l2 sup \<and>
+            (\<forall>ub'. list_leq l1'x ub' \<longrightarrow>
+                   list_leq l2 ub' \<longrightarrow> list_leq sup ub')" 
+        using  HI[OF Hord_l1'x Hord2' Hordub_tail Sub1(3) Leq2ub]
+        by auto
+
+      have "list_leq l1 ((ak, h1vx) # sup)" sorry (* lemma *)
+      have "list_leq l2 sup" using Hsup by auto
+      hence "list_leq l2 ((ak, h1vx) # sup)" using list_leq_cons[OF `list_leq l2 sup`, of "(ak, h1vx)"] 2(2)
+        by auto
+      have "(\<And> ub'. list_leq l1 ub' \<Longrightarrow>
+                   list_leq l2 ub' \<Longrightarrow> list_leq ((ak, h1vx) # sup) ub')"
+      proof -
+        fix ub'
+        assume HS1 : "list_leq l1 ub'"
+        assume HS2 : "list_leq l2 ub'"
+        show "list_leq ((ak, h1vx) # sup) ub'"
+        proof(rule list_leqI)
+      then show ?thesis
+      (* idea: now we need to prove we can "add back in" the head and still have sup work out. *)
+    next
+      case Sub2
+      then show ?thesis sorry
+    qed
+      
+(*
+ `ak \<in> set (map fst l1)` *) sorry
+  next
+    case 3
+    then show ?thesis sorry
+  next
+    case 4
+    then show ?thesis sorry
+  qed
+  then show ?case sorry
+qed  
+*)
+
 instantiation oalist :: (linorder, Pordc) Pordc
 begin
 
 instance proof
   fix a b :: "('a :: linorder, 'b :: Pordc) oalist"
   assume H : "has_ub {a, b}"
+(*
   then obtain ub where H : "is_ub {a, b} ub" by (auto simp add:has_ub_def)
-
-  show "has_sup {a, b}"
-  proof(rule has_sup_intro)
+*)
 
   show "has_sup {a, b}" using H unfolding has_ub_def has_sup_def is_sup_def is_least_def is_ub_def pleq_oalist
   proof(transfer)
-    fix 
-*)
+    fix a b :: "('a :: linorder * 'b :: Pordc) list"
+    assume Hord_a : "strict_order (map fst a)"
+    assume Hord_b : "strict_order (map fst b)"
+    assume Hub : "\<exists>aa\<in>{xs. strict_order (map fst xs)}. \<forall>x\<in>{a, b}. list_leq x aa"
+    then obtain ub where Hord_ub : "strict_order (map fst ub)" and Hub' : "\<forall>x\<in>{a, b}. list_leq x ub" by auto
+    have Hlt_a : "list_leq a ub" using Hub' by auto
+    have Hlt_b : "list_leq b ub" using Hub' by auto
+
+    show "\<exists>aa\<in>{xs. strict_order (map fst xs)}.
+              (\<forall>x\<in>{a, b}. list_leq x aa) \<and>
+              (\<forall>a'\<in>{xs. strict_order (map fst xs)}.
+                  (\<forall>x\<in>{a, b}. list_leq x a') \<longrightarrow> list_leq aa a')"
+      using list_complete[OF Hord_a Hord_b Hord_ub Hlt_a Hlt_b]
+      by(auto)
+  qed
+qed
+
+
 (*
 instantiation oalist :: (linorder, Pord) Pordb
 begin
