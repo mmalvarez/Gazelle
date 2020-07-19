@@ -2660,12 +2660,49 @@ proof(rule list_leqI[OF Hordsd list_bsup_correct[OF Horda Hordb]])
     thus ?thesis by auto
   qed
 qed
+
+lemma list_bsup_is_bsup3 :
+  fixes a b a' :: "('a :: linorder * 'b :: Mergeable) list"
+  assumes Horda : "strict_order (map fst a)"
+  assumes Hordb : "strict_order (map fst b)"
+  assumes Horda' : "strict_order (map fst a')"
+  assumes Hleq : "list_leq a a'"
+  assumes Hbub :
+    "\<And> bd sd .
+      strict_order (map fst bd) \<Longrightarrow> strict_order (map fst sd) \<Longrightarrow>
+      list_leq bd b \<Longrightarrow>
+      list_leq a sd \<Longrightarrow>
+      list_leq bd sd \<Longrightarrow>
+      (\<And> a'' . strict_order (map fst a'') \<Longrightarrow> list_leq a a'' \<Longrightarrow> list_leq bd a'' \<Longrightarrow> list_leq sd a'') \<Longrightarrow>
+      list_leq sd a'
+      "
+  shows "list_leq (list_bsup a b) a'"
+
+proof(rule list_leqI[OF list_bsup_correct[OF Horda Hordb] Horda'])
+  fix k v
+  assume H : "(k, v) \<in> set (list_bsup a b)" 
+
+  consider (1) "k \<in> set (map fst a)" "k \<in> set (map fst b)" |
+           (2) "k \<in> set (map fst a)" "k \<notin> set (map fst b)" |
+           (3) "k \<notin> set (map fst a)" "k \<in> set (map fst b)" |
+           (4) "k \<notin> set (map fst a)" "k \<notin> set (map fst b)" by auto
+  then show "\<exists>v'. (k, v') \<in> set a' \<and> v <[ v'"
+  proof cases
+    case 1
+    then show ?thesis using list_bsup_overlap_key sorry
+  next
+    case 2
+    then show ?thesis sorry
+  next
+    case 3
+    then show ?thesis sorry
+  next
+    case 4
+    then show ?thesis sorry
+  qed
+qed
+
 (*
-      (\<forall>x::('a \<times> 'b) list\<in>{a, bd}. list_leq x a') \<longrightarrow> list_leq sd a')
-"(\<forall>x::('a \<times> 'b) list\<in>{a, bd}. list_leq x sd) \<and> 
-               (\<forall>a'::('a \<times> 'b) list\<in>{xs::('a \<times> 'b) list. strict_order (map fst xs)}. (\<forall>x::('a \<times> 'b) list\<in>{a, bd}. list_leq x a') \<longrightarrow> list_leq sd a') \<longrightarrow>
-               list_leq sd (list_bsup a b)))"
-  
   "(\<forall>bd::('a \<times> 'b) list\<in>{xs::('a \<times> 'b) list. strict_order (map fst xs)}.
             \<forall>sd::('a \<times> 'b) list\<in>{xs::('a \<times> 'b) list. strict_order (map fst xs)}.
                list_leq bd b \<longrightarrow>
@@ -2673,7 +2710,7 @@ qed
                (\<forall>a'::('a \<times> 'b) list\<in>{xs::('a \<times> 'b) list. strict_order (map fst xs)}. (\<forall>x::('a \<times> 'b) list\<in>{a, bd}. list_leq x a') \<longrightarrow> list_leq sd a') \<longrightarrow>
                list_leq sd (list_bsup a b)))"
 *)
-(*
+
 lemma list_bsup_is_bsup :
   fixes a b :: "('a :: linorder * 'b :: Mergeable) list"
   assumes Horda : "strict_order (map fst a)"
@@ -2693,9 +2730,53 @@ lemma list_bsup_is_bsup :
                   list_leq bd b \<longrightarrow>
                   (\<forall>x::('a \<times> 'b) list\<in>{a, bd}. list_leq x sd) \<and> (\<forall>a'::('a \<times> 'b) list\<in>{xs::('a \<times> 'b) list. strict_order (map fst xs)}. (\<forall>x::('a \<times> 'b) list\<in>{a, bd}. list_leq x a') \<longrightarrow> list_leq sd a') \<longrightarrow> list_leq sd a') \<longrightarrow>
            list_leq (list_bsup a b) a')"
+proof(rule conjI)
+  show "list_leq a (list_bsup a b) \<and>
+    (\<forall>bd\<in>{xs. strict_order (map fst xs)}.
+        \<forall>sd\<in>{xs. strict_order (map fst xs)}.
+           list_leq bd b \<longrightarrow>
+           (\<forall>x\<in>{a, bd}. list_leq x sd) \<and>
+           (\<forall>a'\<in>{xs. strict_order (map fst xs)}. (\<forall>x\<in>{a, bd}. list_leq x a') \<longrightarrow> list_leq sd a') \<longrightarrow>
+           list_leq sd (list_bsup a b))"
+  proof (rule conjI)
+    show "list_leq a (list_bsup a b)" using Horda Hordb list_bsup_is_bsup1 by blast
+  next
+    show "\<forall>bd\<in>{xs. strict_order (map fst xs)}.
+       \<forall>sd\<in>{xs. strict_order (map fst xs)}.
+          list_leq bd b \<longrightarrow>
+          (\<forall>x\<in>{a, bd}. list_leq x sd) \<and>
+          (\<forall>a'\<in>{xs. strict_order (map fst xs)}. (\<forall>x\<in>{a, bd}. list_leq x a') \<longrightarrow> list_leq sd a') \<longrightarrow>
+          list_leq sd (list_bsup a b)" using list_bsup_is_bsup2[OF Horda Hordb] by blast
+  qed
+next
+  show "\<forall>a'\<in>{xs. strict_order (map fst xs)}.
+       list_leq a a' \<and>
+       (\<forall>bd\<in>{xs. strict_order (map fst xs)}.
+           \<forall>sd\<in>{xs. strict_order (map fst xs)}.
+              list_leq bd b \<longrightarrow>
+              (\<forall>x\<in>{a, bd}. list_leq x sd) \<and>
+              (\<forall>a'\<in>{xs. strict_order (map fst xs)}. (\<forall>x\<in>{a, bd}. list_leq x a') \<longrightarrow> list_leq sd a') \<longrightarrow>
+              list_leq sd a') \<longrightarrow>
+       list_leq (list_bsup a b) a'"
+  proof
+    fix a' :: "('a * 'b) list"
+    assume Ha' : "a' \<in> {xs. strict_order (map fst xs)}"
+    hence Horda' : "strict_order (map fst a')" by auto
+    
+    show "list_leq a a' \<and>
+          (\<forall>bd\<in>{xs. strict_order (map fst xs)}.
+              \<forall>sd\<in>{xs. strict_order (map fst xs)}.
+                 list_leq bd b \<longrightarrow>
+                 (\<forall>x\<in>{a, bd}. list_leq x sd) \<and>
+                 (\<forall>a'\<in>{xs. strict_order (map fst xs)}. (\<forall>x\<in>{a, bd}. list_leq x a') \<longrightarrow> list_leq sd a') \<longrightarrow>
+                 list_leq sd a') \<longrightarrow>
+          list_leq (list_bsup a b) a'"
+      using list_bsup_is_bsup3[OF Horda Hordb Horda'] by blast
+  qed
+qed
 
 (* finally, Mergeable *)
-(*
+
 instantiation oalist :: (linorder, Mergeable) Mergeable
 begin
 definition bsup_oalist :
@@ -2706,6 +2787,30 @@ instance proof
   show "is_bsup a b [^ a, b ^]"
     unfolding is_bsup_def is_sup_def is_least_def is_bub_def is_ub_def pleq_oalist bsup_oalist
   proof(transfer)
-*)
-*)
+    fix a b :: "('a * 'b) list"
+    assume Horda : "strict_order (map fst a)" 
+    assume Hordb : "strict_order (map fst b)"
+  
+    show "strict_order (map fst a) \<Longrightarrow>
+           strict_order (map fst b) \<Longrightarrow>
+           (list_leq a (list_bsup a b) \<and>
+            (\<forall>bd\<in>{xs. strict_order (map fst xs)}.
+                \<forall>sd\<in>{xs. strict_order (map fst xs)}.
+                   list_leq bd b \<longrightarrow>
+                   (\<forall>x\<in>{a, bd}. list_leq x sd) \<and>
+                   (\<forall>a'\<in>{xs. strict_order (map fst xs)}. (\<forall>x\<in>{a, bd}. list_leq x a') \<longrightarrow> list_leq sd a') \<longrightarrow>
+                   list_leq sd (list_bsup a b))) \<and>
+           (\<forall>a'\<in>{xs. strict_order (map fst xs)}.
+               list_leq a a' \<and>
+               (\<forall>bd\<in>{xs. strict_order (map fst xs)}.
+                   \<forall>sd\<in>{xs. strict_order (map fst xs)}.
+                      list_leq bd b \<longrightarrow>
+                      (\<forall>x\<in>{a, bd}. list_leq x sd) \<and>
+                      (\<forall>a'\<in>{xs. strict_order (map fst xs)}. (\<forall>x\<in>{a, bd}. list_leq x a') \<longrightarrow> list_leq sd a') \<longrightarrow>
+                      list_leq sd a') \<longrightarrow>
+               list_leq (list_bsup a b) a')"
+      using list_bsup_is_bsup[OF Horda Hordb] by blast
+  qed
+qed
+
 end
