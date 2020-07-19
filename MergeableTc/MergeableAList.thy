@@ -1493,14 +1493,1219 @@ instance proof
       by(auto)
   qed
 qed
+end
 
 
-(*
-instantiation oalist :: (linorder, Pord) Pordb
+instantiation oalist :: (linorder, Pordc) Pordb
 begin
   definition bot_oalist :
     "\<bottom> = empty"
 
 instance proof
+  fix a :: "('a :: linorder, 'b :: Pordc) oalist"
+  show "\<bottom> <[ a" unfolding bot_oalist pleq_oalist
+    by(transfer; auto)
+qed
+end
+
+(*
+fun list_bsup :: "('a :: linorder * 'b :: Mergeable) list \<Rightarrow> ('a * 'b) list \<Rightarrow> ('a * 'b) list" where
+"list_bsup [] l2 = l2"
+| "list_bsup l1 [] = l1"
+| "list_bsup ((k1, v1)#l1t) ((k2, v2)#l2t) =
+   ( if k1 < k2
+     then (k1, v1) # list_bsup l1t ((k2, v2)#l2t)
+     else (if k1 = k2
+           then (k1, bsup v1 v2) # list_bsup l1t l2t
+           else (k2, v2) # list_bsup ((k1, v1)#l1t) l2t))"
+*)
+
+fun list_bsup :: "('a :: linorder * 'b :: Mergeable) list \<Rightarrow> ('a * 'b) list \<Rightarrow> ('a * 'b) list" where
+"list_bsup l1 [] = l1"
+| "list_bsup l1 ((k2, v2)#l2t) =
+   (case map_of l1 k2 of
+      None \<Rightarrow> list_bsup (str_ord_update k2 v2 l1) l2t
+      | Some v1 \<Rightarrow> list_bsup (str_ord_update k2 (bsup v1 v2) l1) l2t)"
+
+
+(*
+lemma list_bsup_head :
+  fixes l :: "(('key :: linorder) * 'value) list"
+  shows "(hd (list_bsup ((k1, v1)#l1) ((k2, v2)#l2)) = (k, v) \<and> k \<le> hk) \<or>
+         (hd (str_ord_update k v ((hk, hv)#l)) = (hk, hv) \<and> hk \<le> k)"
+proof(-)
+  consider (1) "k < hk" |
+           (2) "k = hk" |
+           (3) "hk < k"
+    using less_linear[of k hk] by auto
+  then show "(hd (str_ord_update k v ((hk, hv) # l)) = (k, v) \<and> (k \<le> hk)) \<or> (hd (str_ord_update k v ((hk, hv) # l)) = (hk, hv) \<and> hk \<le> k)"
+  proof cases
+    case 1
+    then show ?thesis by auto
+  next
+    case 2 thus ?thesis by auto
+  next
+    case 3 thus ?thesis by auto
+  qed
+qed
+*)
+
+lemma list_bsup_correct :
+  fixes l1 l2 :: "(('a :: linorder) * ('b :: Mergeable)) list"
+  assumes Hord1 :  "strict_order (map fst l1)"
+  assumes Hord2 :  "strict_order (map fst l2)"
+  shows "strict_order (map fst (list_bsup l1 l2))" using Hord1 Hord2
+  proof(induction l2 arbitrary:l1)
+    case Nil
+    then show ?case by auto
+  next
+    fix h2 :: "('a :: linorder * 'b :: Mergeable)"
+    obtain k2 v2 where Hh2 : "h2 = (k2, v2)" by(cases h2; auto)
+    fix l2t l1 :: "('a * 'b) list"
+    assume HI : "(\<And>l1::('a \<times> 'b) list.
+             strict_order (map fst l1) \<Longrightarrow>
+             strict_order (map fst l2t) \<Longrightarrow> strict_order (map fst (list_bsup l1 l2t)))"
+    assume Hord1 : "strict_order (map fst l1)"
+    assume Hord2 : "strict_order (map fst (h2#l2t))"
+    hence Hord2t : "strict_order (map fst l2t)" using Hh2 strict_order_tl[of k2 "map fst l2t"] by auto
+
+    show "strict_order (map fst (list_bsup l1 (h2#l2t)))"
+    proof(cases "map_of l1 k2")
+      case None
+      have Hord1' : "strict_order (map fst (str_ord_update k2 v2 l1))"
+        using str_ord_update_correct[OF Hord1, of k2 v2] by auto
+      have "strict_order (map fst (list_bsup (str_ord_update k2 v2 l1) l2t))"
+        using HI[OF Hord1' Hord2t] by auto
+      thus ?thesis using None Hh2 by(auto)
+    next
+      case (Some v1)
+      have Hord1' : "strict_order (map fst (str_ord_update k2 [^ v1, v2 ^] l1))"
+        using str_ord_update_correct[OF Hord1, of k2 "[^ v1, v2 ^]"] by auto
+      have "strict_order (map fst (list_bsup (str_ord_update k2 [^ v1, v2 ^] l1) l2t))"
+        using HI[OF Hord1' Hord2t] by auto
+      then show ?thesis using Some Hh2 by(auto)
+    qed
+  qed
+
+lift_definition oalist_bsup :: "('a :: linorder, 'b :: Mergeable) oalist \<Rightarrow> ('a, 'b) oalist \<Rightarrow> ('a, 'b) oalist"
+is list_bsup
+proof -
+  fix l1 l2 :: "('a :: linorder * 'b :: Mergeable) list"
+  assume Hord1 :  "strict_order (map fst l1)"
+  assume Hord2 :  "strict_order (map fst l2)"
+  show "strict_order (map fst (list_bsup l1 l2))"
+    using list_bsup_correct[OF Hord1 Hord2] by auto
+qed
+
+lemma list_leq_refl :
+  fixes a :: "('a :: linorder * 'b :: Pord) list"
+  assumes Horda : "strict_order (map fst a)"
+  shows "list_leq a a"
+  by(rule list_leqI[OF Horda Horda]; auto simp add:leq_refl)
+
+declare [[show_types = false]]
+
+lemma str_ord_update_inD :
+  fixes k k' :: "'a :: linorder"
+  fixes v v' :: "'b :: Pord"
+  fixes l :: "('a * 'b) list"
+  assumes Hord : "strict_order (map fst l)"
+  assumes Hk'v' : "(k', v') \<in> set (str_ord_update k v l)"
+  shows "(k = k' \<and> v = v') \<or>
+         ((k', v') \<in> set l)" using Hord Hk'v'
+proof(induction l arbitrary: k v k' v')
+  case Nil
+  then show ?case by auto
+next
+  case (Cons a l)
+  obtain ak av where Ha : "a = (ak, av)" by(cases a; auto)
+  have Hord' : "strict_order (map fst l)" using Cons Ha strict_order_tl[of ak "map fst l"] by auto
+  show ?case using Cons.prems Cons.IH[OF Hord']  Ha by(auto split:if_splits)
+qed
+
+lemma str_ord_update_inD' :
+  fixes k k' :: "'a :: linorder"
+  fixes v v' :: "'b :: Pord"
+  fixes l :: "('a * 'b) list"
+  assumes Hord : "strict_order (map fst l)"
+  assumes Hk'v' : "(k', v') \<in> set (str_ord_update k v l)"
+  assumes Hneq : "k \<noteq> k'"
+  shows "(k', v') \<in> set l" using Hord Hk'v' Hneq
+proof(induction l arbitrary: k v k' v')
+  case Nil
+  then show ?case by auto
+next
+  case (Cons a l)
+  obtain ak av where Ha : "a = (ak, av)" by(cases a; auto)
+  have Hord' : "strict_order (map fst l)" using Cons Ha strict_order_tl[of ak "map fst l"] by auto
+  show ?case using Cons.prems Cons.IH[OF Hord']  Ha by(auto split:if_splits)
+qed
+
+
+declare [[show_types]]
+
+lemma str_ord_update_inI1 :
+  fixes k  :: "'a :: linorder"
+  fixes v  :: "'b :: Pord"
+  fixes l :: "('a * 'b) list"
+  assumes Hord : "strict_order (map fst l)"
+  shows "(k, v) \<in> set (str_ord_update k v l)" using Hord 
+proof(induction l)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons a l)
+  obtain ak av where Ha : "a = (ak, av)" by(cases a; auto)
+  have Hord' : "strict_order (map fst l)" using Cons Ha strict_order_tl[of ak "map fst l"] by auto
+  then show ?case using Cons.prems Cons.IH[OF Hord'] Ha
+    by(auto split:if_splits)
+qed  
+
+lemma str_ord_update_inI2 :
+  fixes k k'  :: "'a :: linorder"
+  fixes v v' :: "'b :: Pord"
+  fixes l :: "('a * 'b) list"
+  assumes Hord : "strict_order (map fst l)"
+  assumes Hneq : "k \<noteq> k'"
+  assumes Hin : "(k', v') \<in> set l"
+  shows "(k', v') \<in> set (str_ord_update k v l)" using Hord Hneq Hin
+proof(induction l)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons a l)
+  obtain ak av where Ha : "a = (ak, av)" by(cases a; auto)
+  have Hord' : "strict_order (map fst l)" using Cons Ha strict_order_tl[of ak "map fst l"] by auto
+  then show ?case using Cons.prems Cons.IH[OF Hord'] Ha
+    by(auto split:if_splits)
+qed
+
+declare [[show_types = false]]
+
+(*
+lemma str_ord_delete_inD :
+  fixes k k' :: "'a :: linorder"
+  fixes v' :: "'b :: Pord"
+  fixes l :: "('a * 'b) list"
+  assumes Hord : "strict_order (map fst l)"
+  assumes Hk'v' : "(k', v') \<in> set (str_ord_delete k l)"
+  shows "(k \<noteq> k' \<and> (k', v') \<in> set l)" using Hord Hk'v'
+proof(induction l arbitrary: k k' v')
+  case Nil
+  then show ?case by auto
+next
+  case (Cons a l)
+  obtain ak av where Ha : "a = (ak, av)" by(cases a; auto)
+  have Hord' : "strict_order (map fst l)" using Cons Ha strict_order_tl[of ak "map fst l"] by auto
+  have Notin : "ak \<notin> set (map fst l)" using strict_order_distinct[OF Cons.prems(1)] Ha by auto
+
+  hence Notin' :  "\<And> vx . (ak, vx) \<in> set l \<Longrightarrow> False" 
+  proof-
+    fix vx
+    assume H : "(ak, vx) \<in> set l"
+    show False using imageI[OF H, of fst] Notin by auto
+  qed
+
+  consider (1) "k < ak" |
+           (2) "ak = k" |
+           (3) "ak < k" using less_linear[of ak k] by auto
+
+  then show ?case
+  proof cases
+    case 1
+    hence Hdel : "str_ord_delete k (a # l) = a # l" using Cons.prems Ha by auto
+
+    then show ?thesis
+    proof(cases "k = k'")
+      case True
+
+      have "k' \<notin> set (map fst l)"
+      proof
+        assume "k' \<in> set (map fst l)"
+        
+      then show ?thesis using 1 Hdel
+    next
+      case False
+      then show ?thesis sorry
+    qed
+
+  proof(cases "ak = k")
+    case True
+
+    then show ?thesis using Ha Cons.prems True Notin'
+      by(auto)
+  next
+
+    case False
+
+
+
+    show ?thesis
+    proof(cases "ak = k'")
+      assume True' : "ak = k'"
+      hence "\<And> vx . (ak, vx) \<in> set l \<Longrightarrow> False"  using Notin' by auto
+
+
+      have "k \<noteq> k'" using False True' by auto
+
+      have "(ak, av) \<in> set (str_ord_delete k l)" 
+
+      have "(k', v') \<in> set (str_ord_delete k (l))" using Cons.prems False True' Ha
+        apply(auto split:if_splits)
+
+      show ?thesis using Cons.prems False True' Ha
+        apply(auto split:if_splits)
+
+
+      hence "(k', v') \<in> set (str_ord_delete k (l))" using Cons.prems(2) Ha False
+        apply(auto split:if_splits)
+        using Cons.prems Cons.IH[OF Hord'] True Ha apply(auto split:if_splits)
+  next
+    case False
+    then show ?thesis sorry
+  qed
+qed
+*)
+
+declare [[show_types = false]]
+
+lemma list_bsup_disj_key1 :
+  fixes k :: "'a :: linorder"
+  fixes v :: "'b :: Mergeable"
+  fixes a b :: "('a * 'b) list"
+  assumes Hord1 : "strict_order (map fst a)"
+  assumes Hord2 : "strict_order (map fst b)"
+  assumes H1 : "(k, v) \<in> set a"
+  assumes H2 : "k  \<notin> set (map fst b)"
+  shows "(k, v) \<in> set (list_bsup a b)" using Hord1 Hord2 H1 H2
+proof(induction b arbitrary: a)
+  case Nil
+  then show ?case
+    by auto
+next
+  case (Cons bh bt)
+  obtain bk and bv where Hbkv : "bh = (bk, bv)" by (cases bh; auto)
+  have Hord2' : "strict_order (map fst bt)" using Hbkv strict_order_tl[of bk "map fst bt"] Cons.prems(2) by auto
+  have Kbk_neq : "bk \<noteq> k" using Hbkv Cons.prems(4) by(auto)
+  have Kbk_notin : "k \<notin> set (map fst bt)" using Hbkv Cons.prems(4) by(auto)
+
+  have  H2' : "k \<notin> set (map fst bt)" using Cons.prems by auto
+  then show ?case
+  proof(cases "map_of a bk")
+    case None
+    have Ord_up : "strict_order (map fst (str_ord_update bk bv a))"
+      using str_ord_update_correct[OF Cons.prems(1), of bk bv] by auto
+    have Ord_bsup : "strict_order (map fst (list_bsup (str_ord_update bk bv a) bt))"
+      using list_bsup_correct[OF Ord_up Hord2'] by auto
+    have In_upd : "(k, v) \<in> set (str_ord_update bk bv a)" using str_ord_update_inI2[OF Cons.prems(1) Kbk_neq Cons.prems(3), of bv] by auto
+    have "(k, v) \<in> set (list_bsup (str_ord_update bk bv a) bt)" using Cons.IH[OF Ord_up Hord2' In_upd Kbk_notin] by auto
+    thus ?thesis using None
+      by(auto simp add:Hbkv)
+  next
+    case (Some av)
+    have Ord_up  : "strict_order (map fst (str_ord_update bk [^ av, bv ^] a))" 
+      using str_ord_update_correct[OF Cons.prems(1), of bk "[^ av, bv ^]"] by auto
+    have Ord_bsup : "strict_order (map fst (list_bsup (str_ord_update bk [^ av, bv ^] a) bt))"
+      using list_bsup_correct[OF Ord_up Hord2'] by auto
+    have In_upd : "(k, v) \<in> set (str_ord_update bk [^ av, bv ^] a)"
+        using str_ord_update_inI2[OF Cons.prems(1) Kbk_neq Cons.prems(3), of "[^ av, bv ^]"] by auto
+    have "(k, v) \<in> set (list_bsup (str_ord_update bk [^ av, bv ^] a) bt)" using Cons.IH[OF Ord_up Hord2' In_upd Kbk_notin] by auto
+    then show ?thesis using Some Hbkv by(auto)
+  qed
+qed
+
+lemma absent_key_value :
+  assumes H : "k \<notin> set (map fst l)"
+  shows "(k, v) \<notin> set (l)"
+proof
+  assume Hcontra : "(k, v) \<in> set l"
+  have "k \<in> set (map fst l)" using imageI[OF Hcontra, of fst] by auto
+  thus False using H by auto
+qed
+
+lemma list_bsup_disj_key2 :
+  fixes k :: "'a :: linorder"
+  fixes v :: "'b :: Mergeable"
+  fixes a b :: "('a * 'b) list"
+  assumes Hord1 : "strict_order (map fst a)"
+  assumes Hord2 : "strict_order (map fst b)"
+  assumes H1 : "(k, v) \<in> set b"
+  assumes H2 : "k  \<notin> set (map fst a)"
+  shows "(k, v) \<in> set (list_bsup a b)" using Hord1 Hord2 H1 H2
+proof(induction b arbitrary: a)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons bh bt)
+  obtain bk and bv where Hbkv : "bh = (bk, bv)" by (cases bh; auto)
+  have Hord2' : "strict_order (map fst bt)" using Hbkv strict_order_tl[of bk "map fst bt"] Cons.prems(2) by auto
+
+  then show ?case
+  proof(cases "map_of a bk")
+    case None
+    have Ord_up : "strict_order (map fst (str_ord_update bk bv a))"
+      using str_ord_update_correct[OF Cons.prems(1), of bk bv] by auto
+    have Ord_bsup : "strict_order (map fst (list_bsup (str_ord_update bk bv a) bt))"
+      using list_bsup_correct[OF Ord_up Hord2'] by auto
+    show ?thesis
+    proof(cases "bk = k")
+      case True
+      have "(bk, bv) \<in> set (bh#bt)" using Hbkv by auto
+      hence Hbvv : "bv = v" using 
+          distinct_unique_value[OF strict_order_distinct[OF Cons.prems(2)], of bk bv v] True Cons.prems(3) by auto
+
+      have In_upd : "(k, v) \<in> set (str_ord_update bk bv a)" using str_ord_update_inI1[OF Cons.prems(1), of bk bv]  True Hbvv by auto
+      have Notin : "k \<notin>   set (map fst bt)" using strict_order_distinct[OF Cons.prems(2)] True Hbkv by auto
+        
+      then show ?thesis using list_bsup_disj_key1[OF Ord_up Hord2' In_upd Notin] None Hbkv by(auto)
+    next
+      case False
+      have Hin : "(k, v) \<in> set bt" using Cons.prems False Hbkv by auto
+      have Hnotin : "k \<notin> set (map fst (str_ord_update bk bv a))"
+      proof
+        assume Hcontra : "k \<in> set (map fst (str_ord_update bk bv a))"
+        then obtain v where Hvc : "(k, v) \<in> set (str_ord_update bk bv a)" by auto
+        hence "(k, v) \<in> set a" using str_ord_update_inD[OF Cons.prems(1) Hvc] Cons.prems(4) False by(auto)
+        thus False using imageI[of "(k, v)" "set a" fst] Cons.prems(4) by auto
+      qed
+      show ?thesis using Cons.IH[OF Ord_up Hord2' Hin Hnotin] Hbkv None by auto
+    qed
+  next
+    case (Some av)
+    have Ord_up : "strict_order (map fst (str_ord_update bk [^ av, bv ^] a))"
+      using str_ord_update_correct[OF Cons.prems(1), of bk "[^ av, bv ^]"] by auto
+    have Ord_bsup : "strict_order (map fst (list_bsup (str_ord_update bk [^ av, bv ^] a) bt))"
+      using list_bsup_correct[OF Ord_up Hord2'] by auto
+    show ?thesis 
+    proof(cases "bk = k")
+      case True
+      have "(bk, av) \<in> set (a)" using True map_of_SomeD[OF Some] by(auto)
+      hence "bk \<in> set (map fst a)" using imageI[of "(bk, av)" "set a" fst] by auto
+      hence False using Cons.prems(4) True by auto
+      thus ?thesis by auto
+    next
+      case False
+      have Hin : "(k, v) \<in> set bt" using Cons.prems False Hbkv by auto
+      have Hnotin : "k \<notin> set (map fst (str_ord_update bk [^ av, bv ^] a))"
+      proof
+        assume Hcontra : "k \<in> set (map fst (str_ord_update bk [^ av, bv ^] a))"
+        then obtain vc where Hvc : "(k, vc) \<in> set (str_ord_update bk [^ av, bv ^] a)" by auto
+        hence "(k, vc) \<in> set a" using str_ord_update_inD[OF Cons.prems(1) Hvc] Cons.prems(4) False by(auto)
+        thus False using imageI[of "(k, vc)" "set a" fst] Cons.prems(4) by auto
+      qed
+      show ?thesis using Cons.IH[OF Ord_up Hord2' Hin Hnotin] Hbkv Some by( auto)
+    qed
+  qed
+qed
+
+lemma list_bsup_overlap_key :
+  fixes k :: "'a :: linorder"
+  fixes v v' :: "'b :: Mergeable"
+  fixes a b :: "('a * 'b) list"
+  assumes Hord1 : "strict_order (map fst a)"
+  assumes Hord2 : "strict_order (map fst b)"
+  assumes H1 : "(k, v) \<in> set a"
+  assumes H2 : "(k, v') \<in> set b"
+  shows "(k, [^ v, v' ^]) \<in> set (list_bsup a b)" using Hord1 Hord2 H1 H2
+proof(induction b arbitrary: a)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons bh bt)
+  obtain bk and bv where Hbkv : "bh = (bk, bv)" by (cases bh; auto)
+  have Hord2' : "strict_order (map fst bt)" using Hbkv strict_order_tl[of bk "map fst bt"] Cons.prems(2) by auto
+
+  then show ?case 
+  proof(cases "map_of a bk")
+    case None
+    have Ord_up : "strict_order (map fst (str_ord_update bk bv a))"
+      using str_ord_update_correct[OF Cons.prems(1), of bk bv] by auto
+    have Ord_bsup : "strict_order (map fst (list_bsup (str_ord_update bk bv a) bt))"
+      using list_bsup_correct[OF Ord_up Hord2'] by auto
+    show ?thesis
+    proof(cases "bk = k")
+      case True
+      have "bk \<notin> set (map fst a)" using None map_of_eq_None_iff[of a bk] by auto
+      hence "k \<notin> set (map fst a)" using True by auto
+      hence "(k, v) \<notin> set a" using absent_key_value[of k a v] by auto
+      hence False using Cons.prems by auto
+      then show ?thesis by auto
+    next
+      case False
+      have Hin_b : "(k, v') \<in> set bt" using Cons.prems False Hbkv by auto
+      have Hin_a : "(k, v) \<in> set (str_ord_update bk bv a)"
+        using str_ord_update_inI2[OF Cons.prems(1) False Cons.prems(3)] by auto
+      show ?thesis using Cons.IH[OF Ord_up Hord2' Hin_a Hin_b] Hbkv None by(auto)
+    qed
+  next
+    case (Some av)
+    have Ord_up : "strict_order (map fst (str_ord_update bk [^av, bv^] a))"
+      using str_ord_update_correct[OF Cons.prems(1), of bk "[^av, bv^]"] by auto
+    show ?thesis
+    proof(cases "bk = k")
+      case True
+      have Inb : "(bk, bv) \<in> set (bh#bt)" using Hbkv by auto
+      hence Hbvv : "bv = v'" using 
+          distinct_unique_value[OF strict_order_distinct[OF Cons.prems(2)], of bk bv v'] True Cons.prems by auto
+      
+      have  "(bk, av) \<in> set (a)" using map_of_SomeD[OF Some] by(auto)
+      hence Havv : "av = v" using
+          distinct_unique_value[OF strict_order_distinct[OF Cons.prems(1)], of bk av v] True Cons.prems by auto
+      have Notin : "k \<notin>   set (map fst bt)" using strict_order_distinct[OF Cons.prems(2)] True Hbkv by auto
+      have Hin : "(k, [^ v, v' ^]) \<in> set (str_ord_update bk [^ av, bv ^] a)"
+        using str_ord_update_inI1[OF Cons.prems(1), of bk "[^ av, bv ^]"] Hbvv Havv True by(auto)
+      show ?thesis using
+           list_bsup_disj_key1[OF Ord_up Hord2' Hin Notin] Cons.prems Some Hbkv by auto
+    next
+      case False
+      have Hin_b : "(k, v') \<in> set bt" using Cons.prems False Hbkv by auto
+      have Hin_a : "(k, v) \<in> set (str_ord_update bk [^av, bv^] a)"
+        using str_ord_update_inI2[OF Cons.prems(1) False Cons.prems(3)] by auto
+      show ?thesis using Cons.IH[OF Ord_up Hord2' Hin_a Hin_b] Hbkv Some by(auto)
+    qed
+  qed
+qed
+
+
+(*
+lemma list_bsup_inD :
+  fixes a b :: "('a :: linorder * 'b :: Mergeable) list"
+  fixes k :: 'a
+  fixes v :: 'b
+  assumes Horda : "strict_order (map fst a)"
+  assumes Hordb : "strict_order (map fst b)"
+  assumes Hx : "(k, v) \<in> set (list_bsup a b)"
+  shows " ((k, v) \<in> set a \<and> k \<notin> set (map fst b)) \<or>
+          ((k, v) \<in> set b \<and> k \<notin> set (map fst a)) \<or>
+          (\<exists> va vb . (k, va) \<in> set a \<and> (k, vb) \<in> set b \<and>
+             v = [^ va, vb ^])" using Horda Hordb Hx
+proof(induction b arbitrary: a k v) 
+  case Nil
+  then show ?case by auto
+next
+  case (Cons bh bt)
+  (* i think we need a case split on whether (k, v) matches (bk, bv) *)
+  obtain bk bv where Hbv : "bh = (bk, bv)" by(cases bh; auto)
+  have Horda_upd : "strict_order (map fst (str_ord_update bk bv a))" using  str_ord_update_correct[OF Cons.prems(1), of bk bv] by(auto)
+  have Hord' : "strict_order (map fst bt)" using Cons Hbv strict_order_tl[of bk "map fst bt"] by auto
+(*
+  consider (1) "k \<notin> set (map fst a)" "k \<notin> set (map fst b)" |
+           (2) "k \<in> set (map fst a)" "k \<notin> set (map fst b)" |
+           (3) "k \<notin> set (map fst a)" "k \<in> set (map fst b)" |
+           (4) "k \<in> set (map fst a)" "k \<in> set (map fst b)" by auto
+    then show ?case
+    proof cases
+      case 1
+      then show ?thesis 
+      proof(cases "map_of a bk")
+        case None
+        then show ?thesis using Cons.prems 1 Hbv apply(auto)
+      next
+        case (Some a)
+        then show ?thesis sorry
+      qed
+        apply(case_tac "map_of a bk"; auto)
+    next
+      case False
+      then show ?thesis sorry
+    qed
+*)
+  then show ?case 
+  proof(cases "map_of a bk")
+    case None
+    have Hnotin : "bk \<notin> set (map fst a)" using None Hbv map_of_eq_None_iff[of a bk] by(auto)
+    have Hkv_in : "(k, v) \<in> set (list_bsup (str_ord_update bk bv a) bt)" using Cons.prems Hbv None by(auto)
+    show ?thesis
+    proof(cases "bk = k")
+      case True
+      (* need to show bv = v *)
+      have Hnotin_k' : "k \<notin> set (map fst bt)" using 
+          strict_order_distinct[OF Cons.prems(2)] Hbv True by(auto)
+      thus ?thesis using Cons apply(auto)
+(*
+      have "\<And> v' . (k, v') \<in> set bt \<Longrightarrow> False" 
+      proof(-)
+        fix v'
+        assume Hcontra : "(k, v') \<in> set bt"
+        thus False using Hnotin_k' image_set[of fst bt] imageI[OF Hcontra, of fst] Hbv apply(subst)
+      hence "(k, v) \<in> set (str_ord_update bk bv a)" using Cons.IH[OF Horda_upd Hord' Hkv_in] apply( auto)
+      have Conc1 : "(k, v) \<in> set (bh # bt)" using True Cons.prems Hbv Cons.IH[OF Horda_upd Hord' Hkv_in] apply(auto)
+      then show ?thesis using Hbv None Cons.prems Cons.IH[OF Horda_upd Hord' Hkv_in]
+*)
+    next
+      case False
+      then show ?thesis sorry
+    qed
+  next
+    case (Some a)
+    then show ?thesis sorry
+  qed
+qed
+*)
+
+lemma list_bsup_absent_key :
+  fixes k :: "'a :: linorder"
+  fixes v :: "'b :: Mergeable"
+  fixes a b :: "('a * 'b) list"
+  assumes Hord1 : "strict_order (map fst a)"
+  assumes Hord2 : "strict_order (map fst b)"
+  assumes H1 : "k  \<notin> set (map fst a)"
+  assumes H2 : "k  \<notin> set (map fst b)"
+  shows "k \<notin> set (map fst (list_bsup a b))" using Hord1 Hord2 H1 H2
+proof(induction b arbitrary: a)
+  case Nil
+  then show ?case
+    by auto
+next
+
+  case (Cons bh bt)
+  obtain bk and bv where Hbkv : "bh = (bk, bv)" by (cases bh; auto)
+  have Hord2' : "strict_order (map fst bt)" using Hbkv strict_order_tl[of bk "map fst bt"] Cons.prems(2) by auto
+
+  show ?case
+  proof(cases "map_of a bk")
+    case None
+    have Ord_up : "strict_order (map fst (str_ord_update bk bv a))"
+      using str_ord_update_correct[OF Cons.prems(1), of bk bv] by auto
+    have Ord_bsup : "strict_order (map fst (list_bsup (str_ord_update bk bv a) bt))"
+      using list_bsup_correct[OF Ord_up Hord2'] by auto
+
+    have Notin' : "k \<notin> (set (map fst  (str_ord_update bk bv a)))"
+
+    proof(cases "bk = k")
+      case True
+      hence  "k \<in> set (map fst (bh # bt))" using Hbkv by(auto)
+      hence False using Cons.prems by auto
+      thus ?thesis by auto
+    next
+      case False
+      have Contr : "\<And> vcontra . (k, vcontra) \<in>  set (str_ord_update bk bv a) \<Longrightarrow> False"
+      proof -
+        fix vcontra
+        assume HC : "(k, vcontra) \<in> set (str_ord_update bk bv a)"
+        have HC' : "(k, vcontra) \<in> set a" using str_ord_update_inD'[OF Cons.prems(1) HC False] by auto
+        show False using Cons.prems(3) imageI[OF HC', of fst] by auto
+      qed
+
+      thus ?thesis by auto
+    qed
+
+    have Notin'_bt : "k \<notin> set (map fst bt)" using Cons.prems(4) by auto
+
+    have Conc' : "k \<notin> set (map fst (list_bsup (str_ord_update bk bv a) bt))"
+      using Cons.IH[OF Ord_up Hord2' Notin' Notin'_bt] by auto
+
+    thus ?thesis using Cons.prems None Hbkv by(auto)
+  next
+    case (Some av)
+    have Ord_up : "strict_order (map fst (str_ord_update bk [^ av, bv ^] a))"
+      using str_ord_update_correct[OF Cons.prems(1), of bk "[^ av, bv ^]"] by auto
+    have Ord_bsup : "strict_order (map fst (list_bsup (str_ord_update bk [^ av, bv ^] a) bt))"
+      using list_bsup_correct[OF Ord_up Hord2'] by auto
+
+    have Notin' : "k \<notin> (set (map fst  (str_ord_update bk [^ av, bv ^] a)))"
+
+    proof(cases "bk = k")
+      case True
+      hence  "k \<in> set (map fst (bh # bt))" using Hbkv by(auto)
+      hence False using Cons.prems by auto
+      thus ?thesis by auto
+    next
+      case False
+      have Contr : "\<And> vcontra . (k, vcontra) \<in>  set (str_ord_update bk [^ av, bv ^] a) \<Longrightarrow> False"
+      proof -
+        fix vcontra
+        assume HC : "(k, vcontra) \<in> set (str_ord_update bk [^ av, bv ^] a)"
+        have HC' : "(k, vcontra) \<in> set a" using str_ord_update_inD'[OF Cons.prems(1) HC False] by auto
+        show False using Cons.prems(3) imageI[OF HC', of fst] by auto
+      qed
+
+      thus ?thesis by auto
+    qed
+
+    have Notin'_bt : "k \<notin> set (map fst bt)" using Cons.prems(4) by auto
+
+    have Conc' : "k \<notin> set (map fst (list_bsup (str_ord_update bk [^ av, bv ^] a) bt))"
+      using Cons.IH[OF Ord_up Hord2' Notin' Notin'_bt] by auto
+
+    thus ?thesis using Cons.prems Some Hbkv by(auto)
+  qed
+qed
+
+
+lemma list_bsup_is_bsup1 :
+  fixes a b :: "('a :: linorder * 'b :: Mergeable) list"
+  assumes Horda : "strict_order (map fst a)"
+  assumes Hordb : "strict_order (map fst b)"
+  shows "list_leq a (list_bsup a b)"
+proof(rule list_leqI[OF Horda list_bsup_correct[OF Horda Hordb]])
+  fix k :: "'a"
+  fix v :: "'b"
+  assume H : "(k, v) \<in> set a"
+  then show "\<exists>v'. (k, v') \<in> set (list_bsup a b) \<and> v <[ v'"
+  proof(cases "k \<in> set (map fst b)")
+    case True
+    then obtain v' where Hv' : "(k, v') \<in> set b" by auto
+    have Leq : "v <[ [^ v, v' ^]" using bsup_leq[OF bsup_spec[of v v']] by auto
+    then show ?thesis using list_bsup_overlap_key[OF Horda Hordb H Hv'] by auto
+  next
+    case False
+    have Leq : "v <[ v" using leq_refl[of v] by auto
+    then show ?thesis using list_bsup_disj_key1[OF Horda Hordb H False] by auto
+  qed
+qed
+
+lemma update_leq1 :
+  assumes Hord : "strict_order (map fst l)"
+  assumes Hnotin : "k \<notin> set (map fst l)"
+  shows "list_leq l (str_ord_update k v l)"
+proof(rule list_leqI[OF Hord str_ord_update_correct[OF Hord]])
+  fix k' v'
+  assume H: "(k', v') \<in> set l"
+  show "\<exists>v''. (k', v'') \<in> set (str_ord_update k v l) \<and> v' <[ v''"
+  proof(cases "k = k'")
+    case True
+    have "k \<in> set (map fst l)" using imageI[OF H, of fst] True by auto
+    hence False using Hnotin by auto
+    then show ?thesis by auto
+  next
+    case False
+    have Conc1 : "(k', v') \<in> set (str_ord_update k v l)"
+      using str_ord_update_inI2[OF Hord False H] by auto
+    have Conc2 : "v' <[ v'" by(simp add:leq_refl)
+    then show ?thesis  using Conc1 Conc2 by auto
+  qed
+qed
+
+lemma update_leq2 :
+  assumes Hord : "strict_order (map fst l)"
+  assumes Hin : "(k, v) \<in> set (l)"
+  assumes Hleq : "v <[ v'"
+  shows "list_leq l (str_ord_update k v' l)"
+proof(rule list_leqI[OF Hord str_ord_update_correct[OF Hord]])
+  fix kx vx
+  assume H : "(kx, vx) \<in> set l"
+  show "\<exists>v''. (kx, v'') \<in> set (str_ord_update k v' l) \<and> vx <[ v''"
+  proof(cases "k = kx")
+    case True
+    have H' : "(k, vx) \<in> set l" using True H by auto
+    have Conc1 : "(k, v') \<in> set (str_ord_update k v' l)" using str_ord_update_inI1[OF Hord] by auto
+
+    have "vx = v" using distinct_unique_value[OF strict_order_distinct[OF Hord] H' Hin] by auto
+    hence Conc2 : "vx <[ v'" using Hleq by auto
+    then show ?thesis using Conc1 Conc2 True by auto
+  next
+    case False
+    have Conc1 : "(kx, vx) \<in> set (str_ord_update k v' l)"
+      using str_ord_update_inI2[OF Hord False H] by auto
+    have Conc2 : "vx <[ vx" by(simp add:leq_refl)
+    then show ?thesis  using Conc1 Conc2 by auto
+  qed
+qed
+
+lemma update_leq2' :
+  assumes Hord : "strict_order (map fst l)"
+  assumes Hin : "(k, v) \<in> set (l)"
+  assumes Hleq : "v' <[ v"
+  shows "list_leq (str_ord_update k v' l) l"
+proof(rule list_leqI[OF str_ord_update_correct[OF Hord] Hord])
+  fix kx vx
+  assume H : "(kx, vx) \<in>  set (str_ord_update k v' l) "
+  show "\<exists>v''. (kx, v'') \<in> set l \<and> vx <[ v''"
+  proof(cases "k = kx")
+    case True
+    have H' : "(k, vx) \<in> set (str_ord_update k v' l)" using True H by auto
+    show ?thesis
+    proof(cases "(k, vx) \<in> set l")
+      assume H'' : "(k, vx) \<in> set l "
+      hence "v = vx" using distinct_unique_value[OF strict_order_distinct[OF Hord] H'' Hin] by auto
+      have Conc2 : "vx <[ vx" by(simp add:leq_refl)
+      show "\<exists>v''. (kx, v'') \<in> set l \<and> vx <[ v''" using True H'' Conc2 by auto
+    next
+      assume H'' : "(k, vx) \<notin> set l "
+      hence "v' = vx" using str_ord_update_inD[OF Hord H'] by auto
+      then show "\<exists>v''. (kx, v'') \<in> set l \<and> vx <[ v''" using True Hin Hleq by(auto)
+    qed
+  next
+    case False
+    have Conc1 : "(kx, vx) \<in> set l" using str_ord_update_inD'[OF Hord H False] by auto
+    have Conc2 : "vx <[ vx" by(simp add:leq_refl)
+    show "\<exists>v''. (kx, v'') \<in> set l \<and> vx <[ v''" using Conc1 Conc2 by auto
+  qed
+qed
+
+
+      
+
+lemma list_bsup_is_bsup2 :
+  fixes a b bd sd :: "('a :: linorder * 'b :: Mergeable) list"
+  assumes Horda : "strict_order (map fst a)"
+  assumes Hordb : "strict_order (map fst b)"
+  assumes Hordbd : "strict_order (map fst bd)"
+  assumes Hordsd : "strict_order (map fst sd)"
+  assumes Hleq : "list_leq bd b"
+  assumes Hub_a : "list_leq a sd"
+  assumes Hub_bd : "list_leq bd sd"
+  assumes Hsup :
+    "\<And> a' ::('a \<times> 'b) list . strict_order (map fst a') \<Longrightarrow>
+       list_leq a a' \<Longrightarrow> list_leq bd a' \<Longrightarrow> list_leq sd a'"
+  shows "list_leq sd (list_bsup a b)"
+proof(rule list_leqI[OF Hordsd list_bsup_correct[OF Horda Hordb]])
+  fix k v
+  assume H : "(k, v) \<in> set sd"
+  consider (1) "k \<in> set (map fst a)" "k \<in> set (map fst b)" |
+           (2) "k \<in> set (map fst a)" "k \<notin> set (map fst b)" |
+           (3) "k \<notin> set (map fst a)" "k \<in> set (map fst b)" |
+           (4) "k \<notin> set (map fst a)" "k \<notin> set (map fst b)" by auto
+  then show "\<exists>v'. (k, v') \<in> set (list_bsup a b) \<and> v <[ v'"
+  proof cases
+    case 1
+    obtain va where Hva : "(k, va) \<in> set a" using 1 by(auto)
+    obtain va' where Hva'1 :  "va <[ va'" and Hva'2 : "(k, va') \<in> set sd" using list_leqD[OF Hub_a Hva] by auto
+    have Hva'_v : "va' = v" using distinct_unique_value[OF strict_order_distinct[OF Hordsd] H Hva'2] by auto
+    obtain vb where Hvb : "(k, vb) \<in> set b" using 1 by(auto)
+    have Conc1 : "(k, [^ va, vb ^]) \<in> set (list_bsup a b)"
+      using list_bsup_overlap_key[OF Horda Hordb Hva Hvb] by auto
+    have Conc2 : "(v <[ [^ va, vb ^])"
+    proof(cases "k \<in> set (map fst bd)")
+      case True
+      obtain vbd where Hvbd : "(k, vbd) \<in> set bd" using True by auto
+      obtain vbd' where Hvbd'1 :  "vbd <[ vbd'" and Hvbd'2 : "(k, vbd') \<in> set sd" using list_leqD[OF Hub_bd Hvbd] by auto
+      have Hvbd'_v : "vbd' = v" using distinct_unique_value[OF strict_order_distinct[OF Hordsd] H Hvbd'2] by auto
+      have Conc' : "is_sup {va, vbd} v"
+      proof(rule is_sup_intro)
+        fix x
+        show "x \<in> {va, vbd} \<Longrightarrow> x <[ v" using Hva'1 Hva'_v Hvbd'1 Hvbd'_v by auto
+      next
+        fix x'
+        assume Hub : "is_ub {va, vbd} x'"
+        
+        hence Hleq_va_x' : "va <[ x'" by(simp add:is_ub_def)
+        have  Hleq_vbd_x' : "vbd <[ x'" using Hub by(simp add:is_ub_def)
+
+        have Listlt_1 : "list_leq a (str_ord_update k x' sd)"
+        proof(rule list_leqI[OF Horda str_ord_update_correct[OF Hordsd]])
+          fix ka kv
+          assume Hinner : "(ka, kv) \<in> set a"
+          show "\<exists>v'. (ka, v') \<in> set (str_ord_update k x' sd) \<and> kv <[ v'"
+          proof(cases "k = ka")
+            case True
+            hence Hkvva : "kv = va"
+                  using distinct_unique_value[OF strict_order_distinct[OF Horda] Hinner, of va] Hva by auto
+            hence "(ka, x') \<in> set (str_ord_update k x' sd)" using True str_ord_update_inI1[OF Hordsd, of ka x'] by auto
+            then show ?thesis  using Hleq_va_x' Hkvva by auto
+          next
+            case False
+            obtain x'' where Hx'' : "(ka, x'') \<in> set sd" and Hx''_leq : "kv <[ x''" using list_leqD[OF Hub_a Hinner] by auto
+            have Conc' : "(ka, x'') \<in> set (str_ord_update k x' sd)" using str_ord_update_inI2[OF Hordsd False Hx''] by auto
+            thus ?thesis using Hx''_leq by auto
+          qed
+        qed
+
+        have Listlt_2 : "list_leq bd (str_ord_update k x' sd)"
+        proof(rule list_leqI[OF Hordbd str_ord_update_correct[OF Hordsd]])
+          fix ka kv
+          assume Hinner : "(ka, kv) \<in> set bd"
+          show "\<exists>v'. (ka, v') \<in> set (str_ord_update k x' sd) \<and> kv <[ v'"
+          proof(cases "k = ka")
+            case True
+            hence Hkvvbd : "kv = vbd"
+                  using distinct_unique_value[OF strict_order_distinct[OF Hordbd] Hinner, of vbd] Hvbd by auto
+            hence "(ka, x') \<in> set (str_ord_update k x' sd)" using True str_ord_update_inI1[OF Hordsd, of ka x'] by auto
+            then show ?thesis  using Hleq_vbd_x' Hkvvbd by auto
+          next
+            case False
+            obtain x'' where Hx'' : "(ka, x'') \<in> set sd" and Hx''_leq : "kv <[ x''" using list_leqD[OF Hub_bd Hinner] by auto
+            have Conc' : "(ka, x'') \<in> set (str_ord_update k x' sd)" using str_ord_update_inI2[OF Hordsd False Hx''] by auto
+            thus ?thesis using Hx''_leq by auto
+          qed
+        qed
+
+        have Conc'1 : "list_leq sd (str_ord_update k x' sd)" using
+          Hsup[OF str_ord_update_correct[OF Hordsd] Listlt_1 Listlt_2] by auto
+
+        hence Conc'2 : "(k, x') \<in> set (str_ord_update k x' sd)" using str_ord_update_inI1[OF Hordsd] by auto
+
+        then obtain x'' where Hx'' : "(k, x'') \<in> set (str_ord_update k x' sd)" and Hx''_leq : "v <[ x''"
+          using list_leqD[OF Conc'1 H] by auto
+
+        have "x' = x''" using distinct_unique_value[OF 
+                strict_order_distinct[OF str_ord_update_correct[OF Hordsd]] Conc'2 Hx'' ] by auto
+
+        thus "v <[ x'" using Hx''_leq by auto
+      qed
+
+      obtain vb' where Hvb' : "vbd <[ vb'" and Hvb'_in : "(k, vb') \<in> set b" using list_leqD[OF Hleq Hvbd] by auto
+      have "vb' = vb" using distinct_unique_value[OF strict_order_distinct[OF Hordb] Hvb Hvb'_in] by auto
+      hence Conc'' : "vbd <[ vb" using Hvb' by auto
+      
+      thus "v <[ [^ va, vb ^]" using is_bsup_unfold2[OF bsup_spec[of va vb] Conc'' Conc'] by auto
+    next
+      case False
+
+      have Listlt_1 : "list_leq a (str_ord_update k va sd)"
+      proof(rule list_leqI[OF Horda str_ord_update_correct[OF Hordsd]])
+        fix ka kv
+        assume Hinner : "(ka, kv) \<in> set a"
+        show "\<exists>v'. (ka, v') \<in> set (str_ord_update k va sd) \<and> kv <[ v'"
+        proof(cases "k = ka")
+          case True
+          hence Hkvva : "kv = va"
+                using distinct_unique_value[OF strict_order_distinct[OF Horda] Hinner, of va] Hva by auto
+          hence "(ka, va) \<in> set (str_ord_update k va sd)" using True str_ord_update_inI1[OF Hordsd, of ka va] by auto
+          then show ?thesis  using  Hkvva leq_refl[of va] by auto
+        next
+          case False
+          obtain x'' where Hx'' : "(ka, x'') \<in> set sd" and Hx''_leq : "kv <[ x''" using list_leqD[OF Hub_a Hinner] by auto
+          have Conc' : "(ka, x'') \<in> set (str_ord_update k va sd)" using str_ord_update_inI2[OF Hordsd False Hx''] by auto
+          thus ?thesis using Hx''_leq by auto
+        qed
+      qed
+
+      have Listlt_2 : "list_leq bd (str_ord_update k va sd)"
+      proof(rule list_leqI[OF Hordbd str_ord_update_correct[OF Hordsd]])
+        fix ka kv
+        assume Hinner : "(ka, kv) \<in> set bd"
+        show "\<exists>v'. (ka, v') \<in> set (str_ord_update k va sd) \<and> kv <[ v'"
+        proof(cases "k = ka")
+          case True
+          hence False using False imageI[OF Hinner, of fst] by auto
+          thus ?thesis by auto
+        next
+          case False
+          obtain x'' where Hx'' : "(ka, x'') \<in> set sd" and Hx''_leq : "kv <[ x''" using list_leqD[OF Hub_bd Hinner] by auto
+          have Conc' : "(ka, x'') \<in> set (str_ord_update k va sd)" using str_ord_update_inI2[OF Hordsd False Hx''] by auto
+          thus ?thesis using Hx''_leq by auto
+        qed
+      qed
+
+      have Conc'1 : "list_leq sd (str_ord_update k va sd)" using
+        Hsup[OF str_ord_update_correct[OF Hordsd] Listlt_1 Listlt_2] by auto
+
+      hence Conc'2 : "(k, va) \<in> set (str_ord_update k va sd)" using str_ord_update_inI1[OF Hordsd] by auto
+
+      then obtain x'' where Hx'' : "(k, x'') \<in> set (str_ord_update k va sd)" and Hx''_leq : "v <[ x''"
+        using list_leqD[OF Conc'1 H] by auto
+
+      have "va = x''" using distinct_unique_value[OF 
+              strict_order_distinct[OF str_ord_update_correct[OF Hordsd]] Conc'2 Hx'' ] by auto
+
+      hence Hv_lt_va : "v <[ va" using Hva'_v Hva'1 using Hx''_leq by auto
+
+      thus "v <[ [^ va, vb ^]" using leq_trans[OF Hv_lt_va is_bsup_unfold1[OF bsup_spec[of va vb]]] by auto
+    qed
+
+    thus ?thesis using Conc1 Conc2 by auto
+
+  next
+
+    case 2
+    obtain va where Hva : "(k, va) \<in> set a" using 2 by(auto)
+    obtain va' where Hva'1 :  "va <[ va'" and Hva'2 : "(k, va') \<in> set sd" using list_leqD[OF Hub_a Hva] by auto
+    have Hva'_v : "va' = v" using distinct_unique_value[OF strict_order_distinct[OF Hordsd] H Hva'2] by auto
+
+    have Conc1: "(k, va) \<in> set (list_bsup a b)" using list_bsup_disj_key1[OF Horda Hordb Hva 2(2)] by auto
+
+    have Conc2 :"v <[ va"
+    proof(cases "k \<in> set (map fst bd)")
+      case True
+      then obtain bdv where Hbdv_in : "(k, bdv) \<in> set bd" by auto
+      then obtain bdv_b where Hbdv_b_in : "(k, bdv_b) \<in> set b" using list_leqD[OF Hleq Hbdv_in] by auto
+      have "k \<in> set (map fst b)" using imageI[OF Hbdv_b_in, of fst] by auto
+      hence False using 2 by auto
+      then show ?thesis by auto
+    next
+      case False
+
+      have Listlt_1 : "list_leq a (str_ord_update k va sd)"
+      proof(rule list_leqI[OF Horda str_ord_update_correct[OF Hordsd]])
+        fix ka kv
+        assume Hinner : "(ka, kv) \<in> set a"
+        show "\<exists>v'. (ka, v') \<in> set (str_ord_update k va sd) \<and> kv <[ v'"
+        proof(cases "k = ka")
+          case True
+          hence Hkvva : "kv = va"
+                using distinct_unique_value[OF strict_order_distinct[OF Horda] Hinner, of va] Hva by auto
+          hence "(ka, va) \<in> set (str_ord_update k va sd)" using True str_ord_update_inI1[OF Hordsd, of ka va] by auto
+          then show ?thesis  using  Hkvva leq_refl[of va] by auto
+        next
+          case False
+          obtain x'' where Hx'' : "(ka, x'') \<in> set sd" and Hx''_leq : "kv <[ x''" using list_leqD[OF Hub_a Hinner] by auto
+          have Conc' : "(ka, x'') \<in> set (str_ord_update k va sd)" using str_ord_update_inI2[OF Hordsd False Hx''] by auto
+          thus ?thesis using Hx''_leq by auto
+        qed
+      qed
+
+      have Listlt_2 : "list_leq bd (str_ord_update k va sd)"
+      proof(rule list_leqI[OF Hordbd str_ord_update_correct[OF Hordsd]])
+        fix ka kv
+        assume Hinner : "(ka, kv) \<in> set bd"
+        show "\<exists>v'. (ka, v') \<in> set (str_ord_update k va sd) \<and> kv <[ v'"
+        proof(cases "k = ka")
+          case True
+          hence False using False imageI[OF Hinner, of fst] by auto
+          thus ?thesis by auto
+        next
+          case False
+          obtain x'' where Hx'' : "(ka, x'') \<in> set sd" and Hx''_leq : "kv <[ x''" using list_leqD[OF Hub_bd Hinner] by auto
+          have Conc' : "(ka, x'') \<in> set (str_ord_update k va sd)" using str_ord_update_inI2[OF Hordsd False Hx''] by auto
+          thus ?thesis using Hx''_leq by auto
+        qed
+      qed
+
+      have Conc'1 : "list_leq sd (str_ord_update k va sd)" using
+        Hsup[OF str_ord_update_correct[OF Hordsd] Listlt_1 Listlt_2] by auto
+
+      hence Conc'2 : "(k, va) \<in> set (str_ord_update k va sd)" using str_ord_update_inI1[OF Hordsd] by auto
+
+      then obtain x'' where Hx'' : "(k, x'') \<in> set (str_ord_update k va sd)" and Hx''_leq : "v <[ x''"
+        using list_leqD[OF Conc'1 H] by auto
+
+      have "va = x''" using distinct_unique_value[OF 
+              strict_order_distinct[OF str_ord_update_correct[OF Hordsd]] Conc'2 Hx'' ] by auto
+
+      then show ?thesis using Hx''_leq by auto
+    qed
+
+    thus ?thesis using Conc1 Conc2 by auto
+
+  next
+    case 3
+    obtain vb where Hvb : "(k, vb) \<in> set b" using 3 by(auto)
+    have Conc1 : "(k, vb) \<in> set (list_bsup a b)"
+      using list_bsup_disj_key2[OF Horda Hordb Hvb 3(1)] by auto
+    have Conc2 : "(v <[ vb)"
+
+    (* TODO: we do not need this case split here (or anywhere? ) *)
+    proof(cases "k \<in> set (map fst bd)")
+      case True
+
+      have Listlt_1 : "list_leq a (str_ord_update k vb sd)"
+      proof(rule list_leqI[OF Horda str_ord_update_correct[OF Hordsd]])
+        fix ka kv
+        assume Hinner : "(ka, kv) \<in> set a"
+        show "\<exists>v'. (ka, v') \<in> set (str_ord_update k vb sd) \<and> kv <[ v'"
+        proof(cases "k = ka")
+          case True
+          have "k \<in> set (map fst a)" using imageI[OF Hinner, of fst] True by auto
+          hence False using 3 by auto
+          then show ?thesis by auto
+        next
+          case False
+          obtain x'' where Hx'' : "(ka, x'') \<in> set sd" and Hx''_leq : "kv <[ x''" using list_leqD[OF Hub_a Hinner] by auto
+          have Conc' : "(ka, x'') \<in> set (str_ord_update k vb sd)" using str_ord_update_inI2[OF Hordsd False Hx''] by auto
+          thus ?thesis using Hx''_leq by auto
+        qed
+      qed
+
+      have Listlt_2 : "list_leq bd (str_ord_update k vb sd)"
+      proof(rule list_leqI[OF Hordbd str_ord_update_correct[OF Hordsd]])
+        fix ka kv
+        assume Hinner : "(ka, kv) \<in> set bd"
+        show "\<exists>v'. (ka, v') \<in> set (str_ord_update k vb sd) \<and> kv <[ v'"
+        proof(cases "k = ka")
+          assume True' : "k = ka"
+          have "(k, vb) \<in> set (str_ord_update k vb sd)" using str_ord_update_inI1[OF Hordsd, of k vb] by auto
+          hence Conc'1 : "(ka, vb) \<in> set (str_ord_update k vb sd)" using True' by auto
+          obtain vb' where Hvb' : "kv <[ vb'" and Hvb'_in :  "(ka, vb') \<in> set b" using list_leqD[OF Hleq Hinner] by auto
+          have Hvb_eq_vb' : "vb = vb'" using
+            distinct_unique_value[OF strict_order_distinct[OF Hordb] Hvb'_in, of vb] True' Hvb by auto
+          thus ?thesis using Hvb' Conc'1 by auto
+        next
+          case False
+          obtain x'' where Hx'' : "(ka, x'') \<in> set sd" and Hx''_leq : "kv <[ x''" using list_leqD[OF Hub_bd Hinner] by auto
+          have Conc' : "(ka, x'') \<in> set (str_ord_update k vb sd)" using str_ord_update_inI2[OF Hordsd False Hx''] by auto
+          thus ?thesis using Hx''_leq by auto
+        qed
+      qed
+
+      have Conc'1 : "list_leq sd (str_ord_update k vb sd)" using
+        Hsup[OF str_ord_update_correct[OF Hordsd] Listlt_1 Listlt_2] by auto
+
+      hence Conc'2 : "(k, vb) \<in> set (str_ord_update k vb sd)" using str_ord_update_inI1[OF Hordsd] by auto
+
+      then obtain x'' where Hx'' : "(k, x'') \<in> set (str_ord_update k vb sd)" and Hx''_leq : "v <[ x''"
+        using list_leqD[OF Conc'1 H] by auto
+
+      have "vb = x''" using distinct_unique_value[OF 
+              strict_order_distinct[OF str_ord_update_correct[OF Hordsd]] Conc'2 Hx'' ] by auto
+
+      then show ?thesis using Hx''_leq by auto
+
+    next
+
+      case False
+
+      have Listlt_1 : "list_leq a (str_ord_update k vb sd)"
+      proof(rule list_leqI[OF Horda str_ord_update_correct[OF Hordsd]])
+        fix ka kv
+        assume Hinner : "(ka, kv) \<in> set a"
+        show "\<exists>v'. (ka, v') \<in> set (str_ord_update k vb sd) \<and> kv <[ v'"
+        proof(cases "k = ka")
+          case True
+          have "k \<in> set (map fst a)" using imageI[OF Hinner, of fst] True by auto
+          hence False using 3 by auto
+          then show ?thesis by auto
+        next
+          case False
+          obtain x'' where Hx'' : "(ka, x'') \<in> set sd" and Hx''_leq : "kv <[ x''" using list_leqD[OF Hub_a Hinner] by auto
+          have Conc' : "(ka, x'') \<in> set (str_ord_update k vb sd)" using str_ord_update_inI2[OF Hordsd False Hx''] by auto
+          thus ?thesis using Hx''_leq by auto
+        qed
+      qed
+
+      have Listlt_2 : "list_leq bd (str_ord_update k vb sd)"
+      proof(rule list_leqI[OF Hordbd str_ord_update_correct[OF Hordsd]])
+        fix ka kv
+        assume Hinner : "(ka, kv) \<in> set bd"
+        show "\<exists>v'. (ka, v') \<in> set (str_ord_update k vb sd) \<and> kv <[ v'"
+        proof(cases "k = ka")
+          assume True' : "k = ka"
+          have "(k, vb) \<in> set (str_ord_update k vb sd)" using str_ord_update_inI1[OF Hordsd, of k vb] by auto
+          hence Conc'1 : "(ka, vb) \<in> set (str_ord_update k vb sd)" using True' by auto
+          obtain vb' where Hvb' : "kv <[ vb'" and Hvb'_in :  "(ka, vb') \<in> set b" using list_leqD[OF Hleq Hinner] by auto
+          have Hvb_eq_vb' : "vb = vb'" using
+            distinct_unique_value[OF strict_order_distinct[OF Hordb] Hvb'_in, of vb] True' Hvb by auto
+          thus ?thesis using Hvb' Conc'1 by auto
+        next
+          case False
+          obtain x'' where Hx'' : "(ka, x'') \<in> set sd" and Hx''_leq : "kv <[ x''" using list_leqD[OF Hub_bd Hinner] by auto
+          have Conc' : "(ka, x'') \<in> set (str_ord_update k vb sd)" using str_ord_update_inI2[OF Hordsd False Hx''] by auto
+          thus ?thesis using Hx''_leq by auto
+        qed
+      qed
+
+      have Conc'1 : "list_leq sd (str_ord_update k vb sd)" using
+        Hsup[OF str_ord_update_correct[OF Hordsd] Listlt_1 Listlt_2] by auto
+
+      hence Conc'2 : "(k, vb) \<in> set (str_ord_update k vb sd)" using str_ord_update_inI1[OF Hordsd] by auto
+
+      then obtain x'' where Hx'' : "(k, x'') \<in> set (str_ord_update k vb sd)" and Hx''_leq : "v <[ x''"
+        using list_leqD[OF Conc'1 H] by auto
+
+      have "vb = x''" using distinct_unique_value[OF 
+              strict_order_distinct[OF str_ord_update_correct[OF Hordsd]] Conc'2 Hx'' ] by auto
+
+      then show ?thesis using Hx''_leq by auto
+    qed
+
+    thus ?thesis using Conc1 Conc2 by auto
+  next
+
+    case 4
+
+    have Hconcr1  : "finite (set sd - {(k, v)})" by auto
+
+    have Hconcr2 : "\<And> k1 v1 v2 . (k1, v1) \<in> set sd - {(k, v)} \<Longrightarrow> (k1, v2) \<in> set sd - {(k, v)} \<Longrightarrow> v1 = v2"
+      using distinct_unique_value[OF strict_order_distinct[OF Hordsd]] by auto
+
+    obtain sd' where Hordsd' : "strict_order (map fst sd')" and Hsd' : "set sd' = (set sd - {(k, v)})"
+      using concretize_alist[OF Hconcr1] Hconcr2 by(blast)
+
+
+    have Listlt_1 : "list_leq a sd'"
+    proof(rule list_leqI[OF Horda Hordsd'])
+      fix ka kv
+      assume Hinner : "(ka, kv) \<in> set a"
+
+      show "\<exists>v'. (ka, v') \<in> set sd' \<and> kv <[ v'"
+      proof(cases "ka = k")
+        case True
+        have "(k, kv) \<in> set a" using Hinner True by auto
+        hence "k \<in> set (map fst a)" using imageI[of "(k, kv)" "set a" fst] by auto
+        hence False using 4 by auto
+        then show ?thesis by auto
+      next
+        case False
+        obtain kv' where Kv_in : "(ka, kv') \<in> set sd" and Conc' : "kv <[ kv'"
+          using list_leqD[OF Hub_a Hinner] by auto
+        have "(ka, kv') \<in> set sd - {(k, v)}" using Kv_in False by auto
+        thus ?thesis using Conc' Hsd' by auto
+      qed
+    qed
+
+    have Listlt_2 : "list_leq bd sd'"
+    proof(rule list_leqI[OF Hordbd Hordsd'])
+      fix ka kv
+      assume Hinner : "(ka, kv) \<in> set bd"
+
+      show "\<exists>v'. (ka, v') \<in> set sd' \<and> kv <[ v'"
+      proof(cases "ka = k")
+        case True
+        have "(k, kv) \<in> set bd" using Hinner True by auto
+        then obtain kv' where Kv'_in : "(k, kv') \<in> set b"
+          using list_leqD[OF Hleq  Hinner] True by auto
+        
+        hence "k \<in> set (map fst b)" using imageI[of "(k, kv')" "set b" fst] by auto
+        hence False using 4 by auto
+        then show ?thesis by auto
+      next
+        case False
+        obtain kv' where Kv_in : "(ka, kv') \<in> set sd" and Conc' : "kv <[ kv'"
+          using list_leqD[OF Hub_bd Hinner] by auto
+        have "(ka, kv') \<in> set sd - {(k, v)}" using Kv_in False by auto
+        thus ?thesis using Conc' Hsd' by auto
+      qed
+    qed
+
+    have Leq_contr : "list_leq sd sd'" using Hsup[OF Hordsd' Listlt_1 Listlt_2] by auto
+    obtain vcontr where Hvcontr_in : "(k, vcontr) \<in> set sd'"
+      using list_leqD[OF Leq_contr H] by auto
+    hence Vcontr_neq : "vcontr \<noteq> v" using Hsd' by auto
+    have Vcontr_in : "(k, vcontr) \<in> set sd" using Hvcontr_in Vcontr_neq Hsd' by auto
+
+    have False using
+      distinct_unique_value[OF strict_order_distinct[OF Hordsd] H Vcontr_in] Vcontr_neq
+      by auto
+    thus ?thesis by auto
+  qed
+qed
+(*
+      (\<forall>x::('a \<times> 'b) list\<in>{a, bd}. list_leq x a') \<longrightarrow> list_leq sd a')
+"(\<forall>x::('a \<times> 'b) list\<in>{a, bd}. list_leq x sd) \<and> 
+               (\<forall>a'::('a \<times> 'b) list\<in>{xs::('a \<times> 'b) list. strict_order (map fst xs)}. (\<forall>x::('a \<times> 'b) list\<in>{a, bd}. list_leq x a') \<longrightarrow> list_leq sd a') \<longrightarrow>
+               list_leq sd (list_bsup a b)))"
+  
+  "(\<forall>bd::('a \<times> 'b) list\<in>{xs::('a \<times> 'b) list. strict_order (map fst xs)}.
+            \<forall>sd::('a \<times> 'b) list\<in>{xs::('a \<times> 'b) list. strict_order (map fst xs)}.
+               list_leq bd b \<longrightarrow>
+               (\<forall>x::('a \<times> 'b) list\<in>{a, bd}. list_leq x sd) \<and> 
+               (\<forall>a'::('a \<times> 'b) list\<in>{xs::('a \<times> 'b) list. strict_order (map fst xs)}. (\<forall>x::('a \<times> 'b) list\<in>{a, bd}. list_leq x a') \<longrightarrow> list_leq sd a') \<longrightarrow>
+               list_leq sd (list_bsup a b)))"
+*)
+(*
+lemma list_bsup_is_bsup :
+  fixes a b :: "('a :: linorder * 'b :: Mergeable) list"
+  assumes Horda : "strict_order (map fst a)"
+  assumes Hordb : "strict_order (map fst b)"
+  shows "     
+       (list_leq a (list_bsup a b) \<and>
+        (\<forall>bd::('a \<times> 'b) list\<in>{xs::('a \<times> 'b) list. strict_order (map fst xs)}.
+            \<forall>sd::('a \<times> 'b) list\<in>{xs::('a \<times> 'b) list. strict_order (map fst xs)}.
+               list_leq bd b \<longrightarrow>
+               (\<forall>x::('a \<times> 'b) list\<in>{a, bd}. list_leq x sd) \<and> 
+               (\<forall>a'::('a \<times> 'b) list\<in>{xs::('a \<times> 'b) list. strict_order (map fst xs)}. (\<forall>x::('a \<times> 'b) list\<in>{a, bd}. list_leq x a') \<longrightarrow> list_leq sd a') \<longrightarrow>
+               list_leq sd (list_bsup a b))) \<and>
+       (\<forall>a'::('a \<times> 'b) list\<in>{xs::('a \<times> 'b) list. strict_order (map fst xs)}.
+           list_leq a a' \<and>
+           (\<forall>bd::('a \<times> 'b) list\<in>{xs::('a \<times> 'b) list. strict_order (map fst xs)}.
+               \<forall>sd::('a \<times> 'b) list\<in>{xs::('a \<times> 'b) list. strict_order (map fst xs)}.
+                  list_leq bd b \<longrightarrow>
+                  (\<forall>x::('a \<times> 'b) list\<in>{a, bd}. list_leq x sd) \<and> (\<forall>a'::('a \<times> 'b) list\<in>{xs::('a \<times> 'b) list. strict_order (map fst xs)}. (\<forall>x::('a \<times> 'b) list\<in>{a, bd}. list_leq x a') \<longrightarrow> list_leq sd a') \<longrightarrow> list_leq sd a') \<longrightarrow>
+           list_leq (list_bsup a b) a')"
+
+(* finally, Mergeable *)
+(*
+instantiation oalist :: (linorder, Mergeable) Mergeable
+begin
+definition bsup_oalist :
+"bsup l1 l2 = oalist_bsup l1 l2"
+
+instance proof
+  fix a b :: "('a :: linorder, 'b :: Mergeable) oalist"
+  show "is_bsup a b [^ a, b ^]"
+    unfolding is_bsup_def is_sup_def is_least_def is_bub_def is_ub_def pleq_oalist bsup_oalist
+  proof(transfer)
+*)
 *)
 end
