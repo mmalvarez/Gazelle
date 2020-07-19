@@ -2689,7 +2689,43 @@ proof(rule list_leqI[OF list_bsup_correct[OF Horda Hordb] Horda'])
   then show "\<exists>v'. (k, v') \<in> set a' \<and> v <[ v'"
   proof cases
     case 1
-    then show ?thesis using list_bsup_overlap_key sorry
+    obtain va where Hva : "(k, va) \<in> set a" using 1 by(auto)
+    obtain va' where Hva'1 :  "va <[ va'" and Hva'2 : "(k, va') \<in> set a'" using list_leqD[OF Hleq Hva] by auto
+
+    obtain vb where Hvb : "(k, vb) \<in> set b" using 1 by auto
+
+    (* idea: obtain values at a and b
+       thus (overlap_key) key is present in bsup, equal to v 
+       
+       to show less than v', use Hbub.
+       problem: we seem to need to come up with a suitable bd. but how?
+*)
+    have H' : "(k, [^ va, vb ^]) \<in> set (list_bsup a b)" using list_bsup_overlap_key[OF Horda Hordb Hva Hvb] by auto
+
+    have Hv_bsup : "v = [^ va, vb ^]" using
+      distinct_unique_value[OF strict_order_distinct[OF list_bsup_correct[OF Horda Hordb]] H H'] by auto
+
+(* idea: need to construct bd, sd to apply Hbub
+can bd just be [] ?
+no, then sd = a.
+*)
+
+(* need to pull this out, quantify over key?
+** get lub (a, bd) using completeness
+but how to get bd?
+ *)
+    have Hbub : "is_bub va vb va'"
+    proof(rule is_bub_intro)
+      show "va <[ va'" using Hva'1 by auto
+    next
+      fix bd sd
+      assume Hin_lt : "bd <[ vb"
+      assume Hin_sup : "is_sup {va, bd} sd" 
+      show "sd <[ va'"
+        sorry
+    qed
+
+    show ?thesis using is_bsup_unfold3[OF bsup_spec[of va vb] Hbub] Hv_bsup Hva'2 by auto
   next
     case 2
     then show ?thesis sorry
