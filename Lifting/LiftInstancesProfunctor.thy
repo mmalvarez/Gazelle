@@ -250,6 +250,183 @@ next
     using lifting_valid_unfold2[OF H] by(auto simp add:snd_l_def split:prod.splits)
 qed
 
+(* NB: assumes that syntax lifting for t1 and t2 are the same. *)
+(*
+definition prod_l1 ::
+  "('sa, 'sb, 'a1, 'b1) lifting \<Rightarrow>
+   ('sa, 'sb, 'a2, 'b2) lifting \<Rightarrow>
+   ('sa, 'sb, 'a1 * 'a2, 'b1 * 'b2) lifting" where
+"prod_l1 t1 t2 =
+  \<lparr> LSyn = (\<lambda> s . (LSyn t1 s))
+  , LIn1 =
+    (\<lambda> s a . (case a of (a1, a2) \<Rightarrow> (LIn1 t1 s a1, LIn1 t2 s a2)))
+  , LIn2 =
+    (\<lambda> sa sb a b .
+        (case a of (a1, a2) \<Rightarrow>
+        (case b of (b1, b2) \<Rightarrow>
+            (LIn2 t1 sa sb a1 b1, LIn2 t2 sa sb a2 b2))))
+  , LOut1 =
+    (\<lambda> s b . (case b of (b1, b2) \<Rightarrow>
+                (LOut1 t1 s b1, LOut1 t2 s b2))) \<rparr>"
+*)
+
+definition prod_l1 ::
+  "('sa, 'sb, 'a1, 'b1) lifting \<Rightarrow>
+   ('sa, 'sb, 'a2, 'b2) lifting \<Rightarrow>
+   ('sa, 'sb, 'a1 * 'a2, 'b1 * 'b2) lifting" where
+"prod_l1 t1 t2 =
+  \<lparr> LSyn = (\<lambda> s . if LSyn t1 s = LSyn t2 s then LSyn t1 s else undefined)
+  , LIn1 =
+    (\<lambda> s a . (case a of (a1, a2) \<Rightarrow> (LIn1 t1 s a1, LIn1 t2 s a2)))
+  , LIn2 =
+    (\<lambda> sa sb a b .
+        (case a of (a1, a2) \<Rightarrow>
+        (case b of (b1, b2) \<Rightarrow>
+            (LIn2 t1 sa sb a1 b1, LIn2 t2 sa sb a2 b2))))
+  , LOut1 =
+    (\<lambda> s b . (case b of (b1, b2) \<Rightarrow>
+                (LOut1 t1 s b1, LOut1 t2 s b2))) \<rparr>"
+
+
+definition sync :: "('sa, 'sb, 'a1, 'b1) lifting \<Rightarrow> ('sa, 'sb, 'a2, 'b2) lifting \<Rightarrow> bool" where
+"sync t1 t2 = (\<forall> s . LSyn t1 s = LSyn t2 s)"
+
+lemma syncI :
+  fixes t1 t2 :: "('sa, 'sb, 'a1, 'b1) lifting"
+  fixes s :: "('sb)"
+  assumes H : "\<And> s . LSyn l1 s = LSyn l2 s"
+  shows "sync l1 l2" using H
+  by(auto simp add:sync_def)
+
+lemma syncD :
+  fixes t1 t2 :: "('sa, 'sb, 'a1, 'b1) lifting"
+  fixes s :: "('sb)"
+  assumes H : "sync l1 l2"
+  shows "LSyn l1 s = LSyn l2 s" using H
+  by(auto simp add:sync_def)
+
+lemma prod_l1_valid :
+  fixes l1 :: "('sa, 'sb, 'a1, 'b1) lifting"
+  fixes l2 :: "('sa, 'sb, 'a2, 'b2) lifting"
+  assumes H1 : "lifting_valid l1"
+  assumes H2 : "lifting_valid l2"
+  assumes Hsyn : "sync l1 l2"
+  shows "lifting_valid (prod_l1 l1 l2)"
+proof(rule lifting_valid_intro)
+  fix s :: 'sb
+  fix a :: "'a1 * 'a2"
+  show "LOut1 (prod_l1 l1 l2) s (LIn1 (prod_l1 l1 l2) (LSyn (prod_l1 l1 l2) s) a) = a"
+    using lifting_valid_unfold1[OF H1, of s "fst a"] lifting_valid_unfold1[OF H2, of s "snd a"]
+    syncD[OF Hsyn]
+    by(auto simp add:prod_l1_def split:prod.splits)
+next
+  fix s :: 'sb
+  fix a :: "'a1 * 'a2"
+  fix b :: "'b1 * 'b2"
+  show "LOut1 (prod_l1 l1 l2) s (LIn2 (prod_l1 l1 l2) (LSyn (prod_l1 l1 l2) s) s a b) = a"
+    using lifting_valid_unfold2[OF H1] lifting_valid_unfold2[OF H2] syncD[OF Hsyn]
+    by(auto simp add:prod_l1_def split:prod.splits)
+qed
+
+definition syn_prod :: "('x \<Rightarrow> 'x1) \<Rightarrow> ('x \<Rightarrow> 'x2) \<Rightarrow> ('x \<Rightarrow> ('x1 * 'x2))"
+  where
+"syn_prod f1 f2 x = (f1 x, f2 x)"
+
+
+
+lemma sup_l1_prod_fst :
+  fixes l1  :: "('sa, 'sb, 'a1, 'b1 :: Mergeableb) lifting"
+  fixes l1' :: "('sap, 'sb, 'a1p, 'b1 :: Mergeableb) lifting"
+  fixes l2  :: "('sa, 'sb, 'a2, 'b2 :: Mergeableb) lifting"
+  assumes Hsyn : "sync l1 l2"
+  assumes H : "sup_l l1 l1'"
+  shows "sup_l (prod_l1 l1 l2) (fst_l l1')"
+proof(rule sup_l_intro)
+  fix s :: "'sb"
+  fix a1 :: "('a1 \<times> 'a2)" 
+  fix a1p :: "'a1p"
+  obtain x1 and x2 where Hx : "a1 = (x1, x2)" by (cases a1; auto)
+  obtain ub where Hub : "is_sup {LIn1 l1 (LSyn l1 s) x1, LIn1 l1' (LSyn l1' s) a1p} ub"
+      using sup_l_unfold1[OF H, of s x1] Hx
+      by(auto simp add:prod_l1_def fst_l_def has_sup_def split:prod.splits)
+  
+    have "is_sup {LIn1 (prod_l1 l1 l2) (LSyn (prod_l1 l1 l2) s) a1, LIn1 (fst_l l1') (LSyn (fst_l l1') s) a1p} (ub, LIn1 l2 (LSyn l2 s) x2)" using  Hub Hx
+      syncD[OF Hsyn]
+    by(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def
+        prod_pleq prod_l1_def fst_l_def bot_spec leq_refl split:prod.splits)
+  thus "has_sup {LIn1 (prod_l1 l1 l2) (LSyn (prod_l1 l1 l2) s) a1, LIn1 (fst_l l1') (LSyn (fst_l l1') s) a1p}" by (auto simp add:has_sup_def)
+next
+  fix s :: "'sb"
+  fix a1::"'a1 \<times> 'a2"
+  fix a1p::"'a1p"
+  fix b1 b2:: "'b1 \<times> 'b2"
+  assume Hb : "has_sup {b1, b2}"
+  obtain x1 and x2 where Hx : "a1 = (x1, x2)" by (cases a1; auto)
+  obtain y1 and y2 where Hy : "b1 = (y1, y2)" by (cases b1; auto)
+  obtain z1 and z2 where Hz : "b2 = (z1, z2)" by (cases b2; auto)
+
+  have Hub1 : "has_sup {y1, z1}" using Hy Hz Hb
+    by(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def prod_pleq)
+
+  obtain ub where Hub : "is_sup {LIn2 l1 (LSyn l1 s) s x1 y1, LIn2 l1' (LSyn l1' s) s a1p z1} ub"
+      using sup_l_unfold2[OF H Hub1, of s x1] Hx Hy Hz
+      by(auto simp add:prod_l1_def fst_l_def has_sup_def split:prod.splits)
+
+    have "is_sup {LIn2 (prod_l1 l1 l2) (LSyn (prod_l1 l1 l2) s) s a1 b1, 
+                  LIn2 (fst_l l1') (LSyn (fst_l l1') s)   s a1p b2} (ub, LIn2 l2 (LSyn l2 s) s x2 y2)" using  Hub Hx Hy Hz
+      syncD[OF Hsyn]
+    by(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def
+        prod_pleq prod_l1_def fst_l_def bot_spec leq_refl split:prod.splits)
+  thus "has_sup {LIn2 (prod_l1 l1 l2) (LSyn (prod_l1 l1 l2) s) s a1 b1, LIn2 (fst_l l1') (LSyn (fst_l l1') s) s a1p b2}" by (auto simp add:has_sup_def)
+qed
+
+lemma sup_l1_prod_snd :
+  fixes l1  :: "('sa, 'sb, 'a1, 'b1 :: Mergeableb) lifting"
+  fixes l2  :: "('sa, 'sb, 'a2, 'b2 :: Mergeableb) lifting"
+  fixes l2' :: "('sap, 'sb, 'a2p, 'b2 :: Mergeableb) lifting"
+  assumes Hsync : "sync l1 l2"
+  assumes H : "sup_l l2 l2'"
+  shows "sup_l (prod_l1 l1 l2) (snd_l l2')"
+proof(rule sup_l_intro)
+  fix s :: "'sb"
+  fix a1 :: "('a1 \<times> 'a2)" 
+  fix a2 :: "'a2p"
+  obtain x1 and x2 where Hx : "a1 = (x1, x2)" by (cases a1; auto)
+  obtain ub :: 'b2 where Hub : "is_sup {LIn1 l2 (LSyn l2 s) x2, LIn1 l2' (LSyn l2' s) a2} ub"
+      using sup_l_unfold1[OF H, of s x2] Hx
+      by(auto simp add:prod_l1_def has_sup_def split:prod.splits)
+  
+    have "is_sup {LIn1 (prod_l1 l1 l2) (LSyn (prod_l1 l1 l2) s) a1, LIn1 (snd_l l2') (LSyn (snd_l l2') s) a2} (LIn1 l1 (LSyn l1 s) x1, ub)" using  Hub Hx
+      syncD[OF Hsync]
+    by(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def
+        prod_pleq prod_l1_def snd_l_def bot_spec leq_refl split:prod.splits)
+  thus "has_sup {LIn1 (prod_l1 l1 l2) (LSyn (prod_l1 l1 l2) s) a1, LIn1 (snd_l l2') (LSyn (snd_l l2') s) a2}" by (auto simp add:has_sup_def)
+next
+  fix s :: "'sb"
+  fix a1::"'a1 \<times> 'a2"
+  fix a2::"'a2p"
+  fix b1 b2:: "'b1 \<times> 'b2"
+  assume Hb : "has_sup {b1, b2}"
+  obtain x1 and x2 where Hx : "a1 = (x1, x2)" by (cases a1; auto)
+  obtain y1 and y2 where Hy : "b1 = (y1, y2)" by (cases b1; auto)
+  obtain z1 and z2 where Hz : "b2 = (z1, z2)" by (cases b2; auto)
+
+  have Hub2 : "has_sup {y2, z2}" using Hy Hz Hb
+    by(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def prod_pleq)
+
+  obtain ub where Hub : "is_sup {LIn2 l2 (LSyn l2 s) s x2 y2, LIn2 l2' (LSyn l2' s) s a2 z2} ub"
+      using sup_l_unfold2[OF H Hub2, of s x2] Hx Hy Hz 
+      by(auto simp add:prod_l1_def fst_l_def has_sup_def split:prod.splits)
+
+    have "is_sup {LIn2 (prod_l1 l1 l2) (LSyn (prod_l1 l1 l2) s) s a1 b1, 
+                  LIn2 (snd_l l2') (LSyn (snd_l l2') s) s a2 b2} (LIn2 l1 (LSyn l1 s) s x1 y1, ub)" using  Hub Hx Hy Hz
+      syncD[OF Hsync]
+    by(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def
+        prod_pleq prod_l1_def snd_l_def bot_spec leq_refl split:prod.splits)
+  thus "has_sup {LIn2 (prod_l1 l1 l2) (LSyn (prod_l1 l1 l2) s) s a1 b1,
+                 LIn2 (snd_l l2') (LSyn (snd_l l2') s) s a2 b2}" by (auto simp add:has_sup_def)
+qed
+
 
 definition prod_l ::
   "('sa1, 'sb, 'a1, 'b1) lifting \<Rightarrow>
@@ -297,10 +474,6 @@ next
     using lifting_valid_unfold2[OF H1] lifting_valid_unfold2[OF H2]
     by(auto simp add:prod_l_def split:prod.splits)
 qed
-
-definition syn_prod :: "('x \<Rightarrow> 'x1) \<Rightarrow> ('x \<Rightarrow> 'x2) \<Rightarrow> ('x \<Rightarrow> ('x1 * 'x2))"
-  where
-"syn_prod f1 f2 x = (f1 x, f2 x)"
 
 declare [[show_types]]
 

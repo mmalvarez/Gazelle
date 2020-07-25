@@ -1,136 +1,25 @@
-theory LiftUtilsNew imports  "../MergeableTc/MergeableInstances" "../MergeableTc/MergeableAList"
+theory LiftUtils imports  "../MergeableTc/MergeableInstances" "../MergeableTc/MergeableAList"
 
 begin
 
-(* we cannot always get a b out, so in order to
-   be able to compose we need 1 and 2-argument versions
-   of LIn. This feels ugly but I will try to revisit this
-   later if I have time. *)
 
 (* lifting' is used for syntax *)
 type_synonym ('a, 'b) lifting' = "('b \<Rightarrow> 'a)"
 
-(* idea: tailor the exact lifting we use based on the syntax.
-   this is useful if e.g. we want to use different priority values
-   in different cases *)
-
+(* key abstraction used to lift semantics into larger types *)
 record ('syn, 'a, 'b) lifting =
   LIn1 :: "('syn \<Rightarrow> 'a \<Rightarrow> 'b)"
   LIn2 :: "('syn \<Rightarrow> 'a \<Rightarrow> 'b \<Rightarrow> 'b)"
   LOut1 :: "('syn \<Rightarrow> 'b \<Rightarrow> 'a)"
-(* should LOut2 instead be
-  ('syn \<Rightarrow> 'b \<Rightarrow> 'a \<Rightarrow> 'a) ?
-idea is that we may need knowledge of "previous" a
-in order to extract new a *)
 
-
-(* key question: do we need/want to index on both
-   syntax types? *)
-(*
-record ('sa, 'sb, 'a, 'b) lifting_gen = 
-  LSyn_g :: "('sb \<Rightarrow> 'sa)"
-  LIn1_g :: "('sa \<Rightarrow> 'a \<Rightarrow> 'b)"
-  LIn2_g :: "('sa \<Rightarrow> 'a \<Rightarrow> 'b \<Rightarrow> 'b)"
-  LOut_g :: "('b \<Rightarrow> 'a)"
-*)
-(*
-definition lg_l' ::
-  "('s1, 's2) lifting' \<Rightarrow>
-   ('s1, 'a, 'b) lifting_gen \<Rightarrow>
-   ('s2, 'a, 'b) lifting_gen" where
-"lg_l' l' l =
-  \<lparr> LIn1_g = (\<lambda> s a . LIn1_g l (l' s) a)
-  , LIn2_g = (\<lambda> s a b . LIn2_g l (l' s) a b)
-  , LOut_g = LOut_g l \<rparr>"
-*)
-
-definition id_l' ::
-  "('a, 'a) lifting'" where
-  "id_l' = id"
-
-definition id_l ::
-  "('x, 'a, 'a) lifting" where
-"id_l =
-  \<lparr> LIn1 = (\<lambda> s a . a)
-  , LIn2 = (\<lambda> s a b . a)
-  , LOut1 = (\<lambda> s b . b)\<rparr>" 
-
-definition triv_l ::
-  "('x, 'a, 'b) lifting \<Rightarrow> ('x, 'a, 'b md_triv) lifting" where
-"triv_l t =
-  \<lparr> LIn1 = (\<lambda> s a . mdt ( LIn1 t s a))
-  , LIn2 = (\<lambda> s a b . (case b of (mdt b') \<Rightarrow> (mdt ( (LIn2 t s a b')))))
-  , LOut1 = (\<lambda> s b . (case b of (mdt b') \<Rightarrow> (LOut1 t s b')))\<rparr>"
-
-definition triv_l' ::
-  "('a, 'b) lifting' \<Rightarrow> ('a, 'b md_triv) lifting'" where
-"triv_l' t' =
-  (case_md_triv t')"
-
-definition option_l ::
-  "('x, 'a, 'b) lifting \<Rightarrow> ('x, 'a, 'b option) lifting" where
-"option_l t =
-  \<lparr> LIn1 = (\<lambda> s a . Some ( LIn1 t s a))
-  , LIn2 = (\<lambda> s a b . (case b of None \<Rightarrow> Some (LIn1 t s a)
-                                   | Some b' \<Rightarrow> (Some ( (LIn2 t s a b')))))
-  , LOut1 = (\<lambda> s b . (case b of Some b' \<Rightarrow> LOut1 t s b'))\<rparr>"
-
-
-definition option_l' ::
-  "('a, 'b) lifting' \<Rightarrow>
-   ('a, 'b option) lifting'" where
-"option_l' t =
-  case_option undefined t "
-
-(* note: this only allows syntax dispatching. *)
-definition prio_l ::
-  "('x \<Rightarrow> nat) \<Rightarrow>
-  ('x \<Rightarrow> nat \<Rightarrow> nat) \<Rightarrow>
-  ('x, 'a, 'b) lifting \<Rightarrow>
-  ('x, 'a, 'b md_prio) lifting" where
-"prio_l f0 f1 t =
-  \<lparr> LIn1 = (\<lambda> s a . mdp (f0 s) (LIn1 t s a))
-  , LIn2 = (\<lambda> s a b . (case b of
-                         mdp m b' \<Rightarrow> mdp (f1 s m) (LIn2 t s a b')))
-  , LOut1 =
-      (\<lambda> s p . (case p of
-                 mdp m b \<Rightarrow> LOut1 t s b))\<rparr>"
-
-definition prio_l' ::
-  "('a, 'b) lifting' \<Rightarrow>
-   ('a, 'b md_prio) lifting'" where
-"prio_l' t =
-  (\<lambda> p . (case p of
-              mdp m b \<Rightarrow> t b))"
-
-
-(* 
-does it matter if we extract the key in the LIn2 case?
-we could get more generality if we encode not the key but something
-more informative (e.g. could be a list of keys, hence allow merging meaningfully)
-the issue here is that we cannot merge 2 semantics that set different keys
-
-another option (?) pre-compute mapping lifts so that we don't need to do this later.
-*)
-definition oalist_k_l ::
-  "('x, 'a, 'k :: linorder) lifting \<Rightarrow>
-   ('x, 'a, 'b) lifting \<Rightarrow>
-   ('x, 'a, ('k * ('k, 'b) oalist)) lifting" where
-"oalist_k_l tk tv =
-  \<lparr> LIn1 = (\<lambda> s a . (let k = LIn1 tk s a in
-                     (k, update k (LIn1 tv s a) empty)))
-  , LIn2 = (\<lambda> s a k'l .
-            (case k'l of
-              (k', l) \<Rightarrow>
-                (let k = LIn2 tk s a k' in
-                (case get l k of
-                  None \<Rightarrow> (k, update k (LIn1 tv s a) l)
-                  | Some v \<Rightarrow> (k, update k (LIn2 tv s a v) l)))))
-  , LOut1 = (\<lambda> s kl .
-              (case kl of
-                (k, l) \<Rightarrow> (case get l k of Some a \<Rightarrow> LOut1 tv s a)))\<rparr>"
-
-(* LIn2 = (\<lambda> s a b . update (LIn2 tk s a (LIn1 tk s (LOut1 tv s b))) (LIn2 tv s a b) b) *)
+definition l_adapt ::
+  "('syn1 \<Rightarrow> 'syn2) \<Rightarrow>
+   ('syn2, 'a, 'b) lifting \<Rightarrow>
+   ('syn1, 'a, 'b) lifting" where
+"l_adapt f t =
+  \<lparr> LIn1 = (\<lambda> s a . LIn1 t (f s) a)
+  , LIn2 = (\<lambda> s a b . LIn2 t (f s) a b)
+  , LOut1 = (\<lambda> s b . LOut1 t (f s) b) \<rparr>"
 
 definition l_map ::
   "('x, 'a, 'b) lifting \<Rightarrow>
@@ -211,8 +100,13 @@ lemma lifting_valid_unfold2 :
   shows "LOut1 l s (LIn2 l s a b) = a"
   using H by (auto simp add:lifting_valid_def)
 
-(* TODO
-we need a version of this that talks out LOut not LIn. *)
+
+lemma l_adapt_valid :
+  fixes f :: "('x1 \<Rightarrow> 'x2)"  
+  fixes t :: "('x2, 'a, 'b) lifting"
+  assumes H : "lifting_valid t"
+  shows "lifting_valid (l_adapt f t)" using H
+  by(auto simp add:lifting_valid_def l_adapt_def)
 
 lemma pred_lift2' :
   assumes Hv : "lifting_valid l2"
@@ -223,34 +117,7 @@ lemma pred_lift2' :
   using Hsyn Hsem HP lifting_valid_unfold2[OF Hv] 
   by(cases l2; auto simp add:l_pred_step2'_def l_map2'_def)
 
-lemma id_l_valid : "lifting_valid (id_l)"
-  apply (rule lifting_valid_intro)
-     apply(simp add:id_l_def)
-    apply(simp add:id_l_def)
-  done
 
-
-
-lemma oalist_k_l_valid :
-  fixes lk :: "('x, 'a, 'k :: linorder) lifting"
-  fixes lv :: "('x, 'a, 'b) lifting"
-  assumes Hk : "lifting_valid lk"
-  assumes Hv : "lifting_valid lv"
-  shows "lifting_valid (oalist_k_l lk lv)"
-proof(rule lifting_valid_intro)
-  fix s :: 'x
-  fix a :: 'a
-  show "LOut1 (oalist_k_l lk lv) s (LIn1 (oalist_k_l lk lv) s a) = a" using lifting_valid_unfold1[OF Hv]
-    by(auto simp add:oalist_k_l_def Let_def get_update split:prod.splits option.splits)
-next
-  fix s :: 'x
-  fix a :: 'a
-  fix b :: "'k * ('k, 'b) oalist"
-  show "LOut1 (oalist_k_l lk lv) s (LIn2 (oalist_k_l lk lv) s a b) = a" using 
-        lifting_valid_unfold1[OF Hv]
-        lifting_valid_unfold2[OF Hv]
-    by(auto simp add:oalist_k_l_def Let_def get_update split:prod.splits option.splits)
-qed
 
 
 record ('a, 'b) langcomp =
@@ -291,6 +158,7 @@ definition sup_pres' ::
      has_sup {st1, st2} \<longrightarrow>
      has_sup {syn1, syn2} \<longrightarrow>
      has_sup {f1 syn1 st1, f2 syn2 st2})"
+
 
 
 (* same syntax ("pointwise")? or all syntaxes? *)
