@@ -271,25 +271,33 @@ definition syn_prod :: "('x \<Rightarrow> 'x1) \<Rightarrow> ('x \<Rightarrow> '
   where
 "syn_prod f1 f2 x = (f1 x, f2 x)"
 
+(* TODO: revisit these. it is possible they need to be
+more general - paritcularly, this is suited for merging together
+a product in one language with a fst in another.
+*)
+declare [[show_types]]
+
 lemma sup_l_prod_fst :
+  fixes f :: "'x \<Rightarrow> 'x1"
+  fixes f' :: "'x \<Rightarrow> 'x2"
   fixes l1  :: "('x1, 'a1, 'b1 :: Mergeableb) lifting"
   fixes l1' :: "('x2, 'a2, 'b1 :: Mergeableb) lifting"
-  fixes l2  :: "('x3, 'a3, 'b2 :: Mergeableb) lifting"
-  assumes H : "sup_l f1 f2' l1 l1'"
-  shows "sup_l (syn_prod f1 f2) f1' (prod_l l1 l2) (fst_l l1')"
+  fixes l2  :: "('x1, 'a3, 'b2 :: Mergeableb) lifting"
+  assumes H : "sup_l f f' l1 l1'"
+  shows "sup_l f f' (prod_l l1 l2) (fst_l l1')"
 proof(rule sup_l_intro)
   fix s :: "'x"
   fix a1 :: "('a1 \<times> 'a3)" 
   fix a2 :: "'a2"
   obtain x1 and x2 where Hx : "a1 = (x1, x2)" by (cases a1; auto)
-  obtain ub where Hub : "is_sup {LIn1_g l1 s x1, LIn1_g l1' s a2} ub"
-      using sup_lg_unfold1[OF H, of s x1] Hx
-      by(auto simp add:prod_lg_def fst_lg_def has_sup_def split:prod.splits)
+  obtain ub where Hub : "is_sup {LIn1 l1 (f s) x1, LIn1 l1' (f' s) a2} ub"
+      using sup_l_unfold1[OF H, of "s" x1] Hx
+      by(auto simp add:prod_l_def fst_l_def has_sup_def split:prod.splits)
   
-  have "is_sup {LIn1_g (prod_lg l1 l2) s a1, LIn1_g (fst_lg l1') s a2} (ub, LIn1_g l2 s x2)" using  Hub Hx
+  have "is_sup {LIn1 (prod_l l1 l2) (f s) a1, LIn1 (fst_l l1') (f' s) a2} (ub, LIn1 l2 (f s) x2)" using  Hub Hx
     by(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def
-        prod_pleq prod_lg_def fst_lg_def bot_spec leq_refl split:prod.splits)
-  thus "has_sup {LIn1_g (prod_lg l1 l2) s a1, LIn1_g (fst_lg l1') s a2}" by (auto simp add:has_sup_def)
+        prod_pleq prod_l_def fst_l_def bot_spec leq_refl split:prod.splits)
+  thus "has_sup {LIn1 (prod_l l1 l2) (f s) a1, LIn1 (fst_l l1') (f' s) a2}" by (auto simp add:has_sup_def)
 next
   fix s :: "'x"
   fix a1::"'a1 \<times> 'a3"
@@ -303,35 +311,37 @@ next
   have Hub1 : "has_sup {y1, z1}" using Hy Hz Hb
     by(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def prod_pleq)
 
-  obtain ub where Hub : "is_sup {LIn2_g l1 s x1 y1, LIn2_g l1' s a2 z1} ub"
-      using sup_lg_unfold2[OF H Hub1, of s x1] Hx Hy Hz
-      by(auto simp add:prod_lg_def fst_lg_def has_sup_def split:prod.splits)
+  obtain ub where Hub : "is_sup {LIn2 l1 (f s) x1 y1, LIn2 l1' (f' s) a2 z1} ub"
+      using sup_l_unfold2[OF H Hub1, of s x1] Hx Hy Hz
+      by(auto simp add:prod_l_def fst_l_def has_sup_def split:prod.splits)
 
-  have "is_sup {LIn2_g (prod_lg l1 l2) s a1 b1, LIn2_g (fst_lg l1') s a2 b2} (ub, LIn2_g l2 s x2 y2)" using  Hub Hx Hy Hz
+  have "is_sup {LIn2 (prod_l l1 l2) (f s) a1 b1, LIn2 (fst_l l1') (f' s) a2 b2} (ub, LIn2 l2 (f s) x2 y2)" using  Hub Hx Hy Hz
     by(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def
-        prod_pleq prod_lg_def fst_lg_def bot_spec leq_refl split:prod.splits)
-  thus "has_sup {LIn2_g (prod_lg l1 l2) s a1 b1, LIn2_g (fst_lg l1') s a2 b2}" by (auto simp add:has_sup_def)
+        prod_pleq prod_l_def fst_l_def bot_spec leq_refl split:prod.splits)
+  thus "has_sup {LIn2 (prod_l l1 l2) (f s) a1 b1, LIn2 (fst_l l1') (f' s) a2 b2}" by (auto simp add:has_sup_def)
 qed
 
 lemma sup_lg_prod_snd :
-  fixes l1  :: "('x, 'a1, 'b1 :: Mergeableb) lifting_gen"
-  fixes l2  :: "('x, 'a2, 'b2 :: Mergeableb) lifting_gen"
-  fixes l2' :: "('x, 'a3, 'b2 :: Mergeableb) lifting_gen"
-  assumes H : "sup_lg l2 l2'"
-  shows "sup_lg (prod_lg l1 l2) (snd_lg l2')"
-proof(rule sup_lg_intro)
+  fixes f :: "'x \<Rightarrow> 'x1"
+  fixes f' :: "'x \<Rightarrow> 'x2"
+  fixes l1  :: "('x1, 'a1, 'b1 :: Mergeableb) lifting"
+  fixes l2  :: "('x1, 'a2, 'b2 :: Mergeableb) lifting"
+  fixes l2' :: "('x2, 'a3, 'b2 :: Mergeableb) lifting"
+  assumes H : "sup_l f f' l2 l2'"
+  shows "sup_l f f' (prod_l l1 l2) (snd_l l2')"
+proof(rule sup_l_intro)
   fix s :: "'x"
   fix a1 :: "('a1 \<times> 'a2)" 
   fix a2 :: "'a3"
   obtain x1 and x2 where Hx : "a1 = (x1, x2)" by (cases a1; auto)
-  obtain ub :: 'b2 where Hub : "is_sup {LIn1_g l2 s x2, LIn1_g l2' s a2} ub"
-      using sup_lg_unfold1[OF H, of s x2] Hx
-      by(auto simp add:prod_lg_def fst_lg_def has_sup_def split:prod.splits)
+  obtain ub :: 'b2 where Hub : "is_sup {LIn1 l2 (f s) x2, LIn1 l2' (f' s) a2} ub"
+      using sup_l_unfold1[OF H, of s x2] Hx
+      by(auto simp add:prod_l_def fst_l_def has_sup_def split:prod.splits)
   
-  have "is_sup {LIn1_g (prod_lg l1 l2) s a1, LIn1_g (snd_lg l2') s a2} (LIn1_g l1 s x1, ub)" using  Hub Hx
+  have "is_sup {LIn1 (prod_l l1 l2) (f s) a1, LIn1 (snd_l l2') (f' s) a2} (LIn1 l1 (f s) x1, ub)" using  Hub Hx
     by(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def
-        prod_pleq prod_lg_def snd_lg_def bot_spec leq_refl split:prod.splits)
-  thus "has_sup {LIn1_g (prod_lg l1 l2) s a1, LIn1_g (snd_lg l2') s a2}" by (auto simp add:has_sup_def)
+        prod_pleq prod_l_def snd_l_def bot_spec leq_refl split:prod.splits)
+  thus "has_sup {LIn1 (prod_l l1 l2) (f s) a1, LIn1 (snd_l l2') (f' s) a2}" by (auto simp add:has_sup_def)
 next
   fix s :: "'x"
   fix a1::"'a1 \<times> 'a2"
@@ -345,14 +355,14 @@ next
   have Hub2 : "has_sup {y2, z2}" using Hy Hz Hb
     by(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def prod_pleq)
 
-  obtain ub where Hub : "is_sup {LIn2_g l2 s x2 y2, LIn2_g l2' s a2 z2} ub"
-      using sup_lg_unfold2[OF H Hub2, of s x2] Hx Hy Hz
-      by(auto simp add:prod_lg_def fst_lg_def has_sup_def split:prod.splits)
+  obtain ub where Hub : "is_sup {LIn2 l2 (f s) x2 y2, LIn2 l2' (f' s) a2 z2} ub"
+      using sup_l_unfold2[OF H Hub2, of s x2] Hx Hy Hz
+      by(auto simp add:prod_l_def fst_l_def has_sup_def split:prod.splits)
 
-  have "is_sup {LIn2_g (prod_lg l1 l2) s a1 b1, LIn2_g (snd_lg l2') s a2 b2} (LIn2_g l1 s x1 y1, ub)" using  Hub Hx Hy Hz
+  have "is_sup {LIn2 (prod_l l1 l2) (f s) a1 b1, LIn2 (snd_l l2') (f' s) a2 b2} (LIn2 l1 (f s) x1 y1, ub)" using  Hub Hx Hy Hz
     by(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def
-        prod_pleq prod_lg_def snd_lg_def bot_spec leq_refl split:prod.splits)
-  thus "has_sup {LIn2_g (prod_lg l1 l2) s a1 b1, LIn2_g (snd_lg l2') s a2 b2}" by (auto simp add:has_sup_def)
+        prod_pleq prod_l_def snd_l_def bot_spec leq_refl split:prod.splits)
+  thus "has_sup {LIn2 (prod_l l1 l2) (f s) a1 b1, LIn2 (snd_l l2') (f' s) a2 b2}" by (auto simp add:has_sup_def)
 qed
 
 lemma prio_sup :
@@ -371,15 +381,17 @@ proof-
   thus "has_sup {b1, b2}" by(rule complete2; auto)
 qed
 
-lemma sup_lg_prio :
-  fixes l1 :: "('x, 'a1, 'b :: Pordb) lifting_gen"
-  fixes l2 :: "('x, 'a2, 'b :: Pordb) lifting_gen"
-  shows "sup_lg (prio_lg f0_1 f1_1 l1) (prio_lg f0_2 f1_2 l2)"
-proof(rule sup_lg_intro)
+lemma sup_l_prio :
+  fixes f :: "'x \<Rightarrow> 'y1"
+  fixes f' :: "'x \<Rightarrow> 'y2"
+  fixes l1 :: "('y1, 'a1, 'b :: Pordb) lifting"
+  fixes l2 :: "('y2, 'a2, 'b :: Pordb) lifting"
+  shows "sup_l f f' (prio_l f0_1 f1_1 l1) (prio_l f0_2 f1_2 l2)"
+proof(rule sup_l_intro)
   fix s :: "'x"
   fix a1 :: "'a1"
   fix a2 :: "'a2"
-  show "has_sup {LIn1_g (prio_lg f0_1 f1_1 l1) s a1, LIn1_g (prio_lg f0_2 f1_2 l2) s a2}"
+  show "has_sup {LIn1 (prio_l f0_1 f1_1 l1) (f s) a1, LIn1 (prio_l f0_2 f1_2 l2) (f' s) a2}"
     by(rule prio_sup)
 next
   fix s :: "'x"
@@ -387,13 +399,20 @@ next
   fix a2 :: "'a2"
   fix b1 b2 :: "'b md_prio"
   assume H : "has_sup {b1, b2}"
-  show "has_sup {LIn2_g (prio_lg f0_1 f1_1 l1) s a1 b1, LIn2_g (prio_lg f0_2 f1_2 l2) s a2 b2}"
+  show "has_sup {LIn2 (prio_l f0_1 f1_1 l1) (f s) a1 b1, LIn2 (prio_l f0_2 f1_2 l2) (f' s) a2 b2}"
     by(rule prio_sup)
 qed
 
+lemma sup_l_inc_zero :
+  fixes l1 :: "('y1, 'a1, 'b :: Mergeableb) lifting"
+  fixes l2:: "('y2, 'a2, 'b :: Mergeableb) lifting"
+  shows "sup_l f f' (prio_l_zero l1) (prio_l_inc l2)"
+  unfolding prio_l_zero_def prio_l_inc_def prio_l_const_def
+  by(rule sup_l_prio)
 (* prios = sort of different
    we probably need to relate the details of the functions?
    (or do we not? md_prio always has an upper bound *)
+(*
 lemma sup_l_inc_zero :
   fixes l1 :: "('a1, 'b :: Mergeableb) lifting"
   fixes l2:: "('a2, 'b :: Mergeableb) lifting"
@@ -440,7 +459,7 @@ next
   thus "has_sup {LIn2 (prio_l_zero l1) a1 b1, LIn2 (prio_l_inc l2) a2 b2}"
     by(auto simp add:has_sup_def)
 qed
-
+*)
 
 (*
 variable maps

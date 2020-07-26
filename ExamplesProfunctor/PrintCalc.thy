@@ -1,6 +1,6 @@
 theory PrintCalc imports
  "../MergeableTc/Mergeable" "../MergeableTc/MergeableInstances" 
-  "../Lifting/LiftInstances"
+  "../Lifting/LiftInstancesProfunctor"
 begin
 
 
@@ -75,14 +75,14 @@ definition print_sem :: "print \<Rightarrow> print_st \<Rightarrow> print_st" wh
 
 definition print_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
   "print_sem_l = 
-    l_map2' print_trans
-            (prod_l ((prio_l_zero (option_l (triv_l (id_l)))))
-                    ((option_l (triv_l (id_l))))) print_sem"
+    lift
+            (prod_l1 ((prio_l_zero (option_l (triv_l (id_l print_trans)))))
+                    ((option_l (triv_l (id_l print_trans))))) print_sem"
 
 definition calc_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "calc_sem_l =
-  l_map2' calc_trans
-    (fst_l (prio_l_inc (option_l (triv_l (id_l))))) calc_sem"
+  lift
+    (fst_l (prio_l_inc (option_l (triv_l (id_l calc_trans))))) calc_sem"
 
 definition print_calc_lc :: "(syn, state) langcomp" where
 "print_calc_lc =
@@ -98,8 +98,8 @@ lemma ex_lc_valid :
   apply(rule lc_valid_lift)
    apply(simp add: print_calc_lc_def calc_sem_l_def print_sem_l_def)
   apply(rule sup_l_comm)
-  apply(rule sup_l_prod_fst)
-   apply(simp add: prio_l_def option_l_def triv_l_def id_l_def prio_l_inc_def prio_l_zero_def prio_l_const_def)
+  apply(rule sup_l1_prod_fst) 
+   apply(simp add: prio_l_def option_l_def triv_l_def id_l_def prio_l_inc_def prio_l_zero_def prio_l_const_def sync_def)
      apply(simp only: prio_l_inc_def prio_l_zero_def prio_l_const_def )
   apply(rule sup_l_prio)
   done

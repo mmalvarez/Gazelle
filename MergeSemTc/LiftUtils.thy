@@ -1,4 +1,4 @@
-theory LiftUtils imports  "../MergeableTc/MergeableInstances" 
+theory LiftUtils imports  "../MergeableTc/MergeableInstances" "../MergeableTc/MergeableAList"
 
 begin
 
@@ -10,19 +10,14 @@ begin
 (* lifting' is used for syntax *)
 type_synonym ('a, 'b) lifting' = "('b \<Rightarrow> 'a)"
 
-record ('a, 'b) lifting =
-  LIn1 :: "('a \<Rightarrow> 'b)"
-  LIn2 :: "('a \<Rightarrow> 'b \<Rightarrow> 'b)"
-  LOut :: "('b \<Rightarrow> 'a)"
-
 (* idea: tailor the exact lifting we use based on the syntax.
    this is useful if e.g. we want to use different priority values
    in different cases *)
 
-record ('syn, 'a, 'b) lifting_gen =
-  LIn1_g :: "('syn \<Rightarrow> 'a \<Rightarrow> 'b)"
-  LIn2_g :: "('syn \<Rightarrow> 'a \<Rightarrow> 'b \<Rightarrow> 'b)"
-  LOut_g :: "('b \<Rightarrow> 'a)"
+record ('syn, 'a, 'b) lifting =
+  LIn1 :: "('syn \<Rightarrow> 'a \<Rightarrow> 'b)"
+  LIn2 :: "('syn \<Rightarrow> 'a \<Rightarrow> 'b \<Rightarrow> 'b)"
+  LOut :: "('b \<Rightarrow> 'a)"
 
 
 (* key question: do we need/want to index on both
@@ -45,36 +40,22 @@ definition lg_l' ::
   , LOut_g = LOut_g l \<rparr>"
 *)
 definition id_l ::
-  "('a, 'a) lifting" where
+  "('x, 'a, 'a) lifting" where
 "id_l =
-  \<lparr> LIn1 = id
-  , LIn2 = (\<lambda> x y . id x)
+  \<lparr> LIn1 = (\<lambda> s a . a)
+  , LIn2 = (\<lambda> s a a' . a)
   , LOut = id\<rparr>" 
 
 definition id_l' ::
   "('a, 'a) lifting'" where
   "id_l' = id"
 
-definition id_lg ::
-  "('x, 'a, 'a) lifting_gen" where
-"id_lg =
-  \<lparr> LIn1_g = (\<lambda> s a . a)
-  , LIn2_g = (\<lambda> s a a' . a)
-  , LOut_g = id\<rparr>" 
-
 definition triv_l ::
-  "('a, 'b) lifting \<Rightarrow> ('a, 'b md_triv) lifting" where
+  "('x, 'a, 'b) lifting \<Rightarrow> ('x, 'a, 'b md_triv) lifting" where
 "triv_l t =
-  \<lparr> LIn1 = mdt o (LIn1 t)
-  , LIn2 = (\<lambda> a b . (case b of (mdt b') \<Rightarrow> (mdt ( (LIn2 t a b')))))
+  \<lparr> LIn1 = (\<lambda> s a . mdt ( LIn1 t s a))
+  , LIn2 = (\<lambda> s a b . (case b of (mdt b') \<Rightarrow> (mdt ( (LIn2 t s a b')))))
   , LOut = (case_md_triv (LOut t))\<rparr>"
-
-definition triv_lg ::
-  "('x, 'a, 'b) lifting_gen \<Rightarrow> ('x, 'a, 'b md_triv) lifting_gen" where
-"triv_lg t =
-  \<lparr> LIn1_g = (\<lambda> s a . mdt ( LIn1_g t s a))
-  , LIn2_g = (\<lambda> s a b . (case b of (mdt b') \<Rightarrow> (mdt ( (LIn2_g t s a b')))))
-  , LOut_g = (case_md_triv (LOut_g t))\<rparr>"
 
 definition triv_l' ::
   "('a, 'b) lifting' \<Rightarrow> ('a, 'b md_triv) lifting'" where
@@ -82,23 +63,14 @@ definition triv_l' ::
   (case_md_triv t')"
 
 definition option_l ::
-  "('a, 'b) lifting \<Rightarrow>
-   ('a, 'b option) lifting" where
+  "('x, 'a, 'b) lifting \<Rightarrow> ('x, 'a, 'b option) lifting" where
 "option_l t =
-  \<lparr> LIn1 = Some o (LIn1 t)
-  , LIn2 = (\<lambda> a b . (case b of None \<Rightarrow> Some (LIn1 t a)
-                    | Some b' \<Rightarrow> Some (LIn2 t a b')))
-  , LOut = case_option undefined (LOut t) \<rparr>"
+  \<lparr> LIn1 = (\<lambda> s a . Some ( LIn1 t s a))
+  , LIn2 = (\<lambda> s a b . (case b of None \<Rightarrow> Some (LIn1 t s a)
+                                   | Some b' \<Rightarrow> (Some ( (LIn2 t s a b')))))
+  , LOut = (case_option undefined (LOut t))\<rparr>"
 
-definition option_lg ::
-  "('x, 'a, 'b) lifting_gen \<Rightarrow> ('x, 'a, 'b option) lifting_gen" where
-"option_lg t =
-  \<lparr> LIn1_g = (\<lambda> s a . Some ( LIn1_g t s a))
-  , LIn2_g = (\<lambda> s a b . (case b of None \<Rightarrow> Some (LIn1_g t s a)
-                                   | Some b' \<Rightarrow> (Some ( (LIn2_g t s a b')))))
-  , LOut_g = (case_option undefined (LOut_g t))\<rparr>"
-
-
+(*
 definition option_l' ::
   "('a, 'b) lifting' \<Rightarrow>
    ('a, 'b option) lifting'" where
@@ -247,6 +219,15 @@ definition prod_lg ::
     (\<lambda> b . (case b of (b1, b2) \<Rightarrow>
                 (LOut_g t1 b1, LOut_g t2 b2))) \<rparr>"
                   
+*)
+
+(*
+definition oalist_lg_syn ::
+  "('x, 'a, 'b :: Pord) lifting_gen \<Rightarrow>
+   ('x, 'a, ('k :: linorder, 'b) oalist) lifting_gen" where
+"lg_oalist_syn t =
+  *)
+  
 
 (* this may not be that useful
    also, do we want this to be more like option? (or prod_lm?) *)
@@ -368,6 +349,9 @@ definition lg_map2' ::
      ('b1 \<Rightarrow> 'b2 \<Rightarrow> 'b2)" where
 "lg_map2' l' l sem syn st =
   (LIn2_g l (l' syn) (sem (l' syn) (LOut_g l st)) st)"
+
+
+  
 
 
 (* is False the right default here? *)

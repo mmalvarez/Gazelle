@@ -123,6 +123,9 @@ qed
 
 setup_lifting type_definition_oalist
 
+type_synonym ('key) kmap =
+  "('key, unit) oalist"
+
 lemma alist_ext: "impl_of xs = impl_of ys \<Longrightarrow> xs = ys"
   by (simp add: impl_of_inject)
 
@@ -262,8 +265,9 @@ proof(induction l arbitrary: k v)
   qed
      
 
+(*
 lift_definition lookup :: "('key :: linorder, 'value) oalist \<Rightarrow> 'key \<Rightarrow> 'value option" is map_of  .
-
+*)
 lift_definition empty :: "('key :: linorder, 'value) oalist" is "[]"
   by(simp add:strict_order_def)
 
@@ -444,6 +448,23 @@ fun to_oalist :: "(('a :: linorder) * 'b) list \<Rightarrow> ('a, 'b) oalist" wh
 "to_oalist [] = empty"
 | "to_oalist ((a, b)#l) = 
      update a b (to_oalist l)"
+
+lift_definition get :: "('key, 'value) oalist \<Rightarrow> ('key :: linorder) \<Rightarrow>  'value option"
+is map_of .
+
+definition has_key :: "('key) kmap \<Rightarrow> 'key :: linorder \<Rightarrow> bool" where
+"has_key l k = (get l k = Some ())"
+
+(* possibly useful for semantics - if a key map describing updated values
+   has only one entry, we can pull it out. *)
+definition kmap_singleton :: "('key :: linorder) kmap \<Rightarrow> 'key" where
+"kmap_singleton l =
+  (case impl_of l of
+    [k] \<Rightarrow> fst k)"
+
+
+definition add_key :: "('key) kmap \<Rightarrow> 'key :: linorder \<Rightarrow> 'key kmap" where
+"add_key l k = update k () l"
 
 value "impl_of (to_oalist ([(1 :: nat, True)]))"
 
@@ -1607,7 +1628,7 @@ declare [[show_types = false]]
 
 lemma str_ord_update_inD :
   fixes k k' :: "'a :: linorder"
-  fixes v v' :: "'b :: Pord"
+  fixes v v' :: "'b"
   fixes l :: "('a * 'b) list"
   assumes Hord : "strict_order (map fst l)"
   assumes Hk'v' : "(k', v') \<in> set (str_ord_update k v l)"
@@ -1646,7 +1667,7 @@ declare [[show_types]]
 
 lemma str_ord_update_inI1 :
   fixes k  :: "'a :: linorder"
-  fixes v  :: "'b :: Pord"
+  fixes v  :: "'b"
   fixes l :: "('a * 'b) list"
   assumes Hord : "strict_order (map fst l)"
   shows "(k, v) \<in> set (str_ord_update k v l)" using Hord 
@@ -1663,7 +1684,7 @@ qed
 
 lemma str_ord_update_inI2 :
   fixes k k'  :: "'a :: linorder"
-  fixes v v' :: "'b :: Pord"
+  fixes v v' :: "'b"
   fixes l :: "('a * 'b) list"
   assumes Hord : "strict_order (map fst l)"
   assumes Hneq : "k \<noteq> k'"
@@ -1680,7 +1701,24 @@ next
     by(auto split:if_splits)
 qed
 
-declare [[show_types = false]]
+declare [[show_types ]]
+
+lemma get_update :
+  fixes k :: "'a :: linorder"
+  fixes v :: "'b"
+  fixes l :: "('a, 'b) oalist"
+  shows "get (update k v l) k = Some v"
+proof(transfer)
+  fix k :: "'a :: linorder"
+  fix v :: "'b"
+  fix l :: "('a * 'b) list"
+  assume Hord : "strict_order (map fst l)"
+  show "map_of (str_ord_update k v l) k = Some v"
+    using str_ord_update_inI1[OF Hord, of k v] 
+      map_of_eq_Some_iff[OF 
+        strict_order_distinct[OF str_ord_update_correct[OF Hord, of k v]], of k v] by auto
+qed
+
 
 (*
 lemma str_ord_delete_inD :
@@ -3032,4 +3070,5 @@ instance proof
   qed
 qed
 
+end
 end

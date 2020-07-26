@@ -74,6 +74,39 @@ fun gensyn_dig :: "('x) gensyn \<Rightarrow> childpath \<Rightarrow> childpath o
     Some (G _ (h#t)) \<Rightarrow> Some (c@[0])
     | _ \<Rightarrow> None)"
 
+definition gs_ex :: "unit gensyn" where
+"gs_ex =
+  G () [G () [], G () [G () [], G () []], G () []]"
+
+value "gensyn_cp_next gs_ex [1, 1]"
+
+fun gensyn_cp_sibling_list :: "'x gensyn list \<Rightarrow> childpath \<Rightarrow> childpath option" where
+  "gensyn_cp_sibling_list [] _ = None"
+| "gensyn_cp_sibling_list _ [] = None"
+| "gensyn_cp_sibling_list ([G x l]) (0#cpt) =
+    (case gensyn_cp_sibling_list l cpt of None \<Rightarrow> None 
+                         | Some res \<Rightarrow> Some (0#res))"
+| "gensyn_cp_sibling_list ([h]) ((Suc n)#cpt) = None"
+| "gensyn_cp_sibling_list ((G x l)#h2#t) (0#cpt) =
+    (case gensyn_cp_sibling_list l cpt of
+      Some cp' \<Rightarrow> Some (0#cp')
+     | None \<Rightarrow> None)"
+| "gensyn_cp_sibling_list (h#h2#t) (Suc n # cpt) =
+    (case gensyn_cp_sibling_list (h2#t) (n # cpt) of
+      Some (n'#cp') \<Rightarrow> Some (Suc n' # cp')
+     | _ \<Rightarrow> None)"
+
+fun gensyn_cp_sibling :: "('x) gensyn \<Rightarrow> childpath \<Rightarrow> childpath option"
+  where
+"gensyn_cp_sibling (G x l) (cp) = gensyn_cp_sibling_list l cp"
+
+value "gensyn_cp_sibling gs_ex [1, 1]"
+
+fun gensyn_cp_parent :: "'x gensyn \<Rightarrow> childpath \<Rightarrow> childpath option" where
+"gensyn_cp_parent _ [] = None"
+| "gensyn_cp_parent g (h#t) = Some t"
+
+
 (* another option for defining cp_next. this should work for our purposes as well *)
 (*
 fun gensyn_cp_next2' :: "('b, 'r, 'g) gensyn \<Rightarrow> childpath \<Rightarrow> childpath option" where

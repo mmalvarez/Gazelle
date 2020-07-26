@@ -80,7 +80,33 @@ lemma pred_lift :
   apply(cases l; auto simp add:l_pred_step_def lift_def)
   done
 
+definition synmap ::
+  "('sc \<Rightarrow> 'sb) \<Rightarrow>
+   ('sa, 'sb, 'a, 'b) lifting \<Rightarrow>
+   ('sa, 'sc, 'a, 'b) lifting" where
+"synmap f l =
+  \<lparr> LSyn = (\<lambda> sc . LSyn l (f sc))
+  , LIn1 = LIn1 l
+  , LIn2 = (\<lambda> sa sc a b . LIn2 l sa (f sc) a b)
+  , LOut1 = (\<lambda> sc b .  LOut1 l (f sc) b)\<rparr>"
 
+lemma lifting_valid_synmap :
+  assumes H : "lifting_valid (l :: ('a, 'sb, 'a, 'b) lifting)"
+  shows "lifting_valid (synmap (f :: ('sc \<Rightarrow> 'sb)) l)"
+proof(rule lifting_valid_intro)
+  fix s :: "'sc"
+  fix a :: 'a
+  show "LOut1 (synmap f l) s (LIn1 (synmap f l) (LSyn (synmap f l) s) a) = a"
+    using lifting_valid_unfold1[OF H]
+    by(auto simp add:synmap_def)
+next
+  fix s :: "'sc"
+  fix a :: 'a
+  fix b :: 'b
+  show "LOut1 (synmap f l) s (LIn2 (synmap f l) (LSyn (synmap f l) s) s a b) = a"
+    using lifting_valid_unfold2[OF H]
+    by(auto simp add:synmap_def)
+qed
 
 record ('a, 'b) langcomp =
   Sem1 :: "'a \<Rightarrow> 'b \<Rightarrow> 'b"
@@ -181,6 +207,37 @@ lemma lc_valid_unfold :
   shows "has_sup {Sem1 l syn st1, Sem2 l syn st2}"
   using H Hsup
   by(auto simp add:lc_valid_def sup_pres_def)
+
+lemma sup_l_synmap :
+  fixes l1 :: "('sa1, 'sb, 'a1, 'b :: Mergeable) lifting"
+  fixes l2 :: "('sa2, 'sb, 'a2, 'b :: Mergeable) lifting"
+  fixes f :: "'sc \<Rightarrow> 'sb"
+  assumes Hsl : "sup_l l1 l2"
+  shows "sup_l (synmap f l1) (synmap f l2)"
+proof(rule sup_l_intro)
+  fix s :: 'sc
+  fix a1 :: 'a1
+  fix a2 :: 'a2
+  show "has_sup
+        {LIn1 (synmap f l1) (LSyn (synmap f l1) s) a1,
+         LIn1 (synmap f l2) (LSyn (synmap f l2) s) a2}" using sup_l_unfold1[OF Hsl]
+    by(auto simp add:synmap_def)
+next
+  fix s :: 'sc
+  fix a1 :: 'a1
+  fix b1 :: 'b
+  fix a2 :: 'a2
+  fix b2 :: 'b
+  assume Hb : "has_sup {b1, b2}"
+  show "has_sup
+        {LIn2 (synmap f l1) (LSyn (synmap f l1) s) s a1 b1,
+         LIn2 (synmap f l2) (LSyn (synmap f l2) s) s a2 b2}"
+using sup_l_unfold2[OF Hsl] Hb
+  by(auto simp add:synmap_def)
+qed
+
+(* TODO: what can we say about sup in the case where the syntaxes might not
+be the same to begin with? *)
 
 lemma sup_l_pres :
   fixes l1 :: "('sa1, 'sb, 'a1, 'b :: Mergeable) lifting"

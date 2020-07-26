@@ -23,6 +23,9 @@ fun gs_map_opt :: "('x \<Rightarrow> 'y option) \<Rightarrow> 'x gensyn \<Righta
       None \<Rightarrow> None
       | Some fl \<Rightarrow> Some (G fx fl)))"
 
+definition gs_sk :: "'a gensyn \<Rightarrow> gensyn_skel" where
+"gs_sk t = gs_map (\<lambda> _ . ()) t"
+
 type_synonym childpath = "nat list"
 
 datatype ('x) gs_result =
@@ -32,12 +35,6 @@ datatype ('x) gs_result =
   | GRUnhandled
   | GRSync "'x gs_result"
   | GROther 'x
-
-(* for consistency with other syntax declarations *)
-(*
-definition LSeq :: "'g \<Rightarrow> 'r \<Rightarrow> (('b, 'r, 'g) gensyn list) \<Rightarrow> ('b, 'r, 'g) gensyn" where
-"LSeq g r l = GRec g r l"
-*)
 
 lemma gensyn_induct':
   assumes Lr : "(\<And> (x :: 'x) (l :: ('x) gensyn list) . P2 l \<Longrightarrow> P2 [(G x l)])"
