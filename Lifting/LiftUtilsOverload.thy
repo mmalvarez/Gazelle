@@ -140,39 +140,49 @@ definition get_lift' :: "(reified, 'b :: reiden, 'c) lifting \<Rightarrow> (reif
   , LIn2 = (\<lambda> s a b . LIn2 t s (denote a) b)
   , LOut1 = (\<lambda> s b . reify (LOut1 t s b)) \<rparr>"
 
-
-class lifty =
-  fixes default_liftr :: "(reified, reified, 'a) lifting"
+(* rtype parameter is the type of the second component of lifting
+   (the "small state" *)
+class lifty = reiden + reident +
+  fixes default_liftr :: "rtype \<Rightarrow> (reified, reified, 'a) lifting"
 
 instantiation nat :: lifty begin
 definition dlr_nat :
-  "default_liftr = ((get_lift' id_l) :: (reified, reified, nat) lifting)"
+  "default_liftr = (\<lambda> _ . ((get_lift' id_l) :: (reified, reified, nat) lifting))"
 instance proof qed
 end
 
 instantiation bool :: lifty begin
 definition dlr_bool :
-  "default_liftr = ((get_lift' id_l) :: (reified, reified, bool) lifting)"
+  "default_liftr = (\<lambda> _ . (get_lift' id_l) :: (reified, reified, bool) lifting)"
 instance proof qed
 end
 
 instantiation option :: (lifty) lifty begin
 definition dlr_opt :
-  "default_liftr = (option_l default_liftr :: (reified, reified, 'a option) lifting)"
+  "default_liftr = (\<lambda> x . (option_l (default_liftr x) :: (reified, reified, 'a option) lifting))"
 instance proof qed
 end
 
 instantiation md_triv :: (lifty) lifty begin
 definition dlr_triv :
-  "default_liftr = (triv_l default_liftr :: (reified, reified, 'a md_triv) lifting)"
+  "default_liftr = (\<lambda> x . triv_l (default_liftr x) :: (reified, reified, 'a md_triv) lifting)"
 instance proof qed
 end
 
 (* can we do something very hacky here
-   in terms of looking at the reified types and deciding if we want one component or the other? *)
+   in terms of looking at the reified types and deciding if we want one component or the other?
+   need to look "one level down"? *)
+(* idea:
+   - first check to see if equal to component 1
+   - then check component 2
+   - finally, do r_prod *)
 instantiation prod :: (lifty, lifty) lifty begin
 definition dlr_prod :
-  "default_liftr =
+  "default_liftr = 
+    (\<lambda> x . 
+       (let t = reifyt (TYPE('a)) in
+        (case x of
+          TProd 
     
 
 
