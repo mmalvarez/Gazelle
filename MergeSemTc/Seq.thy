@@ -6,11 +6,12 @@ begin
 
 datatype syn =
   Sseq
-  | Snext
+  | Sskip
 
+(* idea: these dir's are really defunctionalized continuations *)
 datatype dir =
-  Down
-  | Up
+  Down 
+  | Up childpath
 
 type_synonym state' = "gensyn_skel * unit gs_result * dir"
 
@@ -34,6 +35,11 @@ definition seq_sem :: "('x \<Rightarrow> syn) \<Rightarrow> 'x \<Rightarrow> sta
     | _ \<Rightarrow> st)"
 *)
 
+(* standard: nodes will always try to go to their first child
+not sure if this should be handled here or on a per-node basis
+for now i'm going to see if i can handle it per-node *)
+
+(*
 definition seq_sem :: "syn \<Rightarrow> state' \<Rightarrow> state'" where
 "seq_sem x st =
 (case st of (sk, GRPath cp, d) \<Rightarrow>
@@ -57,6 +63,48 @@ definition seq_sem :: "syn \<Rightarrow> state' \<Rightarrow> state'" where
                       | Some cp' \<Rightarrow> (sk, GRPath cp', Up))
              | Some cp' \<Rightarrow> (sk, GRPath cp', Down))))
   | _ \<Rightarrow> st)"
+*)
+
+fun getlast :: "'a list \<Rightarrow> 'a option" where
+"getlast [] = None"
+| "getlast [h] = Some h"
+| "getlast (h1#h2#t) = getlast (h2#t)"
+
+(* to be strict, we need to check if the returned CP is a suffix of us. *)
+(* TODO: factor out the part about deferring to parent *)
+(*
+(case gensyn_cp_parent sk cp of
+      None \<Rightarrow> (sk, GRDone, Up cp)
+      | Some cp' \<Rightarrow> (sk, GRPath cp', Up xcp))
+*)
+definition seq_sem :: "syn \<Rightarrow> state' \<Rightarrow> state'" where
+"seq_sem x st =
+(case st of (sk, GRPath cp, d) \<Rightarrow>
+  (case x of
+    Sskip \<Rightarrow> (case gensyn_cp_parent sk cp of
+                    None \<Rightarrow> (sk, GRDone, Up cp)
+                    | Some cp' \<Rightarrow> (sk, GRPath cp', Up cp))
+    | Sseq \<Rightarrow>
+        (case d of
+          Down \<Rightarrow>
+            (case gensyn_get sk (cp @ [0]) of
+             None \<Rightarrow> (sk, GRPath cp, Up cp)
+             | Some _ \<Rightarrow> (sk, GRPath (cp @ [0]), Down))
+          | Up xcp \<Rightarrow> 
+             (if gensyn_cp_is_desc_strict cp xcp
+              then (case getlast xcp of 
+                         (Some xcpl) \<Rightarrow> 
+                           (case gensyn_get sk (cp @ [1+xcpl]) of
+                              None \<Rightarrow> (case gensyn_cp_parent sk cp of
+                                        None \<Rightarrow> (sk, GRDone, Up xcp)
+                                        | Some cp' \<Rightarrow> (sk, GRPath cp', Up xcp))
+                              | Some _ \<Rightarrow> (sk, GRPath (cp @ [1+xcpl]), Down))
+                          | None \<Rightarrow> undefined)
+               else (case gensyn_cp_parent sk cp of
+                                        None \<Rightarrow> (sk, GRDone, Up cp)
+                                        | Some cp' \<Rightarrow> (sk, GRPath cp', Up xcp)))))
+  | _ \<Rightarrow> st)"
+
 
 (* problem - need to keep "skip" from
    ovewriting the "other" at a higher priority *)
