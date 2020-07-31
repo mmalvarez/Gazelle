@@ -80,9 +80,10 @@ definition gs_ex :: "unit gensyn" where
 
 value "gensyn_cp_next gs_ex [1, 1]"
 
+(*
 fun gensyn_cp_sibling_list :: "'x gensyn list \<Rightarrow> childpath \<Rightarrow> childpath option" where
   "gensyn_cp_sibling_list [] _ = None"
-| "gensyn_cp_sibling_list _ [] = None"
+| "gensyn_cp_sibling_list (h#t) [] = Some []"
 | "gensyn_cp_sibling_list ([G x l]) (0#cpt) =
     (case gensyn_cp_sibling_list l cpt of None \<Rightarrow> None 
                          | Some res \<Rightarrow> Some (0#res))"
@@ -95,16 +96,61 @@ fun gensyn_cp_sibling_list :: "'x gensyn list \<Rightarrow> childpath \<Rightarr
     (case gensyn_cp_sibling_list (h2#t) (n # cpt) of
       Some (n'#cp') \<Rightarrow> Some (Suc n' # cp')
      | _ \<Rightarrow> None)"
+*)
+
+fun gensyn_cp_sibling_list_ht :: "'x gensyn list \<Rightarrow> nat \<Rightarrow> childpath \<Rightarrow> (nat * childpath) option" where
+  "gensyn_cp_sibling_list_ht [] _ _ = None"
+| "gensyn_cp_sibling_list_ht [h] _ [] = None"
+| "gensyn_cp_sibling_list_ht [h] (Suc n) _ = None"
+
+| "gensyn_cp_sibling_list_ht (h1#h2#t) 0 [] = Some (1, [])"
+| "gensyn_cp_sibling_list_ht ((G x l)#t) 0 (ch#ct) = 
+    (case gensyn_cp_sibling_list_ht l ch ct of
+      Some (n', cp') \<Rightarrow> Some (0, n'#cp')
+      | _ \<Rightarrow> None)"
+
+
+| "gensyn_cp_sibling_list_ht ((G x l)#h2#t) (Suc n) ct =
+    (case gensyn_cp_sibling_list_ht (h2#t) n (ct) of
+      Some (n', cp') \<Rightarrow> Some (Suc n', cp')
+     | _ \<Rightarrow> None)"
+
 
 fun gensyn_cp_sibling :: "('x) gensyn \<Rightarrow> childpath \<Rightarrow> childpath option"
   where
-"gensyn_cp_sibling (G x l) (cp) = gensyn_cp_sibling_list l cp"
+"gensyn_cp_sibling (G x l) [] = None"
+| "gensyn_cp_sibling (G x l) (ch#ct) =
+    (case gensyn_cp_sibling_list_ht l ch ct of
+      None \<Rightarrow> None
+      | Some (ch', ct') \<Rightarrow> Some (ch'#ct'))"
 
-value "gensyn_cp_sibling gs_ex [1, 1]"
+value "gensyn_cp_sibling gs_ex [1]"
+value "gensyn_cp_sibling_list
+([G () [], G () [], G () []])
+[0]"
 
 fun gensyn_cp_parent :: "'x gensyn \<Rightarrow> childpath \<Rightarrow> childpath option" where
 "gensyn_cp_parent _ [] = None"
-| "gensyn_cp_parent g (h#t) = Some t"
+| "gensyn_cp_parent g (h#t) = Some (butlast (h#t))"
+
+(* is the second argument an extension of the first? *)
+fun gensyn_cp_is_desc :: "childpath \<Rightarrow> childpath \<Rightarrow> bool" where
+"gensyn_cp_is_desc [] cp = True"
+| "gensyn_cp_is_desc (h1#t1) [] = False"
+| "gensyn_cp_is_desc (h1#t1) (h2#t2) =
+    (h1 = h2 \<and> gensyn_cp_is_desc t1 t2)"
+
+fun gensyn_cp_is_desc_strict :: "childpath \<Rightarrow> childpath \<Rightarrow> bool" where
+"gensyn_cp_is_desc_strict cp [] = False" 
+| "gensyn_cp_is_desc_strict [] (h2#t2) = True"
+| "gensyn_cp_is_desc_strict (h1#t1) (h2#t2) =
+    (h1 = h2 \<and> gensyn_cp_is_desc_strict t1 t2)"
+
+fun get_suffix :: "childpath \<Rightarrow> childpath \<Rightarrow> childpath option" where
+"get_suffix cp [] = None"
+| "get_suffix [] (h2#t2) = Some (h2#t2)"
+| "get_suffix (h1#t1) (h2#t2) =
+  (if h1 = h2 then get_suffix t1 t2 else None)"
 
 
 (* another option for defining cp_next. this should work for our purposes as well *)

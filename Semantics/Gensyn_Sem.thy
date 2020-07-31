@@ -79,6 +79,27 @@ fun gensyn_sem_exec ::
              | (GRPath cp', m') \<Rightarrow> gensyn_sem_exec x_sem t cp' m' n
              | (_, _) \<Rightarrow> None))"
 
+(*
+fun gensyn_sem_exec_dbg ::
+  "('a, 'b, 'c) x_sem \<Rightarrow>
+   ('a) gensyn \<Rightarrow>
+   childpath \<Rightarrow>
+   'b \<Rightarrow>
+    nat \<Rightarrow>
+   ('b option * 'c gs_result option)" 
+  where
+  "gensyn_sem_exec_dbg x_sem t cp m 0 = None"
+
+| "gensyn_sem_exec x_sem t cp m (Suc n) =
+    (case gensyn_get t cp of
+     None \<Rightarrow> None
+     | Some (G x l) \<Rightarrow>
+       (case x_sem x t cp m of
+              (GRDone, m') \<Rightarrow> Some m'
+             | (GRPath cp', m') \<Rightarrow> gensyn_sem_exec x_sem t cp' m' n
+             | (_, _) \<Rightarrow> None))"
+*)
+
 
 lemma gensyn_sem_exec_morefuel :
   assumes H: "gensyn_sem_exec x_sem t cp m n = Some m'"

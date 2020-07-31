@@ -141,6 +141,19 @@ definition prio_l_inc :: "('x, 'a, 'b) lifting \<Rightarrow> ('x, 'a, 'b md_prio
 "prio_l_inc =
   prio_l (\<lambda> _ . 0) (\<lambda> _ x . 1 + x)"
 
+definition prio_l_inc2 :: "('x, 'a, 'b) lifting \<Rightarrow> ('x, 'a, 'b md_prio) lifting" where
+"prio_l_inc2 =
+  prio_l (\<lambda> _ . 0) (\<lambda> _ x . 2 + x)"
+
+definition prio_l_incN :: "nat \<Rightarrow> ('x, 'a, 'b) lifting \<Rightarrow> ('x, 'a, 'b md_prio) lifting" where
+"prio_l_incN n =
+  prio_l (\<lambda> _ . 0) (\<lambda> _ x . n + x)"
+
+
+definition prio_l_case_inc :: "('x \<Rightarrow> nat) \<Rightarrow> ('x, 'a, 'b) lifting \<Rightarrow> ('x, 'a, 'b md_prio) lifting" where
+"prio_l_case_inc f =
+  prio_l (\<lambda> _ . 0) (\<lambda> s x . (f s) + x)"
+
 definition prio_l_const :: "nat \<Rightarrow> ('x, 'a, 'b) lifting \<Rightarrow> ('x, 'a, 'b md_prio) lifting" where
 "prio_l_const n =
   prio_l (\<lambda> _ . n) (\<lambda> _ _ . n)"
@@ -545,6 +558,29 @@ next
     by(auto simp add:oalist_k_l_def Let_def get_update split:prod.splits option.splits)
 qed
 
+(* utilities for interfacing with Gensyn *)
+definition prod_fan_l ::
+  "('x \<Rightarrow> 'a \<Rightarrow> 'c) \<Rightarrow>
+   ('x, 'a, 'b) lifting \<Rightarrow>
+   ('x, 'a, ('c * 'b)) lifting"
+  where
+"prod_fan_l f l =
+  \<lparr> LIn1 = (\<lambda> x a . (f x a, LIn1 l x a))
+  , LIn2 = (\<lambda> x a cb . (f x a, LIn2 l x a (snd cb)))
+  , LOut1 = (\<lambda> x cb . LOut1 l x (snd cb)) \<rparr>"
+
+lemma prod_fan_l_valid :
+  fixes f :: "('x \<Rightarrow> 'a \<Rightarrow> 'c)"
+  fixes l :: "('x, 'a, 'b) lifting"
+  assumes H :"lifting_valid l"
+  shows "lifting_valid (prod_fan_l f l)"
+  using H by (auto simp add: lifting_valid_def prod_fan_l_def)
+
+definition l_reverse ::
+  "('x, 'a, 'b) lifting \<Rightarrow>
+   'x \<Rightarrow> 'b \<Rightarrow> 'a" where
+"l_reverse l =
+  LOut1 l"
 
 (* finally, here we allow keymaps, which might enable more interesting merges
    however we will need to reset the kmap in between commands. *)
