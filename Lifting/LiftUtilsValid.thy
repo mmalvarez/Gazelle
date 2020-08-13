@@ -116,11 +116,13 @@ definition can_unmap ::
    bool" where
 "can_unmap l' l f =
   (\<forall> b1_1 b2_1 b1_2 b2_2 . 
+     l' b1_1 = l' b1_2 \<longrightarrow>
      LOut l (l' b1_1) b2_1 = LOut l (l' b1_2) b2_2 \<longrightarrow>
      LOut l (l' b1_1) (f b1_1 b2_1) = LOut l (l' b1_2) (f b1_2 b2_2))"
 
 lemma can_unmap_intro :
   assumes H : "\<And> b1_1 b2_1 b1_2 b2_2 .
+                  l' b1_1 = l' b1_2 \<Longrightarrow>
                   LOut l (l' b1_1) b2_1 = LOut l (l' b1_2) b2_2 \<Longrightarrow>
                   LOut l (l' b1_1) (f b1_1 b2_1) = LOut l (l' b1_2) (f b1_2 b2_2)"
   shows "can_unmap l' l f" using H unfolding can_unmap_def
@@ -128,9 +130,10 @@ lemma can_unmap_intro :
 
 lemma can_unmap_unfold :
   assumes H1 : "can_unmap l' l f"
-  assumes H2 : "LOut l (l' b1_1) b2_1 = LOut l (l' b1_2) b2_2"
+  assumes H2 : "l' b1_1 = l' b1_2"
+  assumes H3 : "LOut l (l' b1_1) b2_1 = LOut l (l' b1_2) b2_2"
   shows "LOut l (l' b1_1) (f b1_1 b2_1) = LOut l (l' b1_2) (f b1_2 b2_2)"
-  using H1 H2 unfolding can_unmap_def
+  using H1 H2 H3 unfolding can_unmap_def
   by blast
 (*
 definition l_unpred_step ::
@@ -276,8 +279,11 @@ lemma l_adapt_valid :
   assumes H : "lifting_valid t"
   shows "lifting_valid (l_adapt f t)" using H
   by(auto simp add:lifting_valid_def)
+declare[[show_types]]
 
 lemma l_pred_step_s_map_s :
+  fixes l1 :: "('a1, 'b1) lifting'"
+  fixes l2 :: "('a1, 'a2, 'b2, 'z) lifting_scheme"
   assumes Hv : "lifting_valid l2"
   assumes Hsyn : "l1 x1' = x1"
   assumes Hsem : "LOut l2 x1 x2' = x2"
@@ -291,12 +297,20 @@ definition LFlatten ::
 "LFlatten l s b =
   LNew l s (LOut l s b)"
 
-(* idea: easier if we replace second line under
-   assumes H with a fact about LIn *)
-(* need to handle LNew somehow 
-use assumption about base?
-*)
+(* I'm worried this is too restrictive.
+   Should we use ordering/monotonicity somehow? *)
+(* after thinking about this some more.
+   i think we need to have a separate way of characterizing
+   what happens during merges.
+   i think we should get predicates for which "can_unpred"
+   holds if we do it right (?)
+   well, maybe i was thinking about predicates capturing one step.
+   what about multiple steps?
+   e.g. how does multi step semantics of one language relate to
+   multiple steps of composition?
+   i think i will need to put together 
 
+*)
 definition can_unpred ::
   "('a1, 'b1) lifting' \<Rightarrow>
    ('a1, 'a2, 'b2, 'z) lifting_scheme \<Rightarrow>
@@ -304,6 +318,7 @@ definition can_unpred ::
    bool" where
 "can_unpred l' l P =
   (\<forall> syn syn' st1 st2 st'1 st'2.
+    l' syn = l' syn' \<longrightarrow>
     LOut l (l' syn) st1 = LOut l (l' syn') st'1 \<longrightarrow>
     LOut l (l' syn) st2 = LOut l (l' syn') st'2 \<longrightarrow>
     P syn st1 st2 = P syn' st'1 st'2)"
@@ -311,6 +326,7 @@ definition can_unpred ::
 lemma can_unpred_intro :
   assumes H : 
     "\<And> syn syn' st1 st2 st'1 st'2 .
+      l' syn = l' syn' \<Longrightarrow>
       LOut l (l' syn) st1 = LOut l (l' syn') st'1 \<Longrightarrow>
       LOut l (l' syn) st2 = LOut l (l' syn') st'2 \<Longrightarrow>
       P syn st1 st2 = P syn' st'1 st'2"
@@ -321,21 +337,23 @@ lemma can_unpred_intro :
 
 lemma can_unpred_unfold1 :
   assumes H : "can_unpred l' l P"
-  assumes H1 : "LOut l (l' syn) st1 = LOut l (l' syn') st'1"
-  assumes H2 : "LOut l (l' syn) st2 = LOut l (l' syn') st'2 "
+  assumes H1 : "l' syn = l' syn'"
+  assumes H2 : "LOut l (l' syn) st1 = LOut l (l' syn') st'1"
+  assumes H3 : "LOut l (l' syn) st2 = LOut l (l' syn') st'2 "
   assumes Hl : "P syn st1 st2"
   shows "P syn' st'1 st'2"
-  using H H1 H2 Hl
+  using H H1 H2 H3 Hl
   unfolding can_unpred_def
   by blast
 
 lemma can_unpred_unfold2 :
   assumes H : "can_unpred l' l P"
-  assumes H1 : "LOut l (l' syn) st1 = LOut l (l' syn') st'1"
-  assumes H2 : "LOut l (l' syn) st2 = LOut l (l' syn') st'2 "
+  assumes H1 : "l' syn = l' syn'"
+  assumes H2 : "LOut l (l' syn) st1 = LOut l (l' syn') st'1"
+  assumes H3 : "LOut l (l' syn) st2 = LOut l (l' syn') st'2 "
   assumes Hr : "P syn' st'1 st'2"
   shows "P syn st1 st2"
-  using H H1 H2 Hr
+  using H H1 H2 H3 Hr
   unfolding can_unpred_def
   by blast
 
@@ -378,7 +396,6 @@ lemma pres_LOutS_unfold :
 lemma l_unpred_step_s_unmap_s  :
   assumes Hv : "liftingv_valid l2"
   assumes Hx2' : "x2' \<in> LOutS l2 x1"
-  assumes Hpres : "pres_LOutS l1 l2 f'"
   assumes Hunmap : "can_unmap l1 l2 f'"
   assumes Hunpred : "can_unpred l1 l2 P'"
   assumes H: "\<And> x1'' . l1 x1'' = x1 \<Longrightarrow> P' x1'' x2' (f' x1'' x2')"
@@ -391,6 +408,7 @@ proof(rule allI; rule impI)
   have Syn : "l1 (SOME x. l1 x = x1) = x1"
     by(rule Hilbert_Choice.someI; rule Hsyn')
 
+  have Syn_eq : "l1 (SOME x. l1 x = x1) = l1 syn'" using Hsyn' Syn by simp
 
   have Eq1 : "LOut l2 (l1 syn') (LNew l2 x1 (LOut l2 x1 x2')) = LOut l2 (l1 syn') x2'"
     using Hsyn' lifting_valid_unfold1[OF liftingv_valid_unfold1[OF Hv]] by auto
@@ -403,7 +421,7 @@ proof(rule allI; rule impI)
 
   have Eq3 :
 "LOut l2 (l1 (SOME x. l1 x = x1)) (f' (SOME x. l1 x = x1) (LIn l2 x1 (LOut l2 x1 x2') (LBase l2))) = LOut l2 (l1 syn') (f' syn' x2')"
-  proof(rule can_unmap_unfold[OF Hunmap])
+  proof(rule can_unmap_unfold[OF Hunmap Syn_eq])
     show "LOut l2 (l1 (SOME x. l1 x = x1)) (LIn l2 x1 (LOut l2 x1 x2') (LBase l2)) = LOut l2 (l1 syn') x2'"
       using Syn Hsyn' lifting_valid_unfold2[OF liftingv_valid_unfold1[OF Hv], of "l1 (SOME x. l1 x = x1)"]
       by(simp)
@@ -416,13 +434,81 @@ proof(rule allI; rule impI)
   show "P' syn' (LNew l2 x1 (LOut l2 x1 x2')) 
              (LIn l2 x1 (LOut l2 x1 (f' (SOME x. l1 x = x1) (LNew l2 x1 (LOut l2 x1 x2'))))
                 (LNew l2 x1 (LOut l2 x1 x2')))" 
-  proof(rule can_unpred_unfold2[OF Hunpred Eq1 _ H[OF Hsyn']])
+  proof(rule can_unpred_unfold2[OF Hunpred refl Eq1 _ H[OF Hsyn']])
     show "LOut l2 (l1 syn') (LIn l2 x1 (LOut l2 x1 (f' (SOME x. l1 x = x1) (LNew l2 x1 (LOut l2 x1 x2')))) (LNew l2 x1 (LOut l2 x1 x2'))) 
           =
           LOut l2 (l1 syn') (f' syn' x2')"
       using Eq2 Eq3'
       by(simp)
   qed
+qed
+
+(* need an assumption about equality of the translated syntax elements. *)
+lemma lift_lower_asm1 :
+  fixes l1 :: "('a1, 'b1) lifting'"
+  fixes l2 :: "('a1, 'a2, 'b2, 'z) liftingv_scheme"
+  assumes Hv : "liftingv_valid l2"
+  shows "can_unmap l1 l2 (l_map_s l1 l2 f)"
+proof(rule can_unmap_intro)
+    fix b1_1 b1_2 :: 'b1
+    fix b2_1 b2_2 :: 'b2  
+    assume Hsyn : "l1 b1_1 = l1 b1_2"
+    assume Heq : " LOut l2 (l1 b1_1) b2_1 = LOut l2 (l1 b1_2) b2_2"
+    show " LOut l2 (l1 b1_1) (l_map_s l1 l2 f b1_1 b2_1) =
+           LOut l2 (l1 b1_2) (l_map_s l1 l2 f b1_2 b2_2)"
+      unfolding l_map_s_def using Hsyn Heq lifting_valid_unfold2[OF liftingv_valid_unfold1[OF Hv]]
+      by(simp)
+  qed
+
+lemma lift_lower_asm2 :
+  fixes l1 :: "('a1, 'b1) lifting'"
+  fixes l2 :: "('a1, 'a2, 'b2, 'z) liftingv_scheme"
+  assumes Hv : "liftingv_valid l2"
+  shows "can_unpred l1 l2 (l_pred_step_s l1 l2 P)"
+proof(rule can_unpred_intro)
+  fix syn syn' :: 'b1
+  fix st1 st2 st'1 st'2 :: 'b2
+  assume Hsyn : "l1 syn = l1 syn'"
+  assume H1 : "LOut l2 (l1 syn) st1 = LOut l2 (l1 syn') st'1"
+  assume H2 : "LOut l2 (l1 syn) st2 = LOut l2 (l1 syn') st'2"
+  show "l_pred_step_s l1 l2 P syn st1 st2 = l_pred_step_s l1 l2 P syn' st'1 st'2"
+    unfolding l_pred_step_s_def
+    using Hsyn H1 H2 by(simp)
+qed
+
+(* OK, so to put this together. we need
+   - inverse theorem (pred/map)
+*)
+declare[[show_types = false]]
+lemma lift_lower :
+  fixes l1 :: "('a1, 'b1) lifting'"
+  fixes l2 :: "('a1, 'a2, 'b2, 'z) liftingv_scheme"
+  assumes Hv : "liftingv_valid l2"
+  assumes H : "P x1 x2 (f x1 x2)"
+  shows
+    "l_unpred_step_s l1 l2 (l_pred_step_s l1 l2 P) x1 x2
+                           (l_unmap_s l1 l2 (l_map_s l1 l2 f) x1 x2)"
+proof-
+  have "l_unpred_step_s l1 l2 (l_pred_step_s l1 l2 P) x1 (LOut l2 x1 (LNew l2 x1 x2))
+       (l_unmap_s l1 l2 (l_map_s l1 l2 f) x1 (LOut l2 x1 (LNew l2 x1 x2)))"
+  proof(rule l_unpred_step_s_unmap_s[OF Hv liftingv_valid_unfold2'[OF Hv, of x1 x2] lift_lower_asm1[OF Hv] lift_lower_asm2[OF Hv]
+                               , of l1 P f])
+    fix x1'' :: 'b1
+    assume Hinner : "l1 x1'' = x1"
+    show "l_pred_step_s l1 l2 P x1'' (LNew l2 x1 x2) (l_map_s l1 l2 f x1'' (LNew l2 x1 x2))"
+    proof(rule l_pred_step_s_map_s[OF liftingv_valid_unfold1[OF Hv], 
+                                of l1 x1'' x1 "LNew l2 x1 x2" x2, 
+                                OF Hinner ])
+      show "LOut l2 x1 (LNew l2 x1 x2) = x2"
+        using lifting_valid_unfold1[OF liftingv_valid_unfold1[OF Hv]] by auto
+    next
+      show "P x1 x2 (f x1 x2)" using H by auto
+    qed
+  qed
+
+  thus
+"l_unpred_step_s l1 l2 (l_pred_step_s l1 l2 P) x1 x2 (l_unmap_s l1 l2 (l_map_s l1 l2 f) x1 x2)"
+    using lifting_valid_unfold1[OF liftingv_valid_unfold1[OF Hv]] by auto
 qed
 
 (* have:
