@@ -1,5 +1,5 @@
 theory LiftUtilsOverload
-  imports "LiftUtils" "LiftInstances" "HOL-Library.Adhoc_Overloading"
+  imports "LiftUtils" "LiftInstances1" "HOL-Library.Adhoc_Overloading"
 begin
 
 datatype  reified =
@@ -156,6 +156,11 @@ definition dlr_bool :
   "default_liftr = (\<lambda> _ . (get_lift' id_l) :: (reified, reified, bool) lifting)"
 instance proof qed
 end
+
+(* idea: first we take option_l
+   - then we look at the rtype of its input
+   - then we see if there is a default_liftr for it
+   (problem: we can't actually do this because we don't know that there is one! *)
 
 instantiation option :: (lifty) lifty begin
 definition dlr_opt :
