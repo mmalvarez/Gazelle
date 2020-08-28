@@ -85,12 +85,42 @@ definition is_bsup :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" 
 "is_bsup a b s =
   is_least (is_bub a b) s"
 
+(* monotonicity of predicates
+   useful for reasoning about semantics  *)
+definition is_monop1 :: "('a \<Rightarrow> bool) \<Rightarrow> bool" where
+"is_monop1 P =
+  (\<forall> a b . pleq a b \<longrightarrow> P a \<longrightarrow> P b)"
+
+definition is_monop2 :: "('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> bool" where
+"is_monop2 P =
+  (\<forall> a1 b1 a2 b2 .
+    pleq a1 b1 \<longrightarrow>
+    pleq a2 b2 \<longrightarrow>
+    P a1 a2 \<longrightarrow>
+    P b1 b2)"
+
+(* "contravariant" version *)
+definition is_monop2' :: "('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> bool" where
+"is_monop2' P =
+  (\<forall> a1 b1 a2 b2 .
+    pleq a1 b1 \<longrightarrow>
+    pleq b2 a2 \<longrightarrow>
+    P a1 a2 \<longrightarrow>
+    P b1 b2)"
+
+(* monotonicity for functions *)
+definition is_mono :: "('a \<Rightarrow> 'a) \<Rightarrow> bool" where
+"is_mono f =
+  (\<forall> a b .
+     pleq a b \<longrightarrow>
+     pleq (f a) (f b))"
+
+(* convenience lemmas, true by definition *)
 lemma is_ub_intro :
   assumes H : "\<And> x . x \<in> A \<Longrightarrow> pleq x a"
   shows "is_ub A a" using H
   by(auto simp add:is_ub_def)
 
-(* convenience lemmas, true by definition *)
 lemma is_ub_unfold :
   assumes H1 : "is_ub S ub"
   assumes H2 : "x \<in> S"

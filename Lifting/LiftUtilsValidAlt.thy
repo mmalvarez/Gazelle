@@ -194,6 +194,22 @@ definition pl_unpred_step_s ::
    (\<forall> syn' . l1 syn' = syn \<longrightarrow>
      (P syn' (LNew l2 syn st1) (LUpd l2 syn st2 (LNew l2 syn st1))))"
 
+lemma pl_unpred_step_s_intro :
+  assumes H : "\<And> syn' . l1 syn' = syn \<Longrightarrow>
+          (P syn' (LNew l2 syn st1) (LUpd l2 syn st2 (LNew l2 syn st1)))"
+  shows "pl_unpred_step_s l1 l2 P syn st1 st2"
+  using H
+  unfolding pl_unpred_step_s_def 
+  by auto
+
+lemma pl_unpred_step_s_unfold :
+  assumes H : "pl_unpred_step_s l1 l2 P syn st1 st2"
+  assumes H1 : "l1 syn' = syn"
+  shows "(P syn' (LNew l2 syn st1) (LUpd l2 syn st2 (LNew l2 syn st1)))"
+  using H H1
+  unfolding pl_unpred_step_s_def
+  by auto
+
 definition l_unpred_step_s ::
   "('s1, 's2) lifting' \<Rightarrow>
    ('s1, 'b1, 'b2, 'z) lifting_scheme \<Rightarrow>
@@ -202,6 +218,22 @@ definition l_unpred_step_s ::
 "l_unpred_step_s l1 l2 P syn st1 st2 =
    (\<forall> syn' . l1 syn' = syn \<longrightarrow>
      (P syn' (LNew l2 syn st1) (LPost l2 syn (LUpd l2 syn st2 (LNew l2 syn st1)))))"
+
+lemma l_unpred_step_s_intro :
+  assumes H: "\<And> syn' . l1 syn' = syn \<Longrightarrow>
+                (P syn' (LNew l2 syn st1) (LPost l2 syn (LUpd l2 syn st2 (LNew l2 syn st1))))"
+  shows "l_unpred_step_s l1 l2 P syn st1 st2"
+  using H
+  unfolding l_unpred_step_s_def
+  by auto
+
+lemma l_unpred_step_s_unfold :
+  assumes H: "l_unpred_step_s l1 l2 P syn st1 st2"
+  assumes H1 : "l1 syn' = syn"
+  shows "(P syn' (LNew l2 syn st1) (LPost l2 syn (LUpd l2 syn st2 (LNew l2 syn st1))))"
+  using H H1
+  unfolding l_unpred_step_s_def
+  by auto
 
 (* if we have a pord, do we want to allow out to return more information?
    i think maybe not - the goal of liftings is to inject exactly what we want... (?)
@@ -481,6 +513,62 @@ lemma can_unpred_unfold :
   unfolding can_unpred_def
   by blast
 
+(* idea: this one needs to basically say
+   if input states match w/r/t out
+   and output states match or 
+   output state exceeds given threshold
+   *)
+(* is this what we want? the problem is that we are
+   requiring states above threshold to equal
+   states below in terms of valuation under P
+   *)
+definition can_unpred_strong ::
+  "('a1, 'b1) lifting' \<Rightarrow>
+   ('a1, 'a2, 'b2 :: Pord, 'z) plifting_scheme \<Rightarrow>
+   'b2 \<Rightarrow>
+   ('b1 \<Rightarrow> 'b2 \<Rightarrow> 'b2 \<Rightarrow> bool) \<Rightarrow>
+   bool" where
+"can_unpred_strong l' l thresh P =
+  ((can_unpred l' l P) \<and>
+   (\<forall> syn syn' st1 st2 st'1 st'2.
+     l' syn = l' syn' \<longrightarrow>
+     P syn st1 st2 \<longrightarrow>
+     LOut l (l' syn) st1 = LOut l (l' syn') st'1 \<longrightarrow>
+    (thresh <[ st'2 \<longrightarrow> P syn' st'1 st'2)))"
+(* should roles of st'2 and st2 be reversed? *)
+
+lemma can_unpred_strong_intro :
+  assumes H1 : 
+    "can_unpred l' l P"
+  assumes H2 :
+    "\<And> syn syn' st1 st2 st'1 st'2 .
+      l' syn = l' syn' \<Longrightarrow>
+      LOut l (l' syn) st1 = LOut l (l' syn') st'1 \<Longrightarrow>
+      thresh <[ st'2 \<Longrightarrow>
+      P syn st1 st2 \<Longrightarrow>
+      P syn' st'1 st'2"
+  shows "can_unpred_strong l' l thresh P"
+  using H1 H2
+  unfolding can_unpred_strong_def
+  by(blast)
+
+lemma can_unpred_strong_unfold1 :
+  assumes H : "can_unpred_strong l' l thresh P"
+  shows "can_unpred l' l P"
+  using H
+  unfolding can_unpred_strong_def by auto
+
+lemma can_unpred_strong_unfold2 :
+  assumes H : "can_unpred_strong l' l thresh P"
+  assumes H1 : "l' syn = l' syn'"
+  assumes H2 : "LOut l (l' syn) st1 = LOut l (l' syn') st'1"
+  assumes H3 : "thresh <[ st'2"
+  assumes H4 : "P syn st1 st2"
+  shows "P syn' st'1 st'2"
+  using H H1 H2 H3 H4
+  unfolding can_unpred_strong_def
+  by blast
+
 definition pres_LOutS ::
   "('a1, 'b1) lifting' \<Rightarrow>
    ('a1, 'a2, 'b2, 'z) liftingv_scheme \<Rightarrow>
@@ -503,16 +591,16 @@ lemma pres_LOutS_unfold :
   shows "f s b \<in> LOutS l (l' s)"
   using H H1 unfolding pres_LOutS_def by blast
 
-declare [[show_types = false]]
-lemma l_unpred_step_s_unmap_s  :
-  assumes Hv : "lifting_pv_valid l2"
-  assumes Hx2' : "x2' \<in> LOutS l2 x1"
-  assumes Hpres : "pres_LOutS l1 l2 f'"
+(* first (?) prove
+   pl_unpred_step_s_unmap_s *)
+
+lemma pl_unpred_step_s_unmap_s  :
+  assumes Hv : "plifting_valid l2"
   assumes Hunmap : "can_unmap l1 l2 f'"
   assumes Hunpred : "can_unpred l1 l2 P'"
   assumes H: "\<And> x1'' . l1 x1'' = x1 \<Longrightarrow> P' x1'' x2' (f' x1'' x2')"
-  shows "l_unpred_step_s l1 l2 P' x1 (LOut l2 x1 x2') (l_unmap_s l1 l2 f' x1 (LOut l2 x1 x2'))"
-  unfolding l_unpred_step_s_def l_unmap_s_def Let_def
+  shows "pl_unpred_step_s l1 l2 P' x1 (LOut l2 x1 x2') (l_unmap_s l1 l2 f' x1 (LOut l2 x1 x2'))"
+  unfolding pl_unpred_step_s_def l_unmap_s_def Let_def
 proof(rule allI; rule impI)
   fix syn'
   assume Hsyn' : "l1 syn' = x1"
@@ -522,20 +610,22 @@ proof(rule allI; rule impI)
 
   have Syn_eq : "l1 (SOME x. l1 x = x1) = l1 syn'" using Hsyn' Syn by simp
 
+
   have Eq1 : "LOut l2 (l1 syn') (LNew l2 x1 (LOut l2 x1 x2')) = LOut l2 (l1 syn') x2'"
-    using Hsyn' lifting_valid_unfold2[OF liftingv_valid_unfold1[ OF Hv]] by auto
+    using Hsyn' plifting_valid_unfold1[OF Hv] unfolding LNew_def by auto
 
   have Eq2 :
-"LOut l2 (l1 syn') (LIn l2 x1 (LOut l2 x1 (f' (SOME x. l1 x = x1) (LNew l2 x1 (LOut l2 x1 x2')))) (LNew l2 x1 (LOut l2 x1 x2'))) =
+"LOut l2 (l1 syn') (LUpd l2 x1 (LOut l2 x1 (f' (SOME x. l1 x = x1) (LNew l2 x1 (LOut l2 x1 x2')))) (LNew l2 x1 (LOut l2 x1 x2'))) =
   (LOut l2 x1 (f' (SOME x. l1 x = x1) (LNew l2 x1 (LOut l2 x1 x2'))))"
-    using lifting_valid_unfold1[OF liftingv_valid_unfold1[OF Hv], of "l1 syn'"] Hsyn'
+    using plifting_valid_unfold1[OF Hv, of "l1 syn'"] Hsyn'
     by(auto)
 
   have Eq3 :
 "LOut l2 (l1 (SOME x. l1 x = x1)) (f' (SOME x. l1 x = x1) (LNew l2 x1 (LOut l2 x1 x2'))) = LOut l2 (l1 syn') (f' syn' x2')"
   proof(rule can_unmap_unfold[OF Hunmap Syn_eq])
     show "LOut l2 (l1 (SOME x. l1 x = x1)) (LNew l2 x1 (LOut l2 x1 x2')) = LOut l2 (l1 syn') x2'"
-      using Syn Hsyn' lifting_valid_unfold2[OF liftingv_valid_unfold1[OF Hv], of "l1 (SOME x. l1 x = x1)"]
+      using Syn Hsyn' plifting_valid_unfold1[OF Hv, of "l1 (SOME x. l1 x = x1)"]
+      unfolding LNew_def
       by(simp)
   qed
 
@@ -543,46 +633,192 @@ proof(rule allI; rule impI)
 "LOut l2 x1 (f' (SOME x. l1 x = x1) (LNew l2 x1 (LOut l2 x1 x2'))) = LOut l2 (l1 syn') (f' syn' x2')"
     using Eq3 Syn by simp
 
+  have Eq4 : " LOut l2 (l1 syn') (f' syn' x2') =
+    LOut l2 (l1 syn') (LUpd l2 x1 (LOut l2 (l1 syn') (f' syn' x2')) (LNew l2 x1 (LOut l2 x1 x2')))"
+    using plifting_valid_unfold1[OF Hv, of "l1 syn'"] unfolding Hsyn' by(auto)
+
   show "P' syn' (LNew l2 x1 (LOut l2 x1 x2')) 
-             (LIn l2 x1 (LOut l2 x1 (f' (SOME x. l1 x = x1) (LNew l2 x1 (LOut l2 x1 x2'))))
+             (LUpd l2 x1 (LOut l2 x1 (f' (SOME x. l1 x = x1) (LNew l2 x1 (LOut l2 x1 x2'))))
                 (LNew l2 x1 (LOut l2 x1 x2')))" 
     unfolding  Eq3' 
-  proof(rule can_unpred_unfold[OF Hunpred refl sym[OF Eq1] _ _ H[OF Hsyn']])
-    show "LOut l2 (l1 syn') (LIn l2 x1 (LOut l2 (l1 syn') (f' syn' x2')) (LNew l2 x1 (LOut l2 x1 x2'))) =
-          LOut l2 (l1 syn') (f' syn' x2')"      unfolding Eq3 Eq2 Eq3 Eq3' 
-      using lifting_valid_unfold1[OF liftingv_valid_unfold1[OF Hv]] unfolding Hsyn'
+  proof(rule can_unpred_unfold[OF Hunpred refl sym[OF Eq1] Eq4])
+    show "P' syn' x2' (f' syn' x2')" using H[OF Hsyn'] by auto
+  qed
+qed
+
+lemma pl_unpred_step_s_unmap_s_contra  :
+  assumes Hv : "plifting_valid l2"
+  assumes Hunmap : "can_unmap l1 l2 f'"
+  assumes Hunpred : "can_unpred l1 l2 P'"
+  assumes H: "pl_unpred_step_s l1 l2 P' x1 (LOut l2 x1 x2') (l_unmap_s l1 l2 f' x1 (LOut l2 x1 x2'))"
+  assumes Hsyn :  "l1 x1'' = x1"
+  shows "P' x1'' x2' (f' x1'' x2')"
+proof-
+
+  have Syn : "l1 (SOME x. l1 x = x1) = x1"
+    by(rule Hilbert_Choice.someI; rule Hsyn)
+
+  have Syn_eq : "l1 (SOME x. l1 x = x1) = l1 x1''" using Hsyn Syn by simp
+
+  show "P' x1'' x2' (f' x1'' x2')"
+  proof(rule can_unpred_unfold[OF Hunpred refl _ _ pl_unpred_step_s_unfold[OF H Hsyn]])
+    show "LOut l2 (l1 x1'') (LNew l2 x1 (LOut l2 x1 x2')) = LOut l2 (l1 x1'') x2'"
+      using plifting_valid_unfold1[OF Hv] unfolding LNew_def Hsyn by auto
+  next
+    have 1 : "LOut l2 (l1 x1'') (LUpd l2 x1 (l_unmap_s l1 l2 f' x1 (LOut l2 x1 x2')) (LNew l2 x1 (LOut l2 x1 x2'))) =
+              (l_unmap_s l1 l2 f' x1 (LOut l2 x1 x2'))"
+      using plifting_valid_unfold1[OF Hv] unfolding Hsyn by auto
+
+    have 2 : "LOut l2 (l1 (SOME x. l1 x = x1)) (LUpd l2 x1 (LOut l2 x1 x2') (LBase l2 x1)) = LOut l2 (l1 x1'') x2'"
+      unfolding Syn Hsyn
+      using plifting_valid_unfold1[OF Hv] by auto
+
+    have 3 : "l_unmap_s l1 l2 f' x1 (LOut l2 x1 x2') = LOut l2 (l1 x1'') (f' x1'' x2')"
+      unfolding l_unmap_s_def Let_def 
+      using can_unmap_unfold[OF Hunmap Syn_eq 2]
+            plifting_valid_unfold1[OF Hv] 
+      unfolding LNew_def Syn by auto
+
+    show " LOut l2 (l1 x1'') (LUpd l2 x1 (l_unmap_s l1 l2 f' x1 (LOut l2 x1 x2')) (LNew l2 x1 (LOut l2 x1 x2'))) =
+    LOut l2 (l1 x1'') (f' x1'' x2')"
+      using 1 3 by auto
+  qed
+qed
+
+declare [[show_types = false]]
+lemma l_unpred_step_s_unmap_s  :
+  assumes Hv : "lifting_pv_valid l2 v"
+(*  assumes Hx2' : "x2' \<in> LOutS v x1"
+  assumes Hpres : "pres_LOutS l1 v f'" *)
+  assumes Hunmap : "can_unmap l1 l2 f'"
+  assumes Hunpred : "can_unpred l1 l2 P'"
+  assumes H: "\<And> x1'' . l1 x1'' = x1 \<Longrightarrow> P' x1'' x2' (f' x1'' x2')"
+  shows "l_unpred_step_s l1 l2 P' x1 (LOut l2 x1 x2') (l_unmap_s l1 l2 f' x1 (LOut l2 x1 x2'))"
+  unfolding l_unpred_step_s_def l_unmap_s_def Let_def
+proof(rule allI; rule impI)
+  fix syn'
+  assume Hsyn' : "l1 syn' = x1"
+
+  have Hv' : "plifting_pv_valid l2 v" using lifting_pv_valid_unfold1[OF Hv] by auto
+  hence Hv'' : "plifting_valid l2" using plifting_pv_valid_unfold1[OF Hv'] by auto
+
+
+  have Syn : "l1 (SOME x. l1 x = x1) = x1"
+    by(rule Hilbert_Choice.someI; rule Hsyn')
+
+  have Syn_eq : "l1 (SOME x. l1 x = x1) = l1 syn'" using Hsyn' Syn by simp
+
+  have Eq1 : "LOut l2 (l1 syn') (LNew l2 x1 (LOut l2 x1 x2')) = LOut l2 (l1 syn') x2'"
+    using Hsyn' plifting_valid_unfold1[OF Hv''] unfolding LNew_def by auto
+
+  have Eq2 :
+"LOut l2 (l1 syn') (LUpd l2 x1 (LOut l2 x1 (f' (SOME x. l1 x = x1) (LNew l2 x1 (LOut l2 x1 x2')))) (LNew l2 x1 (LOut l2 x1 x2'))) =
+  (LOut l2 x1 (f' (SOME x. l1 x = x1) (LNew l2 x1 (LOut l2 x1 x2'))))"
+    using plifting_valid_unfold1[OF Hv'', of "l1 syn'"] Hsyn'
+    by(auto)
+
+  have Eq3 :
+"LOut l2 (l1 (SOME x. l1 x = x1)) (f' (SOME x. l1 x = x1) (LNew l2 x1 (LOut l2 x1 x2'))) = LOut l2 (l1 syn') (f' syn' x2')"
+  proof(rule can_unmap_unfold[OF Hunmap Syn_eq])
+    show "LOut l2 (l1 (SOME x. l1 x = x1)) (LNew l2 x1 (LOut l2 x1 x2')) = LOut l2 (l1 syn') x2'"
+      using Syn Hsyn' plifting_valid_unfold1[OF Hv'', of "l1 (SOME x. l1 x = x1)"]
+      unfolding LNew_def
+      by(simp)
+  qed
+
+  have Eq3' :
+"LOut l2 x1 (f' (SOME x. l1 x = x1) (LNew l2 x1 (LOut l2 x1 x2'))) = LOut l2 (l1 syn') (f' syn' x2')"
+    using Eq3 Syn by simp
+
+  have Out1 : "LUpd l2 x1 (LOut l2 (l1 syn') (f' syn' x2')) (LNew l2 x1 (LOut l2 x1 x2')) \<in> LOutS v x1"
+    using plifting_pv_valid_unfold2[OF Hv'] by auto
+
+  hence Eq4 : "LOut l2 (l1 syn') (LPost l2 x1 (LUpd l2 x1 (LOut l2 (l1 syn') (f' syn' x2')) (LNew l2 x1 (LOut l2 x1 x2')))) =
+               LOut l2 (l1 syn') (LUpd l2 x1 (LOut l2 (l1 syn') (f' syn' x2')) (LNew l2 x1 (LOut l2 x1 x2')))"
+    using lifting_pv_valid_unfold3[OF Hv Out1] unfolding Hsyn' by auto
+
+  have Eq5 :  "LOut l2 (l1 syn') (LPost l2 x1 (LUpd l2 x1 (LOut l2 (l1 syn') (f' syn' x2')) (LNew l2 x1 (LOut l2 x1 x2')))) =
+               (LOut l2 (l1 syn') (f' syn' x2'))" using plifting_valid_unfold1[OF Hv''] unfolding Eq4
+    unfolding Hsyn'
+    by auto
+
+  show " P' syn' (LNew l2 x1 (LOut l2 x1 x2'))
+        (LPost l2 x1 (LUpd l2 x1 (LOut l2 x1 (f' (SOME x. l1 x = x1) (LNew l2 x1 (LOut l2 x1 x2')))) (LNew l2 x1 (LOut l2 x1 x2'))))" 
+    unfolding  Eq3' 
+  proof(rule can_unpred_unfold[OF Hunpred refl sym[OF Eq1] _ _, of "f' syn' x2'" ])
+    show "LOut l2 (l1 syn') (f' syn' x2') =
+    LOut l2 (l1 syn') (LPost l2 x1 (LUpd l2 x1 (LOut l2 (l1 syn') (f' syn' x2')) (LNew l2 x1 (LOut l2 x1 x2'))))"
+      using Eq5
+      unfolding Hsyn' by(auto)
+  next
+    show "P' syn' x2' (f' syn' x2')" using H[OF Hsyn'] by auto
+  qed
+qed
+
+lemma l_unpred_step_s_unmap_s_contra  :
+  assumes Hv : "lifting_pv_valid l2 v"
+(*  assumes Hx2' : "x2' \<in> LOutS v x1"
+  assumes Hpres : "pres_LOutS l1 v f'" *)
+  assumes Hunmap : "can_unmap l1 l2 f'"
+  assumes Hunpred : "can_unpred l1 l2 P'"
+  assumes H : "l_unpred_step_s l1 l2 P' x1 (LOut l2 x1 x2') (l_unmap_s l1 l2 f' x1 (LOut l2 x1 x2'))"
+  assumes Hsyn: "l1 x1'' = x1"
+  shows "P' x1'' x2' (f' x1'' x2')"
+proof-
+
+  have Hv' : "plifting_pv_valid l2 v" using lifting_pv_valid_unfold1[OF Hv] by auto
+  hence Hv'' : "plifting_valid l2" using plifting_pv_valid_unfold1[OF Hv'] by auto
+
+  have Syn : "l1 (SOME x. l1 x = x1) = x1"
+    by(rule Hilbert_Choice.someI; rule Hsyn)
+
+  have Syn_eq : "l1 (SOME x. l1 x = x1) = l1 x1''" using Hsyn Syn by simp
+
+  show "P' x1'' x2' (f' x1'' x2')"
+  proof(rule can_unpred_unfold[OF Hunpred refl _ _ l_unpred_step_s_unfold[OF H Hsyn]])
+    show "LOut l2 (l1 x1'') (LNew l2 x1 (LOut l2 x1 x2')) = LOut l2 (l1 x1'') x2'"
+      unfolding LNew_def
+      using plifting_valid_unfold1[OF Hv'']
+      unfolding Hsyn 
       by(auto)
   next
-    have Hx2'_alt : "x2' \<in> LOutS l2 (l1 syn')" using Hx2' Hsyn' by auto
-    have F'_LOutS : "f' syn' x2' \<in> LOutS l2 x1" using pres_LOutS_unfold[OF Hpres Hx2'_alt] unfolding Hsyn' by auto
-    
-    show "f' syn' x2' <[  LIn l2 x1 (LOut l2 (l1 syn') (f' syn' x2')) (LNew l2 x1 (LOut l2 x1 x2'))"
-      unfolding Syn Eq3'
-      using liftingv_valid_unfold5[OF Hv] unfolding Hsyn'
-(*  proof(rule can_unpred_unfold[OF Hunpred refl Eq1 _ H[OF Hsyn']]) *)
-(*  proof(rule can_unpred_unfold[OF Hunpred refl sym[OF Eq1] _ _ H[OF Hsyn']]) *)
-(*
-proof(rule can_unpred_unfold[OF Hunpred refl])
-    show "LOut l2 (l1 syn') (f' syn' x2') =
-          LOut l2 (l1 syn') (LIn l2 x1 (LOut l2 x1 (f' (SOME x. l1 x = x1) (LNew l2 x1 (LOut l2 x1 x2')))) (LNew l2 x1 (LOut l2 x1 x2')))"
-      using Eq2 Eq3'
-      by(simp)
-  next
-    have OutS : "f' syn' (LNew l2 x1 (LOut l2 x1 x2')) \<in> LOutS l2 x1" 
-      using pres_LOutS_unfold[OF Hpres, of "(LNew l2 x1 (LOut l2 x1 x2'))" syn'] Hx2'
-      unfolding Hsyn' sorry (* TODO *)
-    show "f' syn' x2' <[
-    LIn l2 x1
-     (LOut l2 x1 (f' (SOME x::'e. l1 x = x1) (LNew l2 x1 (LOut l2 x1 x2'))))
-     (LNew l2 x1 (LOut l2 x1 x2'))"
-      using liftingv_valid_unfold3[ OF Hv OutS]  Syn Eq3
-(* need something extra here? don't know how to pass through function *)
-      apply(auto)
+    have Out1 : "LUpd l2 x1 (LOut l2 (l1 x1'') (f' x1'' x2')) (LNew l2 x1 (LOut l2 x1 x2')) \<in> LOutS v x1"
+      using plifting_pv_valid_unfold2[OF Hv'] by auto
+  
+    hence Eq4 : "LOut l2 (l1 x1'') (LPost l2 x1 (LUpd l2 x1 (LOut l2 (l1 x1'') (f' x1'' x2')) (LNew l2 x1 (LOut l2 x1 x2')))) =
+                 LOut l2 (l1 x1'') (LUpd l2 x1 (LOut l2 (l1 x1'') (f' x1'' x2')) (LNew l2 x1 (LOut l2 x1 x2')))"
+      using lifting_pv_valid_unfold3[OF Hv Out1] unfolding Hsyn by auto
+  
+    have Eq5 :  "LOut l2 (l1 x1'') (LPost l2 x1 (LUpd l2 x1 (LOut l2 (l1 x1'') (f' x1'' x2')) (LNew l2 x1 (LOut l2 x1 x2')))) =
+                 (LOut l2 (l1 x1'') (f' x1'' x2'))" using plifting_valid_unfold1[OF Hv''] unfolding Eq4
+      unfolding Hsyn
+      by auto
+  
+  (*
+    have Eq6 : "(LUpd l2 x1 (LOut l2 x1 (f' (SOME x. l1 x = x1) 
+                  (LNew l2 x1 (LOut l2 x1 x2')))) (LNew l2 x1 (LOut l2 x1 x2'))) =
+                (LUpd l2 x1 (LOut l2 (l1 x1'') (f' x1'' x2')) (LNew l2 x1 (LOut l2 x1 x2')))"
+      using can_unmap_unfold[OF Hunmap Syn_eq]
+  *)
+  
+    have Eq6 : "LOut l2 x1 (LNew l2 x1 (LOut l2 x1 x2')) = LOut l2 x1 x2'"
+      unfolding LNew_def
+      using plifting_valid_unfold1[OF Hv''] by auto
+  
+    have Eq7 : "(LOut l2 x1 (f' (SOME x. l1 x = x1) 
+                  (LNew l2 x1 (LOut l2 x1 x2')))) =
+                (LOut l2 (l1 x1'') (f' x1'' x2')) "
+      using can_unmap_unfold[OF Hunmap Syn_eq] Eq6 unfolding Syn Hsyn by(auto)
+
+    show "LOut l2 (l1 x1'') (LPost l2 x1 (LUpd l2 x1 (l_unmap_s l1 l2 f' x1 (LOut l2 x1 x2')) (LNew l2 x1 (LOut l2 x1 x2')))) =
+    LOut l2 (l1 x1'') (f' x1'' x2')" unfolding l_unmap_s_def Let_def Syn 
+      using Eq5 can_unmap_unfold[OF Hunmap Syn_eq] Eq7 unfolding Syn Hsyn
+      by(auto)
   qed
-*)
 qed
 
 (* need an assumption about equality of the translated syntax elements. *)
+(*
 lemma lift_lower_asm1 :
   fixes l1 :: "('a1, 'b1) lifting'"
   fixes l2 :: "('a1, 'a2, 'b2, 'z) lifting_scheme"
@@ -648,7 +884,7 @@ proof(rule l_unpred_step_s_unmap_s[OF Hv lift_lower_asm1[OF Hv] lift_lower_asm2[
 "l_unpred_step_s l1 l2 (l_pred_step_s l1 l2 P) x1 x2 (l_unmap_s l1 l2 (l_map_s l1 l2 f) x1 x2)"
     using lifting_valid_unfold1[OF Hv] by auto
 qed
-
+*)
 (* have:
 LOut l2 (l1 syn') (LNew l2 x1 (LOut l2 x1 x2')) = LOut l2 x1 x2'
 *)

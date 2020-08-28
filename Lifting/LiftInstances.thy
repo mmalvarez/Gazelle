@@ -12,9 +12,9 @@ definition id_l' ::
 definition id_l ::
   "('x, 'a, 'a) lifting" where
 "id_l =
-  \<lparr> LIn1 = (\<lambda> s a . a)
-  , LIn2 = (\<lambda> s a b . a)
-  , LOut1 = (\<lambda> s b . b)\<rparr>" 
+  \<lparr> LIn = (\<lambda> s a a' . a)
+  , LOut = (\<lambda> s a . a)
+  , LBase = undefined\<rparr>" 
 
 lemma id_l_valid : "lifting_valid (id_l)"
   apply (rule lifting_valid_intro)
@@ -29,9 +29,9 @@ trivial ordering
 definition triv_l ::
   "('x, 'a, 'b) lifting \<Rightarrow> ('x, 'a, 'b md_triv) lifting" where
 "triv_l t =
-  \<lparr> LIn1 = (\<lambda> s a . mdt ( LIn1 t s a))
-  , LIn2 = (\<lambda> s a b . (case b of (mdt b') \<Rightarrow> (mdt ( (LIn2 t s a b')))))
-  , LOut1 = (\<lambda> s b . (case b of (mdt b') \<Rightarrow> (LOut1 t s b')))\<rparr>"
+  \<lparr> LIn = (\<lambda> s a b . (case b of (mdt b') \<Rightarrow> (mdt ( (LIn t s a b')))))
+  , LOut = (\<lambda> s b . (case b of (mdt b') \<Rightarrow> (LOut t s b')))
+  , LBase = mdt (LBase t) \<rparr>"
 
 definition triv_l' ::
   "('a, 'b) lifting' \<Rightarrow> ('a, 'b md_triv) lifting'" where
@@ -44,13 +44,14 @@ lemma triv_l_valid :
 proof(rule lifting_valid_intro)
   fix s :: 'a
   fix a :: 'b
-  show "LOut1 (triv_l l) s (LIn1 (triv_l l) s a) = a" using lifting_valid_unfold1[OF H]
-    by(auto simp add:triv_l_def)
+  fix b :: "'c md_triv"
+  show "LOut (triv_l l) s (LIn (triv_l l) s a b) = a" using lifting_valid_unfold2[OF H]
+    by(auto simp add:triv_l_def split:md_triv.splits)
 next
   fix s :: 'a
   fix a :: 'b
   fix b :: "'c md_triv"
-  show "LOut1 (triv_l l) s (LIn2 (triv_l l) s a b) = a"
+  show "LNew (triv_l l) s a = LIn (triv_l l) s a (LBase (triv_l l))"
     using lifting_valid_unfold2[OF H]
     by(auto simp add:triv_l_def split:md_triv.splits)
 qed

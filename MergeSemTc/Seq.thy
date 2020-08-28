@@ -91,20 +91,17 @@ definition seq_sem :: "syn \<Rightarrow> state' \<Rightarrow> state'" where
              None \<Rightarrow> (sk, GRPath cp, Up cp)
              | Some _ \<Rightarrow> (sk, GRPath (cp @ [0]), Down))
           | Up xcp \<Rightarrow> 
-             (if gensyn_cp_is_desc_strict cp xcp
-              then (case getlast xcp of 
-                         (Some xcpl) \<Rightarrow> 
-                           (case gensyn_get sk (cp @ [1+xcpl]) of
+             (case get_suffix cp xcp of
+              Some (xcph#xcpt) \<Rightarrow> 
+                           (case gensyn_get sk (cp @ [1+xcph]) of
                               None \<Rightarrow> (case gensyn_cp_parent sk cp of
                                         None \<Rightarrow> (sk, GRDone, Up xcp)
                                         | Some cp' \<Rightarrow> (sk, GRPath cp', Up xcp))
-                              | Some _ \<Rightarrow> (sk, GRPath (cp @ [1+xcpl]), Down))
-                          | None \<Rightarrow> undefined)
-               else (case gensyn_cp_parent sk cp of
-                                        None \<Rightarrow> (sk, GRDone, Up cp)
-                                        | Some cp' \<Rightarrow> (sk, GRPath cp', Up xcp)))))
+                              | Some _ \<Rightarrow> (sk, GRPath (cp @ [1+xcph]), Down))
+                | _ \<Rightarrow> (case gensyn_cp_parent sk cp of
+                          None \<Rightarrow> (sk, GRDone, Up xcp)
+                | Some cp' \<Rightarrow> (sk, GRPath cp', Up xcp)))))
   | _ \<Rightarrow> st)"
-
 
 (* problem - need to keep "skip" from
    ovewriting the "other" at a higher priority *)
