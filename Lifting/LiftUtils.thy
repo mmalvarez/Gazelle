@@ -9,7 +9,7 @@ type_synonym ('a, 'b) lifting' = "('b \<Rightarrow> 'a)"
 (* "pre-lifting" - definition of the idempotent part *)
 record ('syn, 'a, 'b) plifting =
   LUpd :: "('syn \<Rightarrow> 'a \<Rightarrow> 'b \<Rightarrow> 'b)"
-  LOut :: "('syn \<Rightarrow> 'b \<Rightarrow> 'a)"
+  LOut :: "('syn \<Rightarrow> 'b \<Rightarrow> 'a option)"
   LBase :: "'syn \<Rightarrow> 'b"
 
 record ('syn, 'a, 'b) lifting =
@@ -57,7 +57,9 @@ definition pl_map ::
     ('x \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow>
     ('x \<Rightarrow> 'b \<Rightarrow> 'b)" where
 "pl_map l sem syn st =
-  (LUpd l syn (sem syn (LOut l syn st)) st)"
+  (case (LOut l syn st) of
+    Some out \<Rightarrow> (LUpd l syn (sem syn out) st)
+    | None \<Rightarrow> st)"
 
 declare pl_map_def [simp]
 
@@ -77,7 +79,10 @@ definition pl_map_s ::
      ('a1 \<Rightarrow> 'a2 \<Rightarrow> 'a2) \<Rightarrow>
      ('b1 \<Rightarrow> 'b2 \<Rightarrow> 'b2)" where
 "pl_map_s l' l sem syn st =
-  (LUpd l (l' syn) (sem (l' syn) (LOut l (l' syn) st)) st)"
+  (case (LOut l (l' syn) st) of
+    Some out \<Rightarrow>
+      (LUpd l (l' syn) (sem (l' syn) out) st)
+  | None \<Rightarrow> st)"
 
 declare pl_map_s_def [simp]
 
@@ -116,13 +121,14 @@ definition l_unmap_s ::
    ('a1 \<Rightarrow> 'a2 \<Rightarrow> 'a2)" where
 "l_unmap_s l' l sem syn st =
   (let syn' = (SOME x . l' x = syn) :: 'b1 in
-  (LOut l syn (sem syn' (LNew l syn st))))"
+  (case LOut l syn (sem syn' (LNew l syn st)) of
+    Some out \<Rightarrow> out))"
 
 declare l_unmap_s_def [simp]
 
 definition l_pred :: "('x, 'a, 'b, 'z) plifting_scheme \<Rightarrow> ('x \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> ('x \<Rightarrow> 'b \<Rightarrow> bool)" where
 "l_pred t P =
-  (\<lambda> s b . P s (LOut t s b))"
+  (\<lambda> s b . (\<exists> out . LOut t s b = Some out \<and> P s out))"
 
 declare l_pred_def [simp]
 
@@ -137,10 +143,14 @@ definition l_pred_step ::
    ('x \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow>
    ('x \<Rightarrow> 'b \<Rightarrow> 'b \<Rightarrow> bool)" where
 "l_pred_step l P s st1 st2 =
-        (P s (LOut l s st1) (LOut l s st2))"
+  (\<exists> out1 out2 . LOut l s st1 = Some out1 \<and>
+                 LOut l s st2 = Some out2 \<and>
+          (P s out1 out2))"
 
 (* idea: when contained data is the same,
    result's contained data is the same. *)
+(* this needs to be updated to account for options (?)
+*)
 definition can_unmap ::
   "('a1, 'b1) lifting' \<Rightarrow>
    ('a1, 'a2, 'b2, 'z) plifting_scheme \<Rightarrow>
@@ -178,7 +188,10 @@ definition l_pred_step_s ::
    ('s1 \<Rightarrow> 'b1 \<Rightarrow> 'b1 \<Rightarrow> bool) \<Rightarrow>
    ('s2 \<Rightarrow> 'b2 \<Rightarrow> 'b2 \<Rightarrow> bool)" where
 "l_pred_step_s l1 l2 P syn st1 st2 =
-   (P (l1 syn) (LOut l2 (l1 syn) st1) (LOut l2 (l1 syn) st2))"
+  (\<exists> out1 out2 . 
+  (LOut l2 (l1 syn) st1) = Some out1 \<and>
+  (LOut l2 (l1 syn) st2) = Some out2 \<and>
+   (P (l1 syn) out1 out2))"
 
 (* next: define
    - pl_unpred
@@ -244,12 +257,12 @@ lemma l_unpred_step_s_unfold :
    i think the answer is yes - this lifting is specific to the 'a-data *)
 definition plifting_valid :: "('x, 'a, 'b, 'z) plifting_scheme \<Rightarrow> bool" where
 "plifting_valid l =
-  ((\<forall> s a b . LOut l s (LUpd l s a b) = a)\<and>
+  ((\<forall> s a b . LOut l s (LUpd l s a b) = Some a)\<and>
    (\<forall> s a a' b . 
       LUpd l s a (LUpd l s a' b) = LUpd l s a b))"
 
 lemma plifting_valid_intro :
-  assumes H1 : "\<And> s a b . LOut l s (LUpd l s a b) = a"
+  assumes H1 : "\<And> s a b . LOut l s (LUpd l s a b) = Some a"
   assumes H2 : "\<And> s a a' b . LUpd l s a (LUpd l s a' b) = LUpd l s a b"
   shows "plifting_valid l"
   using H1 H2
@@ -257,7 +270,7 @@ lemma plifting_valid_intro :
 
 lemma plifting_valid_unfold1 :
   assumes H : "plifting_valid l"
-  shows "LOut l s (LUpd l s a b) = a"
+  shows "LOut l s (LUpd l s a b) = Some a"
   using H by (auto simp add:plifting_valid_def)
 
 lemma plifting_valid_unfold2 :
@@ -272,14 +285,14 @@ definition plifting_pv_valid :: "('x, 'a, 'b, 'z1) plifting_scheme \<Rightarrow>
    (\<forall> s a b . LUpd l s a b \<in> LOutS v s) \<and>
    (\<forall> s b .
       b \<in> LOutS v s \<longrightarrow>
-      b = LUpd l s (LOut l s b) b))"
+      (\<exists> out . LOut l s b = Some out \<and> b = LUpd l s out b)))"
 
 lemma plifting_pv_valid_intro :
   assumes H : "plifting_valid l"
   assumes H1 : "\<And> s a b . LUpd l s a b \<in> LOutS v s"
   assumes H2 : "\<And> s b .
       b \<in> LOutS v s \<Longrightarrow>
-      b = LUpd l s (LOut l s b) b"
+      (\<exists> out . LOut l s b = Some out \<and> b = LUpd l s out b)"
   shows "plifting_pv_valid l v"
   using H H1 H2
   by (auto simp add:plifting_pv_valid_def)
@@ -295,17 +308,8 @@ lemma plifting_pv_valid_unfold2 :
 lemma plifting_pv_valid_unfold3 :
   assumes H : "plifting_pv_valid l v"
   assumes H1 : "b \<in> LOutS v s"
-  shows "b = LUpd l s (LOut l s b) b"
+  shows "(\<exists> out . LOut l s b = Some out \<and> b = LUpd l s out b)"
   using H H1 by (auto simp add: plifting_pv_valid_def)
-
-(* avoiding free type variables error in codegen *)
-definition plifting_extend :: "('x, 'a, 'b) plifting \<Rightarrow> ('x\<Rightarrow> 'b \<Rightarrow> 'b) \<Rightarrow> ('x, 'a, 'b) lifting"
-  where
-"plifting_extend p post =
-  \<lparr> LUpd = LUpd p
-  , LOut = LOut p
-  , LBase = LBase p
-  , LPost = post \<rparr>"
 
 
 lemma plifting_valid_cast :
@@ -313,7 +317,7 @@ lemma plifting_valid_cast :
   shows "plifting_valid (plifting.extend pv x)"
 proof(rule plifting_valid_intro)
   fix s a b
-  show "LOut (plifting.extend pv x) s (LUpd (plifting.extend pv x) s a b) = a"
+  show "LOut (plifting.extend pv x) s (LUpd (plifting.extend pv x) s a b) = Some a"
     using plifting_valid_unfold1[OF H] by(auto simp add:plifting.defs)
 next
   fix s a a' b
@@ -335,7 +339,9 @@ next
 next
   fix s b
   show "b \<in> LOutS v s \<Longrightarrow>
-           b = LUpd (plifting.extend pv x) s (LOut (plifting.extend pv x) s b) b"
+\<exists>out. LOut (plifting.extend pv x) s b =
+                 Some out \<and>
+                 b = LUpd (plifting.extend pv x) s out b"
     using plifting_pv_valid_unfold3[OF H] by(auto simp add:plifting.defs)
 qed
 
@@ -444,7 +450,7 @@ lemma l_pred_step_s_pl_map_s :
   fixes l2 :: "('a1, 'a2, 'b2, 'z) plifting_scheme"
   assumes Hv : "plifting_valid l2"
   assumes Hsyn : "l1 x1' = x1"
-  assumes Hsem : "LOut l2 x1 x2' = x2"
+  assumes Hsem : "LOut l2 x1 x2' = Some x2"
   assumes HP : "P x1 x2 (f x1 x2)"
   shows "l_pred_step_s l1 l2 P (x1') (x2') (pl_map_s l1 l2 f (x1') (x2'))"
   using Hsyn Hsem HP plifting_valid_unfold1[OF Hv] 
@@ -455,7 +461,7 @@ lemma l_pred_step_s_pl_map_s_contra :
   fixes l2 :: "('a1, 'a2, 'b2, 'z) plifting_scheme"
   assumes Hv : "plifting_valid l2"
   assumes Hsyn : "l1 x1' = x1"
-  assumes Hsem : "LOut l2 x1 x2' = x2"
+  assumes Hsem : "LOut l2 x1 x2' = Some x2"
   assumes HP : "l_pred_step_s l1 l2 P (x1') (x2') (pl_map_s l1 l2 f (x1') (x2'))"
   shows "P x1 x2 (f x1 x2)"
   using Hsyn Hsem HP plifting_valid_unfold1[OF Hv] 
@@ -466,23 +472,25 @@ lemma l_pred_step_s_lmap_s :
   fixes l2 :: "('a1, 'a2, 'b2, 'z) lifting_scheme"
   assumes Hv : "lifting_pv_valid l2 v"
   assumes Hsyn : "l1 x1' = x1"
-  assumes Hsem : "LOut l2 x1 x2' = x2"
+  assumes Hsem : "LOut l2 x1 x2' = Some x2"
   assumes HP : "P x1 x2 (f x1 x2)"
   shows "l_pred_step_s l1 l2 P (x1') (x2') (l_map_s l1 l2 f (x1') (x2'))"
 proof-
   have Hv' : "plifting_pv_valid l2 v" using lifting_pv_valid_unfold1[OF Hv] by auto
   hence Hv'' : "plifting_valid l2" using plifting_pv_valid_unfold1[OF Hv'] by auto
 
+  have HS0 : "(LOut l2 (l1 x1') x2') = Some x2" using Hsem Hsyn by auto
+
   have HS :
-    "(LUpd l2 (l1 x1') (f (l1 x1') (LOut l2 (l1 x1') x2')) x2') \<in> LOutS v (l1 x1')"
+    "(LUpd l2 (l1 x1') (f (l1 x1') x2) x2') \<in> LOutS v (l1 x1')"
     using plifting_pv_valid_unfold2[OF Hv'] by auto
 
-  have Eq1: "LOut l2 (l1 x1') (LPost l2 (l1 x1') (LUpd l2 (l1 x1') (f (l1 x1') (LOut l2 (l1 x1') x2')) x2')) =
-        LOut l2 (l1 x1') (LUpd l2 (l1 x1') (f (l1 x1') (LOut l2 (l1 x1') x2')) x2')"
+  have Eq1: "LOut l2 (l1 x1') (LPost l2 (l1 x1') (LUpd l2 (l1 x1') (f (l1 x1') x2) x2')) =
+        LOut l2 (l1 x1') (LUpd l2 (l1 x1') (f (l1 x1') x2) x2')"
     by(rule lifting_pv_valid_unfold3[OF Hv plifting_pv_valid_unfold2[OF Hv']])
 
-  have Eq2 : "LOut l2 (l1 x1') (LUpd l2 (l1 x1') (f (l1 x1') (LOut l2 (l1 x1') x2')) x2') =
-              (f (l1 x1') (LOut l2 (l1 x1') x2'))"
+  have Eq2 : "LOut l2 (l1 x1') (LUpd l2 (l1 x1') (f (l1 x1') x2) x2') =
+              Some (f (l1 x1') x2)"
     by(rule plifting_valid_unfold1[OF Hv''])
 
   show "l_pred_step_s l1 l2 P (x1') (x2') (l_map_s l1 l2 f (x1') (x2'))"
@@ -496,7 +504,7 @@ lemma l_pred_step_s_lmap_s_contra :
   fixes l2 :: "('a1, 'a2, 'b2, 'z) lifting_scheme"
   assumes Hv : "lifting_pv_valid l2 v"
   assumes Hsyn : "l1 x1' = x1"
-  assumes Hsem : "LOut l2 x1 x2' = x2"
+  assumes Hsem : "LOut l2 x1 x2' = Some x2"
   assumes HP : "l_pred_step_s l1 l2 P (x1') (x2') (l_map_s l1 l2 f (x1') (x2'))"
   shows "P x1 x2 (f x1 x2)"
 proof-
@@ -539,7 +547,7 @@ lemma can_unpred_intro :
 
 lemma can_unpred_intro' :
   assumes H : 
-    "\<And> syn syn' st1 st2 st'1 st'2 .
+    "\<And> syn syn' st1 stx1 st2 stx2 st'1 st'x1 st'2 st'x2.
       l' syn = l' syn' \<Longrightarrow>
       LOut l (l' syn) st1 = LOut l (l' syn') st'1 \<Longrightarrow>
       LOut l (l' syn) st2 = LOut l (l' syn') st'2 \<Longrightarrow>
@@ -647,13 +655,16 @@ lemma pres_LOutS_unfold :
 
 (* first (?) prove
    pl_unpred_step_s_unmap_s *)
-
+(* TODO: this this to deal with option *)
+(*
 lemma pl_unpred_step_s_unmap_s  :
   assumes Hv : "plifting_valid l2"
   assumes Hunmap : "can_unmap l1 l2 f'"
   assumes Hunpred : "can_unpred l1 l2 P'"
   assumes H: "\<And> x1'' . l1 x1'' = x1 \<Longrightarrow> P' x1'' x2' (f' x1'' x2')"
-  shows "pl_unpred_step_s l1 l2 P' x1 (LOut l2 x1 x2') (l_unmap_s l1 l2 f' x1 (LOut l2 x1 x2'))"
+  (* should this be assumed or shown? *)
+  assumes Hout : "LOut l2 x1 x2' = Some out"
+  shows "pl_unpred_step_s l1 l2 P' x1 out (l_unmap_s l1 l2 f' x1 out)"
   unfolding pl_unpred_step_s_def l_unmap_s_def Let_def
 proof(rule allI; rule impI)
   fix syn'
@@ -665,11 +676,16 @@ proof(rule allI; rule impI)
   have Syn_eq : "l1 (SOME x. l1 x = x1) = l1 syn'" using Hsyn' Syn by simp
 
 
-  have Eq1 : "LOut l2 (l1 syn') (LNew l2 x1 (LOut l2 x1 x2')) = LOut l2 (l1 syn') x2'"
-    using Hsyn' plifting_valid_unfold1[OF Hv] unfolding LNew_def by auto
+  have Eq1 : "LOut l2 (l1 syn') (LNew l2 x1 out) = LOut l2 (l1 syn') x2'"
+    using Hout Hsyn' plifting_valid_unfold1[OF Hv] unfolding LNew_def by auto
 
+  obtain out' where EqOut' :
+    "(LOut l2 x1 (f' (SOME x. l1 x = x1) (LNew l2 x1 out))) = Some out'"
+    using plifting_valid_unfold1[OF Hv, of "l1 syn'"] Hsyn' Hout
+    can_unmap_unfold
+    apply(auto)
   have Eq2 :
-"LOut l2 (l1 syn') (LUpd l2 x1 (LOut l2 x1 (f' (SOME x. l1 x = x1) (LNew l2 x1 (LOut l2 x1 x2')))) (LNew l2 x1 (LOut l2 x1 x2'))) =
+"LOut l2 (l1 syn') (LUpd l2 x1 (LOut l2 x1 (f' (SOME x. l1 x = x1) (LNew l2 x1 out))) (LNew l2 x1 out)) =
   (LOut l2 x1 (f' (SOME x. l1 x = x1) (LNew l2 x1 (LOut l2 x1 x2'))))"
     using plifting_valid_unfold1[OF Hv, of "l1 syn'"] Hsyn'
     by(auto)
@@ -870,7 +886,7 @@ proof-
       by(auto)
   qed
 qed
-
+*)
 (* Composition of sub-languages *)
 
 end

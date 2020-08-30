@@ -20,7 +20,7 @@ definition id_pl ::
   "('x, 'a, 'a) plifting" where
 "id_pl =
   \<lparr> LUpd = (\<lambda> s a a' . a)
-  , LOut = (\<lambda> s a . a)
+  , LOut = (\<lambda> s a . Some a)
   , LBase = (\<lambda> s . undefined) \<rparr>" 
 
 abbreviation id_l :: "('x, 'a, 'a) lifting" where
@@ -81,7 +81,7 @@ lemma triv_pl_valid : "plifting_valid t \<Longrightarrow> plifting_valid (triv_p
 proof(rule plifting_valid_intro)
   fix s a b
   assume H : "plifting_valid t"
-  show "LOut (triv_pl t) s (LUpd (triv_pl t) s a b) = a"
+  show "LOut (triv_pl t) s (LUpd (triv_pl t) s a b) = Some a"
     using plifting_valid_unfold1[OF H]
     by(auto simp add:triv_pl_def split:md_triv.splits)
 next
@@ -108,7 +108,8 @@ next
   fix s b
   assume H : "plifting_pv_valid t v"
   assume H' : "b \<in> LOutS (triv_pv v) s"
-  show "b = LUpd (triv_pl t) s (LOut (triv_pl t) s b) b"
+  show "\<exists>out. LOut (triv_pl t) s b = Some out \<and>
+                 b = LUpd (triv_pl t) s out b"
     using plifting_pv_valid_unfold3[OF H] H'
     by(auto simp add:triv_pl_def triv_pv_def split:md_triv.splits)
 qed
@@ -167,7 +168,7 @@ definition option_pl ::
               Some b' \<Rightarrow> Some (LUpd t s a b')
               | None \<Rightarrow> Some (LNew t s a)))
   , LOut = (\<lambda> s b . (case b of Some b' \<Rightarrow> LOut t s b'
-                      | None \<Rightarrow> LOut t s (LBase t s)))
+                      | None \<Rightarrow> None))
   , LBase = (\<lambda> s . None)\<rparr>"
 
 definition option_l ::
@@ -187,7 +188,7 @@ lemma option_pl_valid :
   shows "plifting_valid (option_pl t)"
 proof(rule plifting_valid_intro)
   fix s a b
-  show "LOut (option_pl t) s (LUpd (option_pl t) s a b) = a"
+  show "LOut (option_pl t) s (LUpd (option_pl t) s a b) = Some a"
     using plifting_valid_unfold1[OF H]
     by(auto simp add:option_pl_def LNew_def split:option.splits)
 next
@@ -213,7 +214,8 @@ next
   fix s b
   assume H : "plifting_pv_valid t v"
   assume H' : "b \<in> LOutS (option_pv v) s"
-  show "b = LUpd (option_pl t) s (LOut (option_pl t) s b) b"
+  show "\<exists>out. LOut (option_pl t) s b = Some out \<and>
+                 b = LUpd (option_pl t) s out b"
     using plifting_pv_valid_unfold3[OF H] H'
     by(auto simp add:option_pl_def option_pv_def)
 qed
@@ -285,7 +287,7 @@ lemma prio_pl_valid :
   shows "plifting_valid (prio_pl f0 t)"
 proof(rule plifting_valid_intro)
   fix s a b
-  show "LOut (prio_pl f0 t) s (LUpd (prio_pl f0 t) s a b) = a"
+  show "LOut (prio_pl f0 t) s (LUpd (prio_pl f0 t) s a b) = Some a"
     using plifting_valid_unfold1[OF H]
     by(auto simp add:prio_pl_def LNew_def split:md_prio.splits)
 next
@@ -311,7 +313,8 @@ next
   fix s b
   assume H : "plifting_pv_valid t v"
   assume H' : "b \<in> LOutS (prio_pv v) s"
-  show "b = LUpd (prio_pl f0 t) s (LOut (prio_pl f0 t) s b) b"
+  show "\<exists>out. LOut (prio_pl f0 t) s b = Some out \<and>
+                 b = LUpd (prio_pl f0 t) s out b"
     using plifting_pv_valid_unfold3[OF H] H'
     by(auto simp add:prio_pl_def prio_pv_def)
 qed
@@ -413,7 +416,7 @@ lemma fst_pl_valid :
 proof(rule plifting_valid_intro)
   fix s a 
   fix b :: "'b1 * 'b2"
-  show "LOut (fst_pl t) s (LUpd (fst_pl t) s a b) = a"
+  show "LOut (fst_pl t) s (LUpd (fst_pl t) s a b) = Some a"
     using plifting_valid_unfold1[OF H]
     by(auto simp add:fst_pl_def LNew_def split:prod.splits)
 next
@@ -443,7 +446,8 @@ next
   fix b :: "'b1 * 'b2"
   assume H : "plifting_pv_valid t v"
   assume H' : "b \<in> LOutS (fst_pv v) s"
-  show "b = LUpd (fst_pl t) s (LOut (fst_pl t) s b) b"
+  show "\<exists>out. LOut (fst_pl t) s b = Some out \<and>
+                 b = LUpd (fst_pl t) s out b"
     using plifting_pv_valid_unfold3[OF H] H'
     by(auto simp add:fst_pl_def fst_pv_def)
 qed
@@ -508,7 +512,7 @@ lemma snd_pl_valid :
 proof(rule plifting_valid_intro)
   fix s a 
   fix b :: "'b1 * 'b2"
-  show "LOut (snd_pl t)  s (LUpd (snd_pl t)  s a b) = a"
+  show "LOut (snd_pl t)  s (LUpd (snd_pl t)  s a b) = Some a"
     using plifting_valid_unfold1[OF H]
     by(auto simp add:snd_pl_def LNew_def split:prod.splits)
 next
@@ -538,7 +542,8 @@ next
   fix b :: "'b1 * 'b2"
   assume H : "plifting_pv_valid t v"
   assume H' : "b \<in> LOutS (snd_pv v) s"
-  show "b = LUpd (snd_pl t) s (LOut (snd_pl t) s b) b"
+  show "\<exists>out. LOut (snd_pl t) s b = Some out \<and>
+                 b = LUpd (snd_pl t) s out b"
     using plifting_pv_valid_unfold3[OF H] H'
     by(auto simp add:snd_pl_def snd_pv_def)
 qed
@@ -589,7 +594,11 @@ definition prod_pl ::
                     (LUpd t1 s a1 b1, LUpd t2 s a2 b2))))
   , LOut =
     (\<lambda> s b . (case b of (b1, b2) \<Rightarrow>
-                (LOut t1 s b1, LOut t2 s b2)))
+              (case LOut t1 s b1 of
+                None \<Rightarrow> None
+                | Some b1o \<Rightarrow> (case LOut t2 s b2 of
+                                None \<Rightarrow> None
+                                | Some b2o \<Rightarrow> Some (b1o, b2o)))))
   , LBase =
     (\<lambda> s . (LBase t1 s, LBase t2 s)) \<rparr>"
 
@@ -614,7 +623,7 @@ lemma prod_pl_valid :
   shows "plifting_valid (prod_pl t1 t2)"
 proof(rule plifting_valid_intro)
   fix s a b
-  show "LOut (prod_pl t1 t2) s (LUpd (prod_pl t1 t2) s a b) = a"
+  show "LOut (prod_pl t1 t2) s (LUpd (prod_pl t1 t2) s a b) = Some a"
     using plifting_valid_unfold1[OF H1] plifting_valid_unfold1[OF H2]
     by(auto simp add:prod_pl_def split:prod.splits)
 next
@@ -640,10 +649,20 @@ next
 next
   fix s b
   assume H' : "b \<in> LOutS (prod_pv v1 v2) s"
-  show "b = LUpd (prod_pl t1 t2) s (LOut (prod_pl t1 t2) s b) b"
-    using plifting_pv_valid_unfold3[OF H1]
-          plifting_pv_valid_unfold3[OF H2] H'
-    by(auto simp add:prod_pl_def prod_pv_def split:prod.splits)
+  obtain b1 b2 where B : "b = (b1, b2)" by(cases b; auto)
+
+  have B1out : "b1 \<in> LOutS v1 s" using H' B by(auto simp add:prod_pv_def)
+  have B2out : "b2 \<in> LOutS v2 s" using H' B by(auto simp add:prod_pv_def)
+
+
+  show "\<exists>out. LOut (prod_pl t1 t2) s b = Some out \<and>
+                 b = LUpd (prod_pl t1 t2) s out b"
+    using B
+       plifting_pv_valid_unfold3[OF H1 B1out]
+       plifting_pv_valid_unfold3[OF H2 B2out] H'
+
+ by(auto simp add:prod_pl_def prod_pv_def split:prod.splits option.splits)
+
 qed
 
 lemma prod_l_pv_valid :
@@ -669,10 +688,15 @@ next
 next
   fix s a b
   assume H' : "b \<in> LOutS (prod_pv v1 v2) s "
+
+  obtain b1 b2 where B : "b = (b1, b2)" by(cases b; auto)
+  have B1out : "b1 \<in> LOutS v1 s" using H' B by(auto simp add:prod_pv_def)
+  have B2out : "b2 \<in> LOutS v2 s" using H' B by(auto simp add:prod_pv_def)
+
   show "LOut (prod_l t1 t2) s (LPost (prod_l t1 t2) s b) = LOut (prod_l t1 t2) s b"
-    using lifting_pv_valid_unfold3[OF H1]
-          lifting_pv_valid_unfold3[OF H2] H'
-    by(auto simp add: prod_l_def prod_pl_def prod_pv_def plifting.defs split:prod.splits)
+    using lifting_pv_valid_unfold3[OF H1 B1out]
+          lifting_pv_valid_unfold3[OF H2 B2out] H' B
+    by(auto simp add: prod_l_def prod_pl_def prod_pv_def plifting.defs split:prod.splits option.splits)
 qed
 
 
@@ -726,7 +750,7 @@ definition prod_comma_pl ::
    ('x, 'a2 * 'a1, 'b) plifting" where
 "prod_comma_pl t =
   \<lparr> LUpd = (\<lambda> s a b . (case a of (a1, a2) \<Rightarrow> LUpd t s (a2, a1) b))
-  , LOut = (\<lambda> s b . (case (LOut t s b) of (a1, a2) \<Rightarrow> (a2, a1)))
+  , LOut = (\<lambda> s b . (case (LOut t s b) of (Some (a1, a2)) \<Rightarrow> Some (a2, a1) | None \<Rightarrow> None))
   , LBase = LBase t\<rparr>"
 
 definition prod_comma_l ::
@@ -799,7 +823,7 @@ definition prod_deassoca_pl ::
    ('x, 'a1 * 'a2 * 'a3, 'b) plifting" where
 "prod_deassoca_pl t =
   \<lparr> LUpd = (\<lambda> s a b . (case a of (a1, a2, a3) \<Rightarrow> LUpd t s ((a1, a2), a3) b))
-  , LOut = (\<lambda> s b . (case LOut t s b of ((a1, a2), a3) \<Rightarrow> (a1, a2, a3)))
+  , LOut = (\<lambda> s b . (case LOut t s b of (Some ((a1, a2), a3)) \<Rightarrow> Some (a1, a2, a3) | None \<Rightarrow> None))
   , LBase = LBase t \<rparr>"
 
 definition prod_deassoca_l ::
@@ -820,7 +844,8 @@ definition prod_assoca_pl ::
    ('x, ('a1 * 'a2) * 'a3, 'b) plifting" where
 "prod_assoca_pl t =
   \<lparr> LUpd = (\<lambda> s a b . (case a of ((a1, a2), a3) \<Rightarrow> LUpd t s (a1, a2, a3) b))
-  , LOut = (\<lambda> s b . (case LOut t s b of (a1, a2, a3) \<Rightarrow> ((a1, a2), a3)))
+  , LOut = (\<lambda> s b . (case LOut t s b of (Some (a1, a2, a3)) \<Rightarrow> Some ((a1, a2), a3)
+                                        | None \<Rightarrow> None))
   , LBase = LBase t \<rparr>"
 
 definition prod_assoca_l ::
@@ -1052,7 +1077,7 @@ definition oalist_pl ::
   , LOut = (\<lambda> s l . (case (f s) of
                       Some k \<Rightarrow> (case get l k of 
                                   Some a \<Rightarrow> LOut t s a
-                                  | None \<Rightarrow> LOut t s (LBase t s))
+                                  | None \<Rightarrow> None)
                       | None \<Rightarrow> LOut t s (LBase t s)))
   , LBase = (\<lambda> s . (case (f s) of
                       Some k \<Rightarrow> update k (LBase t s) empty
@@ -1155,7 +1180,9 @@ definition prod_fan_pl ::
 "prod_fan_pl f t =
   \<lparr> LUpd = (\<lambda> x a cb . (f x a, LUpd t x a (snd cb)))
   , LOut = (\<lambda> x cb . LOut t x (snd cb))
-  , LBase = (\<lambda> x . (f x (LOut t x (LBase t x)), LBase t x)) \<rparr>"
+  , LBase = (\<lambda> x . ((case LOut t x (LBase t x) of
+                      Some out \<Rightarrow> f x out)
+                   , LBase t x)) \<rparr>"
 
 definition prod_fan_l ::
   "('x \<Rightarrow> 'a \<Rightarrow> 'c) \<Rightarrow>
@@ -1164,7 +1191,9 @@ definition prod_fan_l ::
 "prod_fan_l f t =
   plifting.extend (prod_fan_pl f t)
     \<lparr> LPost =
-      (\<lambda> s cb . (f s (LOut t s (LPost t s (snd cb))), LPost t s (snd cb))) \<rparr>"
+      (\<lambda> s cb . ((case (LOut t s (LPost t s (snd cb))) of
+                        Some out \<Rightarrow> f s out)
+                , LPost t s (snd cb))) \<rparr>"
 
 definition prod_fan_pv ::
   "('x \<Rightarrow> 'a \<Rightarrow> 'c) \<Rightarrow>
@@ -1172,7 +1201,8 @@ definition prod_fan_pv ::
    ('x, 'a, 'b, 'z) pliftingv_scheme \<Rightarrow>
    ('x, 'a, ('c * 'b)) pliftingv" where
 "prod_fan_pv f t v =
-  \<lparr> LOutS = (\<lambda> s . { cb . \<exists> c b . cb = (c, b) \<and> b \<in> LOutS v s \<and> c = f s (LOut t s b)}) \<rparr>"
+  \<lparr> LOutS = (\<lambda> s . { cb . \<exists> c b out . cb = (c, b) \<and> b \<in> LOutS v s \<and> 
+                          LOut t s b = Some out \<and> c = f s out}) \<rparr>"
 (*
 lemma prod_fan_l_valid :
   fixes f :: "('x \<Rightarrow> 'a \<Rightarrow> 'c)"
@@ -1184,8 +1214,8 @@ lemma prod_fan_l_valid :
 definition l_reverse ::
   "('x, 'a, 'b, 'z) plifting_scheme \<Rightarrow>
    'x \<Rightarrow> 'b \<Rightarrow> 'a" where
-"l_reverse l =
-  LOut l"
+"l_reverse l s b =
+  (case LOut l s b of Some a \<Rightarrow> a)"
 
 (* finally, here we allow keymaps, which might enable more interesting merges
    however we will need to reset the kmap in between commands. *)
