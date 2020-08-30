@@ -1,5 +1,5 @@
 theory PrintCalcSeq
-  imports PrintCalc "../MergeSemTc/Seq" "../Semantics/Gensyn_Sem"
+  imports PrintCalc "../MergeSemTc/Seq" "../Semantics/Gensyn_Sem" "../Lifting/LangComp"
 begin
 
 type_synonym syn = "Seq.syn + PrintCalc.syn"
@@ -23,13 +23,13 @@ definition printcalc_trans :: "syn \<Rightarrow> PrintCalc.syn" where
 definition seq_sem_l ::
   "syn \<Rightarrow> state \<Rightarrow> state" where
 "seq_sem_l =
-  l_map2' seq_trans
+  l_map_s seq_trans
     (fst_l (id_l)) (Seq.seq_sem_l)"
     
 definition print_calc_sem_l ::
   "syn \<Rightarrow> state \<Rightarrow> state" where
 "print_calc_sem_l =
-  l_map2' printcalc_trans
+  l_map_s printcalc_trans
     (snd_l (id_l)) (pcomp print_calc_lc)"
 
 definition print_calc_seq_lc :: "(syn, state) langcomp" where
@@ -61,7 +61,7 @@ value [simp] "pcomp print_calc_seq_lc (Inl (Sseq))
     *)
 definition sem_final :: "(syn, state) x_sem'" where
 "sem_final =
-  l_map2' id
+  l_map_s id
     (prod_fan_l (l_reverse (fst_l (prod_l (option_l (triv_l id_l))
                                           (fst_l (prio_l_keep (option_l (triv_l (id_l)))))))) id_l)
     (pcomp print_calc_seq_lc)"

@@ -23,8 +23,8 @@ definition id_pl ::
   , LOut = (\<lambda> s a . a)
   , LBase = (\<lambda> s . undefined) \<rparr>" 
 
-definition id_l :: "('x, 'a, 'a) lifting" where
-"id_l = plifting.extend id_pl \<lparr> LPost = (\<lambda> s a . a) \<rparr>"
+abbreviation id_l :: "('x, 'a, 'a) lifting" where
+"id_l \<equiv> plifting.extend (id_pl :: ('x, 'a, 'a) plifting) \<lparr> LPost = \<lambda> s a . a \<rparr>"
 
 definition id_pv :: "('x, 'a, 'a) pliftingv" where
 "id_pv = \<lparr> LOutS = (\<lambda> _ . UNIV) \<rparr>"
@@ -45,7 +45,6 @@ lemma id_pl_pv_valid : "plifting_pv_valid id_pl id_pv"
 
 lemma id_l_pv_valid : "lifting_pv_valid id_l id_pv"
   apply(rule lifting_pv_valid_intro)
-    apply(unfold id_l_def)
     apply(rule plifting_pv_valid_cast) apply(rule id_pl_pv_valid)
    apply(auto simp add: id_pl_def id_pv_def plifting.defs)
   done
@@ -69,8 +68,7 @@ definition triv_pl ::
 definition triv_l ::
   "('x, 'a, 'b, 'z) lifting_scheme \<Rightarrow> ('x, 'a, 'b md_triv) lifting" where
 "triv_l t =
-  plifting.extend (triv_pl t) 
-    \<lparr> LPost = (\<lambda> s b . (case b of (mdt b') \<Rightarrow> mdt (LPost t s b'))) \<rparr>"
+  plifting.extend (triv_pl t) \<lparr> LPost = (\<lambda> s b . (case b of (mdt b') \<Rightarrow> mdt (LPost t s b'))) \<rparr>"
 
 definition triv_pv ::
   "('x, 'a, 'b, 'z) pliftingv_scheme \<Rightarrow> ('x, 'a, 'b md_triv) pliftingv" where
@@ -155,8 +153,9 @@ definition option_pl ::
   \<lparr> LUpd = (\<lambda> s a b . 
             (case b of
               Some b' \<Rightarrow> Some (LUpd t s a b')
-              | None \<Rightarrow> Some (LNew t s a)))
-  , LOut = (\<lambda> s b . (case b of Some b' \<Rightarrow> LOut t s b'))
+              | None \<Rightarrow> None))
+  , LOut = (\<lambda> s b . (case b of Some b' \<Rightarrow> LOut t s b'
+                               | None \<Rightarrow> LOut t s (LBase t s)))
   , LBase = (\<lambda> s . None)\<rparr>"
 
 definition option_l ::
@@ -1025,36 +1024,48 @@ variable maps
 
 (* simplest case for lifting into variable map. only allows 
    dispatch based on syntax. *)
+(* TODO: is this definition of out going to cause problems? *)
 definition oalist_pl ::
-   "('x \<Rightarrow> 'k :: linorder) \<Rightarrow>
+   "('x \<Rightarrow> ('k :: linorder) option) \<Rightarrow>
     ('x, 'a, 'b, 'z) plifting_scheme \<Rightarrow>
     ('x, 'a, ('k, 'b) oalist) plifting" where
 "oalist_pl f t =
   \<lparr> LUpd = (\<lambda> s a l .
-            (case get l (f s) of
-              None \<Rightarrow> (update (f s) (LNew t s a) l)
-              | Some v \<Rightarrow> (update (f s) (LUpd t s a v) l)))
-  , LOut = (\<lambda> s l . (case get l (f s) of Some a \<Rightarrow> LOut t s a))
-  , LBase = (\<lambda> s . update (f s) (LBase t s) empty) \<rparr>"
+            (case (f s) of
+              Some k \<Rightarrow>
+                (case get l k of
+                  None \<Rightarrow> (update k (LNew t s a) l)
+                  | Some v \<Rightarrow> (update k (LUpd t s a v) l))
+              | None \<Rightarrow> l))
+  , LOut = (\<lambda> s l . (case (f s) of
+                      Some k \<Rightarrow> (case get l k of 
+                                  Some a \<Rightarrow> LOut t s a
+                                  | None \<Rightarrow> LOut t s (LBase t s))
+                      | None \<Rightarrow> undefined))
+  , LBase = (\<lambda> s . (case (f s) of
+                      Some k \<Rightarrow> update k (LBase t s) empty
+                      | None \<Rightarrow> empty)) \<rparr>"
 
 (* TODO: if we can't find the key, what do we do with LPost?
    I think either obvious choice (LPost on LBase, or leave empty) meets spec *)
 definition oalist_l ::
-   "('x \<Rightarrow> 'k :: linorder) \<Rightarrow>
+   "('x \<Rightarrow> ('k :: linorder) option) \<Rightarrow>
     ('x, 'a, 'b, 'z) lifting_scheme \<Rightarrow>
     ('x, 'a, ('k, 'b) oalist) lifting" where
 "oalist_l f t =
   plifting.extend (oalist_pl f t)
-    \<lparr> LPost = (\<lambda> s l . (case get l (f s) of 
-                             Some a \<Rightarrow> update (f s) (LPost t s a) l
-                             | None \<Rightarrow> l)) \<rparr>"
+    \<lparr> LPost = (\<lambda> s l . (case f s of
+                          Some k \<Rightarrow> (case get l k of 
+                                       Some a \<Rightarrow> update k (LPost t s a) l
+                                       | None \<Rightarrow> l)
+                          | None \<Rightarrow> l)) \<rparr>"
 
 definition oalist_pv ::
-   "('x \<Rightarrow> 'k :: linorder) \<Rightarrow>
+   "('x \<Rightarrow> ('k :: linorder) option) \<Rightarrow>
     ('x, 'a, 'b, 'z) pliftingv_scheme \<Rightarrow>
     ('x, 'a, ('k, 'b) oalist) pliftingv" where
 "oalist_pv f v =
-  \<lparr> LOutS = (\<lambda> s . { l . \<exists> a . get l (f s) = Some a \<and> a \<in> LOutS v s }) \<rparr>"
+  \<lparr> LOutS = (\<lambda> s . { l . \<exists> k a . f s = Some k \<and> get l k = Some a \<and> a \<in> LOutS v s }) \<rparr>"
 
 (*
 lemma oalist_l_valid :
