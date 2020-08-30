@@ -147,15 +147,27 @@ definition option_l' ::
 "option_l' t =
   case_option undefined t "
 
+(*
 definition option_pl ::
   "('x, 'a, 'b, 'z) plifting_scheme \<Rightarrow> ('x, 'a, 'b option) plifting" where
 "option_pl t =
   \<lparr> LUpd = (\<lambda> s a b . 
             (case b of
               Some b' \<Rightarrow> Some (LUpd t s a b')
-              | None \<Rightarrow> None))
+              | None \<Rightarrow> Some (LNew t s a)))
+  , LOut = (\<lambda> s b . (case b of Some b' \<Rightarrow> LOut t s b'))
+  , LBase = (\<lambda> s . None)\<rparr>"
+*)
+
+definition option_pl ::
+  "('x, 'a, 'b, 'z) plifting_scheme \<Rightarrow> ('x, 'a, 'b option) plifting" where
+"option_pl t =
+  \<lparr> LUpd = (\<lambda> s a b . 
+            (case b of
+              Some b' \<Rightarrow> Some (LUpd t s a b')
+              | None \<Rightarrow> Some (LNew t s a)))
   , LOut = (\<lambda> s b . (case b of Some b' \<Rightarrow> LOut t s b'
-                               | None \<Rightarrow> LOut t s (LBase t s)))
+                      | None \<Rightarrow> LOut t s (LBase t s)))
   , LBase = (\<lambda> s . None)\<rparr>"
 
 definition option_l ::
@@ -1041,7 +1053,7 @@ definition oalist_pl ::
                       Some k \<Rightarrow> (case get l k of 
                                   Some a \<Rightarrow> LOut t s a
                                   | None \<Rightarrow> LOut t s (LBase t s))
-                      | None \<Rightarrow> undefined))
+                      | None \<Rightarrow> LOut t s (LBase t s)))
   , LBase = (\<lambda> s . (case (f s) of
                       Some k \<Rightarrow> update k (LBase t s) empty
                       | None \<Rightarrow> empty)) \<rparr>"
