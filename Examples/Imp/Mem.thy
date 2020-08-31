@@ -58,7 +58,11 @@ definition mem_sem :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "mem_sem = 
   l_map_s id
     (prod_l ((prio_l_inc o option_l o triv_l) id_l)
-            (oalist_l mem_keys ((prio_l_inc o option_l o triv_l) id_l))) mem0_sem"
+            (oalist_l mem_keys ((prio_l_inc o option_l  o triv_l) id_l))) mem0_sem"
+
+definition test_lift :: "(syn, state0, state) lifting" where
+"test_lift = (prod_l ((prio_l_inc o option_l o triv_l) id_l)
+            (oalist_l mem_keys ((prio_l_inc o option_l o triv_l) id_l)))"
 
 definition test_store where
 "test_store = to_oalist
@@ -67,22 +71,34 @@ definition test_store where
   , (STR ''z'', Swr (-1))]"
 
 definition test_state where
-"test_state = (Swr (0 :: int), test_store)"
+"test_state = (Swr (3 :: int), test_store)"
 
 value "mem_sem (Sread (STR ''b'')) test_state"
 
 value "mem_sem (Swrite (STR ''b'')) test_state"
+declare [[ML_exception_trace]]
+value [code] "mem_sem (Swrite (STR ''f'')) test_state"
 
-value "mem_sem (Swrite (STR ''f'')) test_state"
+term "LOut ((prod_l ((prio_l_inc o option_l o triv_l) id_l)
+            (oalist_l mem_keys ((prio_l_inc o option_dfl_l (0) o triv_l) id_l))))
+(Swrite (STR ''f''))"
+
+
+
+value "LOut ((prod_l ((prio_l_inc o option_l o triv_l) id_l)
+            (oalist_l mem_keys ((prio_l_inc o option_dfl_l (2 :: int) o triv_l) id_l))))
+(Swrite (STR ''f'')) test_state"
+
+value "mem0_sem (Swrite (STR ''f'')) (0, 2)"
+
+value "LUpd test_lift (Swrite (STR ''f'')) (0, 2) test_state"
+
+value "LOut test_lift (Swrite (STR ''f'')) (LBase test_lift (Swrite (STR ''f'')))"
 
 
 definition test where "test = mem_sem (Sskip) test_state"
+definition test2 where "test2 = mem_sem (Swrite (STR ''f'')) test_state"
 
-(* thing we need to figure out
-   how to uniformly handle case where variable doesn't exist. *)
-value  "mem_sem (Sskip) test_state"
-
-export_code "test" in Eval
 
 
 end
