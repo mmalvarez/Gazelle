@@ -231,18 +231,24 @@ type_synonym ('k, 'v) recclos =
   "(('k list), ('v + unit)) alist"
 *)
 
+(* old version that does not check validity *)
+
 fun roalist_gather' :: "('k :: linorder, 'v) roalist' \<Rightarrow> 'k \<Rightarrow> ('k :: linorder, 'v) roalist'" where
 "roalist_gather' [] _ = []"
 | "roalist_gather' (([], vh)#l) k = roalist_gather' l k"
-| "roalist_gather' (((khh#kht), vh)#l) k = 
-  ( if k = khh then (kht, vh) # roalist_gather' l k
+| "roalist_gather' (([kh], (Inl _))#l) k = roalist_gather' l k"
+| "roalist_gather' (([kh], (Inr ()))#l) k = 
+  ( if k = kh then ([], Inr ())#roalist_gather' l k
+    else roalist_gather' l k)"
+| "roalist_gather' (((khh1#khh2#kht), vh)#l) k = 
+  ( if k = khh1 then (khh2#kht, vh) # roalist_gather' l k
     else roalist_gather' l k)"
 
 lemma roalist_gather'_elem :
   assumes Hord : "strict_order (map fst l)"
-  assumes H : "(kt, v) \<in> set (roalist_gather' l k)"
-  shows "(k#kt, v) \<in> set l" using Hord H
-proof(induction l arbitrary: k kt v)
+  assumes H : "(kt, v) \<in> set (roalist_gather' l kh)"
+  shows "(kh#kt, v) \<in> set l" using Hord H
+proof(induction l arbitrary: kh kt v)
   case Nil
   then show ?case by auto
 next
@@ -258,17 +264,151 @@ next
     fix h1 t1
     assume Cons' : "k1 = h1 # t1"
     then show ?thesis
-    proof(cases "h1 = k")
-      case False
-      then show ?thesis using Cons H1 Cons' Ord_tl by(auto)
+    proof(cases t1)
+      case Nil
+      then show ?thesis  
+      proof(cases v1)
+        case (Inl a)
+        then show ?thesis using Cons H1 Cons' Ord_tl Nil
+          by(auto)
+      next
+        case (Inr b)  
+        then show ?thesis
+        proof(cases "h1 = kh")
+          case False
+          then show ?thesis using Cons H1 Cons' Nil Ord_tl Inr by(auto)
+        next
+          case True
+          then show ?thesis using Cons.prems Cons.IH[OF Ord_tl] H1 Cons' Nil Inr
+            by(auto)
+        qed
+      qed
     next
-      case True
-      then show ?thesis using Cons.prems Cons.IH[OF Ord_tl] H1 Cons' by(auto)
+      fix h2 t2
+      assume Cons'' : "t1 = h2#t2"
+      then show ?thesis 
+      proof(cases "h1 = kh")
+        case False
+        then show ?thesis using Cons H1 Cons' Cons'' Ord_tl by(auto)
+      next
+        case True
+        then show ?thesis using Cons.prems Cons.IH[OF Ord_tl] H1 Cons' Cons'' by(auto)
+      qed
     qed
   qed
 qed
 
-lemma oalist_gather'_order :
+lemma roalist_gather'_elem'1 :
+  assumes Hord : "strict_order (map fst l)"
+  assumes H : "(kh1#kh2#kt, v) \<in> set l"
+  shows "(kh2#kt, v) \<in> set (roalist_gather' l kh1)"
+     using Hord H
+proof(induction l arbitrary: kh1 kh2 kt v)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons a l)
+  then have Ord_tl : "strict_order (map fst l)" using strict_order_tl by auto
+  obtain k1 v1 where H1 : "(a = (k1, v1))" by (cases a; auto)
+
+  show ?case
+  proof(cases k1)
+    assume Nil' : "k1 = []"
+    then show ?thesis using Cons H1 Ord_tl by auto
+  next
+    fix h1 t1
+    assume Cons' : "k1 = h1 # t1"
+    then show ?thesis
+    proof(cases t1)
+      case Nil
+      then show ?thesis  
+      proof(cases v1)
+        case (Inl a)
+        then show ?thesis using Cons H1 Cons' Ord_tl Nil
+          by(auto)
+      next
+        case (Inr b)  
+        then show ?thesis
+        proof(cases "h1 = kh1")
+          case False
+          then show ?thesis using Cons H1 Cons' Nil Ord_tl Inr by(auto)
+        next
+          case True
+          then show ?thesis using Cons.prems Cons.IH[OF Ord_tl] H1 Cons' Nil Inr
+            by(auto)
+        qed
+      qed
+    next
+      fix h2 t2
+      assume Cons'' : "t1 = h2#t2"
+      then show ?thesis 
+      proof(cases "h1 = kh1")
+        case False
+        then show ?thesis using Cons H1 Cons' Cons'' Ord_tl by(auto)
+      next
+        case True
+        then show ?thesis using Cons.prems Cons.IH[OF Ord_tl] H1 Cons' Cons'' by(auto)
+      qed
+    qed
+  qed
+qed
+
+lemma roalist_gather'_elem'2 :
+  assumes Hord : "strict_order (map fst l)"
+  assumes H : "(kh1#kt, Inr ()) \<in> set l"
+  shows "(kt, Inr ()) \<in> set (roalist_gather' l kh1)"
+     using Hord H
+proof(induction l arbitrary: kh1 kt)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons a l)
+  then have Ord_tl : "strict_order (map fst l)" using strict_order_tl by auto
+  obtain k1 v1 where H1 : "(a = (k1, v1))" by (cases a; auto)
+
+  show ?case
+  proof(cases k1)
+    assume Nil' : "k1 = []"
+    then show ?thesis using Cons H1 Ord_tl by auto
+  next
+    fix h1 t1
+    assume Cons' : "k1 = h1 # t1"
+    then show ?thesis
+    proof(cases t1)
+      case Nil
+      then show ?thesis  
+      proof(cases v1)
+        case (Inl a)
+        then show ?thesis using Cons H1 Cons' Ord_tl Nil
+          by(auto)
+      next
+        case (Inr b)  
+        then show ?thesis
+        proof(cases "h1 = kh1")
+          case False
+          then show ?thesis using Cons H1 Cons' Nil Ord_tl Inr by(auto)
+        next
+          case True
+          then show ?thesis using Cons.prems Cons.IH[OF Ord_tl] H1 Cons' Nil Inr
+            by(auto)
+        qed
+      qed
+    next
+      fix h2 t2
+      assume Cons'' : "t1 = h2#t2"
+      then show ?thesis 
+      proof(cases "h1 = kh1")
+        case False
+        then show ?thesis using Cons H1 Cons' Cons'' Ord_tl by(auto)
+      next
+        case True
+        then show ?thesis using Cons.prems Cons.IH[OF Ord_tl] H1 Cons' Cons'' by(auto)
+      qed
+    qed
+  qed
+qed
+
+lemma roalist_gather'_order :
   assumes Hord : "strict_order (map fst l)"
   shows "strict_order (map fst (roalist_gather' l k))" using Hord
 proof(induction l arbitrary: k)
@@ -286,32 +426,81 @@ next
     fix h1 t1
     assume Cons' : "k1 = h1 # t1"
     show ?thesis
-    proof(cases "h1 = k")
-      case False
-      then show ?thesis using Cons H1 Cons' Ord_tl by(auto)
-    next
-      case True
+    proof(cases t1)
+      case Nil
       show ?thesis
-      proof(cases "map fst (roalist_gather' l k)")
-        case Nil
-        then show ?thesis  using H1 Cons' True by(auto simp add:strict_order_def)
+      proof(cases v1)
+        case (Inl a)
+        then show ?thesis using Cons H1 Cons' Ord_tl Nil
+          by(auto)
       next
-        fix t2 l2
-        assume Cons'' : "map fst (roalist_gather' l k) = t2 # l2"
-        hence Cons''_in : "t2 \<in> set (map fst (roalist_gather' l k))" by auto
-        then obtain v2 where H2 : "(t2, v2) \<in> set (roalist_gather' l k)" by(auto)
-        have H2_l : "(k#t2, v2) \<in> set l" using roalist_gather'_elem[OF Ord_tl H2] by auto
-        then obtain idx where "idx < length l" "l ! idx = (k#t2, v2)" 
-          unfolding in_set_conv_nth
-          by auto
-
-        then have Lt : "t1 < t2"
-          using strict_order_unfold[OF Cons.prems, of "1 + idx" 0] H1 Cons' True
-          by(auto simp add: list_lo_lt)
-
-        show ?thesis using
-          strict_order_cons[OF Lt]
-          Cons.prems Cons.IH[OF Ord_tl, of k] H1 Cons' Cons'' True by(auto)
+        case (Inr b)  
+        then show ?thesis using Cons H1 Cons' Nil Ord_tl Inr 
+(* need an argument similar to cons case here. *)
+        proof(cases "h1 = k")
+          case False
+          then show ?thesis using Cons H1 Cons' Nil Ord_tl Inr by(auto)
+        next
+          case True
+          then show ?thesis
+          proof(cases "map fst (roalist_gather' l k)")
+            case Nil' : Nil
+            then show ?thesis  using H1 Cons' Nil Inr True by(auto simp add:strict_order_def)
+          next
+            case Cons'' : (Cons h2 t2)
+  
+            hence Cons'''_in : "h2 \<in> set (map fst (roalist_gather' l k))" by auto
+            then obtain v3 where H2 : "(h2, v3) \<in> set (roalist_gather' l k)" by(auto)
+            have H2_l : "(k#h2, v3) \<in> set l"
+              using roalist_gather'_elem[OF Ord_tl H2]  by auto
+            then obtain idx where "idx < length l" "l ! idx = (k#h2, v3)" 
+              unfolding in_set_conv_nth
+              by auto
+    
+            then have Lt : "t1 < h2"
+              using strict_order_unfold[OF Cons.prems, of "1 + idx" 0] H1 Cons' True
+              by(auto simp add: list_lo_lt)
+    
+            show ?thesis using
+              strict_order_cons[OF Lt]
+              Cons.prems Cons.IH[OF Ord_tl, of k] H1 Cons' Cons'' Inr Nil True
+              by(auto)
+          qed
+        qed
+      qed
+    next
+      fix h2 t2
+      assume Cons'' : "t1 = h2#t2"
+      then show ?thesis
+      proof(cases "h1 = k")
+        case False
+        then show ?thesis using Cons H1 Cons' Cons'' Ord_tl by(auto)
+      next
+        case True
+        show ?thesis
+        proof(cases "map fst (roalist_gather' l k)")
+          case Nil
+          then show ?thesis  using H1 Cons' Cons'' True by(auto simp add:strict_order_def)
+        next
+          fix h3 t3
+          assume Cons''' : "map fst (roalist_gather' l k) = h3 # t3"
+          hence Cons'''_in : "h3 \<in> set (map fst (roalist_gather' l k))" by auto
+          then obtain v3 where H2 : "(h3, v3) \<in> set (roalist_gather' l k)" by(auto)
+          have H2_l : "(k#h3, v3) \<in> set l"  (*roalist_gather'_elem[OF Ord_tl H2] by auto *)
+            using roalist_gather'_elem[OF Ord_tl H2]  by auto
+          then obtain idx where "idx < length l" "l ! idx = (k#h3, v3)" 
+            unfolding in_set_conv_nth
+            by auto
+  
+          then have Lt : "t1 < h3"
+            using strict_order_unfold[OF Cons.prems, of "1 + idx" 0] H1 Cons' True
+            by(auto simp add: list_lo_lt)
+  
+          show ?thesis using
+            strict_order_cons[OF Lt]
+            Cons.prems Cons.IH[OF Ord_tl, of k] H1 Cons' Cons'' Cons''' True
+            by(auto)
+        qed
       qed
     qed
   qed
@@ -853,6 +1042,7 @@ next
   qed
 qed
 
+(* need to factor out second lemma here *)
 lift_definition roalist_delete_clos :: "('k :: linorder) \<Rightarrow> ('k :: linorder, 'v) roalist \<Rightarrow> ('k, 'v) roalist"
 is roalist_delete_clos'
 proof-
@@ -935,6 +1125,131 @@ proof-
     using C1 C2 by auto
 qed
 
+fun roalist_gather'_check :: 
+  "('k :: linorder, 'v) roalist' \<Rightarrow> 'k \<Rightarrow> ('k :: linorder, 'v) roalist' option" where
+"roalist_gather'_check l k =
+  (case map_of l [k] of
+    Some (Inr ()) \<Rightarrow> Some (roalist_gather' l k)
+    | _ \<Rightarrow> None)"
+
+
+lemma roalist_gather'_correct :
+  assumes H1 : "strict_order (map fst l)"
+  and H2 : "roalist_valid l"
+  and H3 : "roalist_gather'_check l k = Some l'"
+  shows "roalist_valid l'" 
+proof(rule roalist_valid_intro)
+  have M :  "map_of l [k] = Some (Inr ())" using H3 
+    by(cases "map_of l [k]"; auto split:sum.splits)
+
+  have Lin : "([k], Inr ()) \<in> set l" using map_of_SomeD[OF M] by auto
+
+  have Gath : "map_of (roalist_gather' l k) [] = Some (Inr ())"
+    using map_of_is_SomeI[OF strict_order_distinct[OF roalist_gather'_order[OF H1]]
+                             roalist_gather'_elem'2[OF H1 Lin]] by auto
+
+  show "map_of l' [] = Some (Inr ())" using H3 M
+    roalist_gather'_elem'2[OF H1 Lin] Gath
+    by(auto split:unit.splits)
+next
+  fix pref v sufh suf
+  assume H : "map_of l' pref = Some (Inl v) "
+  have M :  "map_of l [k] = Some (Inr ())" using H3 
+    by(cases "map_of l [k]"; auto split:sum.splits)
+
+  have H' : "(pref, Inl v) \<in> set (roalist_gather' l k)"
+    using H H3 M map_of_SomeD[OF H] 
+    by(auto split:unit.splits)
+
+  have H'l : "(k#pref, Inl v) \<in> set l"
+    using roalist_gather'_elem[OF H1 H'] by auto
+
+  hence Lval : "map_of l (k#pref) = Some (Inl v)"
+    using map_of_is_SomeI[OF strict_order_distinct[OF H1]] by auto
+
+  show "map_of l' (pref @ sufh # suf) = None"
+  proof(cases "map_of l' (pref @ sufh # suf)")
+    case None thus ?thesis by auto
+  next
+    case (Some bad)
+
+    have False' : "(pref @ sufh # suf, bad) \<in> set (roalist_gather' l k)"
+      using H H3 M map_of_SomeD[OF Some] 
+      by(auto split:unit.splits)
+
+    have False'l : "(k#pref @ sufh # suf, bad) \<in> set l"
+      using roalist_gather'_elem[OF H1 False'] by auto
+
+    hence Lval' : "map_of l (k#pref @ sufh # suf) = Some (bad)"
+      using map_of_is_SomeI[OF strict_order_distinct[OF H1]] by auto
+
+    have "map_of l ((k#pref) @ sufh # suf) = None"
+      using roalist_valid_elim2[OF H2 Lval] by auto
+
+    hence False using Lval' by auto
+    thus ?thesis by auto
+  qed
+next
+  fix pref x sufh suf
+  assume H : "map_of l' (pref @ sufh # suf) = Some x"
+  have M :  "map_of l [k] = Some (Inr ())" using H3 
+    by(cases "map_of l [k]"; auto split:sum.splits)
+
+  have H' : "(pref@ sufh # suf, x) \<in> set (roalist_gather' l k)"
+    using H H3 M map_of_SomeD[OF H] 
+    by(auto split:unit.splits)
+
+  have H'l : "(k#pref @ sufh # suf, x) \<in> set l"
+    using roalist_gather'_elem[OF H1 H'] by auto
+
+  hence Lval : "map_of l (k#pref @ sufh # suf) = Some (x)"
+    using map_of_is_SomeI[OF strict_order_distinct[OF H1]] by auto
+
+  have Lval' : "map_of l (k#pref) = Some (Inr ())"
+    using roalist_valid_elim3[OF H2] Lval by(auto)
+
+  have Prefl : "(k#pref, Inr ()) \<in> set l"
+    using map_of_SomeD[OF Lval'] by auto
+
+  have Prefl_l' : "(pref, Inr ()) \<in> set (roalist_gather' l k)"
+    using roalist_gather'_elem'2[OF H1 Prefl] by auto
+
+  hence Gath : "map_of (roalist_gather' l k) pref = Some (Inr ())"
+    using map_of_is_SomeI[OF strict_order_distinct[OF roalist_gather'_order[OF H1]] Prefl_l']
+    by auto
+
+  show "map_of l' pref = Some (Inr ())"
+    using H3 M Gath by(auto split:unit.splits)
+qed
+
+
+(* need a generalized induction that talks about a prefix *)
+
+
+lift_definition roalist_gather :: "('k :: linorder, 'v) roalist \<Rightarrow> 'k \<Rightarrow> ('k, 'v) roalist option"
+is roalist_gather'_check
+proof-
+  fix k :: "'k"
+  fix list :: "('k :: linorder, 'v) roalist'"
+  assume H : "strict_order (map fst list) \<and> roalist_valid list"
+  hence H1 : "strict_order (map fst list)" and H2 : "roalist_valid list" by auto
+
+  have C1 : "strict_order (map fst (roalist_gather' list k))"
+    using roalist_gather'_order[OF H1] by auto
+
+  show "pred_option (\<lambda>xs. strict_order (map fst xs) \<and> roalist_valid xs)
+        (roalist_gather'_check list k)"
+  proof(cases "roalist_gather'_check list k")
+    case None
+    then show ?thesis by(auto)
+  next
+    case (Some a)
+
+    have C2 : "roalist_valid a" using roalist_gather'_correct[OF H1 H2 Some] by auto
+    then show ?thesis using Some C1
+      by(auto split:option.split_asm sum.split_asm unit.split_asm)
+  qed
+qed
 
 (*
 (* idea: we know we can find a sup, but we need to prove that it also
@@ -1027,7 +1342,7 @@ next
     qed
   qed
 qed
-
+*)
 
 instantiation roalist :: (linorder, Pordc) Pordc
 begin
@@ -1096,7 +1411,8 @@ instance proof
         proof cases
           case 1
           (* contradiction: sup can't be sup. *)
-          (* need smart delete here - delete won't be guaranteed to be valid.
+          (* need smart delete here - delete closure if its a closure, value if it's a value
+              delete won't be guaranteed to be valid.
              (or, maybe just in this case, it will? *)
           have BadSup : "list_leq sup (str_ord_delete pref sup)"
           proof(rule Is_sup'[OF str_ord_delete_correct[OF Sup_ord]])
