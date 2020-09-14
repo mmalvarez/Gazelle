@@ -809,12 +809,12 @@ fun is_prefix :: "'k list \<Rightarrow> 'k list \<Rightarrow> bool" where
    that is, if there is nothing at a particular prefix, we must add it (?)
     (or, does validity handle this?)
 *)
-fun rc_check_prefixes' :: "('key, 'value) roalist' \<Rightarrow> 'key list \<Rightarrow> bool" where
-"rc_check_prefixes' [] _ = True"
-| "rc_check_prefixes' ((kh, (Inr ()))#t) k = rc_check_prefixes' t k"
-| "rc_check_prefixes' ((kh, (Inl v))#t) k =
+fun roalist_check_prefixes' :: "('key, 'value) roalist' \<Rightarrow> 'key list \<Rightarrow> bool" where
+"roalist_check_prefixes' [] _ = True"
+| "roalist_check_prefixes' ((kh, (Inr ()))#t) k = roalist_check_prefixes' t k"
+| "roalist_check_prefixes' ((kh, (Inl v))#t) k =
    (if is_prefix kh k then False
-    else rc_check_prefixes' t k)"
+    else roalist_check_prefixes' t k)"
 
 lift_definition roalist_leq :: "('key :: linorder, 'value :: Pord) roalist \<Rightarrow> ('key, 'value) roalist \<Rightarrow> bool"
 is "list_leq :: ('key :: linorder, 'value :: Pord) roalist' \<Rightarrow> ('key, 'value) roalist' \<Rightarrow> bool" .
@@ -1132,6 +1132,21 @@ fun roalist_gather'_check ::
     Some (Inr ()) \<Rightarrow> Some (roalist_gather' l k)
     | _ \<Rightarrow> None)"
 
+(* 
+  empty list \<Rightarrow> id  
+  if we are a prefix, we include the result
+  otherwise we don't
+*)
+
+(*
+| "roalist_gathers' (([kh], (Inl _))#l) k = roalist_gathers' l k"
+| "roalist_gathers' (([kh], (Inr ()))#l) k = 
+  ( if k = kh then ([], Inr ())#roalist_gathers' l k
+    else roalist_gathers' l k)"
+| "roalist_gather' (((khh1#khh2#kht), vh)#l) k = 
+  ( if k = khh1 then (khh2#kht, vh) # roalist_gathers' l k
+    else roalist_gathers' l k)"
+*)
 
 lemma roalist_gather'_correct :
   assumes H1 : "strict_order (map fst l)"
@@ -1344,6 +1359,75 @@ next
 qed
 *)
 
+(* elem lemma needed. *)
+
+fun roalist_gathers' ::
+  "('k :: linorder, 'v) roalist' \<Rightarrow> 'k list \<Rightarrow> ('k :: linorder, 'v) roalist'" where
+"roalist_gathers' [] _ = []"
+| "roalist_gathers' ((kh, vh)#l) k = 
+  ( if is_prefix k kh then ((drop (length k) kh, vh) # roalist_gathers' l k)
+    else roalist_gathers' l k)"
+
+(*
+lemma roalist_gather'_elem :
+  assumes Hord : "strict_order (map fst l)"
+  assumes H : "(kt, v) \<in> set (roalist_gather' l kh)"
+  shows "(kh#kt, v) \<in> set l" using Hord H
+proof(induction l arbitrary: kh kt v)
+  case Nil
+  then show ?case by auto
+next
+
+
+lemma roalist_gathers'_order :
+  assumes H1 : "strict_order (map fst l)"
+  shows "strict_order (map fst (roalist_gathers' l k))" using H1
+proof(induction l arbitrary: k)
+  case Nil
+  then show ?case 
+    by(auto)
+next
+  case (Cons h t)
+  obtain kh vh where Hd : "(h = (kh, vh))" by(cases h; auto)
+  have Hord' : "strict_order (map fst t)"
+    using strict_order_tl Cons by auto
+
+  then show ?case using Cons
+  proof(cases "map fst (roalist_gathers' t k)")
+    case Nil' : Nil
+    then show ?thesis using Cons Hd 
+      by(auto simp add:strict_order_def)
+  next
+    case Cons' : (Cons h2 t2)
+(*
+    obtain kh2 vh2 where Hd2 : "(h2 = (kh2, vh2))" 
+      by(cases h2; auto)
+*)
+    then show ?thesis using Cons Hd Cons'
+      apply(auto)
+  qed
+    apply(auto)
+qed
+*)
+
+(* intuition: start by using completeness of "vanilla" oalists.
+   however this upper bound may not be valid according to roalist rules,
+   so we will need to find a possibly greater upper bound, and then
+   show that anytihng between this and the "vanilla" sup
+   is going to violate roalist rules.
+*)
+instantiation roalist :: (linorder, Pordc) Pordc
+begin
+instance proof 
+  fix a b :: "('a :: linorder, 'b :: Pordc) roalist"
+  assume H : "has_ub {a, b}"
+
+  show "has_sup {a, b}" using H unfolding has_ub_def has_sup_def is_sup_def is_least_def is_ub_def pleq_roalist
+sorry
+qed
+end
+
+(*
 instantiation roalist :: (linorder, Pordc) Pordc
 begin
 
@@ -1414,7 +1498,9 @@ instance proof
           (* need smart delete here - delete closure if its a closure, value if it's a value
               delete won't be guaranteed to be valid.
              (or, maybe just in this case, it will? *)
-          have BadSup : "list_leq sup (str_ord_delete pref sup)"
+(* problem - we need to be able to deeply delete closures. our delete closure function
+   only deletes closures at the top level. *)
+          have BadSup : "list_leq sup (roalist_delete_clos' pref sup)"
           proof(rule Is_sup'[OF str_ord_delete_correct[OF Sup_ord]])
           proof(rule list_leqI[OF Sup_ord str_ord_delete_correct[OF Sup_ord]])
             fix k v
@@ -1459,6 +1545,7 @@ instance proof
   qed
 qed
 end
+*)
 
 lift_definition roa_empty :: "('k :: linorder, 'v) roalist"
 is "[([], Inr ())] :: ('k, 'v) roalist'"
@@ -1490,35 +1577,67 @@ instance proof
     qed
   qed
 qed
-(*
-lift_definition rc_check_prefixes :: "('key :: linorder, 'value) recclos \<Rightarrow> 'key list \<Rightarrow> bool"
-is rc_check_prefixes' .
-*)
-(*
-fun recclos_bsup' :: "('key :: linorder, 'value :: Mergeable) recclos \<Rightarrow>
-                      ('key, 'value) recclos' \<Rightarrow> ('key, 'value) recclos" where
-"recclos_bsup' l [] = l"
-| "recclos_bsup' l ((rkh, Inl rv)#rt) =
-   (case get l rkh of
-      Some (Inl lv) \<Rightarrow> recclos_bsup' (update rkh (Inl [^ lv, rv ^]) l) rt
-      | Some (Inr ()) \<Rightarrow> recclos_bsup' l rt
+end
+
+lift_definition roalist_check_prefixes :: "('key :: linorder, 'value) roalist \<Rightarrow> 'key list \<Rightarrow> bool"
+is roalist_check_prefixes' .
+
+(* idea: this works like list bsup, except that
+   we need to make sure we don't merge a value and a closure together. *)
+fun roalist_bsup' :: "('key :: linorder, 'value :: Mergeable) roalist' \<Rightarrow>
+                      ('key, 'value) roalist' \<Rightarrow> ('key, 'value) roalist'" where
+"roalist_bsup' l [] = l"
+| "roalist_bsup' l ((rkh, Inl rv)#rt) =
+   (case map_of l rkh of
+      Some (Inl lv) \<Rightarrow> roalist_bsup' (str_ord_update rkh (Inl [^ lv, rv ^]) l) rt
+      | Some (Inr ()) \<Rightarrow> roalist_bsup' l rt
       | None \<Rightarrow>
-        (if rc_check_prefixes l rkh
-         then recclos_bsup' (update rkh (Inl rv) l) rt
-         else recclos_bsup' l rt))"
-| "recclos_bsup' l ((rkh, Inr ())#rt) =
-    (case get l rkh of
-      Some (Inl lv) \<Rightarrow> recclos_bsup' l rt
-      | Some (Inr ()) \<Rightarrow> recclos_bsup' l rt
-      | None \<Rightarrow> (if rc_check_prefixes l rkh
-                 then recclos_bsup' (update rkh (Inr ()) l) rt
-                 else recclos_bsup' l rt))"
-*)
-(*
-lift_definition recclos_bsup :: "('key :: linorder, 'value :: Mergeable) recclos \<Rightarrow>
-                                 ('key, 'value) recclos \<Rightarrow> ('key, 'value) recclos"
-is recclos_bsup' .
-*)
+        (if roalist_check_prefixes' l rkh
+         then roalist_bsup' (str_ord_update rkh (Inl rv) l) rt
+         else roalist_bsup' l rt))"
+| "roalist_bsup' l ((rkh, Inr ())#rt) =
+    (case map_of l rkh of
+      Some (Inl lv) \<Rightarrow> roalist_bsup' l rt
+      | Some (Inr ()) \<Rightarrow> roalist_bsup' l rt
+      | None \<Rightarrow> (if roalist_check_prefixes' l rkh
+                 then roalist_bsup' (str_ord_update rkh (Inr ()) l) rt
+                 else roalist_bsup' l rt))"
+
+
+lift_definition roalist_bsup :: "('key :: linorder, 'value :: Mergeable) roalist \<Rightarrow>
+                                 ('key, 'value) roalist \<Rightarrow> ('key, 'value) roalist"
+is roalist_bsup' 
+proof-
+  show "\<And>list1 list2.
+       strict_order (map fst list1) \<and>
+       roalist_valid list1 \<Longrightarrow>
+       strict_order (map fst list2) \<and>
+       roalist_valid list2 \<Longrightarrow>
+       strict_order (map fst (roalist_bsup' list1 list2)) \<and>
+       roalist_valid (roalist_bsup' list1 list2)" sorry
+qed
+  
+instantiation roalist :: (linorder, Mergeable) Mergeable
+begin
+
+definition bsup_roalist :
+"[^ x, y ^] = roalist_bsup x y"
+
+(* this one is going to be tricky. Hopefully the structure ends up not so different from
+   the bsup proof for "vanilla" oalists, but there will likely have to be nontrivial changes
+   (perhaps substantial) *)
+instance proof
+  fix a b :: "('key :: linorder, 'value :: Mergeable) roalist"
+  show "is_bsup a b [^ a, b ^]"
+    sorry
+qed
+end
+
+instantiation roalist :: (linorder, Mergeable) Mergeableb
+begin
+instance proof qed
+end
+
 (*
 definition test_rc1 :: "(String.literal, int md_triv option) recclos'" where
 "test_rc1 = 
