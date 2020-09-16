@@ -565,8 +565,8 @@ proof-
   qed
 qed
 *)
-fun roalist_get :: "('k :: linorder, 'v) roalist' \<Rightarrow> 'k \<Rightarrow> ('v + ('k, 'v) roalist') option" where
-"roalist_get r k =
+fun roalist_get' :: "('k :: linorder, 'v) roalist' \<Rightarrow> 'k \<Rightarrow> ('v + ('k, 'v) roalist') option" where
+"roalist_get' r k =
   (case map_of r [k] of
     None \<Rightarrow> None
     | Some (Inl v) \<Rightarrow> Some (Inl v)
@@ -706,25 +706,23 @@ next
     qed
   qed
 qed
-(*
-fun rc_update_v :: "('key :: linorder) \<Rightarrow> 'value \<Rightarrow> ('key, 'value) recclos \<Rightarrow> ('key, 'value) recclos" where
-"rc_update_v k v l =
-  update [k] (Inl v) (rc_delete_clos k l)"
+
+fun roalist_update_v' :: "('key :: linorder) \<Rightarrow> 'value \<Rightarrow> ('key, 'value) roalist' \<Rightarrow> ('key, 'value) roalist'" where
+"roalist_update_v' k v l =
+  str_ord_update [k] (Inl v) (roalist_delete_clos' k l)"
 
 (* unsafe because it doesn't check for presence of a value *)
-fun rc_update_clos_unsafe' :: "('key :: linorder) \<Rightarrow> ('key, 'value) recclos' \<Rightarrow> ('key, 'value) recclos \<Rightarrow> ('key, 'value) recclos" where
-"rc_update_clos_unsafe' k [] l = l"
-| "rc_update_clos_unsafe' k ((clkh,clvh)#clt) l =
-   update (k#clkh) clvh (rc_update_clos_unsafe' k clt l)"
+fun roalist_update_clos_unsafe' :: "('key :: linorder) \<Rightarrow> ('key, 'value) roalist' \<Rightarrow> ('key, 'value) roalist' \<Rightarrow> ('key, 'value) roalist'" where
+"roalist_update_clos_unsafe' k [] l = l"
+| "roalist_update_clos_unsafe' k ((clkh,clvh)#clt) l =
+   str_ord_update (k#clkh) clvh (roalist_update_clos_unsafe' k clt l)"
 
-lift_definition rc_update_clos_unsafe :: "('key :: linorder) \<Rightarrow> ('key, 'value) recclos' \<Rightarrow> ('key, 'value) recclos \<Rightarrow> ('key, 'value) recclos" 
-is rc_update_clos_unsafe' .
-
-fun rc_update_clos :: "('key :: linorder) \<Rightarrow> ('key, 'value) recclos' \<Rightarrow> ('key, 'value) recclos \<Rightarrow> ('key, 'value) recclos"
+fun roalist_update_clos' :: "('key :: linorder) \<Rightarrow> ('key, 'value) roalist' \<Rightarrow> ('key, 'value) roalist' \<Rightarrow> ('key, 'value) roalist'"
   where
-"rc_update_clos k cl l =
-  update [k] (Inr ()) (rc_update_clos_unsafe k cl (rc_delete_clos k l))"
-*)
+"roalist_update_clos' k cl l =
+  str_ord_update [k] (Inr ()) (roalist_update_clos_unsafe' k cl (roalist_delete_clos' k l))"
+
+
 (* cannot store a value and a closure at the same key *)
 definition roalist_valid :: "('k :: linorder, 'v) roalist' \<Rightarrow> bool" where
 "roalist_valid l =
@@ -802,6 +800,27 @@ fun is_prefix :: "'k list \<Rightarrow> 'k list \<Rightarrow> bool" where
 | "is_prefix (h1#t1) (h2#t2) =
    (if h1 = h2 then is_prefix t1 t2
     else False)"
+
+
+lift_definition roalist_update_v :: 
+  "('key :: linorder) \<Rightarrow> 'value \<Rightarrow> ('key, 'value) roalist \<Rightarrow> ('key, 'value) roalist" 
+is roalist_update_v' sorry
+
+lift_definition roalist_update_clos ::
+  "('key :: linorder) \<Rightarrow> ('key, 'value) roalist \<Rightarrow> ('key, 'value) roalist \<Rightarrow> ('key, 'value) roalist" 
+is roalist_update_clos' sorry
+
+lift_definition roalist_get ::
+"('k :: linorder, 'v) roalist \<Rightarrow> 'k \<Rightarrow> ('v + ('k, 'v) roalist) option"
+is roalist_get' sorry
+
+fun roalist_update :: 
+  "('key :: linorder) \<Rightarrow> ('value + ('key, 'value) roalist) \<Rightarrow> 
+        ('key, 'value) roalist \<Rightarrow> ('key, 'value) roalist"
+  where
+"roalist_update k (Inl v) l = roalist_update_v k v l"
+| "roalist_update k (Inr c) l = roalist_update_clos k c l"
+
 
 (* idea
    given a key, make sure there is no value stored in any prefix *)
@@ -1616,7 +1635,9 @@ proof-
        strict_order (map fst (roalist_bsup' list1 list2)) \<and>
        roalist_valid (roalist_bsup' list1 list2)" sorry
 qed
-  
+
+
+
 instantiation roalist :: (linorder, Mergeable) Mergeable
 begin
 
