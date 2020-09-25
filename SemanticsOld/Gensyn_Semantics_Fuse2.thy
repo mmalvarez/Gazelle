@@ -48,15 +48,7 @@ locale Gensyn_Semantics_Base_Sig =
                       ('xr) gs_result \<Rightarrow>
                       bool" 
 
-locale Gensyn_Semantics_Base_SigO =
-fixes  base_sem  :: " 'g \<Rightarrow> 
-                      'b \<Rightarrow>
-                      'mstate \<Rightarrow> 
-                      'mstate \<Rightarrow> 
-                      childpath \<Rightarrow>
-                      ('b, 'r, 'g) gensyn \<Rightarrow>  
-                      ('xr) gs_result \<Rightarrow>
-                      bool" 
+locale Gensyn_Semantics_Base_SigO = Gensyn_Semantics_Base_Sig
 begin
 definition "base_semO \<equiv> base_sem"
 declare base_semO_def [simp]
@@ -72,15 +64,7 @@ locale Gensyn_Semantics_Rec_Sig =
                     ('xr) gs_result \<Rightarrow>
                     bool" 
 
-locale Gensyn_Semantics_Rec_SigO =
-  fixes rec_sem :: "'g \<Rightarrow>
-                    'r \<Rightarrow>
-                    'mstate \<Rightarrow>
-                    'mstate \<Rightarrow>
-                    childpath \<Rightarrow>
-                    ('b, 'r, 'g) gensyn \<Rightarrow>
-                    ('xr) gs_result \<Rightarrow>
-                    bool" 
+locale Gensyn_Semantics_Rec_SigO = Gensyn_Semantics_Rec_Sig
 
 begin
 definition "rec_semO \<equiv> rec_sem"

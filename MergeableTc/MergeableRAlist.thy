@@ -222,8 +222,9 @@ end
 type_synonym ('k, 'v) alist = "('k * 'v) list"
 
 (* want 'v option here. problem - is this going to create issues for our data ordering? *)
-type_synonym ('k, 'v) roalist' =
-  "(('k list) * ('v + unit)) list"
+(* 'd stores variable names (useful for representing closures *)
+type_synonym ('k, 'v, 'd) roalist' =
+  "(('k list) * ('v + 'd)) list"
 
 (* also this lacks a canonical representation, I think *)
 (*
@@ -233,12 +234,12 @@ type_synonym ('k, 'v) recclos =
 
 (* old version that does not check validity *)
 
-fun roalist_gather' :: "('k :: linorder, 'v) roalist' \<Rightarrow> 'k \<Rightarrow> ('k :: linorder, 'v) roalist'" where
+fun roalist_gather' :: "('k :: linorder, 'v, 'd) roalist' \<Rightarrow> 'k \<Rightarrow> ('k :: linorder, 'v, 'd) roalist'" where
 "roalist_gather' [] _ = []"
 | "roalist_gather' (([], vh)#l) k = roalist_gather' l k"
 | "roalist_gather' (([kh], (Inl _))#l) k = roalist_gather' l k"
-| "roalist_gather' (([kh], (Inr ()))#l) k = 
-  ( if k = kh then ([], Inr ())#roalist_gather' l k
+| "roalist_gather' (([kh], (Inr d))#l) k = 
+  ( if k = kh then ([], Inr d)#roalist_gather' l k
     else roalist_gather' l k)"
 | "roalist_gather' (((khh1#khh2#kht), vh)#l) k = 
   ( if k = khh1 then (khh2#kht, vh) # roalist_gather' l k
@@ -355,8 +356,8 @@ qed
 
 lemma roalist_gather'_elem'2 :
   assumes Hord : "strict_order (map fst l)"
-  assumes H : "(kh1#kt, Inr ()) \<in> set l"
-  shows "(kt, Inr ()) \<in> set (roalist_gather' l kh1)"
+  assumes H : "(kh1#kt, Inr d) \<in> set l"
+  shows "(kt, Inr d) \<in> set (roalist_gather' l kh1)"
      using Hord H
 proof(induction l arbitrary: kh1 kt)
   case Nil
@@ -506,6 +507,7 @@ next
   qed
 qed
 
+
 (*
 lift_definition rc_gather :: "('k :: linorder, 'v) recclos \<Rightarrow> 'k \<Rightarrow> ('k, 'v) recclos"
 is rc_gather'
@@ -565,15 +567,15 @@ proof-
   qed
 qed
 *)
-fun roalist_get' :: "('k :: linorder, 'v) roalist' \<Rightarrow> 'k \<Rightarrow> ('v + ('k, 'v) roalist') option" where
+fun roalist_get' :: "('k :: linorder, 'v, 'd) roalist' \<Rightarrow> 'k \<Rightarrow> ('v + ('d * ('k, 'v, 'd) roalist')) option" where
 "roalist_get' r k =
   (case map_of r [k] of
     None \<Rightarrow> None
     | Some (Inl v) \<Rightarrow> Some (Inl v)
-    | Some (Inr ()) \<Rightarrow> Some (Inr (roalist_gather' r k)))"
+    | Some (Inr d) \<Rightarrow> Some (Inr (d, roalist_gather' r k)))"
 
 (* delete a closure *)
-fun roalist_delete_clos' :: "('k :: linorder) \<Rightarrow> ('k :: linorder, 'v) roalist' \<Rightarrow> ('k, 'v) roalist'" where
+fun roalist_delete_clos' :: "('k :: linorder) \<Rightarrow> ('k :: linorder, 'v, 'd) roalist' \<Rightarrow> ('k, 'v, 'd) roalist'" where
 "roalist_delete_clos' _ [] = []"
 | "roalist_delete_clos' k (([], vh)#t) = ([], vh)#roalist_delete_clos' k t"
 | "roalist_delete_clos' k (((khh#kht), vh)#t) =
@@ -589,6 +591,7 @@ lemma strict_order_consE :
   shows "h1 < h2"
   using strict_order_unfold[OF H, of 1 0] by auto
 
+(*
 lemma roalist_delete_clos'_elem :
   assumes Hord : "strict_order (map fst l)"
   assumes H : "(k', v) \<in> set (roalist_delete_clos' k l)"
@@ -648,6 +651,7 @@ next
     qed
   qed  
 qed
+*)
 (*
 lemma roalist_delete_clos'_notelem1 :
   assumes Hord : "strict_order (map fst l)"
@@ -679,6 +683,7 @@ next
   qed
 qed
 *)
+(*
 lemma roalist_delete_clos'_notelem2 :
   assumes Hord : "strict_order (map fst l)"
   shows "(kh#kt) \<notin> set (map fst (roalist_delete_clos' kh l))" using Hord
@@ -706,49 +711,56 @@ next
     qed
   qed
 qed
+*)
 
-fun roalist_update_v' :: "('key :: linorder) \<Rightarrow> 'value \<Rightarrow> ('key, 'value) roalist' \<Rightarrow> ('key, 'value) roalist'" where
+fun roalist_update_v' :: "('key :: linorder) \<Rightarrow> 'value \<Rightarrow> ('key, 'value, 'd) roalist' \<Rightarrow> ('key, 'value, 'd) roalist'" where
 "roalist_update_v' k v l =
   str_ord_update [k] (Inl v) (roalist_delete_clos' k l)"
 
 (* unsafe because it doesn't check for presence of a value *)
-fun roalist_update_clos_unsafe' :: "('key :: linorder) \<Rightarrow> ('key, 'value) roalist' \<Rightarrow> ('key, 'value) roalist' \<Rightarrow> ('key, 'value) roalist'" where
+fun roalist_update_clos_unsafe' :: "('key :: linorder) \<Rightarrow> ('key, 'value, 'd) roalist' \<Rightarrow> ('key, 'value, 'd) roalist' \<Rightarrow> ('key, 'value, 'd) roalist'" where
 "roalist_update_clos_unsafe' k [] l = l"
 | "roalist_update_clos_unsafe' k ((clkh,clvh)#clt) l =
    str_ord_update (k#clkh) clvh (roalist_update_clos_unsafe' k clt l)"
 
-fun roalist_update_clos' :: "('key :: linorder) \<Rightarrow> ('key, 'value) roalist' \<Rightarrow> ('key, 'value) roalist' \<Rightarrow> ('key, 'value) roalist'"
+fun roalist_update_clos' :: "('key :: linorder) \<Rightarrow> 'd \<Rightarrow> ('key, 'value, 'd) roalist' \<Rightarrow> ('key, 'value, 'd) roalist' \<Rightarrow> ('key, 'value, 'd) roalist'"
   where
-"roalist_update_clos' k cl l =
-  str_ord_update [k] (Inr ()) (roalist_update_clos_unsafe' k cl (roalist_delete_clos' k l))"
+"roalist_update_clos' k d cl l =
+  str_ord_update [k] (Inr d) (roalist_update_clos_unsafe' k cl (roalist_delete_clos' k l))"
 
 
 (* cannot store a value and a closure at the same key *)
-definition roalist_valid :: "('k :: linorder, 'v) roalist' \<Rightarrow> bool" where
+
+definition roalist_valid :: "('k :: linorder, 'v, 'd) roalist' \<Rightarrow> bool" where
 "roalist_valid l =
-  (map_of l [] = Some (Inr ()) \<and>
+  ((\<exists> d . map_of l [] = Some (Inr d)) \<and>
    (\<forall> pref v sufh suf . map_of l pref = Some (Inl v) \<longrightarrow>
             map_of l (pref@(sufh#suf)) = None) \<and>
    (\<forall> pref x sufh suf . map_of l (pref@(sufh#suf)) = Some x \<longrightarrow>
-            map_of l pref = Some (Inr ())))"
+            (\<exists> d . map_of l pref = Some (Inr d))))"
 
 lemma roalist_valid_intro :
-  assumes H1 : "map_of l [] = Some (Inr ())"
+  assumes H1 : "map_of l [] = Some (Inr x)"
   assumes H2 : "\<And> pref v sufh suf . map_of l pref = Some (Inl v) \<Longrightarrow> 
                                     map_of l (pref @ (sufh # suf)) = None"
   assumes H3 : "\<And> pref x sufh suf . map_of l (pref @ sufh # suf) = Some x \<Longrightarrow>
-                                    map_of l pref = Some (Inr ())"
+                                    (\<exists> d . map_of l pref = Some (Inr ()))"
   shows "roalist_valid l" using H1 H2 H3 unfolding roalist_valid_def
   by(blast)
 
-typedef (overloaded) ('key, 'value) roalist =
-  "{xs :: (('key :: linorder), 'value) roalist' .
+(* TODO: bogus *)
+typedef (overloaded) ('key, 'value, 'd) roalist =
+  "{xs :: (('key :: linorder), 'value, 'd option) roalist' .
        strict_order (map fst xs) \<and> roalist_valid xs}"
   morphisms impl_of Oalist
 proof
-  have C1: "strict_order (map fst ([([], Inr ())] :: ('key, 'value) roalist'))"
+  show "[([], Inr None)]  \<in> 
+          { rc :: (('key :: linorder), 'value, 'd option) roalist' . strict_order (map fst rc) \<and> roalist_valid rc }" 
+    sorry
+(*
+  have C1: "strict_order (map fst ([([], Inr ())] :: ('key, 'value, 'd) roalist'))"
     by(auto simp add:strict_order_def)
-  have C2 : "roalist_valid  ([([], Inr ())] :: ('key, 'value) roalist')"
+  have C2 : "roalist_valid  ([([], Inr ())] :: ('key, 'value, 'd) roalist')"
   proof(rule roalist_valid_intro)
     show "map_of [([], Inr ())] [] = Some (Inr ())"
       by(auto)
@@ -771,10 +783,12 @@ proof
           { rc :: (('key :: linorder), 'value) roalist' . strict_order (map fst rc) \<and> roalist_valid rc }" 
     using C1 C2 by auto
 qed
+*)
+qed
 
 
 setup_lifting type_definition_roalist
-
+(*
 lemma roalist_valid_elim1 :
   assumes Hv : "roalist_valid l"
   shows "map_of l [] = Some (Inr ())"
@@ -791,7 +805,7 @@ lemma roalist_valid_elim3 :
   assumes H : "map_of l (pref @ (sufh#suf)) = Some x"
   shows "map_of l pref = Some (Inr ())"
   using Hv H unfolding roalist_valid_def by blast
-
+*)
 
 (* check if first argument is a prefix of the second *)
 fun is_prefix :: "'k list \<Rightarrow> 'k list \<Rightarrow> bool" where
@@ -802,25 +816,75 @@ fun is_prefix :: "'k list \<Rightarrow> 'k list \<Rightarrow> bool" where
     else False)"
 
 
+lift_definition roalist_gather :: "('k :: linorder, 'v, 'd) roalist \<Rightarrow> 'k \<Rightarrow> ('k, 'v, 'd) roalist"
+is roalist_gather' sorry
+
+
 lift_definition roalist_update_v :: 
-  "('key :: linorder) \<Rightarrow> 'value \<Rightarrow> ('key, 'value) roalist \<Rightarrow> ('key, 'value) roalist" 
+  "('key :: linorder) \<Rightarrow> 'value \<Rightarrow> ('key, 'value, 'd) roalist \<Rightarrow> ('key, 'value, 'd) roalist" 
 is roalist_update_v' sorry
 
 lift_definition roalist_update_clos ::
-  "('key :: linorder) \<Rightarrow> ('key, 'value) roalist \<Rightarrow> ('key, 'value) roalist \<Rightarrow> ('key, 'value) roalist" 
+  "('key :: linorder) \<Rightarrow> 'd option \<Rightarrow> ('key, 'value, 'd) roalist \<Rightarrow> ('key, 'value, 'd) roalist \<Rightarrow> ('key, 'value, 'd) roalist" 
 is roalist_update_clos' sorry
-
+(*
 lift_definition roalist_get ::
-"('k :: linorder, 'v) roalist \<Rightarrow> 'k \<Rightarrow> ('v + ('k, 'v) roalist) option"
+"('k :: linorder, 'v, 'd) roalist \<Rightarrow> 'k \<Rightarrow> ('v + ('d option * ('k, 'v, 'd) roalist)) option"
 is roalist_get' sorry
+*)
+
+fun roalist_is_val' :: "('k :: linorder, 'v, 'd) roalist' \<Rightarrow> 'k \<Rightarrow> bool option" where
+"roalist_is_val' r k =
+  (case map_of r [k] of
+    None \<Rightarrow> None
+    | Some (Inl _) \<Rightarrow> Some True
+    | Some (Inr _) \<Rightarrow> Some False)"
+
+lift_definition roalist_is_val ::
+  "('k :: linorder, 'v, 'd) roalist \<Rightarrow> 'k \<Rightarrow> bool option"
+is roalist_is_val' .
+
+fun roalist_get_v' :: "('k :: linorder, 'v, 'd) roalist' \<Rightarrow> 'k \<Rightarrow> 'v option" where
+"roalist_get_v' l k =
+  (case map_of l [k] of
+    Some (Inl v) \<Rightarrow> Some v
+    | _ \<Rightarrow> None)"
+
+
+lift_definition roalist_get_v :: "('k :: linorder, 'v, 'd) roalist \<Rightarrow> 'k \<Rightarrow> 'v option"
+is roalist_get_v' .
+
+fun roalist_get_d' :: "('k :: linorder, 'v, 'd option) roalist' \<Rightarrow> 'k \<Rightarrow> 'd option" where
+"roalist_get_d' l k =
+  (case map_of l [k] of
+    Some (Inr d) \<Rightarrow> d
+    | _ \<Rightarrow> None)"
+
+term "roalist_get_d'"
+
+lift_definition roalist_get_d :: "('k :: linorder, 'v, 'd) roalist \<Rightarrow> 'k \<Rightarrow> 'd option"
+is "roalist_get_d' :: ('k :: linorder, 'v, 'd option) roalist' \<Rightarrow> 'k \<Rightarrow> 'd option" .
+
+
+fun roalist_get :: "('k :: linorder, 'v, 'd) roalist \<Rightarrow> 'k \<Rightarrow> 
+  ('v + ('d option * ('k, 'v, 'd) roalist)) option"
+  where
+"roalist_get r k =
+  (case roalist_get_v r k of
+    Some v \<Rightarrow> Some (Inl v)
+    | None \<Rightarrow> Some (Inr( (roalist_get_d r k), (roalist_gather r k))))"
+
+
 
 fun roalist_update :: 
-  "('key :: linorder) \<Rightarrow> ('value + ('key, 'value) roalist) \<Rightarrow> 
-        ('key, 'value) roalist \<Rightarrow> ('key, 'value) roalist"
+  "('key :: linorder) \<Rightarrow> ('value + ('key, 'value, 'd) roalist) \<Rightarrow> 
+        ('key, 'value, 'd) roalist \<Rightarrow> ('key, 'value, 'd) roalist"
   where
 "roalist_update k (Inl v) l = roalist_update_v k v l"
-| "roalist_update k (Inr c) l = roalist_update_clos k c l"
-
+| "roalist_update k (Inr c) l = 
+    (case roalist_get l k of
+      Some (Inr (d, _)) \<Rightarrow> roalist_update_clos k d c l
+      | _ \<Rightarrow> roalist_update_clos k None c l)"
 
 (* idea
    given a key, make sure there is no value stored in any prefix *)
@@ -828,15 +892,16 @@ fun roalist_update ::
    that is, if there is nothing at a particular prefix, we must add it (?)
     (or, does validity handle this?)
 *)
-fun roalist_check_prefixes' :: "('key, 'value) roalist' \<Rightarrow> 'key list \<Rightarrow> bool" where
+fun roalist_check_prefixes' :: "('key, 'value, 'd) roalist' \<Rightarrow> 'key list \<Rightarrow> bool" where
 "roalist_check_prefixes' [] _ = True"
-| "roalist_check_prefixes' ((kh, (Inr ()))#t) k = roalist_check_prefixes' t k"
+| "roalist_check_prefixes' ((kh, (Inr d))#t) k = roalist_check_prefixes' t k"
 | "roalist_check_prefixes' ((kh, (Inl v))#t) k =
    (if is_prefix kh k then False
     else roalist_check_prefixes' t k)"
 
-lift_definition roalist_leq :: "('key :: linorder, 'value :: Pord) roalist \<Rightarrow> ('key, 'value) roalist \<Rightarrow> bool"
-is "list_leq :: ('key :: linorder, 'value :: Pord) roalist' \<Rightarrow> ('key, 'value) roalist' \<Rightarrow> bool" .
+lift_definition roalist_leq :: "('key :: linorder, 'value :: Pord, 'd :: Pord) roalist \<Rightarrow> ('key, 'value, 'd :: Pord) roalist \<Rightarrow> bool"
+is "list_leq :: ('key :: linorder, 'value :: Pord, 'd option) roalist' \<Rightarrow> 
+                ('key, 'value, 'd option) roalist' \<Rightarrow> bool" .
 
 (* copied and edited proofs from MergeableAList. *)
 lemma list_leq_refl : 
@@ -932,6 +997,19 @@ proof-
   show "l1 = l2"  using strict_order_set_eq[OF Hord1 Hord2 Conc'] by auto 
 qed
 
+lift_definition roa_empty :: "('k :: linorder, 'v, 'd) roalist"
+is "[([], Inr None)] :: ('k, 'v, 'd option) roalist'"
+  by(auto simp add: strict_order_def roalist_valid_def)
+
+value "roalist_get (roa_empty :: (String.literal, unit, unit) roalist) (String.implode ''a'') "
+
+fun roa_make_vs :: "('k :: linorder  * 'v) list \<Rightarrow> ('k, 'v, 'd) roalist" where
+"roa_make_vs [] = roa_empty"
+| "roa_make_vs ((kh, vh)#t) =
+    roalist_update_v kh vh (roa_make_vs t)"
+  
+
+(*
 instantiation roalist :: (linorder, Pord) Pord
 begin
 
@@ -1754,6 +1832,7 @@ fun rc_merge :: "('k :: linorder, 'v) recclos \<Rightarrow> ('k, 'v) recclos \<R
           defer (* contradictory hyp *)
           defer (* this should be easy - from hyp can prove tails are leq *)
   qed
+*)
 *)
 *)
 end

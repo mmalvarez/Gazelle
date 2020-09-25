@@ -103,14 +103,6 @@ definition seq_sem :: "syn \<Rightarrow> state' \<Rightarrow> state'" where
                 | Some cp' \<Rightarrow> (sk, GRPath cp', Up xcp)))))
   | _ \<Rightarrow> st)"
 
-(* problem - need to keep "skip" from
-   ovewriting the "other" at a higher priority *)
-(* we need to generalize our "prio" liftings
-   so that they can make different decisions based on syntax *)
-
-(* we may not need to do this yet, but probably will at some point.
-   for now we sort of "cheat" around this by combining
-   next and seq into one language *)
 
 type_synonym state = "gensyn_skel md_triv option *
                       unit gs_result md_triv option md_prio *
@@ -121,9 +113,27 @@ term "(prod_l (option_l (triv_l (id_l)))
               (prio_l_inc (option_l (triv_l (id_l))))
               (prio_l_inc (option_l (triv_l (id_l))))))"
 
+instantiation gensyn :: (Bogus) Bogus begin
+definition gensyn_bogus :
+"bogus = G bogus []"
+instance proof qed
+end
+
+instantiation gs_result :: (_) Bogus begin
+definition gsx_result_bogus :
+"bogus = GRUnhandled"
+instance proof qed
+end
+
+instantiation dir :: Bogus begin
+definition dir_bogus :
+"bogus = Down"
+instance proof qed
+end
+
 definition seq_sem_l :: " syn \<Rightarrow> state \<Rightarrow> state" where
 "seq_sem_l  =
-  l_map2' id
+  l_map_s id
     (prod_l (option_l (triv_l (id_l)))
              (prod_l 
               (prio_l_inc (option_l (triv_l (id_l))))

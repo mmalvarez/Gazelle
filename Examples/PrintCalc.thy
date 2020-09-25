@@ -35,7 +35,7 @@ datatype print =
   | Pskip
 
 
-type_synonym state = "int md_triv option md_prio * int list md_triv option"
+type_synonym state = "int md_triv option md_prio * int list md_triv option md_prio"
 
 datatype syn =
   Sadd int
@@ -73,24 +73,16 @@ definition print_sem :: "print \<Rightarrow> print_st \<Rightarrow> print_st" wh
          | Preset \<Rightarrow> (sti, [])
          | Pskip \<Rightarrow> (sti, stl)))"
 
-abbreviation id_l'' :: "('x, 'a, 'a) lifting" where
-"id_l'' \<equiv> plifting_extend (id_pl :: ('x, 'a, 'a) plifting) (\<lambda> s a . a)"
 definition print_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
   "print_sem_l = 
     l_map_s print_trans
-            (prod_l ((prio_l_zero (option_l (triv_l (id_l'' :: (print, int, int) lifting)))))
-                    ((option_l (triv_l (id_l'' :: (print, int list, int list) lifting))))) print_sem"
-
-
-definition id_l' :: "('x, 'a, 'a) lifting" where
-"id_l' = plifting_extend (id_pl :: ('x, 'a, 'a) plifting) (\<lambda> s a . a)"
-
+            (prod_l ((prio_l_zero (option_l (triv_l (id_l :: (print, int, int) lifting)))))
+                    (prio_l_inc (option_l (triv_l (id_l :: (print, int list, int list) lifting))))) print_sem"
 
 
 value "(plifting.extend id_pl \<lparr> LPost = (\<lambda> s a . a) \<rparr>) :: (print, int, int) lifting"
 term "id_l"
 value "id_l :: (print, int, int) lifting"
-value "id_l'' :: (print, int, int) lifting"
 (*
 definition calc_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "calc_sem_l =
@@ -101,7 +93,7 @@ definition calc_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 definition calc_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "calc_sem_l =
   l_map_s calc_trans
-    (fst_l (prio_l_inc (option_l (triv_l (id_l'' :: (calc, int, int ) lifting))))) calc_sem"
+    (fst_l (prio_l_inc (option_l (triv_l (id_l :: (calc, int, int ) lifting))))) calc_sem"
 
 
 
@@ -110,8 +102,10 @@ definition print_calc_lc :: "(syn, state) langcomp" where
   \<lparr> Sem1 = calc_sem_l
   , Sem2 = print_sem_l \<rparr>"
 
-value "pcomp print_calc_lc (Smul 9) (mdp 0 (Some (mdt 2)), Some (mdt []))"
-value "pcomp' print_calc_lc (Smul 9) (mdp 0 (Some (mdt 2)), Some (mdt []))"
+value "pcomp print_calc_lc (Smul 9) ((mdp 0 (Some (mdt 2)), (mdp 0 (Some (mdt [])))))"
+value "pcomp' print_calc_lc (Smul 9) ((mdp 0 (Some (mdt 2))), (mdp 0 (Some (mdt []))))"
+
+value "[^ None, (Some (mdt [1 :: nat])) ^]"
 
 (* TODO: prove the theorems in LiftUtils needed to make this work 
    should be doable - just too tedious for now*)

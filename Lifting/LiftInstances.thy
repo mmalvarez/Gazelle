@@ -15,7 +15,6 @@ begin
 (*
 identity lifting
 *)
-print_classes
 class Bogus =
   fixes bogus :: "'a"
 
@@ -33,6 +32,48 @@ instantiation int :: Bogus begin
 definition int_bogus : "bogus = (0 :: int)"
 instance proof qed
 end
+
+instantiation unit :: Bogus begin
+definition unit_bogus : "bogus = ()"
+instance proof qed
+end
+
+instantiation prod :: (Bogus, Bogus) Bogus begin
+definition prod_bogus : "bogus = (bogus, bogus)"
+instance proof qed
+end
+
+instantiation sum :: (Bogus, _) Bogus begin
+definition sum_bogus : "bogus = Inl bogus"
+instance proof qed
+end
+
+instantiation option :: (_) Bogus begin
+definition option_bogus : "bogus = None"
+instance proof qed
+end
+
+instantiation list :: (_) Bogus begin
+definition list_bogus : "bogus = []"
+instance proof qed
+end
+
+instantiation md_triv :: (Bogus) Bogus begin
+definition md_triv_bogus : "bogus = mdt bogus"
+instance proof qed
+end
+
+instantiation md_prio :: (Bogus) Bogus begin
+definition md_prio_bogus : "bogus = mdp 0 bogus"
+instance proof qed
+end
+
+instantiation oalist :: (linorder, _) Bogus begin
+definition oalist_bogus : "bogus = (empty :: (_, _) oalist)"
+instance proof qed
+end
+
+
 
 definition id_l' ::
   "('a, 'a) lifting'" where
@@ -370,7 +411,7 @@ definition prio_l_keep :: "('x, 'a, 'b) lifting \<Rightarrow> ('x, 'a, 'b md_pri
 
 definition prio_l_inc :: "('x, 'a, 'b) lifting \<Rightarrow> ('x, 'a, 'b md_prio) lifting" where
 "prio_l_inc =
-  prio_l (\<lambda> _ . 0) (\<lambda> _ x . 1 + x)"
+  prio_l (\<lambda> _ . 1) (\<lambda> _ x . 1 + x)"
 
 definition prio_l_inc2 :: "('x, 'a, 'b) lifting \<Rightarrow> ('x, 'a, 'b md_prio) lifting" where
 "prio_l_inc2 =
@@ -593,6 +634,45 @@ next
     by(auto simp add: snd_l_def snd_pl_def snd_pv_def plifting.defs)
 qed
 
+(* for Mergeable lifting targets, we can use bsup to combine two liftings
+   for this to be well defined:
+   - merged items must have LUB (bsup commutes)
+   - LPost needs to commute *)
+(* TODO: need to generalize lifting laws to accommodate this. In particular:
+   - Out x <[ (Upd x y)
+   - Somehow characterize what we are allowed to inject (similar to LOutS?)
+      - or, just state existence of LUB as "side condition"
+*)
+(* NB: this breaks idempotence. we should really rephrase this (and probably all other
+ones) without referenc to Post. (See LiftUtilsNoPost.thy) *)
+definition merge_pl ::
+  "('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme \<Rightarrow>
+   ('x, 'a2, 'b :: Mergeable, 'z2) lifting_scheme \<Rightarrow>
+   ('x, 'a1 * 'a2, 'b) plifting" where
+"merge_pl t1 t2 =
+  \<lparr> LUpd =
+    (\<lambda> s a b . 
+      (case a of (a1, a2) \<Rightarrow>
+        [^ LPost t1 s (LUpd t1 s a1 b), LPost t2 s (LUpd t2 s a2 b) ^]))
+  , LOut =
+    (\<lambda> s b . (LOut t1 s b, LOut t2 s b))
+  , LBase =
+    (\<lambda> s . [^ LBase t1 s, LBase t2 s ^]) \<rparr>"
+
+definition merge_l ::
+  "('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme \<Rightarrow>
+   ('x, 'a2, 'b, 'z2) lifting_scheme \<Rightarrow>
+   ('x, 'a1 * 'a2, 'b) lifting" where
+"merge_l t1 t2 =
+  plifting.extend (merge_pl t1 t2)
+  \<lparr> LPost = (\<lambda> s b . b) \<rparr>"
+
+(*
+definition merge_pv ::
+  "('x, 'a1, 'b :: Mergeable, 'z1) pliftingv_scheme \<Rightarrow>
+   ('x, 'a2, 'b, 'z2) pliftingv_scheme \<Rightarrow>
+   ('x, 'a1 * 'a2, 'b) pliftingv" 
+*)
 definition prod_l' ::
   "('a1, 'b1) lifting' \<Rightarrow>
    ('a2, 'b2) lifting' \<Rightarrow>
@@ -1059,6 +1139,7 @@ variable maps
 (* simplest case for lifting into variable map. only allows 
    dispatch based on syntax. *)
 (* TODO: is this definition of out going to cause problems? *)
+(*
 definition oalist_pl ::
    "('x \<Rightarrow> ('k :: linorder) option) \<Rightarrow>
     ('x, 'a, 'b, 'z) plifting_scheme \<Rightarrow>
@@ -1079,6 +1160,29 @@ definition oalist_pl ::
   , LBase = (\<lambda> s . (case (f s) of
                       Some k \<Rightarrow> update k (LBase t s) empty
                       | None \<Rightarrow> empty)) \<rparr>"
+*)
+
+definition oalist_pl ::
+   "('x \<Rightarrow> ('k :: linorder) option) \<Rightarrow>
+    ('x, 'a, 'b, 'z) plifting_scheme \<Rightarrow>
+    ('x, 'a, ('k, 'b) oalist) plifting" where
+"oalist_pl f t =
+  \<lparr> LUpd = (\<lambda> s a l .
+            (case (f s) of
+              Some k \<Rightarrow>
+                (case get l k of
+                  None \<Rightarrow> (update k (LNew t s a) l)
+                  | Some v \<Rightarrow> (update k (LUpd t s a v) l))
+              | None \<Rightarrow> l))
+  , LOut = (\<lambda> s l . (case (f s) of
+                      Some k \<Rightarrow> (case get l k of 
+                                  Some a \<Rightarrow> LOut t s a
+                                  | None \<Rightarrow> LOut t s (LBase t s))
+                      | None \<Rightarrow> LOut t s (LBase t s)))
+  , LBase = (\<lambda> s . (case (f s) of
+                      Some k \<Rightarrow> update k (LBase t s) empty
+                      | None \<Rightarrow> empty)) \<rparr>"
+
 
 (* TODO: if we can't find the key, what do we do with LPost?
    I think either obvious choice (LPost on LBase, or leave empty) meets spec *)

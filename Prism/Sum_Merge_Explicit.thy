@@ -29,7 +29,6 @@ sublocale Sum_Merge_Explicit_Spec \<subseteq> Sum_Merge_Spec "sum_merge_explicit
   apply(case_tac a, auto)
     apply(case_tac a, auto)
    apply(case_tac a, auto)
-apply(case_tac a, auto)
   done
 
 interpretation Sum_Merge_Explicit_Itp : Sum_Merge_Explicit_Spec

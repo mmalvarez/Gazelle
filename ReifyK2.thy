@@ -10,6 +10,18 @@ datatype 'a reicon =
   | RSum "'a + 'a"
   | ROption "'a option"
 
+(* idea: have a "more explicit" dictionary of fmap arguments
+(perhaps we can even maintain as a typeclass)
+*)
+
+datatype optTag =
+  OT
+
+datatype listTag =
+  LT
+
+
+
 datatype reity =
   RTNat
   | RTUnit
@@ -50,6 +62,31 @@ datatype reiX =
   | RX1 "rei1"
   | RX0 "rei"
 
+datatype 't reiXt =
+  RXt3 "rei3"
+  | RXt2 "rei2"
+  | RXt1 "rei1"
+  | RXt0 "rei"
+
+datatype ('b) reifunctors =
+  RFOption "reiX option"
+  | RFList "reiX list"
+
+
+(* idea: go from a rei tagged with "option nat" to
+a rei functors tagged with "option nat" *)
+class reifd =
+  fixes intoRf :: "rei \<Rightarrow> ('a) reifunctors"
+  fixes outRf :: "'a reifunctors \<Rightarrow> rei"
+
+
+type_synonym reiX' = "rei3 + rei2 + rei1 + rei"
+
+abbreviation "RX3' \<equiv> Inl :: _ \<Rightarrow> reiX'"
+abbreviation "RX2' \<equiv> (Inr o Inl) :: _ \<Rightarrow> reiX'"
+abbreviation "RX1' \<equiv> (Inr o Inr o Inl) :: _ \<Rightarrow> reiX'"
+abbreviation "RX0' \<equiv> (Inr o Inr o Inr) :: _ \<Rightarrow> reiX'"
+
 (* new idea:
 - reify into reiX
 - need an easy way to coerce reiX's into rei1/2/3?
@@ -78,7 +115,33 @@ class reidenX =
   fixes reifyX :: "'a \<Rightarrow> reiX"
   fixes denoteX :: "reiX \<Rightarrow> 'a"
   fixes level :: "'a itself \<Rightarrow> 'a gNat"
+
+class reidenXt =
+  fixes reifyXt :: "'a \<Rightarrow> 'a reiXt"
+  fixes denoteXt :: "'a reiXt \<Rightarrow> 'a"
+  fixes levelt :: "'a itself \<Rightarrow> 'a gNat"
+
+class reidenX' =
+  fixes reifyX' :: "'a \<Rightarrow> reiX'" 
+  fixes denoteX' :: "reiX' \<Rightarrow> 'a"
+  fixes level' :: "'a itself \<Rightarrow> 'a gNat"
   (*fixes inhab :: "'a itself \<Rightarrow> 'a"*)
+
+
+instantiation nat :: reidenXt
+begin
+definition rnt0_def : "reifyXt n = RXt0 (RNat n)"
+definition dnt0_def : "denoteXt x = (case x of RXt0 (RNat n) \<Rightarrow> n
+                                    | RXt1 (R1 (RNat n)) \<Rightarrow> n
+                                    | RXt2 (R2 (R1 (RNat n))) \<Rightarrow> n
+                                    | RXt3 (R3 (R2 (R1 (RNat n)))) \<Rightarrow> n
+                               )"
+definition levelnt_def : "levelt = (\<lambda> (x :: nat itself) . GN 0)"
+(* standard *)
+instance proof qed
+end
+
+value "denoteXt (reifyXt (0 :: nat))"
 
 (* need "squish" functions to normalize our reified things *)
 (* idea: have a function that goes 3 \<Rightarrow> 2 if possible
@@ -140,7 +203,6 @@ datatype 'a higho =
   | Func "'a \<Rightarrow> 'a"
 *)
 
-term "huh"
 
 (* TODO: see if we can reduce the boilerplate in these denotations *)
 instantiation rei3 :: reidenX
@@ -157,6 +219,30 @@ definition rl3_def : "level = (\<lambda> (x :: rei3 itself) . GN 3)"
 
 instance proof qed
 end
+
+fun fmap1 :: "('a \<Rightarrow> 'b) \<Rightarrow> (reiX \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> reiX) \<Rightarrow> 'a reifunctors \<Rightarrow> 'b reifunctors" where
+"fmap1 f t t' (RFOption r) =
+  (case r of
+     None \<Rightarrow> RFOption None
+     | Some r' \<Rightarrow> RFOption (Some (t' (f (t r')))))"
+
+
+(*
+instantiation rei3 :: reidenX'
+begin
+print_context
+definition rr3_def : "reifyX x = RX3 x"
+definition dr3_def : "denoteX x = 
+    (case x of (RX3 x') \<Rightarrow> x'
+               | (RX2 x') \<Rightarrow> R3 x'
+               | (RX1 x') \<Rightarrow> R3 (R2 x')
+               | (RX0 x') \<Rightarrow> R3 (R2 (R1 x')))"
+definition rl3_def : "level = (\<lambda> (x :: rei3 itself) . GN 3)"
+(*definition ri3_def : "inhab = (\<lambda> (x :: rei3 itself) . R3 (R2 (R1 (RUnit ()))))"*)
+
+instance proof qed
+end
+*)
 
 instantiation rei2 :: reidenX
 begin
@@ -197,6 +283,7 @@ definition dr0_def : "denoteX x =
     (case x of 
             RX3 (R3 (R2 (R1 x'))) \<Rightarrow> x'
           | RX2 (R2 (R1 x')) \<Rightarrow> x'
+          | RX1 (R1 x') \<Rightarrow> x'
           |  RX0 (x') \<Rightarrow> x')"
 definition rl0_def : "level = (\<lambda> (x :: rei itself) . GN 0)"
 (*definition ri0_def : "inhab = (\<lambda> (x :: rei itself) . (((RUnit ()))))"*)
@@ -208,17 +295,27 @@ end
 instantiation nat :: reidenX
 begin
 definition rn0_def : "reifyX n = RX0 (RNat n)"
-definition dn0_def : "denoteX x = (case x of RX0 (RNat n) \<Rightarrow> n)"
+definition dn0_def : "denoteX x = (case x of RX0 (RNat n) \<Rightarrow> n
+                                    | RX1 (R1 (RNat n)) \<Rightarrow> n
+                                    | RX2 (R2 (R1 (RNat n))) \<Rightarrow> n
+                                    | RX3 (R3 (R2 (R1 (RNat n)))) \<Rightarrow> n
+                               )"
 definition leveln_def : "level = (\<lambda> (x :: nat itself) . GN 0)"
 (* standard *)
 instance proof qed
 end
 
+value "fmap1 (\<lambda> x . x + 1 :: nat) (denoteX) (reifyX) (RFOption (Some (reifyX (0 :: nat))))"
+
 
 instantiation unit :: reidenX
 begin
 definition ru0_def : "reifyX n = RX0 (RUnit n)"
-definition du0_def : "denoteX x = (case x of RX0 (RUnit n) \<Rightarrow> n)"
+definition du0_def : "denoteX x = 
+    (case x of RX0 (RUnit n) \<Rightarrow> n
+          | RX1 (R1 (RUnit n)) \<Rightarrow> n
+          | RX2 (R2  (R1 (RUnit n))) \<Rightarrow> n
+          | RX3 (R3 (R2 (R1 (RUnit n)))) \<Rightarrow> n)"
 definition levelu_def : "level = (\<lambda> (x :: unit itself) . GN 0)"
 (* standard *)
 instance proof qed
@@ -398,6 +495,7 @@ definition dfun1_def :
       | (RX2 (RF2 f)) \<Rightarrow> (\<lambda> (x :: 'a) . denoteX (reifyX (f (denoteX (reifyX x)))) :: 'b)
       | (RX1 (RF1 f)) \<Rightarrow> (\<lambda> (x :: 'a) . denoteX (reifyX (f (denoteX (reifyX x)))) :: 'b))" 
 
+
 definition dlevel_def :
   "level (tf :: ('a \<Rightarrow> 'b) itself) =
     (case (level (TYPE('a))) of
@@ -406,11 +504,26 @@ definition dlevel_def :
 instance proof qed
 end
 
-value [simp] "denoteX (reifyX (RUnit ()))"
+value [simp] "denoteX (reifyX (RUnit ())) :: unit"
+
+value [simp] "denoteX (reifyX (R1 (RUnit ()))) :: unit"
+
 
 value [simp] "reifyX (\<lambda> (x :: unit) . ())"
 
-value [simp] "(denoteX (reifyX (\<lambda> (x :: unit) . ())) :: (unit \<Rightarrow> unit)) ()"
+
+value [simp] "(denoteX (reifyX (\<lambda> (x :: nat) . x + 1))) (2 :: nat) :: nat"
+
+value [simp] "denoteX (reifyX (2 :: nat)) + (1 :: nat)"
+
+
+datatype 'a reipack = RP "(reiX )"
+
+term "\<lambda> y . denoteX "
+
+abbreviation do_denote :: "'a reipack \<Rightarrow> 'a" where
+  "do_denote x \<equiv> (case x of (RP x') \<Rightarrow> (denoteX x' :: 'a))"
+
 (*
     RX1 (RF1 (\<lambda> (x :: rei) . ((f (RX0 x))))))
      RX1 (RF1 (\<lambda> (x ) . (denoteX (reifyX (f (denoteX (reifyX x)))))))"
@@ -427,8 +540,7 @@ definition dfun1_def :
         RX3 (RF3 f) \<Rightarrow> (\<lambda> x . denoteX (RX3 (f (case (reifyX x) of
         RX2 x' \<Rightarrow> x')))))"
       *)
-instance proof qed
-end
+
 
 value "(reifyX (\<lambda> (x :: nat) . x + 1))"
 

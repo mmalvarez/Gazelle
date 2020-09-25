@@ -37,6 +37,7 @@ definition C ::
   where
 "C s xp i = (C' s (rpair xp i) othercases)"
 
+
 (* TODO: where to do force? *)
 definition LInst :: "'xp \<Rightarrow> 'i \<Rightarrow> ('i, 'xp, 'xs) mpackf" where
 "LInst xp i = force (C ''Inst'' (rxp xp) (rxi i))"

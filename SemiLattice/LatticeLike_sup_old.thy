@@ -154,6 +154,7 @@ definition is_bub :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" w
                 lleq' s' s)))"
 *)
 
+(*
 definition is_bub :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
 "is_bub a b s =
   (lleq a s \<and>
@@ -161,6 +162,15 @@ definition is_bub :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" w
                 LatticeLike_Weak_Spec lleq' \<longrightarrow>
                 LatticeLike.is_sup lleq' {a, b} s' \<longrightarrow>
                 lleq' s' s)))"
+*)
+
+definition is_bub :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
+"is_bub a b s =
+  (lleq a s \<and>
+    ((\<forall> lleq' s' . ord_leq lleq lleq' \<longrightarrow>
+                LatticeLike_Weak_Spec lleq' \<longrightarrow>
+                LatticeLike.is_ub lleq' {a, b} s' \<longrightarrow>
+                lleq' s' s')))"
 
 (*
 
@@ -207,10 +217,7 @@ lemma bsup_sup :
   apply(simp add: LatticeLike_Weak_Spec_axioms)
   apply(rotate_tac -1)
    apply(drule_tac x = s in spec) apply(auto)
-     apply(simp add:is_ub_def)
-  apply(simp add:is_ub_def)
-   apply(rule_tac leq_trans) apply(simp) apply(simp)
-
+   apply(rule_tac leq_trans) apply(simp)
   
 
   apply(rotate_tac -5)

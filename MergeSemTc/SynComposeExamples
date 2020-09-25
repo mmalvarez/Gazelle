@@ -1,0 +1,10 @@
+theory SynComposeExamples imports Compose "../MergeableTc/MergeableInstances" HOL.Lifting
+begin
+
+type_synonym ex_syno = "(int md_triv option md_prio * int list md_triv option)"
+
+
+typedef example = "UNIV :: ex_syn set"
+  by auto
+
+end

@@ -579,8 +579,10 @@ interpretation Test0 : Mergeable_Spec test0_lleq test0_bsup
       defer
       apply(case_tac s'; auto)
 
+
   defer
 
+  apply(clarify)
 (* 
    apply(simp add: LatticeLike_Weak_Spec_def) 
   apply(case_tac "lleq' (Some a) None") 

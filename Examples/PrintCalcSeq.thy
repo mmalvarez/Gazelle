@@ -1,5 +1,5 @@
 theory PrintCalcSeq
-  imports PrintCalc "../MergeSemTc/Seq" "../Semantics/Gensyn_Sem" "../Lifting/LangComp"
+  imports PrintCalc "Seq" "../Semantics/Gensyn_Sem" "../Lifting/LangComp"
 begin
 
 type_synonym syn = "Seq.syn + PrintCalc.syn"

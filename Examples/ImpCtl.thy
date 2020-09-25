@@ -1,5 +1,5 @@
-theory Imp
-  imports "../MergeSemTc/Seq" "../Semantics/Gensyn_Sem" "../MergeableTc/MergeableAList"
+theory ImpCtl
+  imports "../Semantics/Gensyn_Sem" "../MergeableTc/MergeableAList"
           "../MergeableTc/Mergeable" "../MergeableTc/MergeableInstances"
           "../Lifting/LiftUtils" "../Lifting/LiftInstances" "PrintCalcSeq"
 begin
@@ -103,7 +103,7 @@ term "prod_l (id_l) ((snd_l (snd_l id_l)))"
 
 definition printcalcseq_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "printcalcseq_sem_l =
-  l_map2' printcalc_trans
+  l_map_s printcalc_trans
      (prod_l id_l (snd_l id_l))
      (pcomp print_calc_seq_lc)"
 
@@ -119,7 +119,7 @@ definition imp_prio :: "(syn' \<Rightarrow> nat)" where
 don't always want inc2 *)
 definition imp_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "imp_sem_l =
-  l_map2' imp_trans
+  l_map_s imp_trans
     (prod_l (prod_l (option_l (triv_l id_l))
                     (prod_l (prio_l_case_inc imp_prio (option_l (triv_l id_l)))
                             (prio_l_case_inc imp_prio (option_l (triv_l id_l)))))
@@ -128,7 +128,7 @@ definition imp_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 
 definition cond_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "cond_sem_l =
-  l_map2' cond_trans
+  l_map_s cond_trans
     (snd_l (prod_l (prio_l_inc (option_l (triv_l id_l))) 
                    (fst_l (prio_l_keep (option_l (triv_l (id_l)))))))
   cond_sem"
@@ -145,7 +145,7 @@ definition imp_lc :: "(syn, state) langcomp" where
 
 definition sem_final :: "(syn, state) x_sem'" where
 "sem_final =
-  l_map2' id
+  l_map_s id
     (prod_fan_l (l_reverse (fst_l (prod_l (option_l (triv_l id_l))
                                           (fst_l (prio_l_keep (option_l (triv_l (id_l)))))))) id_l)
     (pcomp imp_lc)"
@@ -169,7 +169,7 @@ definition initial :: "state" where
      , (mdp 0 (Some (mdt (GRPath []))))
      , mdp 0 (Some (mdt Down)))
   , (mdp 0 (Some (mdt False)))
-  , (mdp 0 (Some (mdt 2)), Some (mdt [])))"
+  , (mdp 0 (Some (mdt 2)), (mdp 0 (Some (mdt [])))))"
 
 
 definition testprog' :: "syn gensyn" where
@@ -182,7 +182,7 @@ definition initial' :: "state" where
      , (mdp 0 (Some (mdt (GRPath []))))
      , mdp 0 (Some (mdt Down)))
   , (mdp 0 (Some (mdt False)))
-  , (mdp 0 (Some (mdt 2)), Some (mdt [])))"
+  , (mdp 0 (Some (mdt 2)), (mdp 0 (Some (mdt [])))))"
 
 term "(l_reverse (fst_l (prod_l (option_l (triv_l id_l))
                                           (fst_l (prio_l_keep (option_l (triv_l (id_l))))))))"
@@ -201,15 +201,25 @@ value "gsx testprog [] initial 900"
 
 value "gensyn_cp_parent (G () []) []"
 
-declare [[show_types = false]]
+definition testprog2 :: "syn gensyn" where
+"testprog2 = G (Spc (Inl Sseq))
+            [G (Spc (Inr (Sreset 8))) []
+            , G (Simp (Swhile))
+                [ G (Scond Sgtz) []
+                ,  G (Spc (Inr (Ssub 3))) []]]"
 
+value "gsx testprog2 [] initial 900"
+
+
+declare [[show_types = false]]
+(*
 lemma what:
   fixes x
   assumes H : "gsx testprog' [] initial' 3 = x"
   shows False using H
   apply(simp add:gsx_def xsem_def testprog'_def initial'_def sem_final_def
-        prod_fan_l_def l_reverse_def fst_l_def prod_l_def option_l_def triv_l_def id_l_def
-        l_map2'_def pcomp_def imp_lc_def imp_sem_l_def pcs_cond_lc_def
+        prod_fan_l_def l_reverse_def fst_l_def prod_l_def option_l_def triv_l_def
+        l_map_s_def pcomp_def imp_lc_def imp_sem_l_def pcs_cond_lc_def
         printcalcseq_sem_l_def printcalc_trans_def
         print_calc_seq_lc_def imp_ctl_sem_def
         prio_l_keep_def prio_l_inc2_def prio_l_inc_def prio_l_zero_def
@@ -220,6 +230,6 @@ lemma what:
         print_calc_lc_def
         print_sem_l_def calc_sem_l_def
         imp_trans_def print_trans_def calc_trans_def cond_trans_def seq_trans_def
-Imp.printcalc_trans_def)
-
+        )
+*)
 end

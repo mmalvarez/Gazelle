@@ -15,99 +15,30 @@ datatype ('x) gs_result =
   | GRFuel
   | GROther 'x
 
-inductive nosem_base_sem::
-  " 'g \<Rightarrow> 
-    'b \<Rightarrow>
+inductive nosem_sem::
+  " 'x \<Rightarrow>
     'mstate \<Rightarrow> 
     'mstate \<Rightarrow> 
       childpath \<Rightarrow>
-      ('b, 'r, 'g) gensyn \<Rightarrow>  
-      ('rxb) gs_result \<Rightarrow>
+      ('x) gensyn \<Rightarrow>  
+      ('rx) gs_result \<Rightarrow>
       bool"
-  where  "nosem_base_sem _ _ _ _ _ _ GRUnhandled"
-
-
-inductive nosem_rec_sem ::
-  " 'g \<Rightarrow> 
-    'r \<Rightarrow> 
-    'mstate \<Rightarrow> 
-    'mstate \<Rightarrow> 
-      childpath \<Rightarrow>
-      ('b, 'r, 'g) gensyn \<Rightarrow>  
-      ('rxr) gs_result \<Rightarrow>
-      bool"
-  where "nosem_rec_sem _ _ _ _ _ _ GRUnhandled"
-
-locale Gensyn_Semantics_Base_Sig =
-  fixes  xr :: "'xr itself"
-  fixes  ms :: "'mstate itself"
-  fixes  base_sem  :: " 'g \<Rightarrow> 
-                      'b \<Rightarrow>
-                      'mstate \<Rightarrow> 
-                      'mstate \<Rightarrow> 
-                      childpath \<Rightarrow>
-                      ('b, 'r, 'g) gensyn \<Rightarrow>  
-                      ('xr) gs_result \<Rightarrow>
-                      bool" 
-
-locale Gensyn_Semantics_Base_SigO = Gensyn_Semantics_Base_Sig
-begin
-definition "base_semO \<equiv> base_sem"
-declare base_semO_def [simp]
-end
-
-locale Gensyn_Semantics_Rec_Sig =
-  fixes xr :: "'xr itself"
-  fixes ms :: "'mstate itself"
-  fixes rec_sem :: "'g \<Rightarrow>
-                    'r \<Rightarrow>
-                    'mstate \<Rightarrow>
-                    'mstate \<Rightarrow>
-                    childpath \<Rightarrow>
-                    ('b, 'r, 'g) gensyn \<Rightarrow>
-                    ('xr) gs_result \<Rightarrow>
-                    bool" 
-
-locale Gensyn_Semantics_Rec_SigO = Gensyn_Semantics_Rec_Sig
-
-begin
-definition "rec_semO \<equiv> rec_sem"
-declare rec_semO_def [simp]
-end
+  where  "nosem_sem _ _ _ _ _ GRUnhandled"
 
 
 
 locale Gensyn_Semantics_Sig =
-  fixes xr :: "'xr itself"
-  fixes ms :: "'mstate itself"
-  fixes base_sem :: " 'g \<Rightarrow> 
-                      'b \<Rightarrow>
+  fixes  xr :: "'xr itself"
+  fixes  ms :: "'mstate itself"
+  fixes  x_sem  :: "'x \<Rightarrow>
                       'mstate \<Rightarrow> 
                       'mstate \<Rightarrow> 
                       childpath \<Rightarrow>
-                      ('b, 'r, 'g) gensyn \<Rightarrow>  
+                      ('x) gensyn \<Rightarrow>  
                       ('xr) gs_result \<Rightarrow>
-                      bool"
-  fixes rec_sem :: "'g \<Rightarrow>
-                    'r \<Rightarrow>
-                    'mstate \<Rightarrow>
-                    'mstate \<Rightarrow>
-                    childpath \<Rightarrow>
-                    ('b, 'r, 'g) gensyn \<Rightarrow>
-                    ('xr) gs_result \<Rightarrow>
-                    bool"
+                      bool" 
 
-sublocale Gensyn_Semantics_Sig \<subseteq> Gensyn_Semantics_Base_Sig
-  where xr = xr
-  and ms = ms
-  and base_sem = base_sem
-  done
 
-sublocale Gensyn_Semantics_Sig \<subseteq> Gensyn_Semantics_Rec_Sig
-  where xr = xr
-  and ms = ms
-  and rec_sem = rec_sem
-  done
 
 locale Gensyn_Semantics =
 Gensyn_Semantics_Sig 
@@ -119,55 +50,39 @@ print_context
    for other platforms
    *)
 
-term rec_sem
 
 inductive gensyn_sem ::
-  "('d, 'e, 'c) gensyn \<Rightarrow>
+  "('c) gensyn \<Rightarrow>
    childpath \<Rightarrow>
    'b \<Rightarrow>
    'b \<Rightarrow>
    bool
   "
   where
-  "\<And> t cp g b m m' .
-    gensyn_get t cp = Some (GBase g b) \<Longrightarrow>
-    base_sem g b m m' cp t GRDone \<Longrightarrow>
+  "\<And> t cp x l m m' .
+    gensyn_get t cp = Some (G x l) \<Longrightarrow>
+    x_sem x m m' cp t GRDone \<Longrightarrow>
     gensyn_sem t cp m m'"
 
-| "\<And> t cp g b m cp' m' m'' .
-    gensyn_get t cp = Some (GBase g b) \<Longrightarrow>
-    base_sem g b m m' cp t (GRPath cp') \<Longrightarrow>
+| "\<And> t cp x l m cp' m' m'' .
+    gensyn_get t cp = Some (G x l) \<Longrightarrow>
+    x_sem x m m' cp t (GRPath cp') \<Longrightarrow>
     gensyn_sem t cp' m' m'' \<Longrightarrow>
     gensyn_sem t cp m m''"
-
-| "\<And> t cp g r l m m' .
-   gensyn_get t cp = Some (GRec g r l) \<Longrightarrow>
-   rec_sem g r m m' cp t GRDone \<Longrightarrow>
-   gensyn_sem t cp m m'"
-
-| "\<And> t cp g r l m cp' m' m'' .
-   gensyn_get t cp = Some (GRec g r l) \<Longrightarrow>
-   rec_sem g r m m' cp t (GRPath cp') \<Longrightarrow>
-   gensyn_sem t cp' m' m'' \<Longrightarrow>
-   gensyn_sem t cp m m''"
-
 end
 
 print_locale Gensyn_Semantics
 
 (* we can probably get away with just an exec version of this one *)
 interpretation Gensyn_Semantics_Nosem : Gensyn_Semantics 
-  "TYPE(unit)" "TYPE(unit)" nosem_base_sem nosem_rec_sem
+  "TYPE(unit)" "TYPE(unit)" nosem_sem
   done
 
 
 (* test - numnodes predicate *)
-fun gensyn_numnodes :: "('a, 'b, 'c) gensyn \<Rightarrow> nat" and
-    gensyn_numnodes_l :: "('a, 'b, 'c) gensyn list \<Rightarrow> nat" where
-"gensyn_numnodes (GBase _ _) = 1"
-| "gensyn_numnodes (GRec _ _ l) = 1 + gensyn_numnodes_l l"
-| "gensyn_numnodes_l [] = 1"
-| "gensyn_numnodes_l (h#t) = gensyn_numnodes h + gensyn_numnodes_l t"
+fun gensyn_numnodes_l :: "('x) gensyn list \<Rightarrow> nat" where
+"gensyn_numnodes_l [] = 1"
+| "gensyn_numnodes_l ((G x l)#t) = gensyn_numnodes_l l + gensyn_numnodes_l t"
 
 lemma gensyn_numnodes_l_nz : "gensyn_numnodes_l l > (0 :: nat)"
 proof(induction l)
@@ -185,31 +100,18 @@ qed
    need a way to characterize what the predicate is actually looking at *)
 
 (* should the returned states be undefined? it shouldn't really matter. *)
-fun nosem_base_sem_exec :: "'g \<Rightarrow> 'b \<Rightarrow> 'mstate \<Rightarrow>
-  childpath \<Rightarrow> ('b, 'r, 'g) gensyn \<Rightarrow> ('xr gs_result * 'mstate)" where
-"nosem_base_sem_exec _ _ m _ _ = (GRUnhandled, m)"
-
-fun nosem_rec_sem_exec :: "'g \<Rightarrow> 'r \<Rightarrow> 'mstate \<Rightarrow>
-  childpath \<Rightarrow> ('b, 'r, 'g) gensyn \<Rightarrow> ('xr gs_result * 'mstate)" where
-"nosem_rec_sem_exec _ _ m _ _ = (GRUnhandled, m)"
+fun nosem_sem_exec :: "'x \<Rightarrow> 'mstate \<Rightarrow>
+  childpath \<Rightarrow> ('x) gensyn \<Rightarrow> ('xr gs_result * 'mstate)" where
+"nosem_sem_exec _ m _ _ = (GRUnhandled, m)"
 
 (* TODO: this still needs to be fixed up probably *)
+(*
 locale Gensyn_Semantics_Exec =
-  fixes base_sem_exec :: "
-                      'g \<Rightarrow> 
-                      'b \<Rightarrow> 
+  fixes x_sem_exec :: "
+                      'x \<Rightarrow> 
                       'mstate \<Rightarrow>
                       childpath \<Rightarrow> 
-                      ('b, 'r, 'g) gensyn \<Rightarrow> 
-                      ('xr gs_result *
-                      'mstate)"
-
-  fixes rec_sem_exec :: "
-                      'g \<Rightarrow>
-                      'r \<Rightarrow>
-                      'mstate \<Rightarrow>
-                      childpath \<Rightarrow>
-                      ('b, 'r, 'g) gensyn \<Rightarrow>
+                      ('x) gensyn \<Rightarrow> 
                       ('xr gs_result *
                       'mstate)"
 
@@ -444,5 +346,5 @@ lemmas [code_unfold] = Gensyn_Exec_Semantics_Nosem.gsx_rec_sem.simps
 (* the lesson here is that we need to concretize before we export code *)
 
 value "Gensyn_Exec_Semantics_Nosem.gensyn_sem_exec (GBase () ()) [] () (0 :: nat)"
-
+*)
 end

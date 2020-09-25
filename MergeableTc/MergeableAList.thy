@@ -3069,6 +3069,13 @@ instance proof
       using list_bsup_is_bsup[OF Horda Hordb] by blast
   qed
 qed
-
 end
+
+instantiation oalist :: (linorder, Mergeable) Mergeableb
+begin
+
+instance proof qed
+end
+
+
 end
