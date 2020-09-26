@@ -1,3 +1,0 @@
-theory Lens_Merge_Concrete imports Lens_Merge
-begin
-

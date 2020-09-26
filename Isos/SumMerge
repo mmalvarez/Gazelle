@@ -1,5 +1,0 @@
-theory SumMerge imports "Main"
-
-begin
-
-end

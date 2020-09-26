@@ -1,4 +1,0 @@
-theory Sublocale_Build_Test imports Main
-begin
-
-end
