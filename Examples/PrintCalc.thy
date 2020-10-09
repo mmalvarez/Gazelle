@@ -1,5 +1,5 @@
 theory PrintCalc imports
- "../MergeableTc/Mergeable" "../MergeableTc/MergeableInstances" 
+ "../Mergeable/Mergeable" "../Mergeable/MergeableInstances" 
   "../Lifting/LiftInstances" "../Lifting/LangComp"
 begin
 

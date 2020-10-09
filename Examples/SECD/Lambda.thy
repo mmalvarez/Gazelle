@@ -1,6 +1,6 @@
 theory Lambda
-  imports Main "../../MergeableTc/MergeableRAlist"
-          "../../Gensyn" "../../Semantics/Gensyn_Sem" "../../Gensyn_Descend" "../../MergeableTc/Mergeable" "../../MergeableTc/MergeableInstances"
+  imports Main "../../Mergeable/MergeableRAList"
+          "../../Gensyn" "../../Semantics/Gensyn_Sem" "../../Gensyn_Descend" "../../Mergeable/Mergeable" "../../Mergeable/MergeableInstances"
           "../../Lifting/LiftUtils" "../../Lifting/LiftInstances" "../Seq"
 
 
@@ -26,12 +26,12 @@ end
 (* idea: we separate concerns here. so inner data doesn't
    need to show up in this specification (can merge in) *)
 type_synonym valu = unit
-type_synonym env = "(String.literal, valu, (childpath * String.literal)) roalist"
+type_synonym 'a env = "(String.literal, 'a, (childpath * String.literal)) roalist"
 
 (* environment needs to know about name bindings. *)
 
 (* binding name + code pointer + environment *)
-type_synonym clos = "childpath * String.literal * env"
+type_synonym 'a clos = "childpath * String.literal * 'a env"
 
 (* elements of SEC state:
    - S = list of values
@@ -39,40 +39,45 @@ type_synonym clos = "childpath * String.literal * env"
    - C = flag (representing special "ap" symbol) and control stack
    - last field of SECD (bool) is a flag saying whether we should halt. *)
 
-type_synonym sec = "(valu + clos) list * env * (childpath * dir) list"
+type_synonym 'a sec = "('a + 'a clos) list * 'a env * (childpath * dir) list"
 
-type_synonym secd = "gensyn_skel * sec * sec list * bool"
+type_synonym 'a secd = "gensyn_skel * 'a sec * 'a sec list * bool"
 
 (* idea: we are pulling the outermost control element to the top level
    since it is going to be shared with the gensyn evaluator *)
-type_synonym secd_full = "(gensyn_skel * unit gs_result) * secd"
+type_synonym 'a secd_full = "(childpath) * 'a secd"
 
 (* invariant: syn will always be at location given by top control stack element *)
 (* down or up after applying? *)
 (* TODO: we need to finesse how we are handling code pointers in the environment.
    this is still not quite right. *)
 
-(* TODO: factor out gensyn_skel (not doing this right now as it may become useful here *)
-definition secd_sem :: "syn \<Rightarrow> secd \<Rightarrow> secd" where
+(* NB: we are storing the old childpath; this is so that when we interface with
+   gsx_gensyn_sem, we know we will still point at a Lambda syntax node when there is
+   no top of the code stack. *)
+definition secd_sem :: "syn \<Rightarrow> 'a secd_full \<Rightarrow> 'a secd_full" where
 "secd_sem x st =
   (case st of 
-    (g, _, _, True) \<Rightarrow> st
-    | (g, (s, e, (cp, dr)#c'), d, b) \<Rightarrow>
+    (_, g, _, _, True) \<Rightarrow> st
+    | (oldp, g, (s, e, (cp, dr)#c'), d, b) \<Rightarrow>
       (case x of
         Sskip \<Rightarrow> st
         | Sapp \<Rightarrow> (case dr of
-                   Down \<Rightarrow> (g, (s, e, ((cp @ [1]), Down)#
+                   Down \<Rightarrow> (cp
+                           , g, (s, e, ((cp @ [1]), Down)#
                                   ((cp @ [0]), Down)#
                                   ((cp, (Up []))#c')), d, b)
                   | Up xcp \<Rightarrow> (case s of (Inr (code, name, env))#arg#s' \<Rightarrow> 
-                              (g, ( []
+                              (cp
+                              , g, ( []
                                , (case arg of
                                   Inl val \<Rightarrow> (roalist_update_v name val env)
                                   | Inr (code', name', env') \<Rightarrow> (roalist_update_clos name (Some (code', name')) env' env))
                                , [(code, Down)])
                               , (s', e, c')#d, b))
                   )
-        | Svar v \<Rightarrow> (g, ( (case roalist_get e v of
+        | Svar v \<Rightarrow> (cp
+                    , g, ( (case roalist_get e v of
                           Some (Inl val) \<Rightarrow> Inl val # s
                           | Some (Inr (Some (cp', name'), env')) \<Rightarrow>
                             Inr (cp', name', env') # s)
@@ -81,20 +86,21 @@ definition secd_sem :: "syn \<Rightarrow> secd \<Rightarrow> secd" where
                       , d
                       , b)
           | Sabs v \<Rightarrow>
-                (g, ( Inr (cp @ [0], v, e)#s
+                (cp
+                , g, ( Inr (cp @ [0], v, e)#s
                   , e
                   , c')
                   , d
                   , b))
-      | (g, (h#s, e, []), (ds, de, dc)#dt, b) \<Rightarrow>
-         (g, (h#ds, de, dc), dt, b)
-      | (g, (s, e, []), [], b) \<Rightarrow> (g, (s, e, []), [], True) \<comment> \<open> done, need to signal \<close>
+      | (oldp, g, (h#s, e, []), (ds, de, dc)#dt, b) \<Rightarrow>
+         (oldp, g, (h#ds, de, dc), dt, b)
+      | (oldp, g, (s, e, []), [], b) \<Rightarrow> (oldp, g, (s, e, []), [], True) \<comment> \<open> done, need to signal \<close>
       )"
 
 (* problem - need to figure out best way to signal "done" *)
 
 (* i think we are signaling exit too early - not enough time to clean up stack. *)
-fun dump_get_next_path :: "sec list \<Rightarrow> (childpath * dir) option" where
+fun dump_get_next_path :: "'a sec list \<Rightarrow> (childpath * dir) option" where
 "dump_get_next_path [] = None"
 | "dump_get_next_path ((s, e, chdir#ct)#dt) = Some chdir"
 | "dump_get_next_path ((s, e, [])#dt) = dump_get_next_path dt"
@@ -110,19 +116,16 @@ definition secd_gsx_info :: "syn \<Rightarrow> secd \<Rightarrow> (gensyn_skel *
         | Some (cp, _) \<Rightarrow> (g, GRPath cp)))"
 *)
 
-(* TODO: this program-counter handling is rather odd; it maintains a sort of "designated
-   nowhere-node" that could cause very strange interactions with other sub-languages 
-   ugh... no this doesn't work.*)
-definition secd_gsx_info :: "syn \<Rightarrow> secd \<Rightarrow> (gensyn_skel * unit gs_result)" where
+definition secd_gsx_info :: "syn \<Rightarrow> 'a secd_full \<Rightarrow> (gensyn_skel * unit gs_result)" where
 "secd_gsx_info syn st =
   (case st of
-    (g, _, _, True) \<Rightarrow> (g, GRDone)
-    | (g, (s, e, (cp, _)#c'), d, b) \<Rightarrow> (g, GRPath cp)
-    | (g, (s, e, []), d, b) \<Rightarrow> (case dump_get_next_path d of
-        None \<Rightarrow> (g, GRPath []) \<comment> \<open> bogus... \<close>
+    (_, g, _, _, True) \<Rightarrow> (g, GRDone)
+    | (_, g, (s, e, (cp, _)#c'), d, b) \<Rightarrow> (g, GRPath cp)
+    | (oldp, g, (s, e, []), d, b) \<Rightarrow> (case dump_get_next_path d of
+        None \<Rightarrow> (g, GRPath oldp) 
         | Some (cp, _) \<Rightarrow> (g, GRPath cp)))"
 
-definition secd_sem_l :: "(syn, secd) x_sem'" where
+definition secd_sem_l :: "(syn, 'a secd_full) x_sem'" where
 "secd_sem_l =
   l_map_s id
     (prod_fan_l secd_gsx_info id_l) secd_sem"
@@ -132,7 +135,7 @@ term  "gensyn_sem_exec (xsem secd_sem_l)"
 
 term "gensyn_sem_exec"
 
-definition gsx :: "syn gensyn \<Rightarrow> childpath \<Rightarrow> secd \<Rightarrow> nat \<Rightarrow> secd option" where
+definition gsx :: "syn gensyn \<Rightarrow> childpath \<Rightarrow> 'a secd_full \<Rightarrow> nat \<Rightarrow> 'a secd_full option" where
 "gsx =
   gensyn_sem_exec (xsem secd_sem_l)"
 
@@ -143,14 +146,14 @@ definition testprog :: "syn gensyn" where
 definition init_env :: "(String.literal * unit) list" where
 "init_env = [(String.implode ''abcd'', ())]"
 
-definition initial :: "syn gensyn \<Rightarrow> (String.literal, unit, childpath * String.literal) roalist \<Rightarrow> secd" where
-"initial g e = (gs_sk g, ([], e, [([], Down)]), [], False)"
+definition initial :: "syn gensyn \<Rightarrow> (String.literal, 'a, childpath * String.literal) roalist \<Rightarrow> 'a secd_full" where
+"initial g e = ([], gs_sk g, ([], e, [([], Down)]), [], False)"
 
 (* problem is that Isabelle lifting library does not allow wrapping in abstract types.
    solution might be to declare our own type. (wrapping) *)
 value "gsx testprog [] (initial testprog (roa_make_vs init_env)) 4"
 
-value "MergeableAList.get (to_oalist ([(1, 2), (3, 4)])) (3 :: nat) :: nat option"
+value "AList.get (to_oalist ([(1, 2), (3, 4)])) (3 :: nat) :: nat option"
 
 definition testprog2 :: "syn gensyn" where
 "testprog2 =

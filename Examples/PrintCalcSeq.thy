@@ -50,10 +50,10 @@ definition prog' :: "syn gensyn" where
     G (Inr (Sreset 0)) [],
     G (Inl Sseq) [G (Inr (Sadd 2)) []],
     G (Inr (Sadd 3)) [] ]"
-
+(*
 value [simp] "pcomp print_calc_seq_lc (Inl (Sseq))
 ((Some (mdt (gs_sk prog)), (mdp 0 (Some (mdt (GRPath [])))), mdp 0 (Some (mdt Down))), (mdp 0 (Some (mdt 2)), Some (mdt [])))"
-
+*)
 
 (* finally, need a way to get the childpath/lifting in and out *)
 (* we need a "fanout" lg here.
@@ -80,9 +80,10 @@ definition gsx :: "syn gensyn \<Rightarrow> childpath \<Rightarrow> state \<Righ
 "gsx =
   gensyn_sem_exec (xsem sem_final)"
 
+(*
 value  "gsx prog [] ((Some (mdt (gs_sk prog)), (mdp 0 (Some (mdt (GRPath [])))), mdp 0 (Some (mdt Down))), (mdp 0 (Some (mdt 2)), Some (mdt []))) 90"
 
 value  "gsx prog' [] ((Some (mdt (gs_sk prog')), (mdp 0 (Some (mdt (GRPath [])))), mdp 0 (Some (mdt Down))), (mdp 0 (Some (mdt 2)), Some (mdt []))) 900"
-
+*)
 
 end

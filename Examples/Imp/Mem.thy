@@ -3,8 +3,8 @@
    Write *)
 
 theory Mem
-  imports "../../MergeableTc/MergeableInstances"
-          "../../MergeableTc/MergeableAList"
+  imports "../../Mergeable/MergeableInstances"
+          "../../Mergeable/MergeableAList"
           "../../Lifting/LiftUtils"
           "../../Lifting/LiftInstances"
          

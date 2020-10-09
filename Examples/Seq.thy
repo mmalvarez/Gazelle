@@ -1,5 +1,5 @@
 theory Seq
-  imports "../Gensyn" "../Gensyn_Descend" "../MergeableTc/Mergeable" "../MergeableTc/MergeableInstances"
+  imports "../Gensyn" "../Gensyn_Descend" "../Mergeable/Mergeable" "../Mergeable/MergeableInstances"
           "../Lifting/LiftUtils" "../Lifting/LiftInstances"
 
 begin

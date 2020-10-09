@@ -1,5 +1,5 @@
 theory Gensyn_Sem
-  imports "../Gensyn" "../Gensyn_Descend" "../MergeableTc/Mergeable"
+  imports "../Gensyn" "../Gensyn_Descend" "../Mergeable/Mergeable"
 begin
 
 (* TODO:

@@ -73,7 +73,11 @@ definition oalist_bogus : "bogus = (empty :: (_, _) oalist)"
 instance proof qed
 end
 
-
+instantiation String.literal :: Bogus begin
+definition string_literal_bogus :
+"bogus = STR ''''"
+instance proof qed
+end
 
 definition id_l' ::
   "('a, 'a) lifting'" where
@@ -204,6 +208,7 @@ qed
 option ordering
 *)
 
+(* TODO: we could probably use bogus here. *)
 definition option_l' ::
   "('a, 'b) lifting' \<Rightarrow>
    ('a, 'b option) lifting'" where
@@ -305,6 +310,58 @@ next
     using lifting_pv_valid_unfold3[OF H] H1
     by(auto simp add: option_l_def option_pl_def option_pv_def plifting.defs)
 qed
+
+(* sum types *)
+
+definition inl_pl ::
+  "('x, 'a, 'b, 'z) plifting_scheme \<Rightarrow> 
+   ('x, 'a, ('b + 'c)) plifting" where
+"inl_pl t =
+  \<lparr> LUpd = (\<lambda> s a b . 
+            (case b of
+              Inl b' \<Rightarrow> Inl (LUpd t s a b')
+              | _ \<Rightarrow> Inl (LNew t s a)))
+  , LOut = (\<lambda> s b . (case b of Inl b' \<Rightarrow> LOut t s b'
+                      | _ \<Rightarrow> LOut t s (LBase t s)))
+  , LBase = (\<lambda> s . Inl (LBase t s))\<rparr>"
+
+definition inl_l ::
+  "('x, 'a, 'b, 'z) lifting_scheme \<Rightarrow> ('x, 'a, 'b + 'c) lifting" where
+"inl_l t =
+  plifting.extend (inl_pl t)
+    \<lparr> LPost = (\<lambda> s b . (case b of (Inl b') \<Rightarrow> Inl (LPost t s b')
+                                  | _ \<Rightarrow> b)) \<rparr>"
+
+definition inl_pv ::
+  "('x, 'a, 'b, 'z) pliftingv_scheme \<Rightarrow> ('x, 'a, 'b + 'c) pliftingv" where
+"inl_pv v =
+  \<lparr> LOutS = (\<lambda> s . Inl ` (LOutS v s)) \<rparr>"
+
+definition inr_pl ::
+  "('x, 'a, 'b, 'z) plifting_scheme \<Rightarrow> 
+   ('x, 'a, ('c + 'b)) plifting" where
+"inr_pl t =
+  \<lparr> LUpd = (\<lambda> s a b . 
+            (case b of
+              Inr b' \<Rightarrow> Inr (LUpd t s a b')
+              | _ \<Rightarrow> Inr (LNew t s a)))
+  , LOut = (\<lambda> s b . (case b of Inr b' \<Rightarrow> LOut t s b'
+                      | _ \<Rightarrow> LOut t s (LBase t s)))
+  , LBase = (\<lambda> s . Inr (LBase t s))\<rparr>"
+
+definition inr_l ::
+  "('x, 'a, 'b, 'z) lifting_scheme \<Rightarrow> ('x, 'a, 'c + 'b) lifting" where
+"inr_l t =
+  plifting.extend (inr_pl t)
+    \<lparr> LPost = (\<lambda> s b . (case b of (Inr b') \<Rightarrow> Inr (LPost t s b')
+                                  | _ \<Rightarrow> b)) \<rparr>"
+
+definition inr_pv ::
+  "('x, 'a, 'b, 'z) pliftingv_scheme \<Rightarrow> ('x, 'a, 'c + 'b) pliftingv" where
+"inr_pv v =
+  \<lparr> LOutS = (\<lambda> s . Inr ` (LOutS v s)) \<rparr>"
+
+
 
 (*
 priorities
@@ -450,7 +507,10 @@ definition fst_l' ::
 "fst_l' t =
   (\<lambda> x . t (fst x))"
 
-
+(* TODO: fst and snd need to not use Bogus. They need to use Pordc instead.
+i changed it to this because i thought it would be more convenient, but i think it will
+make these much harder to reason about (e.g. no guarantees about how
+fst, snd, etc. interact with merge. *)
 definition fst_pl ::
   "('x, 'a, 'b1, 'z) plifting_scheme \<Rightarrow>
    ('x, 'a, 'b1 * ('b2 :: Pordb)) plifting" where
@@ -1313,29 +1373,281 @@ definition l_reverse ::
 "l_reverse l =
   LOut l"
 
+
+definition roalist_pl ::
+   "('x \<Rightarrow> ('k :: linorder) option) \<Rightarrow>
+    ('x, 'a, 'b, 'z) plifting_scheme \<Rightarrow>
+    ('x, 'a, ('k, 'b, 'd) roalist) plifting" where
+"roalist_pl f t =
+  \<lparr> LUpd = (\<lambda> s a l .
+            (case (f s) of
+              Some k \<Rightarrow>
+                (case roalist_get_v l k of
+                  Some v \<Rightarrow> (roalist_update_v k (LUpd t s a v) l)
+                  | None \<Rightarrow> (roalist_update_v k (LNew t s a) l))
+              | None \<Rightarrow> l))
+  , LOut = (\<lambda> s l . (case (f s) of
+                      Some k \<Rightarrow> (case roalist_get_v l k of 
+                                  Some a \<Rightarrow> LOut t s a
+                                  | None \<Rightarrow> LOut t s (LBase t s))
+                      | None \<Rightarrow> LOut t s (LBase t s)))
+  , LBase = (\<lambda> s . (case (f s) of
+                        Some k \<Rightarrow> roalist_update_v k (LBase t s) roalist_empty
+                        | None \<Rightarrow> roalist_empty)) \<rparr>"
+(*
+  , LOut = (\<lambda> s l . (case (f s) of
+                      Some k \<Rightarrow> (case roalist_get l k of 
+                                  Some a \<Rightarrow> LOut t s a
+                                  | None \<Rightarrow> LOut t s (LBase t s))
+                      | None \<Rightarrow> LOut t s (LBase t s)))
+  , LBase = (\<lambda> s . (case (f s) of
+                      Some k \<Rightarrow> roalist_update k (LBase t s) empty
+                      | None \<Rightarrow> empty)) \<rparr>"
+*)
+
+(* TODO: if we can't find the key, what do we do with LPost?
+   I think either obvious choice (LPost on LBase, or leave empty) meets spec *)
+definition roalist_l ::
+   "('x \<Rightarrow> ('k :: linorder) option) \<Rightarrow>
+    ('x, 'a, 'b, 'z) lifting_scheme \<Rightarrow>
+    ('x, 'a, ('k, 'b, 'd) roalist) lifting" where
+"roalist_l f t =
+  plifting.extend (roalist_pl f t)
+    \<lparr> LPost = (\<lambda> s l . (case f s of
+                          Some k \<Rightarrow> (case roalist_get_v l k of 
+                                       Some a \<Rightarrow> roalist_update_v k (LPost t s a) l
+                                       | None \<Rightarrow> l)
+                          | None \<Rightarrow> l)) \<rparr>"
+
+definition roalist_pv ::
+   "('x \<Rightarrow> ('k :: linorder) option) \<Rightarrow>
+    ('x, 'a, 'b, 'z) pliftingv_scheme \<Rightarrow>
+    ('x, 'a, ('k, 'b, 'd) roalist) pliftingv" where
+"roalist_pv f v =
+  \<lparr> LOutS = (\<lambda> s . { l . \<exists> k a . f s = Some k \<and> roalist_get_v l k = Some a \<and> a \<in> LOutS v s }) \<rparr>"
+
+(* idea: we want a list head lifting that never modifies head. just pushes result. 
+   does this meet our validity criteria? no; update not idempotent.
+   however, we could perhaps have a "pre-pass" that pushes a bogus element onto
+   the stack first, if we need write-only access
+*)
+
+definition list_hd_pl ::
+  "('x, 'a, 'b, 'z) plifting_scheme \<Rightarrow> ('x, 'a, 'b list) plifting" where
+"list_hd_pl t =
+  \<lparr> LUpd = (\<lambda> s a b . 
+            (case b of
+              b' # rest \<Rightarrow> (LUpd t s a b')#rest
+              | [] \<Rightarrow> [(LNew t s a)]))
+  , LOut = (\<lambda> s b . (case b of b' # rest \<Rightarrow> (LOut t s b')
+                      | [] \<Rightarrow> LOut t s (LBase t s)))
+  , LBase = (\<lambda> s . [])\<rparr>"
+
+
+definition list_hd_l ::
+  "('x, 'a, 'b, 'z) lifting_scheme \<Rightarrow> ('x, 'a, 'b list) lifting" where
+"list_hd_l t =
+  plifting.extend (list_hd_pl t)
+    \<lparr> LPost = (\<lambda> s b . (case b of (b'#rest) \<Rightarrow> (LPost t s b')#rest
+                                  | [] \<Rightarrow> [])) \<rparr>"
+
+definition list_hd_pv ::
+  "('x, 'a, 'b, 'z) pliftingv_scheme \<Rightarrow> ('x, 'a, 'b list) pliftingv" where
+"list_hd_pv v =
+  \<lparr> LOutS = 
+    (\<lambda> s . { l . \<exists> h t . h \<in> LOutS v s \<and> l = h#t}) \<rparr>"
+
+
+
+(* Convenience definitions for accessing members of structures. *)
+fun t1_l :: "('x, 'a, 'e1, 'z) lifting_scheme \<Rightarrow>
+             ('x, 'a, 'e1 * 'rest :: Pordb) lifting" where
+"t1_l l = fst_l l"
+
+fun t2_l :: "('x, 'a, 'e2, 'z) lifting_scheme \<Rightarrow>
+             ('x, 'a, 'e1 :: Pordb * 'e2 * 'rest :: Pordb) lifting" where
+"t2_l l = (snd_l (t1_l l))" 
+
+fun t3_l :: "('x, 'a, 'e3, 'z) lifting_scheme \<Rightarrow>
+             ('x, 'a, 'e1 :: Pordb * 'e2 :: Pordb * 'e3 * 'rest :: Pordb) lifting" where
+"t3_l l = snd_l (t2_l l)" 
+
+fun t4_l :: "('x, 'a, 'e4, 'z) lifting_scheme \<Rightarrow>
+             ('x, 'a, 'e1 :: Pordb * 'e2 :: Pordb * 'e3 :: Pordb * 
+                      'e4 * 'rest :: Pordb) lifting" where
+"t4_l l = (snd_l (t3_l l))" 
+
+fun t5_l :: "('x, 'a, 'e5, 'z) lifting_scheme \<Rightarrow>
+             ('x, 'a, 'e1 :: Pordb * 'e2 :: Pordb * 'e3 :: Pordb *
+                      'e4 :: Pordb * 'e5 * 'rest :: Pordb) lifting" where
+"t5_l l = (snd_l (t4_l l))" 
+
+
+(* convenience lifting for standard wrapping (swr) *)
+fun ot_l :: "('x, 'a, 'b, 'z) lifting_scheme \<Rightarrow>
+             ('x, 'a, 'b md_triv option) lifting" where
+"ot_l l =
+  (option_l o triv_l) l"
+
+(* Liftings for mapping over data structures *)
+
+(* a lifting for mapping over an entire list, needed e.g. when relating a
+   list of wrapped values to an unwrapped one *)
+
+(* i'm not sure there is a reasonable way to implement this, however...
+maybe we can have one specific to swr/products/sums?
+i don't know that this can be done for all liftings necessarily.
+e.g. when updating, what happens if we are given a list of a different length?
+
+one idea: check the length of the input list. if it is equal, do an actual update
+otherwise construct a list of LNew values
+we could probably have a more precise/robust one, but that should at least meet
+the laws.
+*)
+
+definition list_map_pl ::
+  "('x, 'a, 'b, 'z) plifting_scheme \<Rightarrow> ('x, 'a list, 'b list) plifting" where
+"list_map_pl t =
+  \<lparr> LUpd = (\<lambda> s a b .
+                if length a = length b
+                then map2 (LUpd t s) a b
+                else map (LNew t s) a)
+  , LOut = (\<lambda> s b . map (LOut t s) b)
+  , LBase = (\<lambda> s . [])\<rparr>"
+
+definition list_map_l ::
+  "('x, 'a, 'b, 'z) lifting_scheme \<Rightarrow> ('x, 'a list, 'b list) lifting" where
+"list_map_l t =
+  plifting.extend (list_map_pl t)
+    \<lparr> LPost = (\<lambda> s b . map (LPost t s) b) \<rparr>"
+
+definition list_map_pv ::
+  "('x, 'a, 'b, 'z) pliftingv_scheme \<Rightarrow> ('x, 'a list, 'b list) pliftingv" where
+"list_map_pv v =
+  \<lparr> LOutS = 
+    (\<lambda> s . {l . list_all (\<lambda> x . x \<in> (LOutS v s)) l}) \<rparr>"
+
+(* sum map-lifting *)
+definition sum_map_pl ::
+  "('x, 'a1, 'b1, 'z1) plifting_scheme \<Rightarrow>
+   ('x, 'a2, 'b2, 'z2) plifting_scheme \<Rightarrow>
+   ('x, 'a1 + 'a2, 'b1 + 'b2) plifting" where
+"sum_map_pl t1 t2 =
+  \<lparr> LUpd = (\<lambda> s a b . 
+    (case b of
+      Inl bl \<Rightarrow> (case a of
+                  Inl al \<Rightarrow> Inl (LUpd t1 s al bl)
+                  | Inr ar \<Rightarrow> Inr (LNew t2 s ar))
+      | Inr br \<Rightarrow> (case a of
+                  Inl al \<Rightarrow> Inl (LNew t1 s al)
+                  | Inr ar \<Rightarrow> Inr (LUpd t2 s ar br))))
+  , LOut = (\<lambda> s a . (case a of
+                      Inl al \<Rightarrow> Inl (LOut t1 s al)
+                      | Inr ar \<Rightarrow> Inr (LOut t2 s ar)))
+  , LBase = (\<lambda> s . Inl (LBase t1 s))
+  \<rparr>"
+
+definition sum_map_l ::
+  "('x, 'a1, 'b1, 'z1) lifting_scheme \<Rightarrow>
+   ('x, 'a2, 'b2, 'z2) lifting_scheme \<Rightarrow>
+   ('x, 'a1 + 'a2, 'b1 + 'b2) lifting" where
+"sum_map_l t1 t2 =
+  plifting.extend (sum_map_pl t1 t2)
+    \<lparr> LPost =
+      (\<lambda> s b . (case b of
+                  Inl bl \<Rightarrow> Inl (LPost t1 s bl)
+                  | Inr br \<Rightarrow> Inr (LPost t2 s br))) \<rparr>"
+
+definition sum_map_pv ::
+  "('x, 'a1, 'b1, 'z1) pliftingv_scheme \<Rightarrow>
+   ('x, 'a2, 'b2, 'z2) pliftingv_scheme \<Rightarrow>
+   ('x, 'a1 + 'a2, 'b1 + 'b2) pliftingv" where
+"sum_map_pv t1 t2 =
+  \<lparr> LOutS = (\<lambda> s . (Inl ` (LOutS t1 s)) \<union> (Inr ` (LOutS t2 s))) \<rparr>"
+
+(* ROAlist map-lifting
+   does not use the ability to parameterize mapping based on keys. *)
+
+(* helper used to implement upd *)
+(* unsure if this should have a 'x (syntax) parameter, but
+   that seems like the most straightforward thing *)
+fun roalist_fuse' ::
+"('x, 'v1, 'v2, 'z1) plifting_scheme \<Rightarrow>
+ ('x, 'd1, 'd2, 'z2) plifting_scheme \<Rightarrow>
+ 'x \<Rightarrow>
+ ('k :: linorder, 'v1, 'd1 option) roalist' \<Rightarrow> 
+ ('k :: linorder, 'v2, 'd2 option) roalist' \<Rightarrow>
+ ('k :: linorder, 'v2, 'd2 option) roalist'" where
+"roalist_fuse' lv ld x [] _ = []"
+| "roalist_fuse' lv ld x ((kh1, Inl vh1)#t1) r2 =
+  (case map_of r2 kh1 of
+    Some (Inl vh2) \<Rightarrow> ((kh1, Inl (LUpd lv x vh1 vh2)))
+    | _ \<Rightarrow> ((kh1, Inl (LNew lv x vh1)))) # 
+   roalist_fuse' lv ld x t1 r2"
+| "roalist_fuse' lv ld x ((kh1, Inr (Some vd1))#t1) r2 =
+  (case map_of r2 kh1 of
+    Some (Inr (Some vd2)) \<Rightarrow> ((kh1, Inr (Some (LUpd ld x vd1 vd2))))
+    | _ \<Rightarrow> ((kh1, Inr (Some (LNew ld x vd1))))) # 
+   roalist_fuse' lv ld x t1 r2"
+| "roalist_fuse' lv ld x ((kh1, Inr None)#t1) r2 =
+    (kh1, Inr None) #
+    roalist_fuse' lv ld x t1 r2"
+
+lift_definition roalist_fuse :: 
+"('x, 'v1, 'v2, 'z1) plifting_scheme \<Rightarrow>
+ ('x, 'd1, 'd2, 'z2) plifting_scheme \<Rightarrow>
+ 'x \<Rightarrow>
+ ('k :: linorder, 'v1, 'd1) roalist \<Rightarrow> 
+ ('k :: linorder, 'v2, 'd2) roalist \<Rightarrow>
+ ('k :: linorder, 'v2, 'd2) roalist" 
+is roalist_fuse' sorry
+
+definition roalist_map_pl ::
+  "('x, 'v1, 'v2, 'z1) plifting_scheme \<Rightarrow>
+   ('x, 'd1, 'd2, 'z2) plifting_scheme \<Rightarrow>
+   ('x, ('k :: linorder, 'v1, 'd1) roalist, ('k :: linorder, 'v2, 'd2) roalist) plifting"
+  where
+"roalist_map_pl tv td =
+  \<lparr> LUpd = (\<lambda> s a b . roalist_fuse tv td s a b)
+  , LOut = (\<lambda> s b . roalist_map 
+                      (\<lambda> _ v . LOut tv s v)
+                      (\<lambda> _ d . LOut td s d)
+                      b)
+  , LBase = (\<lambda> s . roalist_empty) \<rparr>"
+    
+definition roalist_map_l ::
+"('x, 'v1, 'v2, 'z1) lifting_scheme \<Rightarrow>
+ ('x, 'd1, 'd2, 'z2) lifting_scheme \<Rightarrow>
+ ('x, ('k :: linorder, 'v1, 'd1) roalist, ('k :: linorder, 'v2, 'd2) roalist) lifting" where
+"roalist_map_l tv td =
+  plifting.extend (roalist_map_pl tv td)
+  \<lparr> LPost = (\<lambda> s b . roalist_map 
+                      (\<lambda> _ v . LPost tv s v)
+                      (\<lambda> _ d . LPost td s d) 
+                      b) \<rparr>"
+
+(* fill this in later; need an analogue of list_all for roalist. *)
+(*
+definition roalist_map_pv ::
+"('x, 'v1, 'v2, 'z1) lifting_scheme \<Rightarrow>
+ ('x, 'd1, 'd2, 'z2) lifting_scheme \<Rightarrow>
+ ('x, ('k :: linorder, 'v1, 'd1) roalist, ('k :: linorder, 'v2, 'd2) roalist) lifting" where
+*)
+
+(* possibly needed later: option, triv, prio *)
+
 (* finally, here we allow keymaps, which might enable more interesting merges
    however we will need to reset the kmap in between commands. *)
 (* should double check this *)
 (*
-definition oalist_kmap_l ::
-  "('x, 'a, 'k :: linorder) lifting \<Rightarrow>
-   ('x, 'a, 'b) lifting \<Rightarrow>
-   ('x, 'a, ('k kmap * ('k, 'b) oalist)) lifting" where
-"oalist_kmap_l tk tv =
-  \<lparr> LIn1 = (\<lambda> s a . (let k = LIn1 tk s a in
-                     (to_oalist [(k, ())], update k (LIn1 tv s a) empty)))
-  , LIn2 = (\<lambda> s a k'l .
-            (case k'l of
-              (k', l) \<Rightarrow>
-                (let k = kmap_singleton k' in
-                (case get l k of
-                  None \<Rightarrow> (k' , update k (LIn1 tv s a) l)
-                  | Some v \<Rightarrow> (k', update k (LIn2 tv s a v) l)))))
-  , LOut1 = (\<lambda> s kl .
-              (case kl of
-                (km, l) \<Rightarrow> (case get l (kmap_singleton km) of Some a \<Rightarrow> LOut1 tv s a)))\<rparr>"
+
 *)
 
 (* another approach would be to return sets. this might we worth exploring later. *)
+
+(* new lifting needed: merging an OAlist with an ROAlist
+   idea: enable separating control and data for Lambda/SECD
+  
+*)
 
 end

@@ -1,5 +1,5 @@
 theory LiftUtils
- imports  "../MergeableTc/MergeableInstances" "../MergeableTc/MergeableAList"
+ imports  "../Mergeable/MergeableInstances" "../Mergeable/MergeableAList" "../Mergeable/MergeableRAList"
 begin
 
 (* lifting' is used for syntax *)

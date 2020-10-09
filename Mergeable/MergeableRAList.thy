@@ -1,9 +1,10 @@
-theory MergeableRAList imports "../AList/RAList" "MergeableAList"
+theory MergeableRAList imports "../AList/RAList" "MergeableAList" "Pord" "MergeableInstances"
 begin
+
 lift_definition roalist_leq :: "('key :: linorder, 'value :: Pord, 'd :: Pord) roalist \<Rightarrow> ('key, 'value, 'd :: Pord) roalist \<Rightarrow> bool"
 is "list_leq :: ('key :: linorder, 'value :: Pord, 'd option) roalist' \<Rightarrow> 
                 ('key, 'value, 'd option) roalist' \<Rightarrow> bool" .
-
+ 
 (* copied and edited proofs from MergeableAList. *)
 lemma list_leq_refl : 
   assumes H : "strict_order (map fst a)"
@@ -110,14 +111,15 @@ fun roa_make_vs :: "('k :: linorder  * 'v) list \<Rightarrow> ('k, 'v, 'd) roali
     roalist_update_v kh vh (roa_make_vs t)"
   
 
-(*
-instantiation roalist :: (linorder, Pord) Pord
+
+instantiation roalist :: (linorder, Pord, Pord) Pord
 begin
 
 definition pleq_roalist :
 "pleq l1 l2 = roalist_leq l1 l2"
-instance proof
-  fix l1 :: "('a :: linorder, 'b :: Pord) roalist"
+instance sorry
+(*
+  fix l1 :: "('a :: linorder, 'b :: Pord, 'c :: pord) roalist"
   show "l1 <[ l1" unfolding pleq_roalist
     by(transfer; auto simp add: list_leq_refl)
 next
@@ -148,8 +150,10 @@ next
     show "l1 = l2" using list_leq_antisym HO1 HO2 H1 H2 by auto
   qed
 qed
+*)
 end
 
+(*
 lemma roalist_valid_hd :
   assumes H1 : "strict_order (map fst l)"
   assumes H2 : "roalist_valid l"
@@ -239,10 +243,11 @@ next
     qed
   qed
 qed
-
+*)
 (* need to factor out second lemma here *)
-lift_definition roalist_delete_clos :: "('k :: linorder) \<Rightarrow> ('k :: linorder, 'v) roalist \<Rightarrow> ('k, 'v) roalist"
-is roalist_delete_clos'
+lift_definition roalist_delete_clos :: "('k :: linorder) \<Rightarrow> ('k :: linorder, 'v, 'd) roalist \<Rightarrow> ('k, 'v, 'd) roalist"
+is roalist_delete_clos' sorry
+(*
 proof-
   fix k :: "'k"
   fix list :: "('k :: linorder, 'v) roalist'"
@@ -322,12 +327,13 @@ proof-
   show "strict_order (map fst (roalist_delete_clos' k list)) \<and> roalist_valid (roalist_delete_clos' k list)"
     using C1 C2 by auto
 qed
+*)
 
 fun roalist_gather'_check :: 
-  "('k :: linorder, 'v) roalist' \<Rightarrow> 'k \<Rightarrow> ('k :: linorder, 'v) roalist' option" where
+  "('k :: linorder, 'v, 'd) roalist' \<Rightarrow> 'k \<Rightarrow> ('k :: linorder, 'v, 'd) roalist' option" where
 "roalist_gather'_check l k =
   (case map_of l [k] of
-    Some (Inr ()) \<Rightarrow> Some (roalist_gather' l k)
+    Some (Inr _) \<Rightarrow> Some (roalist_gather' l k)
     | _ \<Rightarrow> None)"
 
 (* 
@@ -346,6 +352,7 @@ fun roalist_gather'_check ::
     else roalist_gathers' l k)"
 *)
 
+(*
 lemma roalist_gather'_correct :
   assumes H1 : "strict_order (map fst l)"
   and H2 : "roalist_valid l"
@@ -434,13 +441,12 @@ next
   show "map_of l' pref = Some (Inr ())"
     using H3 M Gath by(auto split:unit.splits)
 qed
+*)
 
 
-(* need a generalized induction that talks about a prefix *)
-
-
-lift_definition roalist_gather :: "('k :: linorder, 'v) roalist \<Rightarrow> 'k \<Rightarrow> ('k, 'v) roalist option"
-is roalist_gather'_check
+lift_definition roalist_gather :: "('k :: linorder, 'v, 'd) roalist \<Rightarrow> 'k \<Rightarrow> ('k, 'v, 'd) roalist option"
+is roalist_gather'_check sorry
+(*
 proof-
   fix k :: "'k"
   fix list :: "('k :: linorder, 'v) roalist'"
@@ -463,7 +469,7 @@ proof-
       by(auto split:option.split_asm sum.split_asm unit.split_asm)
   qed
 qed
-
+*)
 (*
 (* idea: we know we can find a sup, but we need to prove that it also
    meets roalist_valid.
@@ -560,7 +566,7 @@ qed
 (* elem lemma needed. *)
 
 fun roalist_gathers' ::
-  "('k :: linorder, 'v) roalist' \<Rightarrow> 'k list \<Rightarrow> ('k :: linorder, 'v) roalist'" where
+  "('k :: linorder, 'v, 'd) roalist' \<Rightarrow> 'k list \<Rightarrow> ('k :: linorder, 'v, 'd) roalist'" where
 "roalist_gathers' [] _ = []"
 | "roalist_gathers' ((kh, vh)#l) k = 
   ( if is_prefix k kh then ((drop (length k) kh, vh) # roalist_gathers' l k)
@@ -614,8 +620,11 @@ qed
    show that anytihng between this and the "vanilla" sup
    is going to violate roalist rules.
 *)
-instantiation roalist :: (linorder, Pordc) Pordc
+instantiation roalist :: (linorder, Pordc, Pordc) Pordc
 begin
+instance sorry
+end
+(*
 instance proof 
   fix a b :: "('a :: linorder, 'b :: Pordc) roalist"
   assume H : "has_ub {a, b}"
@@ -623,11 +632,8 @@ instance proof
   show "has_sup {a, b}" using H unfolding has_ub_def has_sup_def is_sup_def is_least_def is_ub_def pleq_roalist
 sorry
 qed
-end
-
+*)
 (*
-instantiation roalist :: (linorder, Pordc) Pordc
-begin
 
 instance proof
   fix a b :: "('a :: linorder, 'b :: Pordc) roalist"
@@ -745,15 +751,15 @@ qed
 end
 *)
 
-lift_definition roa_empty :: "('k :: linorder, 'v) roalist"
-is "[([], Inr ())] :: ('k, 'v) roalist'"
-  by(auto simp add: strict_order_def roalist_valid_def)
-
-instantiation roalist :: (linorder, Pordc) Pordb
+instantiation roalist :: (linorder, Pordc, Pordc) Pordb
 begin
 definition bot_roalist :
   "\<bottom> = roa_empty"
 
+instance sorry
+end
+
+(*
 instance proof
   fix a :: "('a :: linorder, 'b :: Pordc) roalist"
   show "\<bottom> <[ a"
@@ -776,35 +782,36 @@ instance proof
   qed
 qed
 end
-
-lift_definition roalist_check_prefixes :: "('key :: linorder, 'value) roalist \<Rightarrow> 'key list \<Rightarrow> bool"
+*)
+lift_definition roalist_check_prefixes :: "('key :: linorder, 'value, 'd) roalist \<Rightarrow> 'key list \<Rightarrow> bool"
 is roalist_check_prefixes' .
 
 (* idea: this works like list bsup, except that
    we need to make sure we don't merge a value and a closure together. *)
-fun roalist_bsup' :: "('key :: linorder, 'value :: Mergeable) roalist' \<Rightarrow>
-                      ('key, 'value) roalist' \<Rightarrow> ('key, 'value) roalist'" where
+fun roalist_bsup' :: "('key :: linorder, 'value :: Mergeable, 'd :: Mergeable) roalist' \<Rightarrow>
+                      ('key, 'value, 'd) roalist' \<Rightarrow> ('key, 'value, 'd) roalist'" where
 "roalist_bsup' l [] = l"
 | "roalist_bsup' l ((rkh, Inl rv)#rt) =
    (case map_of l rkh of
       Some (Inl lv) \<Rightarrow> roalist_bsup' (str_ord_update rkh (Inl [^ lv, rv ^]) l) rt
-      | Some (Inr ()) \<Rightarrow> roalist_bsup' l rt
+      | Some (Inr _) \<Rightarrow> roalist_bsup' l rt
       | None \<Rightarrow>
         (if roalist_check_prefixes' l rkh
          then roalist_bsup' (str_ord_update rkh (Inl rv) l) rt
          else roalist_bsup' l rt))"
-| "roalist_bsup' l ((rkh, Inr ())#rt) =
+| "roalist_bsup' l ((rkh, Inr rv)#rt) =
     (case map_of l rkh of
-      Some (Inl lv) \<Rightarrow> roalist_bsup' l rt
-      | Some (Inr ()) \<Rightarrow> roalist_bsup' l rt
+      Some (Inl _) \<Rightarrow> roalist_bsup' l rt
+      | Some (Inr lv) \<Rightarrow> roalist_bsup' (str_ord_update rkh (Inr [^ lv, rv ^]) l) rt
       | None \<Rightarrow> (if roalist_check_prefixes' l rkh
-                 then roalist_bsup' (str_ord_update rkh (Inr ()) l) rt
+                 then roalist_bsup' (str_ord_update rkh (Inr rv) l) rt
                  else roalist_bsup' l rt))"
 
 
-lift_definition roalist_bsup :: "('key :: linorder, 'value :: Mergeable) roalist \<Rightarrow>
-                                 ('key, 'value) roalist \<Rightarrow> ('key, 'value) roalist"
-is roalist_bsup' 
+lift_definition roalist_bsup :: "('key :: linorder, 'value :: Mergeable, 'd :: Mergeable) roalist \<Rightarrow>
+                                 ('key, 'value, 'd) roalist \<Rightarrow> ('key, 'value, 'd) roalist"
+is roalist_bsup' sorry
+(*
 proof-
   show "\<And>list1 list2.
        strict_order (map fst list1) \<and>
@@ -814,15 +821,18 @@ proof-
        strict_order (map fst (roalist_bsup' list1 list2)) \<and>
        roalist_valid (roalist_bsup' list1 list2)" sorry
 qed
+*)
 
 
-
-instantiation roalist :: (linorder, Mergeable) Mergeable
+instantiation roalist :: (linorder, Mergeable, Mergeable) Mergeable
 begin
 
 definition bsup_roalist :
 "[^ x, y ^] = roalist_bsup x y"
 
+instance sorry
+end
+(*
 (* this one is going to be tricky. Hopefully the structure ends up not so different from
    the bsup proof for "vanilla" oalists, but there will likely have to be nontrivial changes
    (perhaps substantial) *)
@@ -831,9 +841,9 @@ instance proof
   show "is_bsup a b [^ a, b ^]"
     sorry
 qed
-end
+*)
 
-instantiation roalist :: (linorder, Mergeable) Mergeableb
+instantiation roalist :: (linorder, Mergeable, Mergeable) Mergeableb
 begin
 instance proof qed
 end
@@ -933,7 +943,6 @@ fun rc_merge :: "('k :: linorder, 'v) recclos \<Rightarrow> ('k, 'v) recclos \<R
           defer (* contradictory hyp *)
           defer (* this should be easy - from hyp can prove tails are leq *)
   qed
-*)
 *)
 *)
 end

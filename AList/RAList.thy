@@ -1,4 +1,4 @@
-theory RAlist
+theory RAList
 imports AList Linorder_Insts
 begin
 (* implementation of a recursive AList
@@ -718,4 +718,92 @@ fun roalist_check_prefixes' :: "('key, 'value, 'd) roalist' \<Rightarrow> 'key l
 | "roalist_check_prefixes' ((kh, (Inl v))#t) k =
    (if is_prefix kh k then False
     else roalist_check_prefixes' t k)"
+
+
+lift_definition roalist_empty :: "('k :: linorder, 'v, 'd) roalist"
+is "[([], Inr None)]"
+  by(auto simp add: strict_order_def roalist_valid_def)
+
+fun roalist_map' :: "('k :: linorder list \<Rightarrow> 'v1 \<Rightarrow> 'v2) \<Rightarrow> 
+                     ('k :: linorder list \<Rightarrow> 'd1 \<Rightarrow> 'd2) \<Rightarrow>
+                     ('k :: linorder, 'v1, 'd1 option) roalist' \<Rightarrow> 
+                     ('k :: linorder, 'v2, 'd2 option) roalist'" where
+"roalist_map' fv fd [] = []"
+| "roalist_map' fv fd ((kh, Inl vh)#t) =
+    ((kh, Inl (fv kh vh))#roalist_map' fv fd t)"
+| "roalist_map' fv fd ((kh, Inr None)#t) =
+    ((kh, Inr None)# roalist_map' fv fd t)"
+| "roalist_map' fv fd ((kh, Inr (Some d))#t) =
+    ((kh, Inr (Some (fd kh d)))#roalist_map' fv fd t)"
+
+lift_definition roalist_map :: 
+"('k :: linorder list \<Rightarrow> 'v1 \<Rightarrow> 'v2) \<Rightarrow> 
+ ('k :: linorder list \<Rightarrow> 'd1 \<Rightarrow> 'd2) \<Rightarrow>
+ ('k :: linorder, 'v1, 'd1) roalist \<Rightarrow> 
+ ('k :: linorder, 'v2, 'd2) roalist"
+is roalist_map' sorry
+
+fun roalist_keys' :: "('k :: linorder, 'v, 'd) roalist' \<Rightarrow>
+                      ('k :: linorder) list list" where
+"roalist_keys' r = map fst r"
+
+lift_definition roalist_keys :: "('k :: linorder, 'v, 'd) roalist \<Rightarrow>
+                                 ('k :: linorder) list list"
+is roalist_keys' .
+
+(* problem - need a way of figuring out how to deal with weird cases around
+e.g. what if roalist elements at same keys have different value types?
+(values vs closures)
+etc
+*)
+
+(* used in defining liftings for roalist *)
+(* idea. we start with a list of values to lift,
+   as well as a "current" list of values we are updating.
+   this works like map2, except that
+   if we ever encounter a type mismatch or key mismatch,
+   we use a default value instead *)
+(*
+proving correctness could end up being annoying
+*)
+(* this has been moved to LiftInstances, since it is
+easier to express in terms of liftings *)
+(*
+fun roalist_fuse2_safe' ::
+"('k :: linorder list \<Rightarrow> 'v1 \<Rightarrow> 'v2 \<Rightarrow> 'v2) \<Rightarrow> 
+ ('k :: linorder list \<Rightarrow> 'd1 \<Rightarrow> 'd2 \<Rightarrow> 'd2) \<Rightarrow>
+                     ('k :: linorder, 'v1, 'd1 option) roalist' \<Rightarrow> 
+                     ('k :: linorder, 'v2, 'd2 option) roalist' \<Rightarrow>
+                     ('k :: linorder, 'v2, 'd2 option) roalist'" where
+"roalist_fuse2_safe' fv fd [] [] = Some []"
+| "roalist_map2_safe' fv fd ((kh1, Inl vh1)#t1) ((kh2, Inl vh2)#t2) =
+  (if kh1 = kh2 then 
+    (case roalist_map2_safe' fv fd t1 t2 of
+     Some t3 \<Rightarrow> Some ((kh1, Inl (fv kh1 vh1 vh2))#t3)
+     | _ \<Rightarrow> None)
+   else None)"
+| "roalist_map2_safe' fv fd ((kh1, Inr None)#t1) ((kh2, Inr None)#t2) =
+    (if kh1 = kh2 then
+      (case roalist_map2_safe' fv fd t1 t2 of
+       Some t3 \<Rightarrow> Some ((kh1, Inr None)#t3)
+       | _ \<Rightarrow> None)
+    else None)"
+| "roalist_map2_safe' fv fd ((kh1, Inr (Some dh1))#t1) ((kh2, Inr (Some dh2))#t2) =
+    (if kh1 = kh2 then
+      (case roalist_map2_safe' fv fd t1 t2 of
+       Some t3 \<Rightarrow> Some ((kh1, Inr (Some (fd kh1 dh1 dh2)))#t3)
+       | _ \<Rightarrow> None)
+    else None)"
+| "roalist_map2_safe' _ _ _ _ = None"
+
+lift_definition roalist_map2_safe :: 
+"('k :: linorder list \<Rightarrow> 'v1 \<Rightarrow> 'v2 \<Rightarrow> 'v3) \<Rightarrow> 
+ ('k :: linorder list \<Rightarrow> 'd1 \<Rightarrow> 'd2 \<Rightarrow> 'd3) \<Rightarrow>
+ ('k :: linorder, 'v1, 'd1) roalist \<Rightarrow> 
+ ('k :: linorder, 'v2, 'd2) roalist \<Rightarrow>
+ ('k :: linorder, 'v3, 'd3) roalist option"
+is roalist_map2_safe'
+  apply(simp add: pred_option_def set_option_def)
+*)
+
 end

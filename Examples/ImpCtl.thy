@@ -1,6 +1,6 @@
 theory ImpCtl
-  imports "../Semantics/Gensyn_Sem" "../MergeableTc/MergeableAList"
-          "../MergeableTc/Mergeable" "../MergeableTc/MergeableInstances"
+  imports "../Semantics/Gensyn_Sem" "../Mergeable/MergeableAList"
+          "../Mergeable/Mergeable" "../Mergeable/MergeableInstances"
           "../Lifting/LiftUtils" "../Lifting/LiftInstances" "PrintCalcSeq"
 begin
 
