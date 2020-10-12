@@ -31,6 +31,10 @@ fun push_trans :: "syn \<Rightarrow> push_syn" where
 "push_trans Cpush = Ppush"
 | "push_trans _ = Pskip"
 
+fun const_trans :: "syn \<Rightarrow> int option" where
+"const_trans (Si i) = Some i"
+| "const_trans _ = None"
+
 fun calc2_key1 :: "syn \<Rightarrow> str  option" where
 "calc2_key1 (Sc _ s1 _) = Some s1"
 | "calc2_key1 _ = None"
@@ -80,9 +84,45 @@ type_synonym state =
 \<rightarrow> list head
 \<rightarrow> inl *)
 
+(* need a special sub-language for initializing a stack element
+   (this is due to the nature of liftings.)
+*)
 
-fun push_sem :: "('a :: Bogus) list \<Rightarrow> ('a :: Bogus) list" where
-"push_sem l = bogus#l"
+type_synonym 'a push_state =
+  "(gensyn_skel * childpath * dir * 'a list)"
+
+type_synonym const_state =
+  "(gensyn_skel * childpath * int)"
+
+(* push needs to take a child-path *)
+(* TODO: this is sort of hacky. we don't allow push_sem to signal being done.
+   so it cannot exist as the root. *)
+fun push_sem :: "('a :: Bogus) push_state \<Rightarrow> ('a :: Bogus) push_state" where
+"push_sem (sk, cp, Up _, l) = 
+  (case gensyn_cp_parent sk cp of Some cp' \<Rightarrow> (sk, cp', Up cp, l))"
+| "push_sem (sk, cp, Down, l) =
+  (sk, cp @ [0], Down, l)"
+
+fun const_sem :: "int option \<Rightarrow> const_state \<Rightarrow> const_state" where
+"const_sem None (sk, cp, x) = 
+  (case gensyn_cp_parent sk cp of Some cp' \<Rightarrow> (sk, cp', x))"
+| "const_sem (Some i) (sk, cp, x) = 
+  (case gensyn_cp_parent sk cp of Some cp' \<Rightarrow> (sk, cp', i))"
+
+
+(* TODO: we need to make sure we are properly accounting for the overlaps,
+   and doing appropriate "prio_l_case_inc" in those places. Here is where
+   this will happen:
+- value stack. langs: push, const, lambda, calc
+- environment stack: lambda, calc
+    (NB this should be pretty easy since calc only needs read only access)
+- control info: childpath, gensyn skel, etc.
+
+We may already have this set up except for control info.
+Control info is probably not being managed correctly anyhow (e.g. for calc)
+Perhaps having a "lambda-seq" kind of thing would be useful. Need to think
+about how best to structure that.
+*)
 
 (* full state:
 - secd state
@@ -274,6 +314,18 @@ definition gsx :: "syn gensyn \<Rightarrow> childpath \<Rightarrow> state \<Righ
 "gsx = gensyn_sem_exec (xsem sem_final)"
 
 (* next: testprog, initial states, etc. *)
+definition initial :: "syn gensyn \<Rightarrow> 
+                      (String.literal, int swr, (childpath * String.literal) swr) roalist \<Rightarrow> 
+                      state" where
+"initial p env = 
+  ( Some (mdt [])
+  , ( Some (mdt (gs_sk p))
+      , ( mdp 0 (Some (mdt []))
+        , env
+        , mdp 0 (Some (mdt ([([], Down)]))))
+      , mdp 0 (Some (mdt []))
+      , mdp 0 (Some (mdt False)))
+  , mdp 0 (Some (mdt (0 :: int))))"
 
 
 (* now we need to figure out how to push

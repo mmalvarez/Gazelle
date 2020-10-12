@@ -77,6 +77,8 @@ fun getlast :: "'a list \<Rightarrow> 'a option" where
       None \<Rightarrow> (sk, GRDone, Up cp)
       | Some cp' \<Rightarrow> (sk, GRPath cp', Up xcp))
 *)
+(* TODO: when we "re-throw" exceptions (e.g. in the Sskip case)
+   should we use our own path as a parameter to Up? *)
 definition seq_sem :: "syn \<Rightarrow> state' \<Rightarrow> state'" where
 "seq_sem x st =
 (case st of (sk, GRPath cp, d) \<Rightarrow>
