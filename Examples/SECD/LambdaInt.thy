@@ -1,5 +1,5 @@
 theory LambdaInt
-    imports Lambda "../Imp/MemImp" "../../Mergeable/MergeableRAList"
+    imports Lambda "../Imp/MemImp" "../../Mergeable/MergeableRAList" "../Seq"
 begin
 
 (* things needed here:
@@ -9,11 +9,14 @@ begin
     - challenge (?): using state (S component of SECD) as a memory
 *)
 
+(* do we want to try to use Mem for Lit support? *)
+
 datatype syn =
   Sl "Lambda.syn"
   | Sc "calc2" "str" "str"
   | Si "int"
   | Cpush
+  | Cseq
 
 datatype push_syn =
     Ppush
@@ -31,15 +34,19 @@ fun push_trans :: "syn \<Rightarrow> push_syn" where
 "push_trans Cpush = Ppush"
 | "push_trans _ = Pskip"
 
+fun seq_trans ::
+  "syn \<Rightarrow> Seq.syn" where
+"seq_trans _ = Seq.Sskip"
+
 fun const_trans :: "syn \<Rightarrow> int option" where
 "const_trans (Si i) = Some i"
 | "const_trans _ = None"
 
-fun calc2_key1 :: "syn \<Rightarrow> str  option" where
+fun calc2_key1 :: "syn \<Rightarrow> str option" where
 "calc2_key1 (Sc _ s1 _) = Some s1"
 | "calc2_key1 _ = None"
 
-fun calc2_key2 :: "syn \<Rightarrow> str  option" where
+fun calc2_key2 :: "syn \<Rightarrow> str option" where
 "calc2_key2 (Sc _ _ s2) = Some s2"
 | "calc2_key2 _ = None"
 
@@ -66,10 +73,6 @@ type_synonym 'a secw = "('a + 'a closw) list swr * 'a envw * (childpath * dir) l
 
 type_synonym 'a secdw = "gensyn_skel md_triv option * 'a secw * 'a secw list swr * bool swr"
 
-(* idea: we are pulling the outermost control element to the top level
-   since it is going to be shared with the gensyn evaluator *)
-type_synonym 'a secdw_full = "(childpath) * 'a secdw"
-
 (* idea: secd state + int register for results of int machine *)
 type_synonym state' =
   "int secd_full * int"
@@ -89,26 +92,24 @@ type_synonym state =
 *)
 
 type_synonym 'a push_state =
-  "(gensyn_skel * childpath * dir * 'a list)"
+  "(('a + 'a closw) list)"
 
 type_synonym const_state =
-  "(gensyn_skel * childpath * int)"
+  "(int)"
 
 (* push needs to take a child-path *)
 (* TODO: this is sort of hacky. we don't allow push_sem to signal being done.
    so it cannot exist as the root. *)
-fun push_sem :: "('a :: Bogus) push_state \<Rightarrow> ('a :: Bogus) push_state" where
-"push_sem (sk, cp, Up _, l) = 
-  (case gensyn_cp_parent sk cp of Some cp' \<Rightarrow> (sk, cp', Up cp, l))"
-| "push_sem (sk, cp, Down, l) =
-  (sk, cp @ [0], Down, l)"
+fun push_sem :: "push_syn \<Rightarrow> ('a :: Bogus) push_state \<Rightarrow> ('a :: Bogus) push_state" where
+"push_sem Pskip l = l"
+| "push_sem Ppush l = (bogus)#l"
 
 fun const_sem :: "int option \<Rightarrow> const_state \<Rightarrow> const_state" where
-"const_sem None (sk, cp, x) = 
-  (case gensyn_cp_parent sk cp of Some cp' \<Rightarrow> (sk, cp', x))"
-| "const_sem (Some i) (sk, cp, x) = 
-  (case gensyn_cp_parent sk cp of Some cp' \<Rightarrow> (sk, cp', i))"
+"const_sem None x = x"
+| "const_sem (Some i) x = i"
 
+(* Idea: if we use Seq here, we can get our desired control flow for
+   arithmetic nodes "for free" (?) *)
 
 (* TODO: we need to make sure we are properly accounting for the overlaps,
    and doing appropriate "prio_l_case_inc" in those places. Here is where
@@ -130,6 +131,7 @@ about how best to structure that.
 - some way to push int result onto stack in an idempotent way
   - one very cheesy way to do this: have a "CPush" instruction that just creates a new
     list entry using contents of int result register
+
 *)
 
 (* OK - need to figure out exactly how to do the key lift. It is a little different
@@ -193,11 +195,12 @@ term "((snd_l o snd_l o fst_l o snd_l o prio_l_inc o option_l o triv_l o list_hd
 definition calc2_lift :: "(syn, calc2_state, state) lifting" where
 "calc2_lift =
 merge_l
-  ((t2_l o t2_l o t2_l) (roalist_l calc2_key1 ((prio_l_inc o option_l o triv_l) id_l)))
+  ((t2_l o t2_l o t2_l) (roalist_l calc2_key1 ((prio_l_keep o option_l o triv_l) id_l)))
   (merge_l
-    ((t2_l o t2_l o t2_l) (roalist_l calc2_key1 ((prio_l_inc o option_l o triv_l) id_l)))
+    ((t2_l o t2_l o t2_l) (roalist_l calc2_key1 ((prio_l_keep o option_l o triv_l) id_l)))
     ((t2_l o t2_l o t1_l o prio_l_inc o option_l o triv_l o list_hd_l o inl_l)
       ((prio_l_inc o option_l o triv_l) id_l)))"
+
 
 (* scratch work for building up calc2_lift *)
 
@@ -241,6 +244,11 @@ both are done now
    - secd \<Rightarrow> lift into secd_w
    - int (unneeded, use fst/deassoc.) *)
 
+(* idea: we are going to overwrite, unless we are Sskip *)
+fun lambda_prio :: "syn \<Rightarrow> nat" where
+"lambda_prio (Sl _) = 1"
+| "lambda_prio _ = 0"
+
 definition env_lift ::
 "(syn, ('a :: Bogus) env, 'a swr envw) lifting"
 where
@@ -281,6 +289,10 @@ definition secd_lift ::
         ((prio_l_inc o ot_l) id_l)))"
 
 
+
+(* need to branch on whether the lambda instruction is an SSkip (a la seq)
+   if it is, then we will need to write at low priority.
+*)
 definition lambda_state_lift ::
 "(syn, (int) secd_full,  state) lifting"
 where
@@ -295,8 +307,34 @@ definition lambda_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
     lambda_state_lift
     (secd_sem o lambda_trans)"
 
+definition const_lift :: "(syn, const_state, state) lifting" where
+"const_lift =
+    (t2_l o t2_l o t1_l o prio_l_inc o ot_l o list_hd_l o inl_l o prio_l_inc o ot_l) id_l"
+
+definition const_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
+"const_sem_l =
+  l_map_s id
+    const_lift
+    (const_sem o const_trans)"
+
+definition push_lift :: "(syn, int swr push_state, state) lifting" where
+"push_lift =
+  (t2_l o t2_l o t1_l o prio_l_inc o ot_l) id_l"
+
+definition push_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
+"push_sem_l =
+  l_map_s id
+  push_lift
+  (push_sem o push_trans)"
+
 definition sems where
-"sems = [calc_sem_l, lambda_sem_l]"
+"sems = [calc_sem_l, lambda_sem_l, const_sem_l, push_sem_l]"
+
+(* remaining tasks
+   - update Lambda so that it will push all children paths (done)
+   - add a Seq node that is "Sskip" for everything (done)
+   - make sure we use low priority when overwriting rest of state
+      on Lambda Sskip *)
 
 definition gsx_info :: 
   "syn \<Rightarrow> state \<Rightarrow> (gensyn_skel * unit gs_result)" where
