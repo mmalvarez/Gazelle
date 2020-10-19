@@ -48,8 +48,19 @@ definition sum_bogus : "bogus = Inl bogus"
 instance proof qed
 end
 
+(* TODO: which option instance?
+   (list instance should probably be [] but also could use
+   revisiting)
+*)
+(*
 instantiation option :: (_) Bogus begin
 definition option_bogus : "bogus = None"
+instance proof qed
+end
+*)
+
+instantiation option :: (Bogus) Bogus begin
+definition option_bogus : "bogus = Some bogus"
 instance proof qed
 end
 
@@ -1457,7 +1468,31 @@ definition list_hd_pv ::
   \<lparr> LOutS = 
     (\<lambda> s . { l . \<exists> h t . h \<in> LOutS v s \<and> l = h#t}) \<rparr>"
 
+(* another approach to "list-head" lifting:
+   have a "scratch" area that is updated by Upd.
+   Then have Post actually push to the list.
+   "sc" here is short for "scratch"
+*)
 
+definition list_hd_sc_pl ::
+  "('x, 'a, 'b, 'z) plifting_scheme \<Rightarrow> ('x, 'a, ('b * 'b list)) plifting" where
+"list_hd_sc_pl t =
+  \<lparr> LUpd = (\<lambda> s a b .
+              (case b of (bh, bl) \<Rightarrow> (LUpd t s a bh, bl)))
+  , LOut = (\<lambda> s b . (case b of (bh, bl) \<Rightarrow> (LOut t s bh)))
+  , LBase = (\<lambda> s . (LBase t s, [])) \<rparr>"
+
+definition list_hd_sc_l ::
+  "('x, 'a, 'b, 'z) lifting_scheme \<Rightarrow> ('x, 'a, ('b * 'b list)) lifting" where
+"list_hd_sc_l t =
+  plifting.extend (list_hd_sc_pl t)
+    \<lparr> LPost = (\<lambda> s b . (case b of (bh, bl) \<Rightarrow> (LPost t s bh, LPost t s bh # bl))) \<rparr>"
+
+definition list_hd_sc_pv ::
+  "('x, 'a, 'b, 'z) pliftingv_scheme \<Rightarrow> ('x, 'a, ('b * 'b list)) pliftingv" where
+"list_hd_sc_pv v =
+  \<lparr> LOutS =
+    (\<lambda> s . { b . (\<exists> bh bl . bh \<in> LOutS v s \<and> (b = (bh, bl)))}) \<rparr>"
 
 (* Convenience definitions for accessing members of structures. *)
 fun t1_l :: "('x, 'a, 'e1, 'z) lifting_scheme \<Rightarrow>

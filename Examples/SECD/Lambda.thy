@@ -55,13 +55,37 @@ type_synonym 'a secd_full = "(childpath) * 'a secd"
 (* NB: we are storing the old childpath; this is so that when we interface with
    gsx_gensyn_sem, we know we will still point at a Lambda syntax node when there is
    no top of the code stack. *)
+
+(* idea (based on seq):
+- for Sskip:
+   - if we are going down, make sure there is a child. otherwise go up.
+     - actually perhaps we need to push all children to stack in sequence
+     - then go up
+   - if going up, assume existence of parent (else crash, PC invalid)
+*)
+
+(* helper for generating control stack entries for children *)
+fun children_control' :: "gensyn_skel \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> childpath \<Rightarrow> (childpath * dir) list" where
+"children_control' g n nmax cp =
+  (if 0 < nmax then
+    ((cp @ [n]), Down)#children_control' g (1 + n) (nmax - 1) cp
+   else [(cp, Up [])])"
+
+fun children_control :: "gensyn_skel \<Rightarrow> childpath \<Rightarrow> (childpath * dir) list" where
+"children_control g cp =
+  (case gensyn_get g cp of
+    None \<Rightarrow> []
+    | Some (G _ l) \<Rightarrow> children_control' g 0 (length l) cp)"
+
 definition secd_sem :: "syn \<Rightarrow> 'a secd_full \<Rightarrow> 'a secd_full" where
 "secd_sem x st =
   (case st of 
     (_, g, _, _, True) \<Rightarrow> st
     | (oldp, g, (s, e, (cp, dr)#c'), d, b) \<Rightarrow>
       (case x of
-        Sskip \<Rightarrow> st
+        Sskip \<Rightarrow> (case dr of
+                   Down \<Rightarrow> (cp, g, (s, e, (children_control g cp @ c')), d, b)
+                   | Up xcp \<Rightarrow> (cp, g, (s, e, c'), d, b))
         | Sapp \<Rightarrow> (case dr of
                    Down \<Rightarrow> (cp
                            , g, (s, e, ((cp @ [1]), Down)#
@@ -96,6 +120,8 @@ definition secd_sem :: "syn \<Rightarrow> 'a secd_full \<Rightarrow> 'a secd_ful
          (oldp, g, (h#ds, de, dc), dt, b)
       | (oldp, g, (s, e, []), [], b) \<Rightarrow> (oldp, g, (s, e, []), [], True) \<comment> \<open> done, need to signal \<close>
       )"
+
+
 
 (* problem - need to figure out best way to signal "done" *)
 

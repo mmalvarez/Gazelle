@@ -108,64 +108,25 @@ fun const_sem :: "int option \<Rightarrow> const_state \<Rightarrow> const_state
 "const_sem None x = x"
 | "const_sem (Some i) x = i"
 
-(* Idea: if we use Seq here, we can get our desired control flow for
-   arithmetic nodes "for free" (?) *)
 
-(* TODO: we need to make sure we are properly accounting for the overlaps,
-   and doing appropriate "prio_l_case_inc" in those places. Here is where
-   this will happen:
-- value stack. langs: push, const, lambda, calc
-- environment stack: lambda, calc
-    (NB this should be pretty easy since calc only needs read only access)
-- control info: childpath, gensyn skel, etc.
+(* idea: we are going to overwrite, unless we are Sskip *)
+fun lambda_prio :: "syn \<Rightarrow> nat" where
+"lambda_prio (Sl _) = 3"
+| "lambda_prio _ = 1"
 
-We may already have this set up except for control info.
-Control info is probably not being managed correctly anyhow (e.g. for calc)
-Perhaps having a "lambda-seq" kind of thing would be useful. Need to think
-about how best to structure that.
-*)
+fun push_prio :: "syn \<Rightarrow> nat" where
+"push_prio Cpush = 3"
+| "push_prio _ = 1"
 
-(* full state:
-- secd state
-- int result register
-- some way to push int result onto stack in an idempotent way
-  - one very cheesy way to do this: have a "CPush" instruction that just creates a new
-    list entry using contents of int result register
+fun const_prio :: "syn \<Rightarrow> nat" where
+"const_prio (Si _) = 3"
+| "const_prio _ = 1"
 
-*)
+fun calc_prio :: "syn \<Rightarrow> nat" where
+"calc_prio (Sc _ _ _) = 3"
+| "calc_prio _ = 1"
 
-(* OK - need to figure out exactly how to do the key lift. It is a little different
-than memimp because the third argument does not live inside the swr we are lifting into.
-*)
 
-(* another lifting for products, needed here:
-   if we can lift each component, we can lift the whole *)
-
-(*
-definition prod_map_pl ::
-  "('x, 'b1, 'c1, 'z2) plifting_scheme \<Rightarrow>
-   ('x, 'b2, 'c2, 'z3) plifting_scheme \<Rightarrow>
-   ('x, 'a, 'b1 * 'b2, 'z1) plifting_scheme \<Rightarrow>
-   ('x, 'a, 'c1 * 'c2) plifting" where
-"prod_map_pl lfst lsnd l =
-  \<lparr> LUpd =
-    (\<lambda> s a b . (case a of (a1, a2) \<Rightarrow>
-                  (case b of (b1, b2) \<Rightarrow>
-                    (LUpd t1 s a1 b1, LUpd t2 s a2 b2))))
-  , LOut =
-    (\<lambda> s b . (case b of (b1, b2) \<Rightarrow>
-                (LOut t1 s b1, LOut t2 s b2)))
-  , LBase =
-    (\<lambda> s . (LBase t1 s, LBase t2 s)) \<rparr>"
-
-definition prod_l ::
-  "('x, 'a1, 'b1, 'z1) lifting_scheme \<Rightarrow>
-   ('x, 'a2, 'b2, 'z2) lifting_scheme \<Rightarrow>
-   ('x, 'a1 * 'a2, 'b1 * 'b2) lifting" where
-"prod_l t1 t2 =
-  plifting.extend (prod_pl t1 t2)
-    \<lparr> LPost = (\<lambda> s b . (case b of (b1, b2) \<Rightarrow> (LPost t1 s b1, LPost t2 s b2))) \<rparr>"
-*)
 
 term "snd_l (snd_l (fst_l (snd_l ( (roalist_l calc2_key1 ((prio_l_keep o option_l o triv_l) id_l))))))"
 
@@ -181,16 +142,8 @@ definition calc2_key_lift :: "(syn, calc2_state, int swr envw * int swr) lifting
     merge_l
       (roalist_l calc2_key1 ((prio_l_keep o option_l o triv_l) id_l))
       (roalist_l calc2_key2 ((prio_l_keep o option_l o triv_l) id_l)))
-        ((prio_l_inc o option_l o triv_l) id_l))"
+        ((prio_l_case_inc calc_prio o option_l o triv_l) id_l))"
 
-(*
-term "((snd_l o snd_l o fst_l o fst_l o prio_l_inc o option_l o triv_l o list_hd_l o inl_l ) 
-        (roalist_l calc2_key1 ((prio_l_keep o option_l o triv_l) id_l)))"
-
-term "((snd_l o snd_l o fst_l o snd_l o prio_l_inc o option_l o triv_l o list_hd_l o inl_l ) 
-        (roalist_l calc2_key1 ((prio_l_keep o option_l o triv_l) id_l))) :: (syn, calc2_state, state) lifting"
-
-*)
 
 definition calc2_lift :: "(syn, calc2_state, state) lifting" where
 "calc2_lift =
@@ -198,8 +151,8 @@ merge_l
   ((t2_l o t2_l o t2_l) (roalist_l calc2_key1 ((prio_l_keep o option_l o triv_l) id_l)))
   (merge_l
     ((t2_l o t2_l o t2_l) (roalist_l calc2_key1 ((prio_l_keep o option_l o triv_l) id_l)))
-    ((t2_l o t2_l o t1_l o prio_l_inc o option_l o triv_l o list_hd_l o inl_l)
-      ((prio_l_inc o option_l o triv_l) id_l)))"
+    ((t2_l o t2_l o t1_l o prio_l_case_inc calc_prio o option_l o triv_l o list_hd_l o inl_l)
+      ((prio_l_case_inc calc_prio o option_l o triv_l) id_l)))"
 
 
 (* scratch work for building up calc2_lift *)
@@ -244,38 +197,34 @@ both are done now
    - secd \<Rightarrow> lift into secd_w
    - int (unneeded, use fst/deassoc.) *)
 
-(* idea: we are going to overwrite, unless we are Sskip *)
-fun lambda_prio :: "syn \<Rightarrow> nat" where
-"lambda_prio (Sl _) = 1"
-| "lambda_prio _ = 0"
 
 definition env_lift ::
 "(syn, ('a :: Bogus) env, 'a swr envw) lifting"
 where
 "env_lift =
-  roalist_map_l ((prio_l_inc o ot_l) id_l) 
-                ((prio_l_inc o ot_l) id_l)"
+  roalist_map_l ((prio_l_case_inc lambda_prio o ot_l) id_l) 
+                ((prio_l_case_inc lambda_prio o ot_l) id_l)"
 
 definition clos_lift ::
 "(syn, ('a :: Bogus) clos, 'a swr closw) lifting" where
 "clos_lift =
   prod_l
-    ((prio_l_inc o ot_l) id_l)
+    ((prio_l_case_inc lambda_prio o ot_l) id_l)
     (prod_l
-      ((prio_l_inc o ot_l) id_l)
+      ((prio_l_case_inc lambda_prio o ot_l) id_l)
       (env_lift))"
 
 definition sec_lift ::
 "(syn, ('a :: Bogus) sec, 'a swr secw) lifting" where
 "sec_lift =
   prod_l
-    ((prio_l_inc o ot_l o list_map_l)
+    ((prio_l_case_inc lambda_prio o ot_l o list_map_l)
       (sum_map_l 
-        ((prio_l_inc o ot_l) id_l)
+        ((prio_l_case_inc lambda_prio o ot_l) id_l)
         clos_lift))
   (prod_l
       env_lift
-      ((prio_l_inc o ot_l) id_l))"
+      ((prio_l_case_inc lambda_prio o ot_l) id_l))"
 
 definition secd_lift ::
 "(syn, ('a :: Bogus) secd, 'a swr secdw) lifting" where
@@ -285,8 +234,8 @@ definition secd_lift ::
     (prod_l
       sec_lift
       (prod_l
-        ((prio_l_inc o ot_l) (list_map_l sec_lift))
-        ((prio_l_inc o ot_l) id_l)))"
+        ((prio_l_case_inc lambda_prio o ot_l) (list_map_l sec_lift))
+        ((prio_l_case_inc lambda_prio o ot_l) id_l)))"
 
 
 
@@ -307,9 +256,10 @@ definition lambda_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
     lambda_state_lift
     (secd_sem o lambda_trans)"
 
+(* want case_inc instead of inc2 for const_sem, push_sem *)
 definition const_lift :: "(syn, const_state, state) lifting" where
 "const_lift =
-    (t2_l o t2_l o t1_l o prio_l_inc o ot_l o list_hd_l o inl_l o prio_l_inc o ot_l) id_l"
+    (t2_l o t2_l o t1_l o prio_l_case_inc const_prio o ot_l o list_hd_l o inl_l o prio_l_inc2 o ot_l) id_l"
 
 definition const_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "const_sem_l =
@@ -319,7 +269,7 @@ definition const_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 
 definition push_lift :: "(syn, int swr push_state, state) lifting" where
 "push_lift =
-  (t2_l o t2_l o t1_l o prio_l_inc o ot_l) id_l"
+  (t2_l o t2_l o t1_l o prio_l_case_inc push_prio o ot_l) id_l"
 
 definition push_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "push_sem_l =
@@ -364,6 +314,78 @@ definition initial :: "syn gensyn \<Rightarrow>
       , mdp 0 (Some (mdt []))
       , mdp 0 (Some (mdt False)))
   , mdp 0 (Some (mdt (0 :: int))))"
+
+
+(* not clear to me why this is needed... *)
+instantiation  roalist :: (linorder, equal, equal) equal begin
+definition equal_roalist :
+"(equal_class.equal (a :: ('a :: linorder, 'b :: equal, 'c :: equal) roalist)  b) \<equiv>
+   (a = b)"
+instance proof 
+  fix x y :: "('a :: linorder, 'b :: equal, 'c :: equal) roalist"
+  show "equal_class.equal x y = (x = y)"
+    by(simp add: equal_roalist)
+qed
+end
+
+definition testprog1 :: "syn gensyn" where
+"testprog1 =
+  G (Sl (Sabs (STR ''x'')))
+    [G (Sl (Svar (STR ''x''))) []]"
+
+definition testprog2 :: "syn gensyn" where
+"testprog2 =
+  G (Sl Sapp)
+    [ G (Sl (Sabs (STR ''x'')))
+        [G (Sl (Svar (STR ''x''))) []]
+    , G Cpush [G (Si 5) []] 
+    ]"
+
+definition testprog3 :: "syn gensyn" where
+"testprog3 =  
+  G Cpush [G (Si 5) []]"
+
+definition testprog4 :: "syn gensyn" where
+"testprog4 =
+  G (Sl Sapp)
+    [ G (Sl (Sabs (STR ''x'')))
+        [G (Sl (Svar (STR ''x''))) []]
+    ,  G (Sl (Sabs (STR ''x'')))
+        [G (Sl (Svar (STR ''x''))) []]
+    ]"
+
+(* is the problem that Cpush is running twice?
+   it seems to not be running at all... 
+   let's see about getting rid of the need for CPush by having Int constants
+   use a different lifting.
+   integrating Mem would be even better.
+*)
+value "children_control (gs_sk testprog2) [1, 0]"
+
+
+(* this looks possibly OK *)
+value [nbe] "gsx testprog1 [] (initial testprog1 (roa_make_vs [])) 10"
+
+(* this is running into some kind of problem *)
+definition badtest where
+"badtest = gsx testprog2 [] (initial testprog2 (roa_make_vs [])) 80"
+
+(* problem: second stack element hasn't been pushed correctly. why?
+   either: control isn't reaching PUSH
+   or: it is but is getting overwritten *)
+export_code badtest in OCaml
+  module_name Bad file "./lambda_bad.ml"
+
+(* this is better, but now
+   - we are pushing an extra 0 onto the stack
+   - we are not properly clearing the environment after function return
+*)
+value [nbe] "gsx testprog2 [] (initial testprog2 (roa_make_vs [])) 80"
+
+value [nbe] "gsx testprog3 [] (initial testprog3 (roa_make_vs [])) 80"
+
+
+value [nbe] "gsx testprog4 [] (initial testprog4 (roa_make_vs [])) 80"
 
 
 (* now we need to figure out how to push
