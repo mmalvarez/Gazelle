@@ -112,7 +112,7 @@ fun const_sem :: "int option \<Rightarrow> const_state \<Rightarrow> const_state
 (* idea: we are going to overwrite, unless we are Sskip *)
 fun lambda_prio :: "syn \<Rightarrow> nat" where
 "lambda_prio (Sl _) = 3"
-| "lambda_prio _ = 1"
+| "lambda_prio _ = 2"
 
 fun push_prio :: "syn \<Rightarrow> nat" where
 "push_prio Cpush = 3"
@@ -214,6 +214,7 @@ definition clos_lift ::
       ((prio_l_case_inc lambda_prio o ot_l) id_l)
       (env_lift))"
 
+
 definition sec_lift ::
 "(syn, ('a :: Bogus) sec, 'a swr secw) lifting" where
 "sec_lift =
@@ -225,6 +226,21 @@ definition sec_lift ::
   (prod_l
       env_lift
       ((prio_l_case_inc lambda_prio o ot_l) id_l))"
+
+
+(*
+definition sec_lift ::
+"(syn, ('a :: Bogus) sec, 'a swr secw) lifting" where
+"sec_lift =
+  prod_l
+    ((prio_l_case_inc lambda_prio o ot_l o list_map_l)
+      (sum_map_l 
+        ((prio_l_case_inc lambda_prio o ot_l) id_l)
+        clos_lift))
+  (prod_l
+      env_lift
+      ((prio_l_inc2 o ot_l) id_l))"
+*)
 
 definition secd_lift ::
 "(syn, ('a :: Bogus) secd, 'a swr secdw) lifting" where
@@ -256,10 +272,17 @@ definition lambda_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
     lambda_state_lift
     (secd_sem o lambda_trans)"
 
-(* want case_inc instead of inc2 for const_sem, push_sem *)
 definition const_lift :: "(syn, const_state, state) lifting" where
 "const_lift =
     (t2_l o t2_l o t1_l o prio_l_case_inc const_prio o ot_l o list_hd_l o inl_l o prio_l_inc2 o ot_l) id_l"
+
+(*
+definition const_lift :: "(syn, const_state, state) lifting" where
+"const_lift =
+    (t2_l o t2_l o t1_l o prio_l_case_inc const_prio o ot_l o prod_commb_l o list_hd_sc_l o prod_l o inl_l o prio_l_inc2 o ot_l) id_l"
+
+term "(prod_assocb_l o snd_l o prod_commb_l o list_hd_sc_l) id_l"
+*)
 
 definition const_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "const_sem_l =
@@ -285,6 +308,9 @@ definition sems where
    - add a Seq node that is "Sskip" for everything (done)
    - make sure we use low priority when overwriting rest of state
       on Lambda Sskip *)
+
+(* problem seems to be that we are pushing zero too many times
+(also possibly that we are not successfully updating it?) *)
 
 definition gsx_info :: 
   "syn \<Rightarrow> state \<Rightarrow> (gensyn_skel * unit gs_result)" where
@@ -338,7 +364,7 @@ definition testprog2 :: "syn gensyn" where
   G (Sl Sapp)
     [ G (Sl (Sabs (STR ''x'')))
         [G (Sl (Svar (STR ''x''))) []]
-    , G Cpush [G (Si 5) []] 
+    , G Cseq [G Cpush [],  G (Si 5) []] 
     ]"
 
 definition testprog3 :: "syn gensyn" where
@@ -360,8 +386,9 @@ definition testprog4 :: "syn gensyn" where
    use a different lifting.
    integrating Mem would be even better.
 *)
-value "children_control (gs_sk testprog2) [1, 0]"
+value "children_control (gs_sk testprog2) [1]"
 
+value "gensyn_get testprog2 [0]"
 
 (* this looks possibly OK *)
 value [nbe] "gsx testprog1 [] (initial testprog1 (roa_make_vs [])) 10"
@@ -370,16 +397,14 @@ value [nbe] "gsx testprog1 [] (initial testprog1 (roa_make_vs [])) 10"
 definition badtest where
 "badtest = gsx testprog2 [] (initial testprog2 (roa_make_vs [])) 80"
 
-(* problem: second stack element hasn't been pushed correctly. why?
-   either: control isn't reaching PUSH
-   or: it is but is getting overwritten *)
+(* remaining problem: environment isn't properly cleaned up.
+   this appears to be because we aren't using a priority wrapper around the environment *)
 export_code badtest in OCaml
   module_name Bad file "./lambda_bad.ml"
 
 (* this is better, but now
-   - we are pushing an extra 0 onto the stack
-   - we are not properly clearing the environment after function return
-*)
+   - we are pushing an extra 0 onto the stack (2 extra zeroes, in fact... *)
+
 value [nbe] "gsx testprog2 [] (initial testprog2 (roa_make_vs [])) 80"
 
 value [nbe] "gsx testprog3 [] (initial testprog3 (roa_make_vs [])) 80"
