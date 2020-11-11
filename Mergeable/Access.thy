@@ -303,34 +303,7 @@ definition denotet_sum where
 instance proof qed
 end
 
-class n_A
-
-class n_notA
-
-class n_B
-
-class n_notB
-
-datatype nA = NA
-
-datatype nB = NB
-
-instantiation nA :: n_A begin
-instance proof qed
-end
-
-instantiation nA :: n_notB begin
-instance proof qed
-end
-
-instantiation nB :: n_B begin
-instance proof qed
-end
-
-instantiation nB :: n_notA begin
-instance proof qed
-end
-
+(*
 datatype ('name, 'a, 'b) nprod =
   NP "'name" "'a" "'b"
 
@@ -422,14 +395,14 @@ definition sndA :: "('n, 'a, 'b) nprod \<Rightarrow>
 adhoc_overloading findA hereA "digA2 findA" "digA1 findA"  "digA12 findA findA"
 value [nbe] "findA (NP NB (0 :: int) (NP NB (1 :: int) (NP NA (1 :: int) (0 :: int))))"
 
-
+(*
 value [nbe] "findA (NP NB (NP NB (0 :: int) (1 :: int)) (NP NA (1 :: int) (0 :: int)))"
-
+*)
 
 consts findA1 :: "'a \<Rightarrow> String.literal list option"
 
 consts navigate :: "'a \<Rightarrow> String.literal list \<Rightarrow> 'b option"
-
+*)
 (*
 definition navProduct :: "('a1 \<Rightarrow> String.literal list \<Rightarrow> 'b option) \<Rightarrow>
                           ('a2 \<Rightarrow> String.literal list \<Rightarrow> 'b option) \<Rightarrow>
@@ -442,6 +415,54 @@ definition navProduct :: "('a1 \<Rightarrow> String.literal list \<Rightarrow> '
         (p1, p2) \<Rightarrow>
           (if l = 
 *)
+
+class n_A
+
+class n_B
+
+class n_C
+
+class n_D
+
+class n_E
+
+class n_X
+
+datatype nA = NA
+
+datatype nB = NB
+
+datatype nC = NC
+
+datatype nD = ND
+
+datatype nE = NE
+
+datatype nX = NX
+
+instantiation nA :: n_A begin
+instance proof qed
+end
+
+instantiation nB :: n_B begin
+instance proof qed
+end
+
+instantiation nC :: n_C begin
+instance proof qed
+end
+
+instantiation nD :: n_D begin
+instance proof qed
+end
+
+instantiation nE :: n_E begin
+instance proof qed
+end
+
+instantiation nX :: n_X begin
+instance proof qed
+end
 
 
 datatype ('a, 'b) sprod = 
@@ -457,19 +478,68 @@ instantiation nB :: schem begin
 instance proof qed
 end
 
+instantiation nC :: schem begin
+instance proof qed
+end
+
+instantiation nD :: schem begin
+instance proof qed
+end
+
+instantiation nE :: schem begin
+instance proof qed
+end
+
+instantiation nX :: schem begin
+instance proof qed
+end
+
 instantiation sprod :: (schem, schem) schem begin
 instance proof qed
 end
 
 term "SP NA (SP NA NB) :: _ :: schem"
 
-instantiation sprod :: (_, _) n_notA begin
+class hasntA
+
+class hasntB
+
+class hasntC
+
+class hasntD
+
+class hasntE
+
+(* class hasntX *)
+
+instantiation nA :: "{hasntB, hasntC, hasntD, hasntE}" begin
 instance proof qed
 end
 
-instantiation sprod :: (_, _) n_notB begin
+instantiation nB :: "{hasntA, hasntC, hasntD, hasntE}" begin
 instance proof qed
 end
+
+instantiation nC :: "{hasntA, hasntB, hasntD, hasntE}" begin
+instance proof qed
+end
+
+instantiation nD :: "{hasntA, hasntB, hasntC, hasntE}" begin
+instance proof qed
+end
+
+instantiation nE :: "{hasntA, hasntB, hasntC, hasntD}" begin
+instance proof qed
+end
+
+instantiation nX :: "{hasntA, hasntB, hasntC, hasntD, hasntE}" begin
+instance proof qed
+end
+
+
+class hasA1
+
+class hasA2
 
 (* ok. so we need to account for all inputs. but, we still want to label since
    associativity isn't clear. *)
@@ -491,29 +561,23 @@ definition schem_get_base_B ::
   "'a :: n_B \<Rightarrow> 'b \<Rightarrow> 'n :: n_B \<Rightarrow> 'b" where
 "schem_get_base_B _ b _ = b"
 
-
-class hasntA
-
-class hasntB
-
-instantiation nB :: hasntA begin
-instance proof qed
-end
-
-instantiation nB :: hasntB begin
-instance proof qed
-end
-
-class hasA1
-
-class hasA2
-
-
 instantiation sprod :: (hasntA, hasntA) hasntA begin
 instance proof qed
 end
 
 instantiation sprod :: (hasntB, hasntB) hasntB begin
+instance proof qed
+end
+
+instantiation sprod :: (hasntC, hasntC) hasntC begin
+instance proof qed
+end
+
+instantiation sprod :: (hasntD, hasntD) hasntD begin
+instance proof qed
+end
+
+instantiation sprod :: (hasntE, hasntE) hasntE begin
 instance proof qed
 end
 
@@ -707,6 +771,18 @@ definition schem_lift_baseB ::  "('n :: n_B, 'n, 'x, 'a :: Bogus, 'a) schem_lift
 "schem_lift_baseB _ _ =
   id_l"
 
+definition schem_lift_baseC ::  "('n :: n_C, 'n, 'x, 'a :: Bogus, 'a) schem_lift" where
+"schem_lift_baseC _ _ =
+  id_l"
+
+definition schem_lift_baseD ::  "('n :: n_D, 'n, 'x, 'a :: Bogus, 'a) schem_lift" where
+"schem_lift_baseD _ _ =
+  id_l"
+
+definition schem_lift_baseE ::  "('n :: n_E, 'n, 'x, 'a :: Bogus, 'a) schem_lift" where
+"schem_lift_baseE _ _ =
+  id_l"
+
 definition schem_lift_recR_A_left ::
   "('n, 'ls, 'x, 'a, 'b2) schem_lift \<Rightarrow>
    ('n :: n_A, ('ls, 'rs :: hasntA) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
@@ -739,6 +815,54 @@ definition schem_lift_recR_B_right ::
     SP ls rs \<Rightarrow>
       snd_l (rec n rs))"
 
+definition schem_lift_recR_C_left ::
+  "('n, 'ls, 'x, 'a, 'b2) schem_lift \<Rightarrow>
+   ('n :: n_C, ('ls, 'rs :: hasntC) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
+"schem_lift_recR_C_left rec n s =
+  (case s of
+    SP ls rs \<Rightarrow>
+      fst_l  (rec n ls))"
+
+definition schem_lift_recR_C_right ::
+  "('n, 'rs, 'x, 'a, 'b2) schem_lift \<Rightarrow>
+   ('n :: n_C, ('ls :: hasntC, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
+"schem_lift_recR_C_right rec n s =
+  (case s of
+    SP ls rs \<Rightarrow>
+      snd_l (rec n rs))"
+
+definition schem_lift_recR_D_left ::
+  "('n, 'ls, 'x, 'a, 'b2) schem_lift \<Rightarrow>
+   ('n :: n_D, ('ls, 'rs :: hasntD) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
+"schem_lift_recR_D_left rec n s =
+  (case s of
+    SP ls rs \<Rightarrow>
+      fst_l  (rec n ls))"
+
+definition schem_lift_recR_D_right ::
+  "('n, 'rs, 'x, 'a, 'b2) schem_lift \<Rightarrow>
+   ('n :: n_D, ('ls :: hasntD, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
+"schem_lift_recR_D_right rec n s =
+  (case s of
+    SP ls rs \<Rightarrow>
+      snd_l (rec n rs))"
+
+definition schem_lift_recR_E_left ::
+  "('n, 'ls, 'x, 'a, 'b2) schem_lift \<Rightarrow>
+   ('n :: n_E, ('ls, 'rs :: hasntE) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
+"schem_lift_recR_E_left rec n s =
+  (case s of
+    SP ls rs \<Rightarrow>
+      fst_l  (rec n ls))"
+
+definition schem_lift_recR_E_right ::
+  "('n, 'rs, 'x, 'a, 'b2) schem_lift \<Rightarrow>
+   ('n :: n_E, ('ls :: hasntE, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
+"schem_lift_recR_E_right rec n s =
+  (case s of
+    SP ls rs \<Rightarrow>
+      snd_l (rec n rs))"
+
 definition schem_lift_recL ::
   "('s1l, 's2, 'x, 'a1l, 'b2) schem_lift \<Rightarrow>
    ('s1r, 's2, 'x, 'a1r, 'b2) schem_lift \<Rightarrow>
@@ -749,18 +873,45 @@ definition schem_lift_recL ::
     SP s1l s1r \<Rightarrow>
       merge_l (recl s1l s2) (recr s1r s2))"
 
-adhoc_overloading schem_lift "schem_lift_baseA" "schem_lift_baseB"
-                             "schem_lift_recR_A_left schem_lift"
-                             "schem_lift_recR_A_right schem_lift"
-                             "schem_lift_recR_B_left schem_lift"
-                             "schem_lift_recR_B_right schem_lift"
-                             "schem_lift_recL schem_lift schem_lift"
+adhoc_overloading schem_lift 
+  "schem_lift_baseA" 
+  "schem_lift_baseB"
+  "schem_lift_baseC"
+  "schem_lift_baseD"
+  "schem_lift_baseE"
+  "schem_lift_recR_A_left schem_lift"
+  "schem_lift_recR_A_right schem_lift"
+  "schem_lift_recR_B_left schem_lift"
+  "schem_lift_recR_B_right schem_lift"
+  "schem_lift_recR_C_left schem_lift"
+  "schem_lift_recR_C_right schem_lift"
+  "schem_lift_recR_D_left schem_lift"
+  "schem_lift_recR_D_right schem_lift"
+  "schem_lift_recR_E_left schem_lift"
+  "schem_lift_recR_E_right schem_lift"
+  "schem_lift_recL schem_lift schem_lift"
 
 (* need more constraints to prevent going down unhappy paths 
    problem is getting confused; instances for a come up when searching for a b
    (or vice versa?)*)
-value [nbe] "schem_lift (SP NA NB) (SP NA NB)"
 
+value [nbe] "schem_lift (SP (SP NC NA) NB) (SP NA (SP NC (SP NX NB)))"
+
+(* other needed primitives:
+   - option
+   - triv
+   - prio (here we need to specify some kind of descriptor)
+   - sum (left/right)
+   - list_hd
+   -
+   - list_map (?)
+   - oalist_map (?)
+*)
+
+
+(* next step. we need to figure out how to thread through constructors. 
+
+*)
 (* another concept: what if we recurse left only when we have something other than a name
    on LHS *)
 
