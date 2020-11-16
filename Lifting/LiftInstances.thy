@@ -716,6 +716,8 @@ qed
 *)
 (* NB: this breaks idempotence. we should really rephrase this (and probably all other
 ones) without referenc to Post. (See LiftUtilsNoPost.thy) *)
+
+
 definition merge_pl ::
   "('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme \<Rightarrow>
    ('x, 'a2, 'b :: Mergeable, 'z2) lifting_scheme \<Rightarrow>
@@ -737,6 +739,31 @@ definition merge_l ::
 "merge_l t1 t2 =
   plifting.extend (merge_pl t1 t2)
   \<lparr> LPost = (\<lambda> s b . b) \<rparr>"
+
+(*
+definition merge_pl ::
+  "('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme \<Rightarrow>
+   ('x, 'a2, 'b :: Mergeable, 'z2) lifting_scheme \<Rightarrow>
+   ('x, 'a1 * 'a2, 'b) plifting" where
+"merge_pl t1 t2 =
+  \<lparr> LUpd =
+    (\<lambda> s a b . 
+      (case a of (a1, a2) \<Rightarrow>
+        [^ (LUpd t1 s a1 b), (LUpd t2 s a2 b) ^]))
+  , LOut =
+    (\<lambda> s b . (LOut t1 s b, LOut t2 s b))
+  , LBase =
+    (\<lambda> s . [^ LBase t1 s, LBase t2 s ^]) \<rparr>"
+
+definition merge_l ::
+  "('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme \<Rightarrow>
+   ('x, 'a2, 'b, 'z2) lifting_scheme \<Rightarrow>
+   ('x, 'a1 * 'a2, 'b) lifting" where
+"merge_l t1 t2 =
+  plifting.extend (merge_pl t1 t2)
+  \<lparr> LPost = 
+    (\<lambda> s b . [^LPost t1 s b, LPost t2 s b^]) \<rparr>"
+*)
 
 (*
 definition merge_pv ::

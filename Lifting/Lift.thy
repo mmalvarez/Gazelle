@@ -1,4 +1,4 @@
-theory LiftUtilsOrd
+theory Lift
   imports "../Mergeable/MergeableInstances"
 begin
 
