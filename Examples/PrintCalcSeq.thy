@@ -24,13 +24,15 @@ definition seq_sem_l ::
   "syn \<Rightarrow> state \<Rightarrow> state" where
 "seq_sem_l =
   l_map_s seq_trans
-    (fst_l (id_l)) (Seq.seq_sem_l)"
+    (schem_lift NA (SP NA NX))
+    (Seq.seq_sem_l)"
     
 definition print_calc_sem_l ::
   "syn \<Rightarrow> state \<Rightarrow> state" where
 "print_calc_sem_l =
   l_map_s printcalc_trans
-    (snd_l (id_l)) (pcomp print_calc_lc)"
+    (schem_lift NA (SP NX NA))
+    (pcomp print_calc_lc)"
 
 definition print_calc_seq_lc :: "(syn, state) langcomp" where
 "print_calc_seq_lc =
@@ -59,16 +61,42 @@ value [simp] "pcomp print_calc_seq_lc (Inl (Sseq))
 (* we need a "fanout" lg here.
    idea is that we are copying pieces of the product to first and second components.
     *)
+(*
 definition sem_final :: "(syn, state) x_sem'" where
 "sem_final =
   l_map_s id
     (prod_fan_l (l_reverse (fst_l (prod_l (option_l (triv_l id_l))
                                           (fst_l (prio_l_keep (option_l (triv_l (id_l)))))))) id_l)
     (pcomp print_calc_seq_lc)"
-term "(prod_fan_l (l_reverse (fst_l (prod_l (option_l (triv_l id_l))
-                                          (fst_l (prio_l_keep (option_l (triv_l (id_l)))))))) id_l)"
-value [simp] "(l_reverse (fst_l (prod_l (option_l (triv_l id_l))
-                          (prio_l_keep (option_l (triv_l (id_l)))))))"
+*)
+
+(* hmm, fan needs some more work... 
+   or perhaps we are not using it correctly.
+*)
+
+(* we should figure out how to convert the fan argument also. *)
+(* schem_lift (SP NA NB) (SP (SOT NA) (SP (SPRK (SOT NB)) NX)) *)
+
+term "schem_lift (SP NA NB) (SP (SP (SOT NA) (SP (SPRK (SOT NB)) NX)) NX)"
+
+term "(fst_l (prod_l (option_l (triv_l id_l))
+                                          (fst_l (prio_l_keep (option_l (triv_l (id_l)))))))"
+(*
+definition sem_final :: "(syn, state) x_sem'" where
+"sem_final =
+  l_map_s id
+    (schem_lift
+      NA (SFAN (l_reverse (schem_lift (SP NA NB) (SP (SOT NA) (SP (SPRK (SOT NB)) NX)))) NA))
+    (pcomp print_calc_seq_lc)"
+*)
+definition sem_final :: "(syn, state) x_sem'" where
+"sem_final =
+  l_map_s id
+    (schem_lift
+      NA (SFAN (l_reverse 
+                (schem_lift (SP NA NB) (SP (SP (SOT NA) (SP (SPRK (SOT NB)) NX)) NX))) 
+          NA))
+    (pcomp print_calc_seq_lc)"
 
 (* TO DOS:
 - finish generalizing lifting (and lifting validation) to take syntax
@@ -79,6 +107,9 @@ value [simp] "(l_reverse (fst_l (prod_l (option_l (triv_l id_l))
 definition gsx :: "syn gensyn \<Rightarrow> childpath \<Rightarrow> state \<Rightarrow> nat \<Rightarrow> state option" where
 "gsx =
   gensyn_sem_exec (xsem sem_final)"
+
+value  "gsx prog' [] ((Some (mdt (gs_sk prog')), (mdp 0 (Some (mdt (GRPath [])))), mdp 0 (Some (mdt Down))), (mdp 0 (Some (mdt 2)), (mdp 0 (Some (mdt []))))) 900"
+
 
 (*
 value  "gsx prog [] ((Some (mdt (gs_sk prog)), (mdp 0 (Some (mdt (GRPath [])))), mdp 0 (Some (mdt Down))), (mdp 0 (Some (mdt 2)), Some (mdt []))) 90"

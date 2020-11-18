@@ -1,6 +1,7 @@
 theory Seq
   imports "../Gensyn" "../Gensyn_Descend" "../Mergeable/Mergeable" "../Mergeable/MergeableInstances"
           "../Lifting/LiftUtils" "../Lifting/LiftInstances"
+          "../Lifting/AutoLift"
 
 begin
 
@@ -14,56 +15,6 @@ datatype dir =
   | Up childpath
 
 type_synonym state' = "gensyn_skel * unit gs_result * dir"
-
-(*
-definition seq_sem :: "('x \<Rightarrow> syn) \<Rightarrow> 'x \<Rightarrow> state' \<Rightarrow> state'" where
-"seq_sem f x st =
-(case st of (sk, GRPath cp, d) \<Rightarrow>
-  (case d of
-    Down \<Rightarrow>    
-      (case (f x) of
-        Snext \<Rightarrow>
-            (case gensyn_cp_next sk cp of
-                                None => (sk, GRDone)
-                                | Some cp' \<Rightarrow> (sk, GRPath cp'))
-        | Sseq \<Rightarrow>
-            (case gensyn_get sk (cp @ [0]) of
-                     None \<Rightarrow> (case gensyn_cp_next sk cp of
-                              None => (sk, GRDone)
-                              | Some cp' \<Rightarrow> (sk, GRPath cp'))
-                     | Some _ \<Rightarrow> (sk, GRPath (cp @ [0])))))
-    | _ \<Rightarrow> st)"
-*)
-
-(* standard: nodes will always try to go to their first child
-not sure if this should be handled here or on a per-node basis
-for now i'm going to see if i can handle it per-node *)
-
-(*
-definition seq_sem :: "syn \<Rightarrow> state' \<Rightarrow> state'" where
-"seq_sem x st =
-(case st of (sk, GRPath cp, d) \<Rightarrow>
-  (case x of
-    Snext \<Rightarrow>
-        (case gensyn_cp_sibling sk cp of
-         None => (case gensyn_cp_parent sk cp of
-                  None \<Rightarrow> (sk, GRDone, Up)
-                  | Some cp' \<Rightarrow> (sk, GRPath cp', Up))
-         | Some cp' \<Rightarrow> (sk, GRPath cp', Down))
-    | Sseq \<Rightarrow>
-        (case d of
-          Down \<Rightarrow>
-            (case gensyn_get sk (cp @ [0]) of
-             None \<Rightarrow> (sk, GRPath cp, Up)
-             | Some _ \<Rightarrow> (sk, GRPath (cp @ [0]), Down))
-          | Up \<Rightarrow>
-            (case gensyn_cp_sibling sk cp of
-             None => (case gensyn_cp_parent sk cp of
-                      None \<Rightarrow> (sk, GRDone, Up)
-                      | Some cp' \<Rightarrow> (sk, GRPath cp', Up))
-             | Some cp' \<Rightarrow> (sk, GRPath cp', Down))))
-  | _ \<Rightarrow> st)"
-*)
 
 fun getlast :: "'a list \<Rightarrow> 'a option" where
 "getlast [] = None"
@@ -110,10 +61,6 @@ type_synonym state = "gensyn_skel md_triv option *
                       unit gs_result md_triv option md_prio *
                       dir md_triv option md_prio"
 
-term "(prod_l (option_l (triv_l (id_l)))
-             (prod_l 
-              (prio_l_inc (option_l (triv_l (id_l))))
-              (prio_l_inc (option_l (triv_l (id_l))))))"
 
 instantiation gensyn :: (Bogus) Bogus begin
 definition gensyn_bogus :
@@ -133,6 +80,7 @@ definition dir_bogus :
 instance proof qed
 end
 
+(*
 definition seq_sem_l :: " syn \<Rightarrow> state \<Rightarrow> state" where
 "seq_sem_l  =
   l_map_s id
@@ -140,5 +88,13 @@ definition seq_sem_l :: " syn \<Rightarrow> state \<Rightarrow> state" where
              (prod_l 
               (prio_l_inc (option_l (triv_l (id_l))))
               (prio_l_inc (option_l (triv_l (id_l)))))) (seq_sem)"
+*)
+
+definition seq_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
+"seq_sem_l =
+  l_map_s id
+  (schem_lift
+    (SP NA (SP NB NC)) (SP (SOT NA) (SP (SPRI (SOT NB)) (SPRI (SOT NC)))))
+  seq_sem"
 
 end

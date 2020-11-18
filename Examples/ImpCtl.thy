@@ -99,8 +99,6 @@ definition cond_trans :: "syn \<Rightarrow> cond_syn'" where
     Scond x \<Rightarrow> x
     | _ \<Rightarrow> Sskip_cond)"
 
-term "prod_l (id_l) ((snd_l (snd_l id_l)))"
-
 definition printcalcseq_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "printcalcseq_sem_l =
   l_map_s printcalc_trans
@@ -120,10 +118,9 @@ don't always want inc2 *)
 definition imp_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "imp_sem_l =
   l_map_s imp_trans
-    (prod_l (prod_l (option_l (triv_l id_l))
-                    (prod_l (prio_l_case_inc imp_prio (option_l (triv_l id_l)))
-                            (prio_l_case_inc imp_prio (option_l (triv_l id_l)))))
-            (fst_l (prio_l_keep (option_l (triv_l id_l)))))
+    (schem_lift (SP (SP NA (SP NB NC)) ND)
+              (SP (SP (SOT NA) (SP (SPRC imp_prio (SOT NB)) (SPRC imp_prio (SOT NC))))
+                  (SP (SPRK (SOT ND)) NX)))
     imp_ctl_sem"
 
 definition cond_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where

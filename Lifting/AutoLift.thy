@@ -80,6 +80,9 @@ datatype ('x, 'k, 'a) soalist =
 datatype ('x, 'k, 'a) sroalist =
   SRL "'x \<Rightarrow> ('k :: linorder) option" "'a"
 
+datatype ('x, 'da, 'c, 'a) sfan =
+  SFAN "'x \<Rightarrow> 'da \<Rightarrow> 'c" "'a"
+
 (* dealing with the situation where we need to merge multiple (LHS) fields
    into one (RHS) field. *)
 
@@ -138,6 +141,10 @@ instance proof qed
 end
 
 instantiation smerge :: (schem, schem) schem begin
+instance proof qed
+end
+
+instantiation sfan :: (_, _, _, schem) schem begin
 instance proof qed
 end
 
@@ -334,13 +341,39 @@ instance proof qed
 end
 
 
+instantiation sfan :: (_, _, _, hasntA) hasntA begin
+instance proof qed
+end
+
+instantiation sfan :: (_, _, _, hasntB) hasntB begin
+instance proof qed
+end
+
+instantiation sfan :: (_, _, _, hasntC) hasntC begin
+instance proof qed
+end
+
+
+instantiation sfan :: (_, _, _, hasntD) hasntD begin
+instance proof qed
+end
+
+instantiation sfan :: (_, _, _, hasntE) hasntE begin
+instance proof qed
+end
+
 
 type_synonym ('s1, 's2, 'x, 'a, 'b) schem_lift =
 "('s1 \<Rightarrow> 's2 \<Rightarrow> ('x, 'a, 'b) lifting)"
 
 (* id liftings (base case) *)
+(*
 consts schem_lift ::
   "('s1 :: schem, 's2 :: schem, 'x, 'a, 'b :: Mergeable) schem_lift"
+*)
+
+consts schem_lift ::
+  "('s1 :: schem, 's2 :: schem, 'x, 'a, 'b) schem_lift"
 
 definition schem_lift_baseA ::  "('n :: n_A, 'n, 'x, 'a :: Bogus, 'a) schem_lift" where
 "schem_lift_baseA _ _ =
@@ -575,6 +608,15 @@ definition schem_lift_merge_recR_E_right ::
     SM ls rs \<Rightarrow>
       (rec n rs))"
 
+
+definition schem_lift_fan_recR ::
+  "('n, 'ls, 'x, 'a, 'b2) schem_lift \<Rightarrow>
+   ('n, ('x, 'a, 'c, 'ls) sfan, 'x, 'a, ('c * 'b2)) schem_lift" where
+"schem_lift_fan_recR rec n s =
+  (case s of
+    SFAN f ls \<Rightarrow>
+      prod_fan_l f (rec n ls))"
+
 (* left-side recursion (merge) *)
 definition schem_lift_recL ::
   "('s1l, 's2, 'x, 'a1l, 'b2) schem_lift \<Rightarrow>
@@ -602,9 +644,13 @@ adhoc_overloading schem_lift
 
   "schem_lift_option_recR schem_lift"
 
+  "schem_lift_prio_recR schem_lift"
+
   "schem_lift_oalist_recR schem_lift"
 
   "schem_lift_roalist_recR schem_lift"
+
+  "schem_lift_fan_recR schem_lift"
 
   "schem_lift_prod_recR_A_left schem_lift"
   "schem_lift_prod_recR_A_right schem_lift"
@@ -634,22 +680,30 @@ adhoc_overloading schem_lift
    problem is getting confused; instances for a come up when searching for a b
    (or vice versa?)*)
 
-term "schem_lift (SP (SP NC NA) NB) (SP NA (SP NC (SP NX NB)))"
+(* convenience abbreviations for priorities *)
+abbreviation SOT where
+"SOT x \<equiv> (SO (ST x))"
 
-term "schem_lift (SP (SP NC NA) NB) (SP (SO NC) (SM NA NB))"
+abbreviation SPR0 where
+"SPR0 x \<equiv>
+  SPR (\<lambda> _ . 0) (\<lambda> _ _ . 0) x"
 
+abbreviation SPRK where
+"SPRK x \<equiv>
+  SPR (\<lambda> _ . 0) (\<lambda> _ z . z) x"
 
-(* other needed primitives:
-   - option
-   - triv
-   - prio (here we need to specify some kind of descriptor)
-   - sum (left/right)
-   - list_hd
-   -
-   - list_map (?)
-   - oalist_map (?)
-*)
+abbreviation SPRI where
+"SPRI x \<equiv>
+  SPR (\<lambda> _ . 0) (\<lambda> _ z . 1 + z) x"
 
+abbreviation SPRIN where
+"SPRIN n x \<equiv>
+  SPR (\<lambda> _ . n) (\<lambda> _ z . n + z) x"
+
+(* NB: differs from prio_l_case_inc behavior *)
+abbreviation SPRC where
+"SPRC f x \<equiv>
+  SPR (\<lambda> s . f s) (\<lambda> s z . (f s) + z) x"
 
 (* next step. we need to figure out how to thread through constructors. 
 

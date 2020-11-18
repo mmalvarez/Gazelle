@@ -1,6 +1,7 @@
 theory PrintCalc imports
  "../Mergeable/Mergeable" "../Mergeable/MergeableInstances" 
   "../Lifting/LiftInstances" "../Lifting/LangComp"
+  "../Lifting/AutoLift"
 begin
 
 
@@ -73,29 +74,27 @@ definition print_sem :: "print \<Rightarrow> print_st \<Rightarrow> print_st" wh
          | Preset \<Rightarrow> (sti, [])
          | Pskip \<Rightarrow> (sti, stl)))"
 
+(*
 definition print_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
   "print_sem_l = 
     l_map_s print_trans
             (prod_l ((prio_l_zero (option_l (triv_l (id_l :: (print, int, int) lifting)))))
                     (prio_l_inc (option_l (triv_l (id_l :: (print, int list, int list) lifting))))) print_sem"
-
-
-value "(plifting.extend id_pl \<lparr> LPost = (\<lambda> s a . a) \<rparr>) :: (print, int, int) lifting"
-term "id_l"
-value "id_l :: (print, int, int) lifting"
-(*
-definition calc_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
-"calc_sem_l =
-  l_map_s calc_trans
-    (fst_l (prio_l_inc (option_l (triv_l (id_l))))) calc_sem"
 *)
 
+definition print_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
+  "print_sem_l =
+    l_map_s print_trans
+    (schem_lift
+       (SP NA NB) (SP (SPR0 (SOT NA)) (SPRI (SOT NB))))
+    print_sem"
+
 definition calc_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "calc_sem_l =
   l_map_s calc_trans
-    (fst_l (prio_l_inc (option_l (triv_l (id_l :: (calc, int, int ) lifting))))) calc_sem"
-
-
+  (schem_lift
+    NA (SP (SPRI (SOT NA)) NX))
+   calc_sem"
 
 definition print_calc_lc :: "(syn, state) langcomp" where
 "print_calc_lc =
