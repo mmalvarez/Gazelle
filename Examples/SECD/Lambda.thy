@@ -123,25 +123,11 @@ definition secd_sem :: "syn \<Rightarrow> 'a secd_full \<Rightarrow> 'a secd_ful
       )"
 
 
-
-(* problem - need to figure out best way to signal "done" *)
-
 (* i think we are signaling exit too early - not enough time to clean up stack. *)
 fun dump_get_next_path :: "'a sec list \<Rightarrow> (childpath * dir) option" where
 "dump_get_next_path [] = None"
 | "dump_get_next_path ((s, e, chdir#ct)#dt) = Some chdir"
 | "dump_get_next_path ((s, e, [])#dt) = dump_get_next_path dt"
-
-(*
-definition secd_gsx_info :: "syn \<Rightarrow> secd \<Rightarrow> (gensyn_skel * unit gs_result)" where
-"secd_gsx_info syn st =
-  (case st of
-    (g, (s, e, (cp, _)#c'), d, b) \<Rightarrow> (g, GRPath cp)
-    | (g, (s, e, []), d) \<Rightarrow>
-      (case dump_get_next_path d of
-        None \<Rightarrow> (g, GRDone)
-        | Some (cp, _) \<Rightarrow> (g, GRPath cp)))"
-*)
 
 definition secd_gsx_info :: "syn \<Rightarrow> 'a secd_full \<Rightarrow> (gensyn_skel * unit gs_result)" where
 "secd_gsx_info syn st =
@@ -155,12 +141,8 @@ definition secd_gsx_info :: "syn \<Rightarrow> 'a secd_full \<Rightarrow> (gensy
 definition secd_sem_l :: "(syn, 'a secd_full) x_sem'" where
 "secd_sem_l =
   l_map_s id
-    (prod_fan_l secd_gsx_info id_l) secd_sem"
-
-term "xsem secd_sem_l"
-term  "gensyn_sem_exec (xsem secd_sem_l)"
-
-term "gensyn_sem_exec"
+    (schem_lift NA (SFAN secd_gsx_info NA))
+    secd_sem"
 
 definition gsx :: "syn gensyn \<Rightarrow> childpath \<Rightarrow> 'a secd_full \<Rightarrow> nat \<Rightarrow> 'a secd_full option" where
 "gsx =

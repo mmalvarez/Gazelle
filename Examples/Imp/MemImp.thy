@@ -2,12 +2,6 @@ theory MemImp
   imports Mem "../ImpCtl" 
 begin
 
-(* convention:
-   2 registers. the first one interfaces with memory.
-   but we can swap register contents *)
-(* or, should we somehow be lifting each component via memory?
-   how would that work? *)
-
 datatype calc2 = 
   Cadd
   | Csub
@@ -49,7 +43,8 @@ fun calc2_key3 :: "syn \<Rightarrow> str option" where
 fun cond_key :: "syn \<Rightarrow> str option" where
 "cond_key (Sb _ s) = Some s"
 | "cond_key _ = None"
-
+        
+(*
 definition calc2_key_lift :: "(syn, calc2_state, (str, int swr) oalist) lifting" where
 "calc2_key_lift =
   merge_l
@@ -57,6 +52,15 @@ definition calc2_key_lift :: "(syn, calc2_state, (str, int swr) oalist) lifting"
     (merge_l
       (oalist_l calc2_key2 ((prio_l_keep o option_l o triv_l) id_l))
       (oalist_l calc2_key3 ((prio_l_inc o option_l o triv_l) id_l)))"
+*)
+
+definition calc2_key_lift :: "(syn, calc2_state, (str, int swr) oalist) lifting" where
+"calc2_key_lift =
+  schem_lift
+        (SP NA (SP NB NC))
+        (SM (SL calc2_key1 (SPRK (SOT NA)))
+        (SM (SL calc2_key2 (SPRK (SOT NB)))
+            (SL calc2_key3 (SPRI (SOT NC)))))"
 
 fun calc2_sem :: "calc2 \<Rightarrow> calc2_state \<Rightarrow> calc2_state" where
 "calc2_sem (Cadd) (x1, x2, x3) =
@@ -86,35 +90,41 @@ type_synonym state =
 definition imp_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "imp_sem_l =
   l_map_s imp_trans
-  (prod_l (prod_l (option_l (triv_l id_l))
-                  (prod_l (prio_l_case_inc imp_prio (option_l (triv_l id_l)))
-                          (prio_l_case_inc imp_prio (option_l (triv_l id_l)))))
-          (fst_l (prio_l_keep (option_l (triv_l id_l)))))
+  (schem_lift
+    (SP (SP NA (SP NB NC)) ND)
+        (SP 
+          (SP (SOT NA)
+              (SP (SPRC imp_prio (SOT NB)) (SPRC imp_prio (SOT NC))))
+          (SP (SPRK (SOT ND)) NX)))
   imp_ctl_sem"
 
 definition calc2_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "calc2_sem_l =
   l_map_s id
-  (snd_l (snd_l (calc2_key_lift)))
+  (schem_lift
+    NA (SP NX (SP NX (SINJ calc2_key_lift NA))))
   (calc2_sem o calc2_trans)"
 
 definition cond_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "cond_sem_l =
   l_map_s id
-  (snd_l 
-    (prod_l (prio_l_inc (option_l (triv_l id_l)))
-            (oalist_l cond_key ((prio_l_keep o option_l o triv_l) id_l))))
+  (schem_lift
+    (SP NA NB)
+    (SP NX
+        (SP (SPRI (SOT NA))
+            (SL cond_key (SPRK (SOT NB))))))
   (cond_sem o cond_trans)"
 
 definition mem_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "mem_sem_l = 
   l_map_s mem_trans
-    (snd_l (snd_l id_l))
+    (schem_lift NA (SP NX (SP NX NA)))
   mem_sem"
 
 definition seq_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "seq_sem_l =
-  l_map_s seq_trans (fst_l id_l)
+  l_map_s seq_trans 
+  (schem_lift NA (SP NA NX))
   Seq.seq_sem_l"
 
 definition sems where
@@ -123,8 +133,11 @@ definition sems where
 definition sem_final :: "(syn, state) x_sem'" where
 "sem_final =
   l_map_s id
-    (prod_fan_l (l_reverse (fst_l (prod_l (option_l (triv_l id_l))
-                                          (fst_l (prio_l_keep (option_l (triv_l (id_l)))))))) id_l)
+    (schem_lift
+      NA (SFAN (LOut
+                (schem_lift (SP NA NB) 
+                            (SP (SP (SOT NA) (SP (SPRK (SOT NB)) NX)) NX))) 
+          NA))
     (pcomps sems)"
 
 

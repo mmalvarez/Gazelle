@@ -33,8 +33,6 @@ datatype syn' =
   | Sskip
   | Swhile
 
-(* TODO: fix this so we can actually reassociate, the way you would
-   actually want to write it *)
 type_synonym state' = "(gensyn_skel * unit gs_result * dir) * bool"
 
 definition imp_ctl_sem :: "syn' \<Rightarrow> state' \<Rightarrow> state'" where
@@ -111,23 +109,19 @@ definition imp_prio :: "(syn' \<Rightarrow> nat)" where
     Sskip \<Rightarrow> 0
     | _ \<Rightarrow> 2)"
   
-
-(* is reassociation going to be a problem? *)
-(* also - we need to match on syntax I think?
-don't always want inc2 *)
 definition imp_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "imp_sem_l =
   l_map_s imp_trans
     (schem_lift (SP (SP NA (SP NB NC)) ND)
-              (SP (SP (SOT NA) (SP (SPRC imp_prio (SOT NB)) (SPRC imp_prio (SOT NC))))
+                (SP (SP (SOT NA) (SP (SPRC imp_prio (SOT NB)) (SPRC imp_prio (SOT NC))))
                   (SP (SPRK (SOT ND)) NX)))
     imp_ctl_sem"
 
 definition cond_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "cond_sem_l =
   l_map_s cond_trans
-    (snd_l (prod_l (prio_l_inc (option_l (triv_l id_l))) 
-                   (fst_l (prio_l_keep (option_l (triv_l (id_l)))))))
+    (schem_lift (SP NA NB)
+                 (SP NX (SP (SPRI (SOT NA)) (SP (SPRK (SOT NB)) NX))))
   cond_sem"
 
 definition pcs_cond_lc :: "(syn, state) langcomp" where
@@ -143,10 +137,11 @@ definition imp_lc :: "(syn, state) langcomp" where
 definition sem_final :: "(syn, state) x_sem'" where
 "sem_final =
   l_map_s id
-    (prod_fan_l (l_reverse (fst_l (prod_l (option_l (triv_l id_l))
-                                          (fst_l (prio_l_keep (option_l (triv_l (id_l)))))))) id_l)
+    (schem_lift NA
+      (SFAN (l_reverse 
+                (schem_lift (SP NA NB) (SP (SP (SOT NA) (SP (SPRK (SOT NB)) NX)) NX))) 
+          NA))
     (pcomp imp_lc)"
-
 
 definition gsx :: "syn gensyn \<Rightarrow> childpath \<Rightarrow> state \<Rightarrow> nat \<Rightarrow> state option" where
 "gsx =
@@ -180,14 +175,6 @@ definition initial' :: "state" where
      , mdp 0 (Some (mdt Down)))
   , (mdp 0 (Some (mdt False)))
   , (mdp 0 (Some (mdt 2)), (mdp 0 (Some (mdt [])))))"
-
-term "(l_reverse (fst_l (prod_l (option_l (triv_l id_l))
-                                          (fst_l (prio_l_keep (option_l (triv_l (id_l))))))))"
-
-value [simp] "l_reverse (fst_l (prod_l (option_l (triv_l id_l))
-                                          (fst_l (prio_l_keep (option_l (triv_l (id_l)))))))
-(Spc (Inl Sseq)) initial'
-"
 
 
 value [simp] "(pcomp imp_lc) (Spc (Inl Sseq)) initial'"

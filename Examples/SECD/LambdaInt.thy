@@ -125,17 +125,7 @@ fun const_prio :: "syn \<Rightarrow> nat" where
 fun calc_prio :: "syn \<Rightarrow> nat" where
 "calc_prio (Sc _ _ _) = 3"
 | "calc_prio _ = 1"
-
-
-
-term "snd_l (snd_l (fst_l (snd_l ( (roalist_l calc2_key1 ((prio_l_keep o option_l o triv_l) id_l))))))"
-
-term "(prod_l (
-    merge_l
-      (roalist_l calc2_key1 ((prio_l_keep o option_l o triv_l) id_l))
-      (roalist_l calc2_key2 ((prio_l_keep o option_l o triv_l) id_l)))
-        ((prio_l_inc o option_l o triv_l) id_l))"
-
+(*
 definition calc2_key_lift :: "(syn, calc2_state, int swr envw * int swr) lifting" where
 "calc2_key_lift =
   prod_deassoca_l (prod_l (
@@ -143,8 +133,29 @@ definition calc2_key_lift :: "(syn, calc2_state, int swr envw * int swr) lifting
       (roalist_l calc2_key1 ((prio_l_keep o option_l o triv_l) id_l))
       (roalist_l calc2_key2 ((prio_l_keep o option_l o triv_l) id_l)))
         ((prio_l_case_inc calc_prio o option_l o triv_l) id_l))"
+*)
+
+definition calc2_key_lift :: "(syn, calc2_state, int swr envw * int swr) lifting" where
+"calc2_key_lift =
+  schem_lift
+  (SP NA (SP NB NC))
+  (SP (SM (SRL calc2_key1 (SPRK (SOT NA)))
+          (SRL calc2_key2 (SPRK (SOT NB))))
+      (SPRC calc_prio (SOT NC)))"
 
 
+(*
+  schem_lift
+  (SP NA (SP NB NC))
+  (SP NX 
+      (SP 
+        (SP NX)
+        NX))
+*)
+
+(* need inl/inr liftings *)
+(* maybe we should also add some more letters. would be good scaling test anyway.
+*)
 definition calc2_lift :: "(syn, calc2_state, state) lifting" where
 "calc2_lift =
 merge_l
@@ -185,18 +196,6 @@ definition calc_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
   calc2_lift
   (calc2_sem o calc_trans)"
 
-term "prod_l "
-
-(* OK, so it looks like we need map-liftings for
-- sum
-- roalist
-both are done now
-*)
-(* secd_full has:
-   - childpath \<Rightarrow> lift into state
-   - secd \<Rightarrow> lift into secd_w
-   - int (unneeded, use fst/deassoc.) *)
-
 
 definition env_lift ::
 "(syn, ('a :: Bogus) env, 'a swr envw) lifting"
@@ -226,21 +225,6 @@ definition sec_lift ::
   (prod_l
       env_lift
       ((prio_l_case_inc lambda_prio o ot_l) id_l))"
-
-
-(*
-definition sec_lift ::
-"(syn, ('a :: Bogus) sec, 'a swr secw) lifting" where
-"sec_lift =
-  prod_l
-    ((prio_l_case_inc lambda_prio o ot_l o list_map_l)
-      (sum_map_l 
-        ((prio_l_case_inc lambda_prio o ot_l) id_l)
-        clos_lift))
-  (prod_l
-      env_lift
-      ((prio_l_inc2 o ot_l) id_l))"
-*)
 
 definition secd_lift ::
 "(syn, ('a :: Bogus) secd, 'a swr secdw) lifting" where

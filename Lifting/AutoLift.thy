@@ -22,6 +22,11 @@ class n_E
 
 class n_X
 
+
+(* class collecting all "base" names *)
+class basename
+
+
 (* each name N gets a dummy datatype NN *)
 datatype nA = NA
 
@@ -39,7 +44,15 @@ instantiation nA :: n_A begin
 instance proof qed
 end
 
+instantiation nA :: basename begin
+instance proof qed
+end
+
 instantiation nB :: n_B begin
+instance proof qed
+end
+
+instantiation nB :: basename begin
 instance proof qed
 end
 
@@ -47,11 +60,23 @@ instantiation nC :: n_C begin
 instance proof qed
 end
 
+instantiation nC :: basename begin
+instance proof qed
+end
+
 instantiation nD :: n_D begin
 instance proof qed
 end
 
+instantiation nD :: basename begin
+instance proof qed
+end
+
 instantiation nE :: n_E begin
+instance proof qed
+end
+
+instantiation nE :: basename begin
 instance proof qed
 end
 
@@ -82,6 +107,10 @@ datatype ('x, 'k, 'a) sroalist =
 
 datatype ('x, 'da, 'c, 'a) sfan =
   SFAN "'x \<Rightarrow> 'da \<Rightarrow> 'c" "'a"
+
+(* convenience function for injecting existing liftings *)
+datatype ('x, 'da, 'db, 'a) sinject =
+  SINJ "('x, 'da, 'db) lifting" "'a"
 
 (* dealing with the situation where we need to merge multiple (LHS) fields
    into one (RHS) field. *)
@@ -148,6 +177,11 @@ instantiation sfan :: (_, _, _, schem) schem begin
 instance proof qed
 end
 
+instantiation sinject :: (_ , _, _, schem) schem
+begin
+instance proof qed
+end
+
 (* declare which names are _not_ in which classes
    (this helps us avoid the need for backtracking, which Isabelle
    typeclasses don't support) *)
@@ -206,15 +240,7 @@ instantiation sprod :: (hasntE, hasntE) hasntE begin
 instance proof qed
 end
 
-(* problem: sometimes we are merging multiple things into one.
-   do we reuse name? where do we annotate which lifting to use (LHS or RHS?)
-   i guess it has to be LHS? but this creates an asymmetry?*)
 
-(* striv
-   sprio
-   soption
-  soalist
-  sroalist *)
 instantiation striv :: (hasntA) hasntA begin
 instance proof qed
 end
@@ -353,7 +379,6 @@ instantiation sfan :: (_, _, _, hasntC) hasntC begin
 instance proof qed
 end
 
-
 instantiation sfan :: (_, _, _, hasntD) hasntD begin
 instance proof qed
 end
@@ -361,6 +386,28 @@ end
 instantiation sfan :: (_, _, _, hasntE) hasntE begin
 instance proof qed
 end
+
+
+instantiation sinject :: (_, _, _, hasntA) hasntA begin
+instance proof qed
+end
+
+instantiation sinject :: (_, _, _, hasntB) hasntB begin
+instance proof qed
+end
+
+instantiation sinject :: (_, _, _, hasntC) hasntC begin
+instance proof qed
+end
+
+instantiation sinject :: (_, _, _, hasntD) hasntD begin
+instance proof qed
+end
+
+instantiation sinject :: (_, _, _, hasntE) hasntE begin
+instance proof qed
+end
+
 
 
 type_synonym ('s1, 's2, 'x, 'a, 'b) schem_lift =
@@ -617,6 +664,13 @@ definition schem_lift_fan_recR ::
     SFAN f ls \<Rightarrow>
       prod_fan_l f (rec n ls))"
 
+
+definition schem_lift_inject ::
+  " ('n, ('x, 'a, 'b, 'n) sinject, 'x, 'a, 'b) schem_lift" where
+"schem_lift_inject n s =
+  (case s of
+    SINJ l ls \<Rightarrow> l)"
+
 (* left-side recursion (merge) *)
 definition schem_lift_recL ::
   "('s1l, 's2, 'x, 'a1l, 'b2) schem_lift \<Rightarrow>
@@ -628,10 +682,6 @@ definition schem_lift_recL ::
     SP s1l s1r \<Rightarrow>
       merge_l (recl s1l s2) (recr s1r s2))"
 
-(* option lifting *)
-
-(* prio lifting (TODO: prio selector) *)
-(* oalist lifting (TODO: key) *)
 
 adhoc_overloading schem_lift 
   "schem_lift_baseA" 
@@ -676,6 +726,8 @@ adhoc_overloading schem_lift
 
   "schem_lift_recL schem_lift schem_lift"
 
+  "schem_lift_inject"
+
 (* need more constraints to prevent going down unhappy paths 
    problem is getting confused; instances for a come up when searching for a b
    (or vice versa?)*)
@@ -694,7 +746,7 @@ abbreviation SPRK where
 
 abbreviation SPRI where
 "SPRI x \<equiv>
-  SPR (\<lambda> _ . 0) (\<lambda> _ z . 1 + z) x"
+  SPR (\<lambda> _ . 1) (\<lambda> _ z . 1 + z) x"
 
 abbreviation SPRIN where
 "SPRIN n x \<equiv>

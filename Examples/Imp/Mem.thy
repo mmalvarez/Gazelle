@@ -1,12 +1,9 @@
-(* Idea : Mem language has
-   Read
-   Write *)
-
 theory Mem
   imports "../../Mergeable/MergeableInstances"
-          "../../Mergeable/MergeableAList"
+          "../../Mergeable/MergeableAList"          
           "../../Lifting/LiftUtils"
           "../../Lifting/LiftInstances"
+          "../../Lifting/AutoLift"
          
 begin
 
@@ -58,14 +55,6 @@ fun mem_key_dest :: "syn \<Rightarrow> str option" where
 | "mem_key_dest (Scopy s1 s2) = (Some s2)"
 | "mem_key_dest Sskip = None"
 
-(*
-definition mem_sem :: "syn \<Rightarrow> state \<Rightarrow> state" where
-"mem_sem = 
-  l_map_s id
-    (prod_l ((prio_l_inc o option_l o triv_l) id_l)
-            (oalist_l mem_keys ((prio_l_inc o option_l  o triv_l) id_l))) mem0_sem"
-*)
-
 (* where is post happening? *)
 (* problem: post happens after data already lost in merge
    we either need to accept that merge_pl is "weird" in that it depends on
@@ -77,9 +66,9 @@ we should be trying to merge specific keys/sub-lists *)
 definition mem_sem :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "mem_sem = 
   l_map_s id
-    (merge_l (oalist_l mem_key_src ((prio_l_inc o option_l  o triv_l) id_l))
-             (oalist_l mem_key_dest ((prio_l_inc2 o option_l  o triv_l) id_l))) mem0_sem"
-
+    (schem_lift (SP NA NB)
+                (SM (SL mem_key_src (SPRI (SOT NA)))
+                    (SL mem_key_dest (SPRIN 2 (SOT NB))))) mem0_sem"
 
 definition test_store where
 "test_store = to_oalist
@@ -87,13 +76,7 @@ definition test_store where
   , (STR ''b'', Swr 2)
   , (STR ''z'', Swr (-1))]"
 
-value "LOut (merge_l (oalist_l mem_key_src ((prio_l_keep o option_l  o triv_l) id_l))
-                     (oalist_l mem_key_dest ((prio_l_inc o option_l  o triv_l) id_l))) (Scopy (STR ''a'') (STR ''b'')) test_store"
-
-value "LPost (oalist_l mem_key_dest ((prio_l_inc o option_l  o triv_l) id_l)) (Scopy (STR ''a'') (STR ''b'')) test_store"
-
-
-value "mem_sem (Scopy (STR ''b'') (STR ''b'')) test_store"
+value "mem_sem (Scopy (STR ''x'') (STR ''y'')) test_store"
 
 (*
 definition t1 where
