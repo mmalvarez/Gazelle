@@ -32,31 +32,46 @@ declare lifting.cases [simp]
 
 (* Validity of lifting *)
 
-(* i think we need to take ordering into account here.
-   idea is that when we project, _data_ ordering needs to be preserved *)
-(* TODO: can these laws be reduced? *)
-
-(* if we get rid of H3 we no longer need the POrd constraint on a.
+(*
+problem. looks like in order to get merge lifting to work, we must further
+constrain (at least) OutS membership laws.
 *)
 definition lifting_valid :: "('x, 'a, 'b :: Pord, 'z) liftingv_scheme \<Rightarrow> bool" where
 "lifting_valid l =
-  ((\<forall> s a b . LUpd l s a b \<in> LOutS l s) \<and>
-   (\<forall> s b . LOut l s b \<in> LInS l s) \<and>
+  ((\<forall> s b b' . b \<in> LOutS l s \<longrightarrow> b <[ b' \<longrightarrow>  b' \<in> LOutS l s) \<and> 
+   (\<forall> s a b . a \<in> LInS l s \<longrightarrow> LUpd l s a b \<in> LOutS l s) \<and>
+   (\<forall> s b . b \<in> LOutS l s \<longrightarrow> LOut l s b \<in> LInS l s) \<and>
    (\<forall> s a b . a \<in> LInS l s \<longrightarrow> a = LOut l s (LUpd l s a b)) \<and>
    (\<forall> s b . b \<in> LOutS l s \<longrightarrow> b <[ LUpd l s (LOut l s b) b))"
 
 lemma lifting_validI :
-  assumes HSO : "\<And> s a b . LUpd l s a b \<in> LOutS l s"
-  assumes HSI : "\<And> s b . LOut l s b \<in> LInS l s"
-  assumes HI : "\<And> s a b . a \<in> LInS l s \<Longrightarrow>  a = LOut l s (LUpd l s a b)"
-  assumes HO : "\<And> s b . b \<in> LOutS l s \<Longrightarrow> b <[ LUpd l s (LOut l s b) b"
+  assumes HSC : "\<And> s b b' . b \<in> LOutS l s \<Longrightarrow>
+                            b <[ b' \<Longrightarrow>
+                            b' \<in> LOutS l s"
+  assumes HSO : "\<And> s a b . a \<in> LInS l s \<Longrightarrow>
+                            LUpd l s a b \<in> LOutS l s"
+  assumes HSI : "\<And> s b . b \<in> LOutS l s \<Longrightarrow>
+                          LOut l s b \<in> LInS l s"
+  assumes HI : "\<And> s a b . a \<in> LInS l s \<Longrightarrow>  
+                          LOut l s (LUpd l s a b) = a"
+  assumes HO : "\<And> s b . b \<in> LOutS l s \<Longrightarrow>
+                        b <[ LUpd l s (LOut l s b) b"
   shows "lifting_valid l" using assms
+  by(auto simp add: lifting_valid_def)
+
+(* closure property for LOutS 
+   PROBLEM: this does not hold for md_prio!*)
+lemma lifting_validDC :
+  assumes H : "lifting_valid l"
+  assumes Hin : "b \<in> LOutS l s"
+  assumes Hleq : "b <[ b'"
+  shows "b' \<in> LOutS l s" using assms
   by(auto simp add: lifting_valid_def)
 
 lemma lifting_validDO :
   assumes H : "lifting_valid l"
   assumes HI : "a \<in> LInS l s"
-  shows "a = LOut l s (LUpd l s a b)" using assms
+  shows "LOut l s (LUpd l s a b) = a" using assms
   by(auto simp add: lifting_valid_def)
 
 lemma lifting_validDO' :
@@ -73,11 +88,13 @@ lemma lifting_validDI :
 
 lemma lifting_validDSO :
   assumes H : "lifting_valid l"
+  assumes HI : "a \<in> LInS l s"
   shows "LUpd l s a b \<in> LOutS l s" using assms
   by(auto simp add: lifting_valid_def)
 
 lemma lifting_validDSI :
   assumes H : "lifting_valid l"
+  assumes HI : "b \<in> LOutS l s"
   shows "LOut l s b \<in> LInS l s" using assms
   by(auto simp add: lifting_valid_def)
 
@@ -267,13 +284,14 @@ lemma lift_pred_step_lift_map_s :
   fixes l2 :: "('a1, 'a2 :: Pord, 'b2 :: Pord, 'z) liftingv_scheme"
   assumes Hv : "lifting_valid l2"
   assumes Hsyn : "l1 x1' = x1"
+  assumes Hout : "x2' \<in> LOutS l2 x1"
   assumes Hsem : "LOut l2 x1 x2' = x2"
   assumes Hres : "respects_InS l2 f"
   assumes HP : "P x1 x2 (f x1 x2)"
   shows "lift_pred_step_s l1 l2 P x1' x2' (lift_map_s l1 l2 f x1' x2')"
   using Hv Hsyn Hsem HP
 proof-
-  have In: "x2 \<in> LInS l2 x1" using lifting_validDSI[OF Hv, of x1 x2'] Hsem 
+  have In: "x2 \<in> LInS l2 x1" using lifting_validDSI[OF Hv Hout] Hsem 
     by(auto)
 
   have In': "f x1 x2 \<in> LInS l2 x1" using respects_InSD[OF Hres] In by auto
@@ -293,12 +311,13 @@ lemma lift_pred_step_lift_map_s_contra :
   fixes l2 :: "('a1, 'a2 :: Pord, 'b2 :: Pord, 'z) liftingv_scheme"
   assumes Hv : "lifting_valid l2"
   assumes Hsyn : "l1 x1' = x1"
+  assumes Hout : "x2' \<in> LOutS l2 x1"
   assumes Hsem : "LOut l2 x1 x2' = x2"
   assumes Hres : "respects_InS l2 f"
   assumes HP : "lift_pred_step_s l1 l2 P (x1') (x2') (lift_map_s l1 l2 f (x1') (x2'))"
   shows "P x1 x2 (f x1 x2)"
 proof-
-  have In: "x2 \<in> LInS l2 x1" using lifting_validDSI[OF Hv, of x1 x2'] Hsem 
+  have In: "x2 \<in> LInS l2 x1" using lifting_validDSI[OF Hv Hout] Hsem 
     by(auto)
 
   have In': "f x1 x2 \<in> LInS l2 x1" using respects_InSD[OF Hres] In by auto
@@ -431,6 +450,7 @@ lemma lower_pred_step_s_lower_map_s  :
   assumes Hv : "lifting_valid l2"
   assumes Hunmap : "can_lower_map_s l1 l2 f'"
   assumes Hunpred : "can_lower_pred_step_s l1 l2 P'"
+  assumes Hout : "x2' \<in> LOutS l2 x1"
   assumes H: "\<And> x1'' . l1 x1'' = x1 \<Longrightarrow> P' x1'' x2' (f' x1'' x2')"
   shows "lower_pred_step_s l1 l2 P' x1 (LOut l2 x1 x2') (lower_map_s l1 l2 f' x1 (LOut l2 x1 x2'))"
 proof(rule lower_pred_step_sI)
@@ -444,7 +464,7 @@ proof(rule lower_pred_step_sI)
 
   have Eq1 : "LOut l2 (l1 syn') x2' = LOut l2 (l1 syn') (LNew l2 x1 (LOut l2 x1 x2'))"
     using Hsyn lifting_validDO[OF Hv]
-               lifting_validDSI[OF Hv]
+               lifting_validDSI[OF Hv Hout]
     unfolding LNew_def by auto
 
   have Eq2 :
