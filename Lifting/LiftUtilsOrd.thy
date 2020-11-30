@@ -35,6 +35,11 @@ declare lifting.cases [simp]
 (*
 problem. looks like in order to get merge lifting to work, we must further
 constrain (at least) OutS membership laws.
+
+problem is that with merge, we are taking 2 elements (a pair)
+that are each individually in OutS, and have a LUB.
+but, will the combined thing be in OutS? This matters for instance when we
+have a priority wrapping an option
 *)
 definition lifting_valid :: "('x, 'a, 'b :: Pord, 'z) liftingv_scheme \<Rightarrow> bool" where
 "lifting_valid l =
