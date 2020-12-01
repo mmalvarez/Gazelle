@@ -12,9 +12,6 @@ begin
    for (instead of undefined)
 *)
 
-(*
-identity lifting
-*)
 class Bogus =
   fixes bogus :: "'a"
 
@@ -47,6 +44,7 @@ instantiation sum :: (Bogus, _) Bogus begin
 definition sum_bogus : "bogus = Inl bogus"
 instance proof qed
 end
+
 
 (* TODO: which option instance?
    (list instance should probably be [] but also could use
@@ -90,41 +88,32 @@ definition string_literal_bogus :
 instance proof qed
 end
 
+
+(*
+identity lifting
+*)
+
+
 definition id_l' ::
-  "('a, 'a) lifting'" where
+  "('a, 'a) syn_lifting" where
   "id_l' = id"
 
-definition id_pl ::
-  "('x, 'a :: Bogus, 'a) plifting" where
-"id_pl =
+definition id_l ::
+  "('x, 'a :: {Pord, Bogus}, 'a) lifting" where
+"id_l =
   \<lparr> LUpd = (\<lambda> s a a' . a)
   , LOut = (\<lambda> s a . a)
   , LBase = (\<lambda> s . bogus) \<rparr>" 
 
-abbreviation id_l :: "('x, 'a :: Bogus, 'a) lifting" where
-"id_l \<equiv> plifting.extend (id_pl :: ('x, 'a, 'a) plifting) \<lparr> LPost = \<lambda> s a . a \<rparr>"
-
-definition id_pv :: "('x, 'a, 'a) pliftingv" where
-"id_pv = \<lparr> LOutS = (\<lambda> _ . UNIV) \<rparr>"
+definition id_lv :: "('x, 'a :: {Pord, Bogus}, 'a) liftingv" where
+"id_lv = lifting.extend id_l \<lparr> LOutS = (\<lambda> _ . UNIV) \<rparr>"
 
 
-lemma id_pl_valid : "plifting_valid (id_pl)"
-  apply (rule plifting_valid_intro)
-     apply(simp add:id_pl_def)
-    apply(simp add:id_pl_def)
-  done
-
-
-lemma id_pl_pv_valid : "plifting_pv_valid id_pl id_pv"
-  apply(rule plifting_pv_valid_intro)
-    apply(rule id_pl_valid)
-   apply(auto simp add: id_pl_def id_pv_def)
-  done
-
-lemma id_l_pv_valid : "lifting_pv_valid id_l id_pv"
-  apply(rule lifting_pv_valid_intro)
-    apply(rule plifting_pv_valid_cast) apply(rule id_pl_pv_valid)
-   apply(auto simp add: id_pl_def id_pv_def plifting.defs)
+lemma id_pl_valid : "lifting_valid (id_lv)"
+  apply (rule lifting_validI)
+  apply(simp add:id_l_def id_lv_def)
+   apply(simp add:id_l_def id_lv_def)
+   apply(simp add:id_l_def id_lv_def leq_refl)
   done
 
 (*
@@ -132,115 +121,61 @@ trivial ordering
 *)
 
 definition triv_l' ::
-  "('a, 'b) lifting' \<Rightarrow> ('a, 'b md_triv) lifting'" where
+  "('a, 'b) syn_lifting \<Rightarrow> ('a, 'b md_triv) syn_lifting" where
 "triv_l' t' =
   (case_md_triv t')"
 
-definition triv_pl ::
-  "('x, 'a, 'b, 'z) plifting_scheme \<Rightarrow> ('x, 'a, 'b md_triv) plifting" where
-"triv_pl t =
-  \<lparr> LUpd = (\<lambda> s a b . (case b of (mdt b') \<Rightarrow> (mdt ( (LUpd t s a b')))))
-  , LOut = (\<lambda> s b . (case b of (mdt b') \<Rightarrow> (LOut t s b')))
-  , LBase = (\<lambda> s . mdt (LBase t s)) \<rparr>"
-
 definition triv_l ::
-  "('x, 'a, 'b, 'z) lifting_scheme \<Rightarrow> ('x, 'a, 'b md_triv) lifting" where
-"triv_l t =
-  plifting.extend (triv_pl t) \<lparr> LPost = (\<lambda> s b . (case b of (mdt b') \<Rightarrow> mdt (LPost t s b'))) \<rparr>"
+  "('x, 'a :: Bogus, 'a md_triv) lifting" where
+"triv_l =
+  \<lparr> LUpd = (\<lambda> s a _ . mdt a)
+  , LOut = (\<lambda> s b . (case b of (mdt b') \<Rightarrow> b'))
+  , LBase = (\<lambda> s . mdt bogus) \<rparr>"
 
-definition triv_pv ::
-  "('x, 'a, 'b, 'z) pliftingv_scheme \<Rightarrow> ('x, 'a, 'b md_triv) pliftingv" where
-"triv_pv v =
-  \<lparr> LOutS = (\<lambda> s . mdt ` LOutS v s) \<rparr>"
+definition triv_lv ::
+  "('x, 'a :: Bogus, 'a md_triv) liftingv" where
+"triv_lv =
+  lifting.extend (triv_l) \<lparr> LOutS = (\<lambda> s . UNIV) \<rparr>"
 
-
-
-lemma triv_pl_valid : "plifting_valid t \<Longrightarrow> plifting_valid (triv_pl t)"
-proof(rule plifting_valid_intro)
-  fix s a b
-  assume H : "plifting_valid t"
-  show "LOut (triv_pl t) s (LUpd (triv_pl t) s a b) = a"
-    using plifting_valid_unfold1[OF H]
-    by(auto simp add:triv_pl_def split:md_triv.splits)
+lemma triv_pl_valid : 
+  shows "lifting_valid (triv_lv :: ('x, 'a :: Bogus, 'a md_triv) liftingv)"
+proof(rule lifting_validI)
+  fix s :: 'x
+  fix a :: 'a 
+  fix b
+  show "LUpd (triv_lv) s a b \<in> LOutS (triv_lv) s"
+    using lifting_validDSO 
+    by(auto simp add:triv_l_def triv_lv_def split:md_triv.splits)
 next
-  fix s a a' b
-  assume H : "plifting_valid t"
-  show "LUpd (triv_pl t) s a (LUpd (triv_pl t) s a' b) = LUpd (triv_pl t) s a b"
-    using plifting_valid_unfold2[OF H]
-    by(auto simp add:triv_pl_def split:md_triv.splits)
+  fix s :: 'x
+  fix a :: 'a
+  fix b
+  show "LOut (triv_lv) s (LUpd (triv_lv) s a b) = a"
+    by(auto simp add:triv_lv_def triv_l_def split:md_triv.splits)
+next
+  fix s :: 'x
+  fix b :: "'a md_triv"
+  assume H' : "b \<in> LOutS (triv_lv) s"
+
+  show "b <[ LUpd (triv_lv) s (LOut (triv_lv) s b) b"
+   by(auto simp add:triv_lv_def triv_l_def triv_pleq
+          split:md_triv.splits)
 qed
 
-lemma triv_pl_pv_valid : 
-  "plifting_pv_valid (t :: ('x, 'a, 'b, 'z1) plifting_scheme) (v :: ('x, 'a, 'b, 'z2) pliftingv_scheme) \<Longrightarrow> 
-   plifting_pv_valid (triv_pl t) (triv_pv v)"
-proof(rule plifting_pv_valid_intro)
-  assume H : "plifting_pv_valid t v"
-  show "plifting_valid (triv_pl t)" using triv_pl_valid[OF plifting_pv_valid_unfold1[OF H]] by auto
-next
-  fix s a b
-  assume H : "plifting_pv_valid t v"
-  show "LUpd (triv_pl t) s a b \<in> LOutS (triv_pv v) s"
-    using plifting_pv_valid_unfold2[OF H]
-    by(auto simp add:triv_pl_def triv_pv_def split:md_triv.splits)
-next
-  fix s b
-  assume H : "plifting_pv_valid t v"
-  assume H' : "b \<in> LOutS (triv_pv v) s"
-  show "b = LUpd (triv_pl t) s (LOut (triv_pl t) s b) b"
-    using plifting_pv_valid_unfold3[OF H] H'
-    by(auto simp add:triv_pl_def triv_pv_def split:md_triv.splits)
-qed
-
-lemma triv_l_pv_valid :
-  assumes H : "lifting_pv_valid t v"
-  shows "lifting_pv_valid (triv_l t) (triv_pv v)"
-proof(rule lifting_pv_valid_intro)
-  show "plifting_pv_valid (triv_l t) (triv_pv v)"
-    unfolding triv_l_def
-  proof(rule plifting_pv_valid_cast)
-    show "plifting_pv_valid (triv_pl t) (triv_pv v)"
-      using triv_pl_pv_valid[OF lifting_pv_valid_unfold1[OF H]]
-      by(auto simp add: triv_l_def triv_pv_def)
-  qed
-next
-  fix s a b
-  assume H1 : "b \<in> LOutS (triv_pv v) s"
-  show "LPost (triv_l t) s b \<in> LOutS (triv_pv v) s" unfolding triv_l_def
-    using lifting_pv_valid_unfold2[OF H] H1
-    by(auto simp add: triv_pl_def triv_pv_def plifting.defs split:md_triv.splits)
-next
-  fix s a b
-  assume H1 : "b \<in> LOutS (triv_pv v) s "
-  show "LOut (triv_l t) s (LPost (triv_l t) s b) = LOut (triv_l t) s b"
-    using lifting_pv_valid_unfold3[OF H] H1
-    by(auto simp add: triv_l_def triv_pl_def triv_pv_def plifting.defs split:md_triv.splits)
-qed
 (*
 option ordering
 *)
 
 (* TODO: we could probably use bogus here. *)
 definition option_l' ::
-  "('a, 'b) lifting' \<Rightarrow>
-   ('a, 'b option) lifting'" where
+  "('a, 'b) syn_lifting \<Rightarrow>
+   ('a, 'b option) syn_lifting" where
 "option_l' t =
   case_option undefined t "
 
-(*
-definition option_pl ::
-  "('x, 'a, 'b, 'z) plifting_scheme \<Rightarrow> ('x, 'a, 'b option) plifting" where
-"option_pl t =
-  \<lparr> LUpd = (\<lambda> s a b . 
-            (case b of
-              Some b' \<Rightarrow> Some (LUpd t s a b')
-              | None \<Rightarrow> Some (LNew t s a)))
-  , LOut = (\<lambda> s b . (case b of Some b' \<Rightarrow> LOut t s b'))
-  , LBase = (\<lambda> s . None)\<rparr>"
-*)
-
-definition option_pl ::
-  "('x, 'a, 'b, 'z) plifting_scheme \<Rightarrow> ('x, 'a, 'b option) plifting" where
-"option_pl t =
+definition option_l ::
+  "('x, 'a, 'b:: {Pord}, 'z) lifting_scheme \<Rightarrow> ('x, 'a, 'b option) lifting" where
+"option_l t =
   \<lparr> LUpd = (\<lambda> s a b . 
             (case b of
               Some b' \<Rightarrow> Some (LUpd t s a b')
@@ -249,85 +184,41 @@ definition option_pl ::
                       | None \<Rightarrow> LOut t s (LBase t s)))
   , LBase = (\<lambda> s . None)\<rparr>"
 
-definition option_l ::
-  "('x, 'a, 'b, 'z) lifting_scheme \<Rightarrow> ('x, 'a, 'b option) lifting" where
-"option_l t =
-  plifting.extend (option_pl t)
-    \<lparr> LPost = (\<lambda> s b . (case b of (Some b') \<Rightarrow> Some (LPost t s b')
-                                  | None \<Rightarrow> None)) \<rparr>"
+definition option_lv ::
+  "('x, 'a, 'b :: {Pord}, 'z) liftingv_scheme \<Rightarrow> ('x, 'a, 'b option) liftingv" where
+"option_lv v = lifting.extend (option_l v)
+  \<lparr> LOutS = (\<lambda> s . Some ` (LOutS v s))\<rparr>"
 
-definition option_pv ::
-  "('x, 'a, 'b, 'z) pliftingv_scheme \<Rightarrow> ('x, 'a, 'b option) pliftingv" where
-"option_pv v =
-  \<lparr> LOutS = (\<lambda> s . Some ` (LOutS v s)) \<rparr>"
-
-lemma option_pl_valid :
-  assumes H : "plifting_valid t"
-  shows "plifting_valid (option_pl t)"
-proof(rule plifting_valid_intro)
+lemma option_l_valid :
+  assumes H : "lifting_valid (t :: ('x, 'a, 'b :: {Bogus, Pord}, 'z) liftingv_scheme)"
+  shows "lifting_valid (option_lv t)"
+proof(rule lifting_validI)
   fix s a b
-  show "LOut (option_pl t) s (LUpd (option_pl t) s a b) = a"
-    using plifting_valid_unfold1[OF H]
-    by(auto simp add:option_pl_def LNew_def split:option.splits)
-next
-  fix s a a' b
-  show "LUpd (option_pl t) s a (LUpd (option_pl t) s a' b) = LUpd (option_pl t) s a b"
-    using plifting_valid_unfold2[OF H]
-    by(auto simp add:option_pl_def LNew_def split:option.splits)
-qed
-
-lemma option_pl_pv_valid : 
-  "plifting_pv_valid (t :: ('x, 'a, 'b, 'z1) plifting_scheme) (v :: ('x, 'a, 'b, 'z2) pliftingv_scheme) \<Longrightarrow> 
-   plifting_pv_valid (option_pl t) (option_pv v)"
-proof(rule plifting_pv_valid_intro)
-  assume H : "plifting_pv_valid t v"
-  show "plifting_valid (option_pl t)" using option_pl_valid[OF plifting_pv_valid_unfold1[OF H]] by auto
+  show "LUpd (option_lv t) s a b \<in> LOutS (option_lv t) s"
+    using lifting_validDSO[OF H]
+    by(auto simp add:option_l_def option_lv_def LNew_def split:option.splits)
 next
   fix s a b
-  assume H : "plifting_pv_valid t v"
-  show "LUpd (option_pl t) s a b \<in> LOutS (option_pv v) s"
-    using plifting_pv_valid_unfold2[OF H]
-    by(auto simp add:option_pl_def option_pv_def LNew_def split:option.splits)
+  show "LOut (option_lv t) s (LUpd (option_lv t) s a b) = a"
+    using lifting_validDO[OF H]
+    by(auto simp add:option_l_def option_lv_def LNew_def split:option.splits)
 next
   fix s b
-  assume H : "plifting_pv_valid t v"
-  assume H' : "b \<in> LOutS (option_pv v) s"
-  show "b = LUpd (option_pl t) s (LOut (option_pl t) s b) b"
-    using plifting_pv_valid_unfold3[OF H] H'
-    by(auto simp add:option_pl_def option_pv_def)
-qed
+  assume H' : "b \<in> LOutS (option_lv t) s"
+  then obtain b' where Hb' : "b = Some b'" and Hb'in : "b' \<in> LOutS t s"
+    by(auto simp add:option_l_def option_lv_def LNew_def option_pleq split:option.splits)
 
-lemma option_l_pv_valid :
-  assumes H : "lifting_pv_valid t v"
-  shows "lifting_pv_valid (option_l t) (option_pv v)"
-proof(rule lifting_pv_valid_intro)
-  show "plifting_pv_valid (option_l t) (option_pv v)"
-    unfolding option_l_def
-  proof(rule plifting_pv_valid_cast)
-    show "plifting_pv_valid (option_pl t) (option_pv v)"
-      using option_pl_pv_valid[OF lifting_pv_valid_unfold1[OF H]]
-      by(auto)
-  qed
-next
-  fix s a b
-  assume H1 : "b \<in> LOutS (option_pv v) s"
-  show "LPost (option_l t) s b \<in> LOutS (option_pv v) s" unfolding option_l_def
-    using lifting_pv_valid_unfold2[OF H] H1
-    by(auto simp add: option_pl_def option_pv_def plifting.defs)
-next
-  fix s a b
-  assume H1 : "b \<in> LOutS (option_pv v) s "
-  show "LOut (option_l t) s (LPost (option_l t) s b) = LOut (option_l t) s b"
-    using lifting_pv_valid_unfold3[OF H] H1
-    by(auto simp add: option_l_def option_pl_def option_pv_def plifting.defs)
+  show "b <[ LUpd (option_lv t) s (LOut (option_lv t) s b) b"
+    using lifting_validDI[OF H Hb'in] Hb'
+    by(auto simp add:option_l_def option_lv_def LNew_def option_pleq split:option.splits)
 qed
 
 (* sum types *)
 
-definition inl_pl ::
-  "('x, 'a, 'b, 'z) plifting_scheme \<Rightarrow> 
-   ('x, 'a, ('b + 'c)) plifting" where
-"inl_pl t =
+definition inl_l ::
+  "('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow> 
+   ('x, 'a, ('b + 'c :: Pord)) lifting" where
+"inl_l t =
   \<lparr> LUpd = (\<lambda> s a b . 
             (case b of
               Inl b' \<Rightarrow> Inl (LUpd t s a b')
@@ -336,22 +227,44 @@ definition inl_pl ::
                       | _ \<Rightarrow> LOut t s (LBase t s)))
   , LBase = (\<lambda> s . Inl (LBase t s))\<rparr>"
 
-definition inl_l ::
-  "('x, 'a, 'b, 'z) lifting_scheme \<Rightarrow> ('x, 'a, 'b + 'c) lifting" where
-"inl_l t =
-  plifting.extend (inl_pl t)
-    \<lparr> LPost = (\<lambda> s b . (case b of (Inl b') \<Rightarrow> Inl (LPost t s b')
-                                  | _ \<Rightarrow> b)) \<rparr>"
+definition inl_lv ::
+  "('x, 'a, 'b :: Pord, 'z) liftingv_scheme \<Rightarrow> ('x, 'a, 'b + 'c :: Pord) liftingv" where
+"inl_lv v =
+  lifting.extend (inl_l v)
+  \<lparr> LOutS = (\<lambda> s . Inl ` (LOutS v s))\<rparr>"
 
-definition inl_pv ::
-  "('x, 'a, 'b, 'z) pliftingv_scheme \<Rightarrow> ('x, 'a, 'b + 'c) pliftingv" where
-"inl_pv v =
-  \<lparr> LOutS = (\<lambda> s . Inl ` (LOutS v s)) \<rparr>"
+lemma inl_l_valid :
+  assumes H : "lifting_valid (t :: ('x, 'a, 'b :: {Pord}, 'z) liftingv_scheme)"
+  shows "lifting_valid (inl_lv t :: ('x, 'a, 'b + 'c :: Pord) liftingv)"
+proof(rule lifting_validI)
+  fix s a
+  fix b :: "'b + 'c"
+  show "LUpd (inl_lv t) s a b \<in> LOutS (inl_lv t) s"
+    using lifting_validDSO[OF H]
+    by(auto simp add:inl_l_def inl_lv_def LNew_def split:sum.splits)
+next
+  fix s a 
+  fix b :: "'b + 'c"
 
-definition inr_pl ::
-  "('x, 'a, 'b, 'z) plifting_scheme \<Rightarrow> 
-   ('x, 'a, ('c + 'b)) plifting" where
-"inr_pl t =
+  show "LOut (inl_lv t) s (LUpd (inl_lv t) s a b) = a"
+    using lifting_validDO[OF H]
+    by(auto simp add:inl_l_def inl_lv_def LNew_def split:sum.splits)
+next
+  fix s
+  fix b :: "'b + 'c"
+  assume H' : "b \<in> LOutS (inl_lv t) s"
+  then obtain b' where Hb' : "b = Inl b'" and Hb'in : "b' \<in> LOutS t s"
+    by(auto simp add:inl_l_def inl_lv_def LNew_def split:sum.splits)
+
+  show "b <[ LUpd (inl_lv t) s (LOut (inl_lv t) s b) b"
+    using lifting_validDI[OF H Hb'in] Hb'
+    by(auto simp add:inl_l_def inl_lv_def LNew_def sum_pleq split:sum.splits)
+qed
+
+definition inr_l ::
+  "('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow> 
+   ('x, 'a, ('c :: Pord+ 'b)) lifting" where
+"inr_l t =
   \<lparr> LUpd = (\<lambda> s a b . 
             (case b of
               Inr b' \<Rightarrow> Inr (LUpd t s a b')
@@ -360,392 +273,278 @@ definition inr_pl ::
                       | _ \<Rightarrow> LOut t s (LBase t s)))
   , LBase = (\<lambda> s . Inr (LBase t s))\<rparr>"
 
-definition inr_l ::
-  "('x, 'a, 'b, 'z) lifting_scheme \<Rightarrow> ('x, 'a, 'c + 'b) lifting" where
-"inr_l t =
-  plifting.extend (inr_pl t)
-    \<lparr> LPost = (\<lambda> s b . (case b of (Inr b') \<Rightarrow> Inr (LPost t s b')
-                                  | _ \<Rightarrow> b)) \<rparr>"
+definition inr_lv ::
+  "('x, 'a, 'b :: Pord, 'z) liftingv_scheme \<Rightarrow> ('x, 'a, 'c :: Pord + 'b :: Pord) liftingv" where
+"inr_lv v =
+  lifting.extend (inr_l v)
+  \<lparr> LOutS = (\<lambda> s . Inr ` (LOutS v s))\<rparr>"
 
-definition inr_pv ::
-  "('x, 'a, 'b, 'z) pliftingv_scheme \<Rightarrow> ('x, 'a, 'c + 'b) pliftingv" where
-"inr_pv v =
-  \<lparr> LOutS = (\<lambda> s . Inr ` (LOutS v s)) \<rparr>"
+lemma inr_l_valid :
+  assumes H : "lifting_valid (t :: ('x, 'a, 'b :: {Pord}, 'z) liftingv_scheme)"
+  shows "lifting_valid (inr_lv t :: ('x, 'a, 'c :: Pord + 'b) liftingv)"
+proof(rule lifting_validI)
+  fix s a
+  fix b :: "'c + 'b"
+  show "LUpd (inr_lv t) s a b \<in> LOutS (inr_lv t) s"
+    using lifting_validDSO[OF H]
+    by(auto simp add:inr_l_def inr_lv_def LNew_def split:sum.splits)
+next
+  fix s a 
+  fix b :: "'c + 'b"
 
+  show "LOut (inr_lv t) s (LUpd (inr_lv t) s a b) = a"
+    using lifting_validDO[OF H]
+    by(auto simp add:inr_l_def inr_lv_def LNew_def split:sum.splits)
+next
+  fix s
+  fix b :: "'c + 'b"
+  assume H' : "b \<in> LOutS (inr_lv t) s"
+  then obtain b' where Hb' : "b = Inr b'" and Hb'in : "b' \<in> LOutS t s"
+    by(auto simp add:inr_l_def inr_lv_def LNew_def split:sum.splits)
 
+  show "b <[ LUpd (inr_lv t) s (LOut (inr_lv t) s b) b"
+    using lifting_validDI[OF H Hb'in] Hb'
+    by(auto simp add:inr_l_def inr_lv_def LNew_def sum_pleq split:sum.splits)
+qed
 
-(*
-priorities
-*)
 
 definition prio_l' ::
-  "('a, 'b) lifting' \<Rightarrow>
-   ('a, 'b md_prio) lifting'" where
+  "('a, 'b) syn_lifting \<Rightarrow>
+   ('a, 'b md_prio) syn_lifting" where
 "prio_l' t =
   (\<lambda> p . (case p of
               mdp m b \<Rightarrow> t b))"
 
 (* note: this only allows setting output priority based on syntax. *)
-definition prio_pl ::
+definition prio_l ::
  "('x \<Rightarrow> nat) \<Rightarrow>
-  ('x, 'a, 'b, 'z) plifting_scheme \<Rightarrow>
-  ('x, 'a, 'b md_prio) plifting" where
-"prio_pl f0 t =
+  ('x \<Rightarrow> nat \<Rightarrow> nat) \<Rightarrow>
+  ('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow>
+  ('x, 'a, 'b md_prio) lifting" where
+"prio_l f0 f1 t =
   \<lparr> LUpd = (\<lambda> s a b . (case b of
-                         mdp m b' \<Rightarrow> mdp m (LUpd t s a b')))
+                         mdp m b' \<Rightarrow> mdp (f1 s m) (LUpd t s a b')))
   , LOut =
       (\<lambda> s p . (case p of
                  mdp m b \<Rightarrow> LOut t s b))
   , LBase = (\<lambda> s . mdp (f0 s) (LBase t s)) \<rparr>"
 
-definition prio_l :: "('x \<Rightarrow> nat) \<Rightarrow>
-                      ('x \<Rightarrow> nat \<Rightarrow> nat) \<Rightarrow> 
-                      ('x, 'a, 'b, 'z) lifting_scheme \<Rightarrow>
-                      ('x, 'a, 'b md_prio) lifting" where
-"prio_l f0 f1 t =
-  plifting.extend (prio_pl f0 t)
-    \<lparr> LPost = (\<lambda> s b . (case b of
-                          mdp m b' \<Rightarrow> mdp (f1 s m) (LPost t s b'))) \<rparr>"
-
-definition prio_pv :: "('x, 'a, 'b, 'z) pliftingv_scheme \<Rightarrow>
-                       ('x, 'a, 'b md_prio) pliftingv" where
-"prio_pv v = \<lparr> LOutS = (\<lambda> s . { p . \<exists> m b . p = mdp m b \<and> b \<in> LOutS v s}) \<rparr>"
+definition prio_lv :: "('x \<Rightarrow> nat) \<Rightarrow>
+                       ('x \<Rightarrow> nat \<Rightarrow> nat) \<Rightarrow>
+                       ('x, 'a, 'b :: Pord, 'z) liftingv_scheme \<Rightarrow>
+                       ('x, 'a, 'b md_prio) liftingv" where
+"prio_lv f0 f1 v = lifting.extend (prio_l f0 f1 v)
+              \<lparr> LOutS = (\<lambda> s . { p . \<exists> m b . p = mdp m b \<and> b \<in> LOutS v s})\<rparr>"
 
 lemma prio_pl_valid :
-  assumes H : "plifting_valid t"
-  shows "plifting_valid (prio_pl f0 t)"
-proof(rule plifting_valid_intro)
+  assumes H : "lifting_valid t"
+  assumes Hmono : "\<And> s p . p \<le> f1 s p"
+  shows "lifting_valid (prio_lv f0 f1 t)"
+proof(rule lifting_validI)
   fix s a b
-  show "LOut (prio_pl f0 t) s (LUpd (prio_pl f0 t) s a b) = a"
-    using plifting_valid_unfold1[OF H]
-    by(auto simp add:prio_pl_def LNew_def split:md_prio.splits)
+  show "LUpd (prio_lv f0 f1 t) s a b \<in> LOutS (prio_lv f0 f1 t) s"
+    using lifting_validDSO[OF H]
+    by(auto simp add:prio_l_def prio_lv_def LNew_def split:md_prio.splits)
 next
-  fix s a a' b
-  show "LUpd (prio_pl f0 t) s a (LUpd (prio_pl f0 t) s a' b) = LUpd (prio_pl f0 t) s a b"
-    using plifting_valid_unfold2[OF H]
-    by(auto simp add:prio_pl_def LNew_def split:md_prio.splits)
-qed
+  fix s a b
+  show "LOut (prio_lv f0 f1 t) s (LUpd (prio_lv f0 f1 t) s a b) = a"
+    using lifting_validDO[OF H]
+    by(auto simp add:prio_l_def prio_lv_def LNew_def split:md_prio.splits)
 
-lemma prio_pl_pv_valid : 
-  "plifting_pv_valid (t :: ('x, 'a, 'b, 'z1) plifting_scheme) (v :: ('x, 'a, 'b, 'z2) pliftingv_scheme) \<Longrightarrow> 
-   plifting_pv_valid (prio_pl f0 t) (prio_pv v)"
-proof(rule plifting_pv_valid_intro)
-  assume H : "plifting_pv_valid t v"
-  show "plifting_valid (prio_pl f0 t)" using prio_pl_valid[OF plifting_pv_valid_unfold1[OF H]] by auto
-next
-  fix s a b
-  assume H : "plifting_pv_valid t v"
-  show "LUpd (prio_pl f0 t) s a b \<in> LOutS (prio_pv v) s"
-    using plifting_pv_valid_unfold2[OF H]
-    by(auto simp add:prio_pl_def prio_pv_def LNew_def split:md_prio.splits)
 next
   fix s b
-  assume H : "plifting_pv_valid t v"
-  assume H' : "b \<in> LOutS (prio_pv v) s"
-  show "b = LUpd (prio_pl f0 t) s (LOut (prio_pl f0 t) s b) b"
-    using plifting_pv_valid_unfold3[OF H] H'
-    by(auto simp add:prio_pl_def prio_pv_def)
+
+  assume H' : "b \<in> LOutS (prio_lv f0 f1 t) s"
+  then obtain b' p where Hb' : "b = mdp p b'" and H'' : "b' \<in> LOutS t s"
+    by(auto simp add:prio_l_def prio_lv_def LNew_def split:md_prio.splits)
+
+  hence "b' <[ LUpd t s (LOut t s b') b'"
+    using lifting_validDI[OF H H'']
+    by(auto simp add:prio_l_def prio_lv_def LNew_def split:md_prio.splits)
+
+  thus "b <[ LUpd (prio_lv f0 f1 t) s (LOut (prio_lv f0 f1 t) s b) b" using Hb' Hmono[of p s]
+    by(auto simp add:prio_l_def prio_lv_def prio_pleq LNew_def split:md_prio.splits)
 qed
 
-lemma prio_l_pv_valid :
-  assumes H : "lifting_pv_valid t v"
-  shows "lifting_pv_valid (prio_l f0 f1 t) (prio_pv v)"
-proof(rule lifting_pv_valid_intro)
-  show "plifting_pv_valid (prio_l f0 f1 t) (prio_pv v)"
-    unfolding prio_l_def
-  proof(rule plifting_pv_valid_cast)
-    show "plifting_pv_valid (prio_pl f0 t) (prio_pv v)"
-      using prio_pl_pv_valid[OF lifting_pv_valid_unfold1[OF H]]
-      by(auto)
-  qed
-next
-  fix s a b
-  assume H1 : "b \<in> LOutS (prio_pv v) s"
-  show "LPost (prio_l f0 f1 t)  s b \<in> LOutS (prio_pv v) s" unfolding option_l_def
-    using lifting_pv_valid_unfold2[OF H] H1
-    by(auto simp add: prio_l_def prio_pl_def prio_pv_def plifting.defs)
-next
-  fix s a b
-  assume H1 : "b \<in> LOutS (prio_pv v) s "
-  show "LOut (prio_l f0 f1 t) s (LPost (prio_l f0 f1 t) s b) = LOut (prio_l f0 f1 t) s b"
-    using lifting_pv_valid_unfold3[OF H] H1
-    by(auto simp add: prio_l_def prio_pl_def prio_pv_def plifting.defs)
-qed
-
-
-definition prio_l_keep :: "('x, 'a, 'b) lifting \<Rightarrow> ('x, 'a, 'b md_prio) lifting" where
+definition prio_l_keep :: "('x, 'a, 'b :: Pord) lifting \<Rightarrow> ('x, 'a, 'b md_prio) lifting" where
 "prio_l_keep =
   prio_l (\<lambda> _ . 0) (\<lambda> _ n . n)"
 
-definition prio_l_inc :: "('x, 'a, 'b) lifting \<Rightarrow> ('x, 'a, 'b md_prio) lifting" where
+definition prio_l_inc :: "('x, 'a, 'b :: Pord) lifting \<Rightarrow> ('x, 'a, 'b md_prio) lifting" where
 "prio_l_inc =
   prio_l (\<lambda> _ . 1) (\<lambda> _ x . 1 + x)"
 
-definition prio_l_inc2 :: "('x, 'a, 'b) lifting \<Rightarrow> ('x, 'a, 'b md_prio) lifting" where
+definition prio_l_inc2 :: "('x, 'a, 'b :: Pord) lifting \<Rightarrow> ('x, 'a, 'b md_prio) lifting" where
 "prio_l_inc2 =
   prio_l (\<lambda> _ . 0) (\<lambda> _ x . 2 + x)"
 
-definition prio_l_incN :: "nat \<Rightarrow> ('x, 'a, 'b) lifting \<Rightarrow> ('x, 'a, 'b md_prio) lifting" where
+definition prio_l_incN :: "nat \<Rightarrow> ('x, 'a, 'b :: Pord) lifting \<Rightarrow> ('x, 'a, 'b md_prio) lifting" where
 "prio_l_incN n =
   prio_l (\<lambda> _ . 0) (\<lambda> _ x . n + x)"
 
-
-definition prio_l_case_inc :: "('x \<Rightarrow> nat) \<Rightarrow> ('x, 'a, 'b) lifting \<Rightarrow> ('x, 'a, 'b md_prio) lifting" where
+definition prio_l_case_inc :: "('x \<Rightarrow> nat) \<Rightarrow> ('x, 'a, 'b :: Pord) lifting \<Rightarrow> ('x, 'a, 'b md_prio) lifting" where
 "prio_l_case_inc f =
   prio_l (\<lambda> _ . 0) (\<lambda> s x . (f s) + x)"
 
-definition prio_l_const :: "nat \<Rightarrow> ('x, 'a, 'b) lifting \<Rightarrow> ('x, 'a, 'b md_prio) lifting" where
-"prio_l_const n =
-  prio_l (\<lambda> _ . n) (\<lambda> _ _ . n)"
-
-definition prio_l_zero ::
-"('x, 'a, 'b) lifting \<Rightarrow> ('x, 'a, 'b md_prio) lifting" where
-"prio_l_zero =
-  prio_l_const 0"
-
-definition prio_l_one ::
-"('x, 'a, 'b) lifting \<Rightarrow> ('x, 'a, 'b md_prio) lifting" where
-"prio_l_one =
-  prio_l_const 1"
 
 
 (*
 products
 *)
+
 definition fst_l' ::
-  "('a, 'b1) lifting' \<Rightarrow>
-   ('a, 'b1 * 'b2) lifting'" where
+  "('a, 'b1) syn_lifting \<Rightarrow>
+   ('a, 'b1 * 'b2) syn_lifting" where
 "fst_l' t =
   (\<lambda> x . t (fst x))"
 
-(* TODO: fst and snd need to not use Bogus. They need to use Pordc instead.
-i changed it to this because i thought it would be more convenient, but i think it will
-make these much harder to reason about (e.g. no guarantees about how
-fst, snd, etc. interact with merge. *)
-definition fst_pl ::
-  "('x, 'a, 'b1, 'z) plifting_scheme \<Rightarrow>
-   ('x, 'a, 'b1 * ('b2 :: Pordb)) plifting" where
-"fst_pl t =
+definition fst_l ::
+  "('x, 'a, 'b1 :: Pord, 'z) lifting_scheme \<Rightarrow>
+   ('x, 'a, 'b1 * ('b2 :: Pordb)) lifting" where
+"fst_l t =
   \<lparr> LUpd = (\<lambda> s a b . (case b of (b1, b2) \<Rightarrow> (LUpd t s a b1, b2)))
   , LOut = (\<lambda> s x . (LOut t s (fst x)))
   , LBase = (\<lambda> s . (LBase t s, \<bottom>)) \<rparr>"
 
-definition fst_l ::
-  "('x, 'a, 'b1, 'z) lifting_scheme \<Rightarrow> ('x, 'a, 'b1 * ('b2 :: Pordb)) lifting" where
-"fst_l t =
-  plifting.extend (fst_pl t)
-    \<lparr> LPost = (\<lambda> s b . (case b of (b1, b2) \<Rightarrow> (LPost t s b1, b2))) \<rparr>"
-
-definition fst_pv ::
-  "('x, 'a, 'b1, 'z) pliftingv_scheme \<Rightarrow> ('x, 'a, 'b1 * ('b2 :: Pordb)) pliftingv" where
-"fst_pv t =
+definition fst_lv ::
+  "('x, 'a, 'b1 :: Pord, 'z) liftingv_scheme \<Rightarrow> ('x, 'a, 'b1 * ('b2 :: Pordb)) liftingv" where
+"fst_lv t =
+  lifting.extend (fst_l t)
   \<lparr> LOutS = (\<lambda> s . { b . \<exists> b1 b2 . b = (b1, b2) \<and> b1 \<in> LOutS t s} ) \<rparr>"
 
-lemma fst_pl_valid :
-  assumes H : "plifting_valid t"
-  shows "plifting_valid ((fst_pl t) :: ('x, 'a, 'b1 * ('b2 :: Pordb)) plifting)"
-proof(rule plifting_valid_intro)
+lemma fst_l_valid :
+  assumes H : "lifting_valid v"
+  shows "lifting_valid ((fst_lv v) :: ('x, 'a, ('b1 :: Pord) * ('b2 :: Pordb)) liftingv)"
+proof(rule lifting_validI)
   fix s a 
   fix b :: "'b1 * 'b2"
-  show "LOut (fst_pl t) s (LUpd (fst_pl t) s a b) = a"
-    using plifting_valid_unfold1[OF H]
-    by(auto simp add:fst_pl_def LNew_def split:prod.splits)
-next
-  fix s a a' 
-  fix b :: "'b1 * 'b2"
-  show "LUpd (fst_pl t) s a (LUpd (fst_pl t) s a' b) = LUpd (fst_pl t) s a b"
-    using plifting_valid_unfold2[OF H]
-    by(auto simp add:fst_pl_def LNew_def split:prod.splits)
-qed
 
-lemma fst_pl_pv_valid : 
-  "plifting_pv_valid (t :: ('x, 'a, 'b1, 'z1) plifting_scheme) (v :: ('x, 'a, 'b1, 'z2) pliftingv_scheme) \<Longrightarrow> 
-   plifting_pv_valid ((fst_pl t) :: ('x, 'a, 'b1 * ('b2 :: Pordb)) plifting)
-                     ((fst_pv v) :: ('x, 'a, 'b1 * ('b2 :: Pordb)) pliftingv)"
-proof(rule plifting_pv_valid_intro)
-  assume H : "plifting_pv_valid t v"
-  show "plifting_valid (fst_pl t)" using fst_pl_valid[OF plifting_pv_valid_unfold1[OF H]] by auto
-next
-  fix s a 
-  fix b :: "'b1 * 'b2"
-  assume H : "plifting_pv_valid t v"
-  show "LUpd (fst_pl t) s a b \<in> LOutS (fst_pv v) s"
-    using plifting_pv_valid_unfold2[OF H]
-    by(auto simp add:fst_pl_def fst_pv_def LNew_def split:prod.splits)
-next
-  fix s 
-  fix b :: "'b1 * 'b2"
-  assume H : "plifting_pv_valid t v"
-  assume H' : "b \<in> LOutS (fst_pv v) s"
-  show "b = LUpd (fst_pl t) s (LOut (fst_pl t) s b) b"
-    using plifting_pv_valid_unfold3[OF H] H'
-    by(auto simp add:fst_pl_def fst_pv_def)
-qed
-
-lemma fst_l_pv_valid :
-  assumes H : "lifting_pv_valid t v"
-  shows "lifting_pv_valid ((fst_l t) :: ('x, 'a, 'b1 * ('b2 :: Pordb)) lifting) 
-                          ((fst_pv v) :: ('x, 'a, 'b1 * ('b2 :: Pordb)) pliftingv)"
-proof(rule lifting_pv_valid_intro)
-  show "plifting_pv_valid (fst_l t) (fst_pv v)"
-    unfolding fst_l_def
-  proof(rule plifting_pv_valid_cast)
-    show "plifting_pv_valid (fst_pl t) (fst_pv v)"
-      using fst_pl_pv_valid[OF lifting_pv_valid_unfold1[OF H]]
-      by(auto)
-  qed
-next
-  fix s a 
-  fix b :: "'b1 * 'b2"
-  assume H1 : "b \<in> LOutS (fst_pv v) s"
-  show "LPost (fst_l t) s b \<in> LOutS (fst_pv v) s" unfolding option_l_def
-    using lifting_pv_valid_unfold2[OF H] H1
-    by(auto simp add: fst_l_def fst_pl_def fst_pv_def plifting.defs)
+  show "LUpd (fst_lv v) s a b \<in> LOutS (fst_lv v) s"
+    using lifting_validDSO[OF H] by(auto simp add: fst_lv_def fst_l_def split:prod.splits)
 next
   fix s a
   fix b :: "'b1 * 'b2"
-  assume H1 : "b \<in> LOutS (fst_pv v) s "
-  show "LOut (fst_l t) s (LPost (fst_l t) s b) = LOut (fst_l t) s b"
-    using lifting_pv_valid_unfold3[OF H] H1
-    by(auto simp add: fst_l_def fst_pl_def fst_pv_def plifting.defs)
+
+  show "LOut (fst_lv v) s (LUpd (fst_lv v) s a b) = a"
+    using lifting_validDO[OF H]
+    by(auto simp add: fst_lv_def fst_l_def split:prod.splits)
+
+next
+  fix s
+  fix b :: "'b1 * 'b2"
+
+  assume H' : "b \<in> LOutS (fst_lv v) s"
+
+  then obtain b'1 b'2 where Hb' : "b = (b'1, b'2)" and H'' : "b'1 \<in> LOutS v s"
+    by(auto simp add: fst_lv_def fst_l_def split:prod.splits)
+
+  show "b <[ LUpd (fst_lv v) s (LOut (fst_lv v) s b) b"
+    using lifting_validDI[OF H H''] Hb'
+    by(auto simp add: fst_lv_def fst_l_def prod_pleq leq_refl split:prod.splits)
 qed
 
+
 definition snd_l' ::
-  "('a, 'b2) lifting' \<Rightarrow>
-   ('a, 'b1 * 'b2) lifting'" where
+  "('a, 'b2) syn_lifting \<Rightarrow>
+   ('a, 'b1 * 'b2) syn_lifting" where
 "snd_l' t =
   (\<lambda> x . t (snd x))"
 
-
-definition snd_pl ::
-  "('x, 'a, 'b2, 'z) plifting_scheme \<Rightarrow>
-   ('x, 'a, ('b1 :: Pordb) * 'b2) plifting" where
-"snd_pl t =
+definition snd_l ::
+  "('x, 'a, 'b2 :: Pord, 'z) lifting_scheme \<Rightarrow>
+   ('x, 'a, ('b1 :: Pordb) * 'b2) lifting" where
+"snd_l t =
   \<lparr> LUpd = (\<lambda> s a b . (case b of (b1, b2) \<Rightarrow> (b1, LUpd t s a b2)))
   , LOut = (\<lambda> s x . (LOut t s (snd x)))
   , LBase = (\<lambda> s . (\<bottom>, LBase t s)) \<rparr>"
 
-definition snd_l ::
-  "('x, 'a, 'b2, 'z) lifting_scheme \<Rightarrow> ('x, 'a, ('b1 :: Pordb) * 'b2) lifting" where
-"snd_l t =
-  plifting.extend (snd_pl t)
-    \<lparr> LPost = (\<lambda> s b . (case b of (b1, b2) \<Rightarrow> (b1, LPost t s b2))) \<rparr>"
-
-definition snd_pv ::
-  "('x, 'a, 'b2, 'z) pliftingv_scheme \<Rightarrow> ('x, 'a, ('b1 :: Pordb) * 'b2) pliftingv" where
-"snd_pv t =
-  \<lparr> LOutS = (\<lambda> s . { b . \<exists> b1 b2 . b = (b1, b2) \<and> b2 \<in> LOutS t s} ) \<rparr>"
+definition snd_lv ::
+  "('x, 'a, 'b2 :: Pord, 'z) liftingv_scheme \<Rightarrow> ('x, 'a, ('b1 :: Pordb) * 'b2) liftingv" where
+"snd_lv t =
+  lifting.extend (snd_l t)
+  \<lparr> LOutS = (\<lambda> s . { b . \<exists> b1 b2 . b = (b1, b2) \<and> b2 \<in> LOutS t s} )\<rparr>"
 
 lemma snd_pl_valid :
-  assumes H : "plifting_valid t"
-  shows "plifting_valid ((snd_pl t) :: ('x, 'a, ('b1 :: Pordb) * 'b2) plifting)"
-proof(rule plifting_valid_intro)
-  fix s a 
+  assumes H : "lifting_valid v"
+  shows "lifting_valid ((snd_lv v) :: ('x, 'a, ('b1 :: Pordb) * ('b2 :: Pord)) liftingv)"
+proof(rule lifting_validI)
+  fix s a
   fix b :: "'b1 * 'b2"
-  show "LOut (snd_pl t)  s (LUpd (snd_pl t)  s a b) = a"
-    using plifting_valid_unfold1[OF H]
-    by(auto simp add:snd_pl_def LNew_def split:prod.splits)
-next
-  fix s a a' 
-  fix b :: "'b1 * 'b2"
-  show "LUpd (snd_pl t)  s a (LUpd (snd_pl t)  s a' b) = LUpd (snd_pl t)  s a b"
-    using plifting_valid_unfold2[OF H]
-    by(auto simp add:snd_pl_def LNew_def split:prod.splits)
-qed
-
-lemma snd_pl_pv_valid : 
-  "plifting_pv_valid (t :: ('x, 'a, 'b2, 'z1) plifting_scheme) (v :: ('x, 'a, 'b2, 'z2) pliftingv_scheme) \<Longrightarrow> 
-   plifting_pv_valid ((snd_pl t) :: ('x, 'a, ('b1 :: Pordb) * 'b2) plifting)
-                     ((snd_pv v) :: ('x, 'a, ('b1 :: Pordb) * 'b2) pliftingv)"
-proof(rule plifting_pv_valid_intro)
-  assume H : "plifting_pv_valid t v"
-  show "plifting_valid (snd_pl t)" using snd_pl_valid[OF plifting_pv_valid_unfold1[OF H]] by auto
-next
-  fix s a 
-  fix b :: "'b1 * 'b2"
-  assume H : "plifting_pv_valid t v"
-  show "LUpd (snd_pl t) s a b \<in> LOutS (snd_pv v) s"
-    using plifting_pv_valid_unfold2[OF H]
-    by(auto simp add:snd_pl_def snd_pv_def LNew_def split:prod.splits)
-next
-  fix s 
-  fix b :: "'b1 * 'b2"
-  assume H : "plifting_pv_valid t v"
-  assume H' : "b \<in> LOutS (snd_pv v) s"
-  show "b = LUpd (snd_pl t) s (LOut (snd_pl t) s b) b"
-    using plifting_pv_valid_unfold3[OF H] H'
-    by(auto simp add:snd_pl_def snd_pv_def)
-qed
-
-lemma snd_l_pv_valid :
-  assumes H : "lifting_pv_valid t v"
-  shows "lifting_pv_valid ((snd_l t) :: ('x, 'a, ('b1 :: Pordb) * 'b2) lifting)
-                          ((snd_pv v) :: ('x, 'a, ('b1 :: Pordb) * 'b2) pliftingv)"
-proof(rule lifting_pv_valid_intro)
-  show "plifting_pv_valid (snd_l t) (snd_pv v)"
-    unfolding snd_l_def
-  proof(rule plifting_pv_valid_cast)
-    show "plifting_pv_valid (snd_pl t) (snd_pv v)"
-      using snd_pl_pv_valid[OF lifting_pv_valid_unfold1[OF H]]
-      by(auto)
-  qed
-next
-  fix s a 
-  fix b :: "'b1 * 'b2"
-  assume H1 : "b \<in> LOutS (snd_pv v) s"
-  show "LPost (snd_l t) s b \<in> LOutS (snd_pv v) s" unfolding option_l_def
-    using lifting_pv_valid_unfold2[OF H] H1
-    by(auto simp add: snd_l_def snd_pl_def snd_pv_def plifting.defs)
+  show "LUpd (snd_lv v) s a b \<in> LOutS (snd_lv v) s"
+    using lifting_validDSO[OF H] by(auto simp add: snd_lv_def snd_l_def split:prod.splits)
 next
   fix s a
   fix b :: "'b1 * 'b2"
-  assume H1 : "b \<in> LOutS (snd_pv v) s "
-  show "LOut (snd_l t) s (LPost (snd_l t) s b) = LOut (snd_l t) s b"
-    using lifting_pv_valid_unfold3[OF H] H1
-    by(auto simp add: snd_l_def snd_pl_def snd_pv_def plifting.defs)
+
+  show "LOut (snd_lv v) s (LUpd (snd_lv v) s a b) = a"
+    using lifting_validDO[OF H]
+    by(auto simp add: snd_lv_def snd_l_def split:prod.splits)
+
+next
+  fix s
+  fix b :: "'b1 * 'b2"
+
+  assume H' : "b \<in> LOutS (snd_lv v) s"
+
+  then obtain b'1 b'2 where Hb' : "b = (b'1, b'2)" and H'' : "b'2 \<in> LOutS v s"
+    by(auto simp add: snd_lv_def snd_l_def split:prod.splits)
+
+  show "b <[ LUpd (snd_lv v) s (LOut (snd_lv v) s b) b"
+    using lifting_validDI[OF H H''] Hb'
+    by(auto simp add: snd_lv_def snd_l_def prod_pleq leq_refl split:prod.splits)
 qed
 
-(* for Mergeable lifting targets, we can use bsup to combine two liftings
-   for this to be well defined:
-   - merged items must have LUB (bsup commutes)
-   - LPost needs to commute *)
-(* TODO: need to generalize lifting laws to accommodate this. In particular:
-   - Out x <[ (Upd x y)
-   - Somehow characterize what we are allowed to inject (similar to LOutS?)
-      - or, just state existence of LUB as "side condition"
+
+lemma fst_snd_ortho :
+  assumes H1 : "lifting_valid l1"
+  assumes H2 : "lifting_valid l2"
+  shows "l_ortho (fst_lv (l1 :: ('x, 'a1, 'b1 :: Mergeableb, 'z1) liftingv_scheme))
+                 (snd_lv (l2 :: ('x, 'a2, 'b2 :: Mergeableb, 'z2) liftingv_scheme))"
+proof(rule l_orthoI)
+  fix s :: 'x
+  fix a1 :: 'a1 
+  fix a2 :: 'a2
+  fix b :: "('b1 * 'b2)"
+
+  obtain b1 b2 where B : "b = (b1, b2)" by(cases b; auto)
+
+  (* idea:
+     Z here needs to be bsup (?) 
+     ugh... actually i don't think this works.
+     since updating the other component theoretically could reduce it
+     could strengthen definition of Lifting laws...*)
+
+  have "is_sup {LUpd (fst_lv l1) s a1 b, LUpd (snd_lv l2) s a2 b} 
+               (LUpd l1 s a1 b1, LUpd l2 s a2 b2)"
+  proof(rule is_sup_intro)
+    fix x
+    assume "x \<in> {LUpd (fst_lv l1) s a1 b, LUpd (snd_lv l2) s a2 b}"
+    thus "x <[ (LUpd l1 s a1 b1, LUpd l2 s a2 b2)" using B
+      apply(auto simp add: fst_lv_def fst_l_def snd_lv_def snd_l_def
+               leq_refl
+               prod_bot prod_pleq prod_bsup split:prod.splits)
+
+  show "\<exists>z. is_sup {LUpd (fst_lv l1) s a1 b, LUpd (snd_lv l2) s a2 b} z \<and>
+           z \<in> LOutS (fst_lv l1) s \<and>
+           z \<in> LOutS (snd_lv l2) s \<and> LOut (fst_lv l1) s z = a1 \<and> LOut (snd_lv l2) s z = a2"
+  apply(auto simp add: fst_lv_def fst_l_def snd_lv_def snd_l_def
+             prod_bot prod_pleq prod_bsup split:prod.splits)
+
+qed
+
+lemma snd_fst_ortho :
+  "l_ortho (snd_lv (l1 :: ('x, 'a1, 'b :: Mergeableb, 'z1) liftingv_scheme))
+           (fst_lv (l2 :: ('x, 'a2, 'b :: Mergeableb, 'z2) liftingv_scheme))"
+
 *)
-(* NB: this breaks idempotence. we should really rephrase this (and probably all other
-ones) without referenc to Post. (See LiftUtilsNoPost.thy) *)
-
-
-definition merge_pl ::
-  "('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme \<Rightarrow>
-   ('x, 'a2, 'b :: Mergeable, 'z2) lifting_scheme \<Rightarrow>
-   ('x, 'a1 * 'a2, 'b) plifting" where
-"merge_pl t1 t2 =
-  \<lparr> LUpd =
-    (\<lambda> s a b . 
-      (case a of (a1, a2) \<Rightarrow>
-        [^ LPost t1 s (LUpd t1 s a1 b), LPost t2 s (LUpd t2 s a2 b) ^]))
-  , LOut =
-    (\<lambda> s b . (LOut t1 s b, LOut t2 s b))
-  , LBase =
-    (\<lambda> s . [^ LBase t1 s, LBase t2 s ^]) \<rparr>"
-
+(* merging
+   note that the orthogonality condition required for validity
+   is rather strong here. *)
 definition merge_l ::
   "('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme \<Rightarrow>
-   ('x, 'a2, 'b, 'z2) lifting_scheme \<Rightarrow>
+   ('x, 'a2, 'b :: Mergeable, 'z2) lifting_scheme \<Rightarrow>
    ('x, 'a1 * 'a2, 'b) lifting" where
 "merge_l t1 t2 =
-  plifting.extend (merge_pl t1 t2)
-  \<lparr> LPost = (\<lambda> s b . b) \<rparr>"
-
-(*
-definition merge_pl ::
-  "('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme \<Rightarrow>
-   ('x, 'a2, 'b :: Mergeable, 'z2) lifting_scheme \<Rightarrow>
-   ('x, 'a1 * 'a2, 'b) plifting" where
-"merge_pl t1 t2 =
   \<lparr> LUpd =
     (\<lambda> s a b . 
       (case a of (a1, a2) \<Rightarrow>
@@ -755,289 +554,114 @@ definition merge_pl ::
   , LBase =
     (\<lambda> s . [^ LBase t1 s, LBase t2 s ^]) \<rparr>"
 
-definition merge_l ::
-  "('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme \<Rightarrow>
-   ('x, 'a2, 'b, 'z2) lifting_scheme \<Rightarrow>
-   ('x, 'a1 * 'a2, 'b) lifting" where
-"merge_l t1 t2 =
-  plifting.extend (merge_pl t1 t2)
-  \<lparr> LPost = 
-    (\<lambda> s b . [^LPost t1 s b, LPost t2 s b^]) \<rparr>"
-*)
+definition merge_lv ::
+  "('x, 'a1, 'b :: Mergeable, 'z1) liftingv_scheme \<Rightarrow>
+   ('x, 'a2, 'b :: Mergeable, 'z2) liftingv_scheme \<Rightarrow>
+   ('x, 'a1 * 'a2, 'b) liftingv" where
+"merge_lv v1 v2 =
+  lifting.extend (merge_l v1 v2)
+  \<lparr> LOutS = (\<lambda> s . LOutS v1 s \<inter> LOutS v2 s) \<rparr>"
 
-(*
-definition merge_pv ::
-  "('x, 'a1, 'b :: Mergeable, 'z1) pliftingv_scheme \<Rightarrow>
-   ('x, 'a2, 'b, 'z2) pliftingv_scheme \<Rightarrow>
-   ('x, 'a1 * 'a2, 'b) pliftingv" 
-*)
-definition prod_l' ::
-  "('a1, 'b1) lifting' \<Rightarrow>
-   ('a2, 'b2) lifting' \<Rightarrow>
-   ('a1 * 'a2, 'b1 * 'b2) lifting'" where
-"prod_l' t1 t2 =
-  (\<lambda> x . (case x of (x1, x2) \<Rightarrow> (t1 x1, t2 x2)))"
+lemma merge_lv_valid :
+  assumes H1 : "lifting_valid (l1 :: ('x, 'a1, 'b :: Mergeable, 'z1) liftingv_scheme)"
+  assumes H2 : "lifting_valid (l2 :: ('x, 'a2, 'b :: Mergeable, 'z2) liftingv_scheme)"
+  assumes Hort : "l_ortho l1 l2"
+  shows "lifting_valid (merge_lv l1 l2)"
+proof(rule lifting_validI)
+  fix s :: 'x
+  fix a :: "'a1 * 'a2"
+  fix b :: "'b"
 
-definition prod_pl ::
-  "('x, 'a1, 'b1, 'z1) plifting_scheme \<Rightarrow>
-   ('x, 'a2, 'b2, 'z2) plifting_scheme \<Rightarrow>
-   ('x, 'a1 * 'a2, 'b1 * 'b2) plifting" where
-"prod_pl t1 t2 =
-  \<lparr> LUpd =
-    (\<lambda> s a b . (case a of (a1, a2) \<Rightarrow>
-                  (case b of (b1, b2) \<Rightarrow>
-                    (LUpd t1 s a1 b1, LUpd t2 s a2 b2))))
-  , LOut =
-    (\<lambda> s b . (case b of (b1, b2) \<Rightarrow>
-                (LOut t1 s b1, LOut t2 s b2)))
-  , LBase =
-    (\<lambda> s . (LBase t1 s, LBase t2 s)) \<rparr>"
+  obtain a1 a2 where A : "a = (a1, a2)" by (cases a; auto)
 
-definition prod_l ::
-  "('x, 'a1, 'b1, 'z1) lifting_scheme \<Rightarrow>
-   ('x, 'a2, 'b2, 'z2) lifting_scheme \<Rightarrow>
-   ('x, 'a1 * 'a2, 'b1 * 'b2) lifting" where
-"prod_l t1 t2 =
-  plifting.extend (prod_pl t1 t2)
-    \<lparr> LPost = (\<lambda> s b . (case b of (b1, b2) \<Rightarrow> (LPost t1 s b1, LPost t2 s b2))) \<rparr>"
+  obtain z where
+    Zsup : "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} z" and
+    ZS1 : "z \<in> LOutS l1 s" and
+    ZS2 : "z \<in> LOutS l2 s" and
+    Z1 : "LOut l1 s z = a1" and
+    Z2 : "LOut l2 s z = a2"
+    using l_orthoD[OF Hort] by blast
 
-definition prod_pv ::
-  "('x, 'a1, 'b1, 'z1) pliftingv_scheme \<Rightarrow>
-   ('x, 'a2, 'b2, 'z2) pliftingv_scheme \<Rightarrow>
-   ('x, 'a1 * 'a2, 'b1 * 'b2) pliftingv" where
-"prod_pv t1 t2 =
-  \<lparr> LOutS = (\<lambda> s . { b . \<exists> b1 b2 . b = (b1, b2) \<and> b1 \<in> LOutS t1 s \<and> b2 \<in> LOutS t2 s }) \<rparr>"
+  have "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} [^ LUpd l1 s a1 b, LUpd l2 s a2 b ^]"
+    using bsup_sup[OF Zsup bsup_spec] by auto
 
-lemma prod_pl_valid : 
-  assumes H1 : "plifting_valid t1"
-  assumes H2 : "plifting_valid t2"
-  shows "plifting_valid (prod_pl t1 t2)"
-proof(rule plifting_valid_intro)
-  fix s a b
-  show "LOut (prod_pl t1 t2) s (LUpd (prod_pl t1 t2) s a b) = a"
-    using plifting_valid_unfold1[OF H1] plifting_valid_unfold1[OF H2]
-    by(auto simp add:prod_pl_def split:prod.splits)
+  hence "[^ LUpd l1 s a1 b, LUpd l2 s a2 b ^] = z"
+    using is_sup_unique[OF Zsup] by auto
+
+  thus "LUpd (merge_lv l1 l2) s a b \<in> LOutS (merge_lv l1 l2) s"
+    using ZS1 ZS2 A
+    by(auto simp add: merge_lv_def merge_l_def split:prod.splits)  
 next
-  fix s a a' b
-  show "LUpd (prod_pl t1 t2) s a (LUpd (prod_pl t1 t2) s a' b) = LUpd (prod_pl t1 t2) s a b"
-    using plifting_valid_unfold2[OF H1] plifting_valid_unfold2[OF H2]
-    by(auto simp add:prod_pl_def split:prod.splits)
+  fix s :: 'x
+  fix a :: "'a1 * 'a2"
+  fix b :: "'b"
+
+  obtain a1 a2 where A : "a = (a1, a2)" by (cases a; auto)
+
+  obtain z where
+    Zsup : "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} z" and
+    ZS1 : "z \<in> LOutS l1 s" and
+    ZS2 : "z \<in> LOutS l2 s" and
+    Z1 : "LOut l1 s z = a1" and
+    Z2 : "LOut l2 s z = a2"
+    using l_orthoD[OF Hort] by blast
+
+  have "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} [^ LUpd l1 s a1 b, LUpd l2 s a2 b ^]"
+    using bsup_sup[OF Zsup bsup_spec] by auto
+
+  hence "[^ LUpd l1 s a1 b, LUpd l2 s a2 b ^] = z"
+    using is_sup_unique[OF Zsup] by auto
+
+  thus "LOut (merge_lv l1 l2) s (LUpd (merge_lv l1 l2) s a b) = a"
+    using Z1 Z2 A
+    by(auto simp add: merge_lv_def merge_l_def split:prod.splits)
+next
+  fix s :: 'x
+  fix b :: 'b
+
+  assume Belem : "b \<in> LOutS (merge_lv l1 l2) s"
+
+  have Be1 : "b \<in> LOutS l1 s"
+    using Belem
+    by(auto simp add: merge_lv_def)
+
+  have Be2 : "b \<in> LOutS l2 s"
+    using Belem
+    by(auto simp add: merge_lv_def)
+
+  obtain a1 where A1 : "LOut l1 s b = a1" by auto
+  obtain a2 where A2 : "LOut l2 s b = a2" by auto
+
+  obtain z where
+    Zsup : "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} z" and
+    ZS1 : "z \<in> LOutS l1 s" and
+    ZS2 : "z \<in> LOutS l2 s" and
+    Z1 : "LOut l1 s z = a1" and
+    Z2 : "LOut l2 s z = a2"
+    using l_orthoD[OF Hort] by blast
+
+  have "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} [^ LUpd l1 s a1 b, LUpd l2 s a2 b ^]"
+    using bsup_sup[OF Zsup bsup_spec] by auto
+
+  hence Meq : "[^ LUpd l1 s a1 b, LUpd l2 s a2 b ^] = z"
+    using is_sup_unique[OF Zsup] by auto
+
+  (* slightly odd - for this part we don't actually need Be2 *)
+  have Leq1 :
+    "b <[ LUpd l1 s a1 b" using lifting_validDI[OF H1 Be1] A1
+    by auto
+
+  have Leq2 :
+    "LUpd l1 s a1 b <[ z" using is_sup_unfold1[OF Zsup]
+    by auto
+
+  hence Leq : "b <[ z"
+    using leq_trans[OF Leq1 Leq2] by auto
+
+  thus "b <[ LUpd (merge_lv l1 l2) s (LOut (merge_lv l1 l2) s b) b"
+    using A1 A2 Meq
+    by(auto simp add: merge_lv_def merge_l_def split:prod.splits)
 qed
- 
-lemma prod_pl_pv_valid : 
-  assumes H1 : "plifting_pv_valid t1 v1"
-  assumes H2 : "plifting_pv_valid t2 v2"
-  shows "plifting_pv_valid (prod_pl t1 t2) (prod_pv v1 v2)"
-proof(rule plifting_pv_valid_intro)
-  show "plifting_valid (prod_pl t1 t2)" 
-    using prod_pl_valid[OF plifting_pv_valid_unfold1[OF H1]
-                           plifting_pv_valid_unfold1[OF H2]] by auto
-next
-  fix s a b
-  show "LUpd (prod_pl t1 t2) s a b \<in> LOutS (prod_pv v1 v2) s"
-    using plifting_pv_valid_unfold2[OF H1] plifting_pv_valid_unfold2[OF H2]
-    by(auto simp add:prod_pl_def prod_pv_def split:prod.splits)
-next
-  fix s b
-  assume H' : "b \<in> LOutS (prod_pv v1 v2) s"
-  show "b = LUpd (prod_pl t1 t2) s (LOut (prod_pl t1 t2) s b) b"
-    using plifting_pv_valid_unfold3[OF H1]
-          plifting_pv_valid_unfold3[OF H2] H'
-    by(auto simp add:prod_pl_def prod_pv_def split:prod.splits)
-qed
-
-lemma prod_l_pv_valid :
-  assumes H1 : "lifting_pv_valid t1 v1"
-  assumes H2 : "lifting_pv_valid t2 v2"  
-  shows "lifting_pv_valid (prod_l t1 t2) (prod_pv v1 v2)"
-proof(rule lifting_pv_valid_intro)
-  show "plifting_pv_valid (prod_l t1 t2) (prod_pv v1 v2)"
-    unfolding prod_l_def
-  proof(rule plifting_pv_valid_cast)
-    show "plifting_pv_valid (prod_pl t1 t2) (prod_pv v1 v2)"
-      using prod_pl_pv_valid[OF lifting_pv_valid_unfold1[OF H1]
-                                lifting_pv_valid_unfold1[OF H2]]
-      by(auto simp add: prod_pl_def prod_pv_def)
-  qed
-next
-  fix s a b
-  assume H' : "b \<in> LOutS (prod_pv v1 v2) s"
-  show "LPost (prod_l t1 t2) s b \<in> LOutS (prod_pv v1 v2) s" unfolding triv_l_def
-    using lifting_pv_valid_unfold2[OF H1]
-          lifting_pv_valid_unfold2[OF H2] H'
-    by(auto simp add: prod_l_def prod_pv_def plifting.defs split:prod.splits)
-next
-  fix s a b
-  assume H' : "b \<in> LOutS (prod_pv v1 v2) s "
-  show "LOut (prod_l t1 t2) s (LPost (prod_l t1 t2) s b) = LOut (prod_l t1 t2) s b"
-    using lifting_pv_valid_unfold3[OF H1]
-          lifting_pv_valid_unfold3[OF H2] H'
-    by(auto simp add: prod_l_def prod_pl_def prod_pv_def plifting.defs split:prod.splits)
-qed
-
-
-definition syn_prod :: "('x \<Rightarrow> 'x1) \<Rightarrow> ('x \<Rightarrow> 'x2) \<Rightarrow> ('x \<Rightarrow> ('x1 * 'x2))"
-  where
-"syn_prod f1 f2 x = (f1 x, f2 x)"
-
-(* commutators for product liftings  *)
-definition prod_commb_l' ::
-  "('a1 * 'a2, 'b1 * 'b2) lifting' \<Rightarrow>
-   ('a1 * 'a2, 'b2 * 'b1) lifting'" where
-"prod_commb_l' t =
-  (\<lambda> x . (case x of (x1, x2) \<Rightarrow> t (x2, x1)))"
-
-(* TODO: do we need to define another version of this that commutes the a? *)
-definition prod_commb_pl ::
-  "('x, 'a, 'b1 * 'b2, 'z) plifting_scheme \<Rightarrow>
-   ('x, 'a, 'b2 * 'b1) plifting" where
-"prod_commb_pl t =
-  \<lparr> LUpd = (\<lambda> s a b . (case b of (b1, b2) \<Rightarrow> 
-                        (case (LUpd t s a (b2, b1)) of
-                          (b2', b1') \<Rightarrow> (b1', b2'))))
-  , LOut = (\<lambda> s b . (case b of (b1, b2) \<Rightarrow> (LOut t s (b2, b1))))
-  , LBase = (\<lambda> s . (case (LBase t s) of
-                      (b1, b2) \<Rightarrow> (b2, b1))) \<rparr>"
-
-definition prod_commb_l ::
-  "('x, 'a, 'b1 * 'b2, 'z) lifting_scheme \<Rightarrow>
-   ('x, 'a, 'b2 * 'b1) lifting" where
-"prod_commb_l t =
-  plifting.extend (prod_commb_pl t)
-    \<lparr> LPost = (\<lambda> s b . (case b of (b1, b2) \<Rightarrow> 
-                        (case (LPost t s (b2, b1)) of
-                          (b2', b1') \<Rightarrow> (b1', b2')))) \<rparr>"
-
-definition prod_commb_pv ::
-  "('x, 'a, 'b1 * 'b2, 'z) pliftingv_scheme \<Rightarrow>
-   ('x, 'a, 'b2 * 'b1) pliftingv" where
-"prod_commb_pv t =
-  \<lparr> LOutS = 
-    (\<lambda> s . { b . \<exists> b1 b2 . b = (b1, b2) \<and> (b2, b1) \<in> LOutS t s }) \<rparr>"
-
-definition prod_comma_l' ::
-  "('a1 * 'a2, 'b) lifting' \<Rightarrow>
-   ('a2 * 'a1, 'b) lifting'" where
-"prod_comma_l' t =
-  (\<lambda> x . (case (t x) of (x1, x2) \<Rightarrow> (x2, x1)))"
-
-definition prod_comma_pl ::
-  "('x, 'a1 * 'a2, 'b, 'z) plifting_scheme \<Rightarrow>
-   ('x, 'a2 * 'a1, 'b) plifting" where
-"prod_comma_pl t =
-  \<lparr> LUpd = (\<lambda> s a b . (case a of (a1, a2) \<Rightarrow> LUpd t s (a2, a1) b))
-  , LOut = (\<lambda> s b . (case (LOut t s b) of (a1, a2) \<Rightarrow> (a2, a1)))
-  , LBase = LBase t\<rparr>"
-
-definition prod_comma_l ::
-  "('x, 'a1 * 'a2, 'b, 'z) lifting_scheme \<Rightarrow>
-   ('x, 'a2 * 'a1, 'b) lifting" where
-"prod_comma_l t =
-  plifting.extend (prod_comma_pl t)
-    \<lparr> LPost = LPost t \<rparr>"
-
-definition prod_comma_pv ::
-  "('x, 'a1 * 'a2, 'b, 'z) pliftingv_scheme \<Rightarrow>
-   ('x, 'a2 * 'a1, 'b) pliftingv" where
-"prod_comma_pv t =
-  \<lparr> LOutS = 
-    LOutS t \<rparr>"
-
-(* associators for product liftings *)
-definition prod_deassocb_pl ::
-  "('x, 'a, ('b1 * 'b2) * 'b3, 'z) plifting_scheme \<Rightarrow>
-   ('x, 'a, 'b1 * 'b2 * 'b3) plifting" where
-"prod_deassocb_pl t =
-  \<lparr> LUpd = (\<lambda> s a b . (case b of (b1, b2, b3) \<Rightarrow>
-                        (case (LUpd t s a ((b1, b2), b3)) of
-                          ((b1', b2'), b3') \<Rightarrow> (b1', b2', b3'))))
-  , LOut = (\<lambda> s b . (case b of (b1, b2, b3) \<Rightarrow> LOut t s ((b1, b2), b3)))
-  , LBase = (\<lambda> s . (case (LBase t s) of ((b1, b2), b3) \<Rightarrow> (b1, b2, b3))) \<rparr>"
-
-definition prod_deassocb_l ::
-  "('x, 'a, ('b1 * 'b2) * 'b3, 'z) lifting_scheme \<Rightarrow>
-   ('x, 'a, 'b1 * 'b2 * 'b3) lifting" where
-"prod_deassocb_l t =
-  plifting.extend (prod_deassocb_pl t)
-    \<lparr> LPost = (\<lambda> s b . (case b of (b1, b2, b3) \<Rightarrow>
-                        (case (LPost t s ((b1, b2), b3)) of
-                          ((b1', b2'), b3') \<Rightarrow> (b1', b2', b3')))) \<rparr>"
-
-definition prod_deassocb_pv ::
-"('x, 'a, ('b1 * 'b2) * 'b3, 'z) pliftingv_scheme \<Rightarrow>
- ('x, 'a, 'b1 * 'b2 * 'b3) pliftingv" where
-"prod_deassocb_pv v =
-  \<lparr> LOutS = (\<lambda> s . { b . \<exists> b1 b2 b3 . b = (b1, b2, b3) \<and> ((b1, b2), b3) \<in> LOutS v s}) \<rparr>"
-
-definition prod_assocb_pl ::
-  "('x, 'a, 'b1 * 'b2 * 'b3, 'z) plifting_scheme \<Rightarrow>
-   ('x, 'a, ('b1 * 'b2) * 'b3) plifting" where
-"prod_assocb_pl t =
-  \<lparr> LUpd = (\<lambda> s a b . (case b of ((b1, b2), b3) \<Rightarrow>
-                        (case (LUpd t s a (b1, b2, b3)) of
-                          (b1', b2', b3') \<Rightarrow> ((b1', b2'), b3'))))
-  , LOut = (\<lambda> s b . (case b of ((b1, b2), b3) \<Rightarrow> LOut t s (b1, b2, b3)))
-  , LBase = (\<lambda> s . (case (LBase t s) of (b1, b2, b3) \<Rightarrow> ((b1, b2), b3))) \<rparr>"
-
-definition prod_assocb_l ::
-  "('x, 'a, 'b1 * 'b2 * 'b3, 'z) lifting_scheme \<Rightarrow>
-   ('x, 'a, ('b1 * 'b2) * 'b3) lifting" where
-"prod_assocb_l t =
-  plifting.extend (prod_assocb_pl t)
-    \<lparr> LPost = (\<lambda> s b . (case b of ((b1, b2), b3) \<Rightarrow>
-                        (case (LPost t s (b1, b2, b3)) of
-                          (b1', b2', b3') \<Rightarrow> ((b1', b2'), b3')))) \<rparr>"
-
-definition prod_assocb_pv ::
-"('x, 'a, 'b1 * 'b2 * 'b3, 'z) pliftingv_scheme \<Rightarrow>
- ('x, 'a, ('b1 * 'b2) * 'b3) pliftingv" where
-"prod_assocb_pv v =
-  \<lparr> LOutS = (\<lambda> s . { b . \<exists> b1 b2 b3 . b = ((b1, b2), b3) \<and> (b1, b2, b3) \<in> LOutS v s}) \<rparr>"
-
-definition prod_deassoca_pl ::
-  "('x, ('a1 * 'a2) * 'a3, 'b, 'z) plifting_scheme \<Rightarrow>
-   ('x, 'a1 * 'a2 * 'a3, 'b) plifting" where
-"prod_deassoca_pl t =
-  \<lparr> LUpd = (\<lambda> s a b . (case a of (a1, a2, a3) \<Rightarrow> LUpd t s ((a1, a2), a3) b))
-  , LOut = (\<lambda> s b . (case LOut t s b of ((a1, a2), a3) \<Rightarrow> (a1, a2, a3)))
-  , LBase = LBase t \<rparr>"
-
-definition prod_deassoca_l ::
-  "('x, ('a1 * 'a2) * 'a3, 'b, 'z) lifting_scheme \<Rightarrow>
-   ('x, 'a1 * 'a2 * 'a3, 'b) lifting" where
-"prod_deassoca_l t =
-  plifting.extend (prod_deassoca_pl t)
-    \<lparr> LPost = LPost t \<rparr>"
-
-definition prod_deassoca_pv ::
-  "('x, ('a1 * 'a2) * 'a3, 'b, 'z) pliftingv_scheme \<Rightarrow>
-   ('x, 'a1 * 'a2 * 'a3, 'b) pliftingv" where
-"prod_deassoca_pv v =
-  \<lparr> LOutS = LOutS v \<rparr>"
-
-definition prod_assoca_pl ::
-  "('x, 'a1 * 'a2 * 'a3, 'b, 'z) plifting_scheme \<Rightarrow>
-   ('x, ('a1 * 'a2) * 'a3, 'b) plifting" where
-"prod_assoca_pl t =
-  \<lparr> LUpd = (\<lambda> s a b . (case a of ((a1, a2), a3) \<Rightarrow> LUpd t s (a1, a2, a3) b))
-  , LOut = (\<lambda> s b . (case LOut t s b of (a1, a2, a3) \<Rightarrow> ((a1, a2), a3)))
-  , LBase = LBase t \<rparr>"
-
-definition prod_assoca_l ::
-  "('x, 'a1 * 'a2 * 'a3, 'b, 'z) lifting_scheme \<Rightarrow>
-   ('x, ('a1 * 'a2) * 'a3, 'b) lifting" where
-"prod_assoca_l t =
-  plifting.extend (prod_assoca_pl t)
-    \<lparr> LPost = LPost t \<rparr>"
-
-definition prod_assoca_pv ::
-  "('x, 'a1 * 'a2 * 'a3, 'b, 'z) pliftingv_scheme \<Rightarrow>
-   ('x, ('a1 * 'a2) * 'a3, 'b) pliftingv" where
-"prod_assoca_pv v =
-  \<lparr> LOutS = LOutS v \<rparr>"
-
-
-
 (* TODO: revisit these. it is possible they need to be
 more general - paritcularly, this is suited for merging together
 a product in one language with a fst in another.
