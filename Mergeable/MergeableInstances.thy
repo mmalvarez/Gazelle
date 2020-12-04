@@ -88,11 +88,6 @@ definition option_pleq : "(x :: 'a option) <[ y =
         (case y of
           None \<Rightarrow> False
           | Some y' \<Rightarrow> (pleq x' y')))"
-(*
-instantiation option :: (Pordc) Pordb
-begin
-
-*)
 (*definition option_bot : "bot = (None :: 'a option)"*)
 
 instance proof
@@ -124,9 +119,8 @@ qed
 end
 
 (* definition option_bot : "bot = (None :: 'a option)" *)
-instantiation option :: (Pordc) Pordb
+instantiation option :: (Pordc) Pordc
 begin
-definition option_bot : "bot = (None :: 'a option)"
 
 instance proof
   fix a b :: "'a option"
@@ -190,11 +184,25 @@ instance proof
       qed
     qed
   qed
+qed
+end
+
+instantiation option :: (Pord) Pordb
+begin
+
+definition option_bot : "bot = (None :: 'a option)"
+
+instance proof
 next
   fix a :: "'a option"
   show "\<bottom> <[ a"
     by(auto simp add:option_pleq option_bot)
 qed
+end
+
+instantiation option :: (Pordc) Pordbc
+begin
+instance proof qed
 end
 
 instantiation option :: (Mergeable) Mergeableb
@@ -678,7 +686,7 @@ instance proof
 qed
 end
 
-instantiation md_prio :: (Pordb) Pordb
+instantiation md_prio :: (Pordbc) Pordbc
 begin
 definition prio_bot :
 "\<bottom> = mdp 0 bot"

@@ -583,11 +583,11 @@ proof(-)
   thus ?thesis using H by auto
 qed
 
-(* TODO: figure out why we need this annotation *)
-class Pordb =  Pordc +
+class Pordb =  Pord +
 fixes bot :: "'a :: Pord_Weak" ("\<bottom>")
 assumes bot_spec :
   "\<And> (a :: 'a ) .  pleq bot a"
 
+class Pordbc =  Pordc + Pordb
 
 end

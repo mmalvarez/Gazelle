@@ -142,6 +142,6 @@ qed
 
 
 class Mergeableb = Mergeable +
-  Pordb
+  Pordbc
 
 end

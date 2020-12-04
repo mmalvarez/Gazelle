@@ -20,21 +20,55 @@ definition LNew :: "('syn, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow> 'syn
 
 
 (* Validity of lifting *)
-definition lifting_valid :: "('x, 'a, 'b :: Pord, 'z) liftingv_scheme \<Rightarrow> bool" where
-"lifting_valid l =
-  ((\<forall> s a b . LUpd l s a b \<in> LOutS l s) \<and>
-   (\<forall> s a b . a = LOut l s (LUpd l s a b)) \<and>
-   (\<forall> s b . b \<in> LOutS l s \<longrightarrow> b <[ LUpd l s (LOut l s b) b))"
 
-(* let's see if this is more ergonomic *)
+(* we should stratify this into "lifting_valid_weak" and "lifting_valid"
+weak is just the first law
+that way we can express things like
+"lifting a weakly valid lifting through a well-formed prio lifting
+will be (strongly) valid"
+*)
+
+definition lifting_valid_weak :: "('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow> bool" where
+"lifting_valid_weak l =
+  (\<forall> s a b . a = (LOut l s (LUpd l s a b)) \<and>
+  (\<forall> s b . b <[ LUpd l s (LOut l s b) b))"
+
+lemma lifting_valid_weakI :
+  assumes HI : "\<And> s a b . LOut l s (LUpd l s a b) = a"
+  assumes HO : "\<And> s b. b <[ LUpd l s (LOut l s b) b"
+  shows "lifting_valid_weak l" using assms
+  by(auto simp add: lifting_valid_weak_def)
+
+lemma lifting_valid_weakDO :
+  assumes H : "lifting_valid_weak l"
+  shows "LOut l s (LUpd l s a b) = a" using assms
+  by(auto simp add: lifting_valid_weak_def)
+
+lemma lifting_valid_weakDO' :
+  assumes H : "lifting_valid_weak l"
+  shows "LOut l s (LNew l s a) = a" using assms
+  by(auto simp add: lifting_valid_weak_def LNew_def)
+
+lemma lifting_valid_weakDI :
+  assumes H : "lifting_valid_weak l"
+  shows "b <[ LUpd l s (LOut l s b) b" using assms
+  by(auto simp add:lifting_valid_weak_def)
+
+
+(* Note that the second law is quite a strong condition -
+   we require updates to _strictly increase_ the information content
+   this implies the usage of something like priority *)
+definition lifting_valid :: "('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow> bool" where
+"lifting_valid l =
+   ((\<forall> s a b . a = LOut l s (LUpd l s a b)) \<and>
+    (\<forall> s a b . b <[ LUpd l s a b))"
+
 declare liftingv.defs [simp]
 declare liftingv.cases [simp]
 
 lemma lifting_validI :
-  assumes HSO : "\<And> s a b . LUpd l s a b \<in> LOutS l s"
   assumes HI : "\<And> s a b . LOut l s (LUpd l s a b) = a"
-  assumes HO : "\<And> s b . b \<in> LOutS l s \<Longrightarrow>
-                        b <[ LUpd l s (LOut l s b) b"
+  assumes HO : "\<And> s a b. b <[ LUpd l s a b"
   shows "lifting_valid l" using assms
   by(auto simp add: lifting_valid_def)
 
@@ -50,14 +84,96 @@ lemma lifting_validDO' :
 
 lemma lifting_validDI :
   assumes H : "lifting_valid l"
-  assumes HO : "b \<in> LOutS l s"
-  shows "b <[ LUpd l s (LOut l s b) b" using assms
+  shows "b <[ LUpd l s a b" using assms
   by(auto simp add:lifting_valid_def)
 
-lemma lifting_validDSO :
+lemma lifting_valid_imp_weak :
   assumes H : "lifting_valid l"
-  shows "LUpd l s a b \<in> LOutS l s" using assms
-  by(auto simp add: lifting_valid_def)
+  shows "lifting_valid_weak l" using assms
+  by(auto simp add: lifting_valid_def lifting_valid_weak_def)
+
+(* could define a weak version of this, but likely not useful *)
+definition lifting_validb :: "('x, 'a, 'b :: Pordb, 'z) lifting_scheme \<Rightarrow> bool" where
+"lifting_validb l =
+  (lifting_valid l \<and>
+  (\<forall> s . LBase l s = \<bottom>))"
+
+lemma lifting_validbI :
+  assumes HI : "\<And> s a b . LOut l s (LUpd l s a b) = a"
+  assumes HO : "\<And> s a b. b <[ LUpd l s a b"
+  assumes HB : "\<And> s . LBase l s = \<bottom>"
+  shows "lifting_validb l" using assms
+  by(auto simp add: lifting_valid_def lifting_validb_def)
+
+lemma lifting_validbI' :
+  assumes H : "lifting_valid l"
+  assumes HB : "\<And> s . LBase l s = \<bottom>"
+  shows "lifting_validb l" using assms
+  by(auto simp add: lifting_valid_def lifting_validb_def)
+
+lemma lifting_validbDO :
+  assumes H : "lifting_validb l"
+  shows "LOut l s (LUpd l s a b) = a" using assms
+  by(auto simp add: lifting_valid_def lifting_validb_def)
+
+lemma lifting_validbDO' :
+  assumes H : "lifting_validb l"
+  shows "a = LOut l s (LNew l s a)" using assms
+  by(auto simp add: lifting_valid_def lifting_validb_def LNew_def)
+
+lemma lifting_validbDI :
+  assumes H : "lifting_validb l"
+  shows "b <[ LUpd l s a b" using assms
+  by(auto simp add:lifting_valid_def lifting_validb_def)
+
+lemma lifting_validbDB :
+  assumes H : "lifting_validb l"
+  shows "LBase l s = \<bottom>" using assms
+  by(auto simp add:lifting_valid_def lifting_validb_def)
+
+lemma lifting_validbDV :
+  assumes H : "lifting_validb l"
+  shows "lifting_valid l"
+  using assms 
+  by(auto simp add:lifting_valid_def lifting_validb_def)
+
+definition lifting_valid_weakb :: "('x, 'a, 'b :: Pordb, 'z) lifting_scheme \<Rightarrow> bool" where
+"lifting_valid_weakb l =
+  (lifting_valid_weak l \<and>
+  (\<forall> s . LBase l s = \<bottom>))"
+
+lemma lifting_valid_weakbI :
+  assumes HI : "\<And> s a b . LOut l s (LUpd l s a b) = a"
+  assumes HO : "\<And> s b. b <[ LUpd l s (LOut l s b) b"
+  assumes HB : "\<And> s . LBase l s = \<bottom>"
+  shows "lifting_valid_weakb l" using assms
+  by(auto simp add: lifting_valid_weak_def lifting_valid_weakb_def)
+
+lemma lifting_valid_weakbI' :
+  assumes HV : "lifting_valid_weak l"
+  assumes HB : "\<And> s . LBase l s = \<bottom>"
+  shows "lifting_valid_weakb l" using assms
+  by(auto simp add: lifting_valid_weak_def lifting_valid_weakb_def)
+
+lemma lifting_valid_weakbDO :
+  assumes H : "lifting_valid_weakb l"
+  shows "LOut l s (LUpd l s a b) = a" using assms
+  by(auto simp add: lifting_valid_weak_def lifting_valid_weakb_def)
+
+lemma lifting_valid_weakbDI :
+  assumes H : "lifting_valid_weakb l"
+  shows "\<And> s b. b <[ LUpd l s (LOut l s b) b" using assms
+  by(auto simp add: lifting_valid_weak_def lifting_valid_weakb_def)
+
+lemma lifting_valid_weakbDB :
+  assumes H : "lifting_valid_weakb l"
+  shows "LBase l s = \<bottom>" using assms
+  by(auto simp add: lifting_valid_weak_def lifting_valid_weakb_def)
+
+lemma lifting_valid_weakbDV :
+  assumes H : "lifting_valid_weakb l"
+  shows "lifting_valid_weak l" using assms
+  by(auto simp add: lifting_valid_weak_def lifting_valid_weakb_def)
 
 (*
   Mapping semantics through a lifting
@@ -99,49 +215,66 @@ declare lower_map_s_def [simp]
 
 (* Orthogonality of liftings
    Used to define valid merge-liftings. *)
-
+(* could weaken this to require just that bases have a LUB
+   this would complicate proofs though and might not even work. *)
 definition l_ortho ::
-  "('x, 'a1, 'b :: Mergeable, 'z1) liftingv_scheme \<Rightarrow>
-   ('x, 'a2, 'b, 'z2) liftingv_scheme \<Rightarrow>
+  "('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme \<Rightarrow>
+   ('x, 'a2, 'b, 'z2) lifting_scheme \<Rightarrow>
    bool" where
 "l_ortho l1 l2 =
-  (\<forall> s a1 a2 b .
-    \<exists> z . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} z \<and>
-      z \<in> LOutS l1 s \<and> z \<in> LOutS l2 s \<and>
-      LOut l1 s z = a1 \<and> LOut l2 s z = a2
-      )" 
+  (
+    (\<forall> s . LBase l1 s = LBase l2 s) \<and>
+    (\<forall> s a1 a2 b .
+      \<exists> z . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} z \<and>
+        LOut l1 s z = a1 \<and> LOut l2 s z = a2
+        ))" 
 
-lemma l_orthoD [elim] :
+
+lemma l_orthoDB :
+  fixes s :: 'x
+  assumes H : "l_ortho (l1 :: ('x, 'a1, 'b ::Mergeable, 'z1) lifting_scheme)
+                       (l2 :: ('x, 'a2, 'b, 'z2) lifting_scheme)"
+  shows "LBase l1 s = LBase l2 s"
+  using assms
+  by(auto simp add: l_ortho_def; blast)
+  
+lemma l_orthoDI :
   fixes s :: 'x
   fixes a1 :: 'a1
   fixes a2 :: 'a2
   fixes b :: "('b :: Mergeable)"
-  assumes H : "l_ortho (l1 :: ('x, 'a1, 'b, 'z1) liftingv_scheme)
-                       (l2 :: ('x, 'a2, 'b, 'z2) liftingv_scheme)"
+  assumes H : "l_ortho (l1 :: ('x, 'a1, 'b, 'z1) lifting_scheme)
+                       (l2 :: ('x, 'a2, 'b, 'z2) lifting_scheme)"
   obtains z where
     "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} z"
-    "z \<in> LOutS l1 s"
-    "z \<in> LOutS l2 s"
     "LOut l1 s z = a1"
     "LOut l2 s z = a2"
   using assms
   by(auto simp add: l_ortho_def; blast)
 
 lemma l_orthoI [intro]:
-  assumes H :
+  assumes HB :
+    "\<And> s . LBase l1 s = LBase l2 s"
+  assumes HI :
     "\<And> s a1 a2 b . 
       (\<exists> z . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} z \<and> 
-             z \<in> LOutS l1 s \<and> z \<in> LOutS l2 s \<and>
              LOut l1 s z = a1 \<and> LOut l2 s z = a2)"
   shows "l_ortho l1 l2"
   using assms
   by(auto simp add: l_ortho_def)
 
 lemma l_ortho_comm :
-  assumes H :"l_ortho (l1 :: ('x, 'a1, 'b :: Mergeable, 'z1) liftingv_scheme) 
-                      (l2 :: ('x, 'a2, 'b, 'z2) liftingv_scheme)"
+  assumes H :"l_ortho (l1 :: ('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme) 
+                      (l2 :: ('x, 'a2, 'b, 'z2) lifting_scheme)"
   shows "l_ortho l2 l1"
 proof(rule l_orthoI)
+  fix s
+
+  show "LBase l2 s = LBase l1 s"
+    using l_orthoDB[OF H]
+    by auto
+
+next
   fix s :: "'x"
   fix a1 :: "'a1"
   fix a2 :: "'a2"
@@ -149,19 +282,17 @@ proof(rule l_orthoI)
 
   obtain z where
     Zsup : "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} z" and
-    ZS1 : "z \<in> LOutS l1 s" and
-    ZS2 : "z \<in> LOutS l2 s" and
     Z1 : "LOut l1 s z = a1" and
     Z2 : "LOut l2 s z = a2"
-    using l_orthoD[OF H] by blast
+    using l_orthoDI[OF H] by blast
 
-  have "is_sup {LUpd l2 s a2 b, LUpd l1 s a1 b} z \<and> z \<in> LOutS l2 s \<and>
-         z \<in> LOutS l1 s \<and> LOut l2 s z = a2 \<and> LOut l1 s z = a1"
-    using is_sup_comm2[OF Zsup] ZS1 ZS2 Z1 Z2
+  have "is_sup {LUpd l2 s a2 b, LUpd l1 s a1 b} z \<and> 
+                LOut l2 s z = a2 \<and> LOut l1 s z = a1"
+    using is_sup_comm2[OF Zsup] Z1 Z2
     by auto
 
-  thus "\<exists>z. is_sup {LUpd l2 s a2 b, LUpd l1 s a1 b} z \<and> z \<in> LOutS l2 s \<and>
-         z \<in> LOutS l1 s \<and> LOut l2 s z = a2 \<and> LOut l1 s z = a1"
+  thus "\<exists>z. is_sup {LUpd l2 s a2 b, LUpd l1 s a1 b} z \<and> 
+                    LOut l2 s z = a2 \<and> LOut l1 s z = a1"
     by auto
 qed
 
