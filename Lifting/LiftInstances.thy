@@ -131,7 +131,7 @@ definition triv_lv ::
   lifting.extend (triv_l) \<lparr> LOutS = (\<lambda> s . UNIV) \<rparr>"
 
 lemma triv_l_valid : 
-  shows "lifting_valid_weak (triv_l :: ('x, 'a :: Bogus, 'a md_triv) lifting)"
+  shows "lifting_valid_weak' (triv_l :: ('x, 'a :: Bogus, 'a md_triv) lifting)"
 proof(rule lifting_valid_weakI)
   fix s :: 'x
   fix a :: 'a
@@ -169,46 +169,46 @@ definition option_l ::
                       | None \<Rightarrow> LOut t s (LBase t s)))
   , LBase = (\<lambda> s . None)\<rparr>"
 
-definition option_lv ::
-  "('x, 'a, 'b :: {Pord}, 'z) liftingv_scheme \<Rightarrow> ('x, 'a, 'b option) liftingv" where
-"option_lv v = lifting.extend (option_l v)
-  \<lparr> LOutS = (\<lambda> s . Some ` (LOutS v s))\<rparr>"
+definition option_l_S :: "('s, 'b) valid_set \<Rightarrow> ('s, 'b option) valid_set" where
+"option_l_S S s = (Some ` S s)"
 
 lemma option_l_valid_weak :
-  assumes H : "lifting_valid_weak (t :: ('x, 'a, 'b :: {Pord}, 'z) lifting_scheme)"
-  shows "lifting_valid_weak (option_l t)"
+  assumes H : "lifting_valid_weak (t :: ('x, 'a, 'b :: {Pord}, 'z) lifting_scheme) S"
+  shows "lifting_valid_weak (option_l t) (option_l_S S)"
 proof(rule lifting_valid_weakI)
   fix s a b
   show "LOut (option_l t) s (LUpd (option_l t) s a b) = a"
     using lifting_valid_weakDO[OF H]
-    by(auto simp add:option_l_def option_lv_def LNew_def split:option.splits)
+    by(auto simp add:option_l_def LNew_def split:option.splits)
 next
   fix s b
-  show "b <[ LUpd (option_l t) s (LOut (option_l t) s b) b"
+  assume Hb : "b \<in> option_l_S S s"
+  thus "b <[ LUpd (option_l t) s (LOut (option_l t) s b) b"
     using lifting_valid_weakDI[OF H]
-    by(auto simp add:option_l_def option_lv_def LNew_def option_pleq split:option.splits)
+    by(auto simp add:option_l_def option_l_S_def LNew_def option_pleq split:option.splits)
 qed
 
 lemma option_l_valid :
-  assumes H : "lifting_valid (t :: ('x, 'a, 'b :: {Pord}, 'z) lifting_scheme)"
-  shows "lifting_valid (option_l t)"
+  assumes H : "lifting_valid (t :: ('x, 'a, 'b :: {Pord}, 'z) lifting_scheme) S"
+  shows "lifting_valid (option_l t) (option_l_S S)"
 proof(rule lifting_validI)
   fix s a b
   show "LOut (option_l t) s (LUpd (option_l t) s a b) = a"
     using lifting_validDO[OF H]
-    by(auto simp add:option_l_def option_lv_def LNew_def split:option.splits)
+    by(auto simp add:option_l_def LNew_def split:option.splits)
 next
   fix s a b
-  show "b <[ LUpd (option_l t) s a b"
+  assume Hb : "b \<in> (option_l_S S) s"
+  thus "b <[ LUpd (option_l t) s a b"
     using lifting_validDI[OF H]
-    by(auto simp add:option_l_def option_lv_def LNew_def option_pleq split:option.splits)
+    by(auto simp add:option_l_def option_l_S_def LNew_def option_pleq split:option.splits)
 qed
 
-lemma option_l_validb_weak :
-  assumes H : "lifting_valid_weak (t :: ('x, 'a, 'b :: {Pord}, 'z) lifting_scheme)"
-  shows "lifting_valid_weakb (option_l t)"
+lemma option_l_valid_weakb :
+  assumes H : "lifting_valid_weak (t :: ('x, 'a, 'b :: {Pord}, 'z) lifting_scheme) S"
+  shows "lifting_valid_weakb (option_l t) (option_l_S S)"
 proof(rule lifting_valid_weakbI')
-  show "lifting_valid_weak (option_l t)"
+  show "lifting_valid_weak (option_l t) (option_l_S S)"
     using option_l_valid_weak[OF H] by auto
 next
   fix s
@@ -217,10 +217,10 @@ next
 qed
 
 lemma option_l_validb :
-  assumes H : "lifting_valid (t :: ('x, 'a, 'b :: {Pord}, 'z) lifting_scheme)"
-  shows "lifting_validb (option_l t)"
+  assumes H : "lifting_valid (t :: ('x, 'a, 'b :: {Pord}, 'z) lifting_scheme) S"
+  shows "lifting_validb (option_l t) (option_l_S S)"
 proof(rule lifting_validbI')
-  show "lifting_valid (option_l t)"
+  show "lifting_valid (option_l t) (option_l_S S)"
     using option_l_valid[OF H] by auto
 next
   fix s
@@ -228,15 +228,18 @@ next
     by(simp add: option_l_def option_bot)
 qed
 
+(* hmm... do we need a hypothesis about
+   updates remaining in the valid set? *)
 lemma option_ortho :
-  assumes H : "l_ortho (l1 :: ('x, 'a1, 'b :: Mergeable) lifting) 
-                       (l2 :: ('x, 'a2, 'b :: Mergeable) lifting)"
-  shows "l_ortho (option_l l1) (option_l l2)"
+  assumes H1 : "lifting_valid l1 S1"
+  assumes H2 : "lifting_valid l2 S2"
+  assumes Horth : "l_ortho (l1 :: ('x, 'a1, 'b :: Mergeable) lifting) S1
+                       (l2 :: ('x, 'a2, 'b :: Mergeable) lifting) S2"
+  shows "l_ortho (option_l l1) (option_l_S S1) (option_l l2) (option_l_S S2)"
 proof(rule l_orthoI)
   fix s :: 'x
 
   show "LBase (option_l l1) s = LBase (option_l l2) s"
-    using l_orthoDB[OF H]
     by(auto simp add: option_l_def split:option.splits)
 next
 
@@ -245,60 +248,44 @@ next
   fix a2 :: 'a2
   fix b :: "'b option"
 
+  assume Hb1 : "LUpd (option_l l1) s a1 b \<in> option_l_S S1 s"
+  assume Hb2 : "LUpd (option_l l2) s a2 b \<in> option_l_S S2 s"
+
   show "\<exists>z. is_sup {LUpd (option_l l1) s a1 b, LUpd (option_l l2) s a2 b} z \<and>
              LOut (option_l l1) s z = a1 \<and> LOut (option_l l2) s z = a2"
   proof(cases b)
     case None
 
+    have A1 : "LUpd l1 s a1 (LBase l1 s) \<in> S1 s"
+      using lifting_valid_S
+
     obtain z where
-      Zsup : "is_sup {(LNew l1 s a1), (LNew l2 s a2)} z" and
+      Zsup : "is_sup {LUpd l1 s a1 (LBase l1 s), LUpd l2 s a2 (LBase l2 s)} z" and
       Z1 : "LOut l1 s z = a1" and
-      Z2 : "LOut l2 s z = a2" unfolding LNew_def l_orthoDB[OF H] 
-      using l_orthoDI[OF H]
+      Z2 : "LOut l2 s z = a2" unfolding LNew_def 
+      using l_orthoDI
       by(blast)
 
-    have ZLeq1 : "LNew l1 s a1 <[ z" using Zsup
-      by(auto simp add:is_sup_unfold1)
 
-    have ZLeq2 : "LNew l2 s a2 <[ z" using Zsup
-      by(auto simp add:is_sup_unfold1)
-
-    have "is_sup {LUpd (option_l l1) s a1 b, LUpd (option_l l2) s a2 b} (Some z)"
-    proof(rule is_sup_intro)
-      fix x
-      assume X : "x \<in> {LUpd (option_l l1) s a1 b, LUpd (option_l l2) s a2 b}"
-      show "x <[ Some z" using X ZLeq1 ZLeq2 None
-        by(auto simp add: option_l_def option_pleq split:option.splits)
-    next
-      fix x'
-      assume UB : "is_ub {LUpd (option_l l1) s a1 b, LUpd (option_l l2) s a2 b} x'"
-
-      obtain x'' where X' : "x' = Some x''" using 
-          is_ub_unfold[OF UB, of "LUpd (option_l l1) s a1 b"] None
-        by(auto simp add: option_pleq option_l_def split:option.splits)
-
-      hence UB' : "is_ub {(LNew l1 s a1), (LNew l2 s a2)} x''"
-        using is_ub_unfold[OF UB, of "Some (LNew l1 s a1)"] 
-              is_ub_unfold[OF UB, of "Some (LNew l2 s a2)"]
-              None
-        by(auto simp add: is_ub_def option_l_def option_pleq)
-
-      have "z <[ x''" using is_sup_unfold2[OF Zsup UB'] by auto
-
-      thus "Some z <[ x'" using UB None X'
-        by(auto simp add: option_l_def option_pleq split:option.splits)
-    qed
-
-    then show ?thesis using None Z1 Z2
-      by(auto simp add: option_l_def)
+(*
+    hence False using Hb1 by(auto simp add: option_l_S_def)
+*)
+    thus ?thesis 
+      apply(auto simp add: option_l_def option_l_S_def)
   next
     case (Some a)
+
+    have Ha1 : "a \<in> S1 s" using Hb1 Some
+      by(auto simp add:option_l_S_def)
+
+    have Ha2 : "a \<in> S2 s" using Hb2 Some
+      by(auto simp add:option_l_S_def)
 
     obtain z where
       Zsup : "is_sup {LUpd l1 s a1 a, LUpd l2 s a2 a} z" and
       Z1 : "LOut l1 s z = a1" and
       Z2 : "LOut l2 s z = a2" unfolding LNew_def l_orthoDB[OF H] 
-      using l_orthoDI[OF H]
+      using l_orthoDI[OF H Ha1 Ha2]
       by(blast)
 
     have ZLeq1 : "LUpd l1 s a1 a <[ z" using Zsup
@@ -352,16 +339,21 @@ definition inl_l ::
                       | _ \<Rightarrow> LOut t s (LBase t s)))
   , LBase = (\<lambda> s . Inr \<bottom>)\<rparr>"
 
+definition inl_l_S ::
+  "('x, 'b) valid_set \<Rightarrow> ('x, ('b + 'c :: Pordb)) valid_set" where
+"inl_l_S S s =
+  Inl ` S s"
+
 (* lemmata to define:
   - valid_weak
   - valid
   - validb_weak
   - validb *)
 
-(* hmm... do we need LOutS after all? *)
+(* Sum has no least element, we inl/inr liftings cannot have validb versions *)
 lemma inl_l_valid_weak :
-  assumes H : "lifting_valid_weak t"
-  shows "lifting_valid_weak (inl_l t :: ('x, 'a, ('b :: Pord + 'c :: Pordb)) lifting)"
+  assumes H : "lifting_valid_weak t S"
+  shows "lifting_valid_weak (inl_l t :: ('x, 'a, ('b :: Pord + 'c :: Pordb)) lifting) (inl_l_S S)"
 proof(rule lifting_valid_weakI)
   fix s :: 'x
   fix a :: 'a 
@@ -372,13 +364,35 @@ proof(rule lifting_valid_weakI)
 next
   fix s :: 'x
   fix b :: "'b + 'c"
+  assume Hb : "b \<in> inl_l_S S s"
   show "b <[ LUpd (inl_l t) s (LOut (inl_l t) s b) b"
-    using lifting_valid_weakDI[OF H]
-    apply(simp add: inl_l_def sum_pleq LNew_def split:sum.splits)
+    using lifting_valid_weakDI[OF H] Hb
+    by(auto simp add: inl_l_def inl_l_S_def sum_pleq LNew_def split:sum.splits)
+qed
+
+lemma inl_l_valid :
+  assumes H : "lifting_valid t S"
+  shows "lifting_valid (inl_l t :: ('x, 'a, ('b :: Pord + 'c :: Pordb)) lifting) (inl_l_S S)"
+proof(rule lifting_validI)
+  fix s :: 'x
+  fix a :: 'a 
+  fix b :: "('b + 'c)"
+  show "LOut (inl_l t) s (LUpd (inl_l t) s a b) = a"
+    using lifting_validDO[OF H]
+    by(auto simp add: inl_l_def sum_pleq LNew_def split:sum.splits)
+next
+  fix s :: 'x
+  fix a
+  fix b :: "'b + 'c"
+  assume Hb : "b \<in> inl_l_S S s"
+  show "b <[ LUpd (inl_l t) s a b"
+    using lifting_validDI[OF H] Hb
+    by(auto simp add: inl_l_def inl_l_S_def sum_pleq LNew_def split:sum.splits)
+qed
 
 definition inr_l ::
   "('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow> 
-   ('x, 'a, ('c :: Pord + 'b :: Pord)) lifting" where
+   ('x, 'a, ('c :: Pordb + 'b)) lifting" where
 "inr_l t =
   \<lparr> LUpd = (\<lambda> s a b . 
             (case b of
@@ -386,10 +400,58 @@ definition inr_l ::
               | _ \<Rightarrow> Inr (LNew t s a)))
   , LOut = (\<lambda> s b . (case b of Inr b' \<Rightarrow> LOut t s b'
                       | _ \<Rightarrow> LOut t s (LBase t s)))
-  , LBase = (\<lambda> s . Inr (LBase t s))\<rparr>"
+  , LBase = (\<lambda> s . Inl \<bottom>)\<rparr>"
 
+definition inr_l_S ::
+  "('x, 'b) valid_set \<Rightarrow> ('x, ('c :: Pordb + 'b)) valid_set" where
+"inr_l_S S s =
+  Inr ` S s"
 
+(* lemmata to define:
+  - valid_weak
+  - valid
+  - validb_weak
+  - validb *)
 
+(* Sum has no least element, we inl/inr liftings cannot have validb versions *)
+lemma inr_l_valid_weak :
+  assumes H : "lifting_valid_weak t S"
+  shows "lifting_valid_weak (inr_l t :: ('x, 'a, ('c :: Pordb + 'b :: Pord)) lifting) (inr_l_S S)"
+proof(rule lifting_valid_weakI)
+  fix s :: 'x
+  fix a :: 'a 
+  fix b :: "('c + 'b)"
+  show "LOut (inr_l t) s (LUpd (inr_l t) s a b) = a"
+    using lifting_valid_weakDO[OF H]
+    by(auto simp add: inr_l_def sum_pleq LNew_def split:sum.splits)
+next
+  fix s :: 'x
+  fix b :: "'c + 'b"
+  assume Hb : "b \<in> inr_l_S S s"
+  show "b <[ LUpd (inr_l t) s (LOut (inr_l t) s b) b"
+    using lifting_valid_weakDI[OF H] Hb
+    by(auto simp add: inr_l_def inr_l_S_def sum_pleq LNew_def split:sum.splits)
+qed
+
+lemma inr_l_valid :
+  assumes H : "lifting_valid t S"
+  shows "lifting_valid (inr_l t :: ('x, 'a, ('c :: Pordb + 'b :: Pord)) lifting) (inr_l_S S)"
+proof(rule lifting_validI)
+  fix s :: 'x
+  fix a :: 'a 
+  fix b :: "('c + 'b)"
+  show "LOut (inr_l t) s (LUpd (inr_l t) s a b) = a"
+    using lifting_validDO[OF H]
+    by(auto simp add: inr_l_def sum_pleq LNew_def split:sum.splits)
+next
+  fix s :: 'x
+  fix a
+  fix b :: "'c + 'b"
+  assume Hb : "b \<in> inr_l_S S s"
+  show "b <[ LUpd (inr_l t) s a b"
+    using lifting_validDI[OF H] Hb
+    by(auto simp add: inr_l_def inr_l_S_def sum_pleq LNew_def split:sum.splits)
+qed
 
 
 definition prio_l' ::
@@ -420,12 +482,17 @@ definition prio_lv :: "('x \<Rightarrow> nat) \<Rightarrow>
 "prio_lv f0 f1 v = lifting.extend (prio_l f0 f1 v)
               \<lparr> LOutS = (\<lambda> s . { p . \<exists> m b . p = mdp m b \<and> b \<in> LOutS v s})\<rparr>"
 
+definition prio_l_S :: "('x, 'b) valid_set \<Rightarrow> ('x, 'b md_prio) valid_set" where
+"prio_l_S S s =
+  { p . (case p of
+          mdp n x \<Rightarrow> x \<in> S s) }"
+
 (* prio preserves weak and strong liftings,
    given a (non-strictly) increasing change *)
 lemma prio_l_valid_weak :
-  assumes H : "lifting_valid_weak t"
+  assumes H : "lifting_valid_weak t S"
   assumes Hmono : "\<And> s p . p \<le> f1 s p"
-  shows "lifting_valid_weak (prio_l f0 f1 t)"
+  shows "lifting_valid_weak (prio_l f0 f1 t) (prio_l_S S)"
 proof(rule lifting_valid_weakI)
   fix s a b
   show "LOut (prio_l f0 f1 t) s (LUpd (prio_l f0 f1 t) s a b) = a"
@@ -433,15 +500,16 @@ proof(rule lifting_valid_weakI)
     by(auto simp add:prio_l_def prio_lv_def LNew_def split:md_prio.splits)
 next
   fix s b
+  assume Hb : "b \<in> prio_l_S S s"
   show "b <[ LUpd (prio_l f0 f1 t) s (LOut (prio_l f0 f1 t) s b) b"
-    using lifting_valid_weakDI[OF H] Hmono
-    by(auto simp add:prio_l_def prio_lv_def LNew_def prio_pleq split:md_prio.splits)
+    using lifting_valid_weakDI[OF H] Hmono Hb
+    by(auto simp add:prio_l_def prio_lv_def prio_l_S_def LNew_def prio_pleq split:md_prio.splits)
 qed
 
 lemma prio_l_valid :
-  assumes H : "lifting_valid t"
+  assumes H : "lifting_valid t S"
   assumes Hmono : "\<And> s p . p \<le> f1 s p"
-  shows "lifting_valid (prio_l f0 f1 t)"
+  shows "lifting_valid (prio_l f0 f1 t) (prio_l_S S)"
 proof(rule lifting_validI)
   fix s a b
   show "LOut (prio_l f0 f1 t) s (LUpd (prio_l f0 f1 t) s a b) = a"
@@ -449,18 +517,20 @@ proof(rule lifting_validI)
     by(auto simp add:prio_l_def prio_lv_def LNew_def split:md_prio.splits)
 next
   fix s a b
+  assume Hb : "b \<in> prio_l_S S s"
   show "b <[ LUpd (prio_l f0 f1 t) s a b"
-    using lifting_validDI[OF H] Hmono
-    by(auto simp add:prio_l_def prio_lv_def LNew_def prio_pleq split:md_prio.splits)
+    using lifting_validDI[OF H] Hmono Hb
+    by(auto simp add:prio_l_def prio_l_S_def LNew_def prio_pleq split:md_prio.splits)
 qed
 
 (* prio turns weak liftings into strong ones,
-   given a strictly increasing change *)
+   given a strictly increasing change
+   (i think prio also lets us ignore side conditions on valid sets?) *)
 lemma prio_l_valid_strong :
   fixes t :: "('x, 'a, 'b :: Pord) lifting"
-  assumes H : "lifting_valid_weak t"
+  assumes H : "lifting_valid_weak t S"
   assumes Hmono : "\<And> s p . p < f1 s p"
-  shows "lifting_valid (prio_l f0 f1 t)"
+  shows "lifting_valid (prio_l f0 f1 t) (\<lambda> _ . UNIV)"
 proof(rule lifting_validI)
   fix s a b
   show "LOut (prio_l f0 f1 t) s (LUpd (prio_l f0 f1 t) s a b) = a"
@@ -479,12 +549,12 @@ qed
 
 (* lifting_valid_weakb? *)
 lemma prio_l_valid_weakb :
-  assumes H : "lifting_valid_weakb t"
+  assumes H : "lifting_valid_weakb t S"
   assumes Hzero : "\<And> s . f0 s = 0"
   assumes Hmono : "\<And> s p . p \<le> f1 s p"
-  shows "lifting_valid_weakb (prio_l f0 f1 t)"
+  shows "lifting_valid_weakb (prio_l f0 f1 t) (prio_l_S S)"
 proof(rule lifting_valid_weakbI')
-  show "lifting_valid_weak (prio_l f0 f1 t)"
+  show "lifting_valid_weak (prio_l f0 f1 t) (prio_l_S S)"
     using prio_l_valid_weak[OF lifting_valid_weakbDV[OF H] Hmono]
     by auto
 next
@@ -495,12 +565,12 @@ next
 qed
 
 lemma prio_l_validb :
-  assumes H : "lifting_validb t"
+  assumes H : "lifting_validb t S"
   assumes Hzero : "\<And> s . f0 s = 0"
   assumes Hmono : "\<And> s p . p \<le> f1 s p"
-  shows "lifting_validb (prio_l f0 f1 t)"
+  shows "lifting_validb (prio_l f0 f1 t) (prio_l_S S)"
 proof(rule lifting_validbI')
-  show "lifting_valid (prio_l f0 f1 t)"
+  show "lifting_valid (prio_l f0 f1 t) (prio_l_S S)"
     using prio_l_valid[OF lifting_validbDV[OF H] Hmono]
     by auto
 next
@@ -515,13 +585,13 @@ qed
    (even when \<bottom> enters the picture)*)
 lemma prio_l_validb_strong :
   fixes t :: "('x, 'a, 'b :: Pordbc) lifting"
-  assumes H : "lifting_valid_weakb t"
+  assumes H : "lifting_valid_weakb t S"
   assumes Hzero : "\<And> s . f0 s = 0"
   assumes Hmono : "\<And> s p . p < f1 s p"
-  shows "lifting_validb (prio_l f0 f1 t)"
+  shows "lifting_validb (prio_l f0 f1 t) (\<lambda> s . UNIV)"
 proof(rule lifting_validbI')
   fix s a b
-  show "lifting_valid (prio_l f0 f1 t)"
+  show "lifting_valid (prio_l f0 f1 t) (\<lambda> s . UNIV)"
     using prio_l_valid_strong[OF lifting_valid_weakbDV[OF H] Hmono]
     by(auto)
 next
@@ -586,6 +656,10 @@ definition fst_l ::
   , LOut = (\<lambda> s x . (LOut t s (fst x)))
   , LBase = (\<lambda> s . (LBase t s, \<bottom>)) \<rparr>"
 
+definition fst_l_S :: "('x, 'b1 :: Pord) valid_set \<Rightarrow> ('x, ('b1 * 'b2 :: Pordb)) valid_set" where
+"fst_l_S S s =
+  { b . case b of (b1, _) \<Rightarrow> (b1 \<in> S s) }"
+
 definition fst_lv ::
   "('x, 'a, 'b1 :: Pord, 'z) liftingv_scheme \<Rightarrow> ('x, 'a, 'b1 * ('b2 :: Pordb)) liftingv" where
 "fst_lv t =
@@ -594,8 +668,9 @@ definition fst_lv ::
 
 
 lemma fst_l_valid_weak  :
-  assumes H : "lifting_valid_weak t"
-  shows "lifting_valid_weak ((fst_l t) :: ('x, 'a, ('b1 :: Pord) * ('b2 :: Pordb)) lifting)"
+  assumes H : "lifting_valid_weak t S"
+  shows "lifting_valid_weak ((fst_l t) :: ('x, 'a, ('b1 :: Pord) * ('b2 :: Pordb)) lifting) 
+                            (fst_l_S S)"
 proof(rule lifting_valid_weakI)
   fix s a 
   fix b :: "('b1 :: Pord) * ('b2 :: Pordb)"
@@ -605,15 +680,16 @@ proof(rule lifting_valid_weakI)
 next
   fix s
   fix b :: "('b1 :: Pord) * ('b2 :: Pordb)"
-
-  show "b <[ LUpd (fst_l t) s (LOut (fst_l t) s b) b"
+  assume  Hb : "b \<in> fst_l_S S s"
+  thus "b <[ LUpd (fst_l t) s (LOut (fst_l t) s b) b"
     using lifting_valid_weakDI[OF H]
-    by(auto simp add: fst_l_def prod_pleq leq_refl split:prod.splits)
+    by(auto simp add: fst_l_def prod_pleq leq_refl fst_l_S_def split:prod.splits)
 qed
 
 lemma fst_l_valid :
-  assumes H : "lifting_valid t"
-  shows "lifting_valid ((fst_l t) :: ('x, 'a, ('b1 :: Pord) * ('b2 :: Pordb)) lifting)"
+  assumes H : "lifting_valid t S"
+  shows "lifting_valid ((fst_l t) :: ('x, 'a, ('b1 :: Pord) * ('b2 :: Pordb)) lifting)
+                       (fst_l_S S)"
 proof(rule lifting_validI)
   fix s a 
   fix b :: "('b1 :: Pord) * ('b2 :: Pordb)"
@@ -623,17 +699,18 @@ proof(rule lifting_validI)
 next
   fix s a
   fix b :: "('b1 :: Pord) * ('b2 :: Pordb)"
-
-  show "b <[ LUpd (fst_l t) s a b"
+  assume  Hb : "b \<in> fst_l_S S s"
+  thus "b <[ LUpd (fst_l t) s a b"
     using lifting_validDI[OF H]
-    by(auto simp add: fst_l_def prod_pleq leq_refl split:prod.splits)
+    by(auto simp add: fst_l_def prod_pleq fst_l_S_def leq_refl split:prod.splits)
 qed
 
 lemma fst_l_valid_weakb :
-  assumes H : "lifting_valid_weakb t"
-  shows "lifting_valid_weakb ((fst_l t) :: ('x, 'a, ('b1 :: Pordb) * ('b2 :: Pordb)) lifting)"
+  assumes H : "lifting_valid_weakb t S"
+  shows "lifting_valid_weakb ((fst_l t) :: ('x, 'a, ('b1 :: Pordb) * ('b2 :: Pordb)) lifting)
+                             (fst_l_S S)"
 proof(rule lifting_valid_weakbI')
-  show "lifting_valid_weak (fst_l t)"
+  show "lifting_valid_weak (fst_l t) (fst_l_S S)"
     using fst_l_valid_weak[OF lifting_valid_weakbDV[OF H]]  by auto
 next
   fix s
@@ -643,10 +720,11 @@ next
 qed
 
 lemma fst_l_validb :
-  assumes H : "lifting_validb t"
-  shows "lifting_validb ((fst_l t) :: ('x, 'a, ('b1 :: Pordb) * ('b2 :: Pordb)) lifting)"
+  assumes H : "lifting_validb t S"
+  shows "lifting_validb ((fst_l t) :: ('x, 'a, ('b1 :: Pordb) * ('b2 :: Pordb)) lifting)
+                        (fst_l_S S)"
 proof(rule lifting_validbI')
-  show "lifting_valid (fst_l t)"
+  show "lifting_valid (fst_l t) (fst_l_S S)"
     using fst_l_valid[OF lifting_validbDV[OF H]]  by auto
 next
   fix s
@@ -683,81 +761,84 @@ definition snd_l ::
   , LOut = (\<lambda> s x . (LOut t s (snd x)))
   , LBase = (\<lambda> s . (\<bottom>, LBase t s)) \<rparr>"
 
-definition snd_lv ::
-  "('x, 'a, 'b2 :: Pord, 'z) liftingv_scheme \<Rightarrow> ('x, 'a, ('b1 :: Pordb) * 'b2) liftingv" where
-"snd_lv t =
-  lifting.extend (snd_l t)
-  \<lparr> LOutS = (\<lambda> s . { b . \<exists> b1 b2 . b = (b1, b2) \<and> b2 \<in> LOutS t s} )\<rparr>"
+definition snd_l_S :: "('x, 'b2 :: Pord) valid_set \<Rightarrow> ('x, ('b1 :: Pord * 'b2)) valid_set" where
+"snd_l_S S s =
+  { b . case b of (_, b2) \<Rightarrow> (b2 \<in> S s) }"
+
 
 lemma snd_l_valid_weak :
-  assumes H : "lifting_valid_weak v"
-  shows "lifting_valid_weak ((snd_l v) :: ('x, 'a, ('b1 :: Pordb) * ('b2 :: Pord)) lifting)"
+  assumes H : "lifting_valid_weak v S"
+  shows "lifting_valid_weak ((snd_l v) :: ('x, 'a, ('b1 :: Pordb) * ('b2 :: Pord)) lifting)
+                            (snd_l_S S)"
 proof(rule lifting_valid_weakI)
   fix s a
   fix b :: "'b1 * 'b2"
   show "LOut (snd_l v) s (LUpd (snd_l v) s a b) = a"
     using lifting_valid_weakDO[OF H]
-    by(auto simp add: snd_lv_def snd_l_def split:prod.splits)
+    by(auto simp add: snd_l_S_def snd_l_def split:prod.splits)
 next
   fix s a
   fix b :: "'b1 * 'b2"
-
-  show "b <[ LUpd (snd_l v) s (LOut (snd_l v) s b) b"
+  assume Hb : "b \<in> snd_l_S S s"
+  thus "b <[ LUpd (snd_l v) s (LOut (snd_l v) s b) b"
     using lifting_valid_weakDI[OF H]
-    by(auto simp add: snd_lv_def snd_l_def prod_pleq leq_refl split:prod.splits)
+    by(auto simp add: snd_l_S_def snd_l_def prod_pleq leq_refl split:prod.splits)
 qed
 
 lemma snd_l_valid :
-  assumes H : "lifting_valid v"
-  shows "lifting_valid ((snd_l v) :: ('x, 'a, ('b1 :: Pordb) * ('b2 :: Pord)) lifting)"
+  assumes H : "lifting_valid v S"
+  shows "lifting_valid ((snd_l v) :: ('x, 'a, ('b1 :: Pordb) * ('b2 :: Pord)) lifting)
+                       (snd_l_S S)"
 proof(rule lifting_validI)
   fix s a
   fix b :: "'b1 * 'b2"
   show "LOut (snd_l v) s (LUpd (snd_l v) s a b) = a"
     using lifting_validDO[OF H]
-    by(auto simp add: snd_lv_def snd_l_def split:prod.splits)
+    by(auto simp add: snd_l_def split:prod.splits)
 next
   fix s a
   fix b :: "'b1 * 'b2"
-
-  show "b <[ LUpd (snd_l v) s a b"
+  assume Hb : "b \<in> snd_l_S S s"
+  thus "b <[ LUpd (snd_l v) s a b"
     using lifting_validDI[OF H]
-    by(auto simp add: snd_lv_def snd_l_def prod_pleq leq_refl split:prod.splits)
+    by(auto simp add: snd_l_S_def snd_l_def prod_pleq leq_refl split:prod.splits)
 qed
 
 lemma snd_l_valid_weakb :
-  assumes H : "lifting_valid_weakb v"
-  shows "lifting_valid_weakb ((snd_l v) :: ('x, 'a, ('b1 :: Pordb) * ('b2 :: Pordb)) lifting)"
+  assumes H : "lifting_valid_weakb v S"
+  shows "lifting_valid_weakb ((snd_l v) :: ('x, 'a, ('b1 :: Pordb) * ('b2 :: Pordb)) lifting)
+                             (snd_l_S S)"
 proof(rule lifting_valid_weakbI')
-  show "lifting_valid_weak (snd_l v)"
+  show "lifting_valid_weak (snd_l v) (snd_l_S S)"
     using snd_l_valid_weak[OF lifting_valid_weakbDV[OF H]] by auto
 next
   fix s
   show "LBase (snd_l v) s = \<bottom>"
     using lifting_valid_weakbDB[OF H]
-    by(auto simp add: snd_lv_def snd_l_def prod_bot)
+    by(auto simp add: snd_l_def prod_bot)
 qed
 
 lemma snd_l_validb :
-  assumes H : "lifting_validb v"
-  shows "lifting_validb ((snd_l v) :: ('x, 'a, ('b1 :: Pordb) * ('b2 :: Pordb)) lifting)"
+  assumes H : "lifting_validb v S"
+  shows "lifting_validb ((snd_l v) :: ('x, 'a, ('b1 :: Pordb) * ('b2 :: Pordb)) lifting)
+                        (snd_l_S S)"
 proof(rule lifting_validbI')
-  show "lifting_valid (snd_l v)"
+  show "lifting_valid (snd_l v) (snd_l_S S)"
     using snd_l_valid[OF lifting_validbDV[OF H]] by auto
 next
   fix s
   show "LBase (snd_l v) s = \<bottom>"
     using lifting_validbDB[OF H]
-    by(auto simp add: snd_lv_def snd_l_def prod_bot)
+    by(auto simp add: snd_l_def prod_bot)
 qed
 
 
 (* need extra condition: base = \<bottom> *)
 lemma fst_snd_ortho :
-  assumes H1 : "lifting_validb l1"
-  assumes H2 : "lifting_validb l2"
-  shows "l_ortho (fst_l (l1 :: ('x, 'a1, 'b1 :: Mergeableb, 'z1) lifting_scheme))
-                 (snd_l (l2 :: ('x, 'a2, 'b2 :: Mergeableb, 'z2) lifting_scheme))"
+  assumes H1 : "lifting_validb l1 S1"
+  assumes H2 : "lifting_validb l2 S2"
+  shows "l_ortho (fst_l (l1 :: ('x, 'a1, 'b1 :: Mergeableb, 'z1) lifting_scheme)) (fst_l_S S1)
+                 (snd_l (l2 :: ('x, 'a2, 'b2 :: Mergeableb, 'z2) lifting_scheme)) (snd_l_S S2)"
 proof(rule l_orthoI)
   fix s
   show "LBase (fst_l l1) s = LBase (snd_l l2) s"
@@ -769,18 +850,27 @@ next
   fix a2 :: 'a2
   fix b :: "('b1 * 'b2)"
 
+  assume Hb1 : "b \<in> fst_l_S S1 s"
+  assume Hb2 : "b \<in> snd_l_S S2 s"
+
   obtain b1 b2 where B : "b = (b1, b2)" by(cases b; auto)
+
+  have Hb1' : "b1 \<in> S1 s"
+    using Hb1 B by(auto simp add:fst_l_S_def)
+
+  have Hb2' : "b2 \<in> S2 s"
+    using Hb2 B by(auto simp add:snd_l_S_def)
 
   have C1 :
     "LOut (fst_l l1) s (LUpd l1 s a1 b1, LUpd l2 s a2 b2) = a1"
     using lifting_validbDO[OF H1]
-    by(auto simp add: fst_lv_def fst_l_def snd_lv_def snd_l_def
+    by(auto simp add: fst_l_def snd_l_def
            prod_bot prod_pleq prod_bsup)
 
   have C2 :
     "LOut (snd_l l2) s (LUpd l1 s a1 b1, LUpd l2 s a2 b2) = a2"
     using lifting_validbDO[OF H2]
-    by(auto simp add: fst_lv_def fst_l_def snd_lv_def snd_l_def
+    by(auto simp add: fst_l_def snd_l_def
            prod_bot prod_pleq prod_bsup)
 
   have "is_sup {LUpd (fst_l l1) s a1 b, LUpd (snd_l l2) s a2 b} 
@@ -789,8 +879,8 @@ next
     fix x
     assume "x \<in> {LUpd (fst_l l1) s a1 b, LUpd (snd_l l2) s a2 b}"
     thus "x <[ (LUpd l1 s a1 b1, LUpd l2 s a2 b2)"
-      using B lifting_validbDI[OF H1] lifting_validbDI[OF H2]
-      by(auto simp add: fst_lv_def fst_l_def snd_lv_def snd_l_def
+      using B lifting_validbDI[OF H1 Hb1'] lifting_validbDI[OF H2 Hb2']
+      by(auto simp add: fst_l_def snd_l_def
                leq_refl
                prod_bot prod_pleq prod_bsup split:prod.splits)
   next
@@ -799,7 +889,7 @@ next
 
     show "(LUpd l1 s a1 b1, LUpd l2 s a2 b2) <[ x'"
       using is_ub_unfold[OF H] lifting_validbDI[OF H1] lifting_validbDI[OF H2] B
-      by(auto simp add: fst_lv_def fst_l_def snd_lv_def snd_l_def
+      by(auto simp add: fst_lv_def fst_l_def snd_l_def
          prod_bot prod_pleq prod_bsup split:prod.splits)
   qed
 
@@ -813,13 +903,190 @@ next
 qed
 
 lemma snd_fst_ortho :
-  assumes H1 : "lifting_validb l1"
-  assumes H2 : "lifting_validb l2"
+  assumes H1 : "lifting_validb l1 S1"
+  assumes H2 : "lifting_validb l2 S2"
   shows 
-  "l_ortho (snd_l (l2 :: ('x, 'a1, 'b :: Mergeableb, 'z1) liftingv_scheme))
-           (fst_l (l1 :: ('x, 'a2, 'b :: Mergeableb, 'z2) liftingv_scheme))"
+  "l_ortho (snd_l (l2 :: ('x, 'a1, 'b :: Mergeableb, 'z1) liftingv_scheme)) (snd_l_S S2)
+           (fst_l (l1 :: ('x, 'a2, 'b :: Mergeableb, 'z2) liftingv_scheme)) (fst_l_S S1)"
   using l_ortho_comm[OF fst_snd_ortho[OF H1 H2]]
   by auto
+
+(* do we really need Mergeableb constraint on b2? *)
+lemma fst_ortho :
+  assumes H1 : "lifting_validb l1 S1"
+  assumes H2 : "lifting_validb l2 S2"
+  assumes Horth : "l_ortho l1 S1 l2 S2"
+  shows "l_ortho (fst_l l1 :: ('x, 'a1, ('b1 :: Mergeableb) * 'b2 :: Mergeableb) lifting)
+                 (fst_l_S S1)
+                 (fst_l l2 :: ('x, 'a2, ('b1 :: Mergeableb) * 'b2 :: Mergeableb) lifting)
+                 (fst_l_S S2)"
+proof(rule l_orthoI)
+  fix s
+  show "LBase (fst_l l1) s = LBase (fst_l l2) s"
+    using l_orthoDB[OF Horth] by(auto simp add: fst_l_def)
+next
+  fix s :: 'x
+  fix a1 :: 'a1
+  fix a2 :: 'a2
+  fix b :: "('b1 * 'b2)"
+
+  obtain b1 b2 where B : "b = (b1, b2)" by(cases b; auto)
+
+  assume Hb1 : "b \<in> fst_l_S S1 s"
+  assume Hb2 : "b \<in> fst_l_S S2 s"
+
+  have Hb1' : "b1 \<in> S1 s"
+    using Hb1 B by(auto simp add: fst_l_S_def)
+
+  have Hb2' : "b1 \<in> S2 s"
+    using Hb2 B by(auto simp add: fst_l_S_def)
+
+  obtain z where Zsup : "is_sup {LUpd l1 s a1 b1, LUpd l2 s a2 b1} z"
+    and Z1 : "LOut l1 s z = a1" and Z2 : "LOut l2 s z = a2"
+    using l_orthoDI[OF Horth Hb1' Hb2']
+    by(auto)
+
+  have C1 : "LOut (fst_l l1) s (z, b2) = a1" using Z1
+    by(auto simp add: fst_l_def)
+
+  have C2 : "LOut (fst_l l2) s (z, b2) = a2" using Z2
+    by(auto simp add: fst_l_def)
+
+  have "is_sup {LUpd (fst_l l1) s a1 b, LUpd (fst_l l2) s a2 b} (z, b2)"
+  proof(rule is_sup_intro)
+    fix x
+    assume X : "x \<in> {LUpd (fst_l l1) s a1 b, LUpd (fst_l l2) s a2 b}"
+    thus "x <[ (z, b2)"
+      using B is_sup_unfold1[OF Zsup, of "LUpd l1 s a1 b1"] 
+              is_sup_unfold1[OF Zsup, of "LUpd l2 s a2 b1"]
+      by(auto simp add: fst_l_def prod_pleq leq_refl)
+  next
+    fix x'
+    assume X' : "is_ub {LUpd (fst_l l1) s a1 b, LUpd (fst_l l2) s a2 b} x'"
+
+    obtain x'1 x'2 where X'p : "x' = (x'1, x'2)"
+      by(cases x'; auto)
+
+    (* show x'2 = b2
+       then use Zsup to show the rest *)
+
+    have C2 : "b2 <[ x'2"
+      using is_ub_unfold[OF X', of "LUpd (fst_l l1) s a1 b"] B X'p
+      by(auto simp add: fst_l_def prod_pleq)
+      
+    have Ub : "is_ub {LUpd l1 s a1 b1, LUpd l2 s a2 b1} x'1"
+    proof(rule is_ub_intro)
+      fix w
+      assume W : "w \<in> {LUpd l1 s a1 b1, LUpd l2 s a2 b1}"
+      
+      thus "w <[ x'1" using 
+          is_ub_unfold[OF X', of "LUpd (fst_l l1) s a1 b"]
+          is_ub_unfold[OF X', of "LUpd (fst_l l2) s a2 b"]
+          X'p B
+        by(auto simp add: fst_l_def prod_pleq)
+    qed
+
+    have C1 : "z <[ x'1"
+      using is_sup_unfold2[OF Zsup Ub] by auto
+
+    show "(z, b2) <[ x'"
+      using C1 C2 X'p
+      by(auto simp add: prod_pleq)
+  qed
+
+  thus "\<exists>z. is_sup {LUpd (fst_l l1) s a1 b, LUpd (fst_l l2) s a2 b} z \<and>
+           LOut (fst_l l1) s z = a1 \<and> LOut (fst_l l2) s z = a2"
+    using C1 C2
+    by auto
+qed
+
+lemma snd_ortho :
+  assumes H1 : "lifting_validb l1 S1"
+  assumes H2 : "lifting_validb l2 S2"
+  assumes Horth : "l_ortho l1 S1 l2 S2"
+  shows "l_ortho (snd_l l1 :: ('x, 'a1, ('b1 :: Mergeableb) * 'b2 :: Mergeableb) lifting)
+                 (snd_l_S S1)
+                 (snd_l l2 :: ('x, 'a2, ('b1 :: Mergeableb) * 'b2 :: Mergeableb) lifting)
+                 (snd_l_S S2)"
+proof(rule l_orthoI)
+  fix s
+  show "LBase (snd_l l1) s = LBase (snd_l l2) s"
+    using l_orthoDB[OF Horth] by(auto simp add: snd_l_def)
+next
+  fix s :: 'x
+  fix a1 :: 'a1
+  fix a2 :: 'a2
+  fix b :: "('b1 * 'b2)"
+
+  obtain b1 b2 where B : "b = (b1, b2)" by(cases b; auto)
+
+  assume Hb1 : "b \<in> snd_l_S S1 s"
+  assume Hb2 : "b \<in> snd_l_S S2 s"
+
+  have Hb1' : "b2 \<in> S1 s"
+    using Hb1 B by(auto simp add: snd_l_S_def)
+
+  have Hb2' : "b2 \<in> S2 s"
+    using Hb2 B by(auto simp add: snd_l_S_def)
+
+  obtain z where Zsup : "is_sup {LUpd l1 s a1 b2, LUpd l2 s a2 b2} z"
+    and Z1 : "LOut l1 s z = a1" and Z2 : "LOut l2 s z = a2"
+    using l_orthoDI[OF Horth Hb1' Hb2']
+    by(auto)
+
+  have C1 : "LOut (snd_l l1) s (b1, z) = a1" using Z1
+    by(auto simp add: snd_l_def)
+
+  have C2 : "LOut (snd_l l2) s (b1, z) = a2" using Z2
+    by(auto simp add: snd_l_def)
+
+  have "is_sup {LUpd (snd_l l1) s a1 b, LUpd (snd_l l2) s a2 b} (b1, z)"
+  proof(rule is_sup_intro)
+    fix x
+    assume X : "x \<in> {LUpd (snd_l l1) s a1 b, LUpd (snd_l l2) s a2 b}"
+    thus "x <[ (b1, z)"
+      using B is_sup_unfold1[OF Zsup, of "LUpd l1 s a1 b2"] 
+              is_sup_unfold1[OF Zsup, of "LUpd l2 s a2 b2"]
+      by(auto simp add: snd_l_def prod_pleq leq_refl)
+  next
+    fix x'
+    assume X' : "is_ub {LUpd (snd_l l1) s a1 b, LUpd (snd_l l2) s a2 b} x'"
+
+    obtain x'1 x'2 where X'p : "x' = (x'1, x'2)"
+      by(cases x'; auto)
+
+    (* show x'2 = b2
+       then use Zsup to show the rest *)
+
+    have C2 : "b1 <[ x'1"
+      using is_ub_unfold[OF X', of "LUpd (snd_l l1) s a1 b"] B X'p
+      by(auto simp add: snd_l_def prod_pleq)
+      
+    have Ub : "is_ub {LUpd l1 s a1 b2, LUpd l2 s a2 b2} x'2"
+    proof(rule is_ub_intro)
+      fix w
+      assume W : "w \<in> {LUpd l1 s a1 b2, LUpd l2 s a2 b2}"
+      
+      thus "w <[ x'2" using 
+          is_ub_unfold[OF X', of "LUpd (snd_l l1) s a1 b"]
+          is_ub_unfold[OF X', of "LUpd (snd_l l2) s a2 b"]
+          X'p B
+        by(auto simp add: snd_l_def prod_pleq)
+    qed
+
+    have C1 : "z <[ x'2"
+      using is_sup_unfold2[OF Zsup Ub] by auto
+
+    show "(b1, z) <[ x'"
+      using C1 C2 X'p
+      by(auto simp add: prod_pleq)
+  qed
+
+  thus "\<exists>z. is_sup {LUpd (snd_l l1) s a1 b, LUpd (snd_l l2) s a2 b} z \<and>
+           LOut (snd_l l1) s z = a1 \<and> LOut (snd_l l2) s z = a2"
+    using C1 C2
+    by auto
+qed
 
 (*
 do we want a further correctness condition that says we preserve
@@ -851,11 +1118,14 @@ definition merge_lv ::
   lifting.extend (merge_l v1 v2)
   \<lparr> LOutS = (\<lambda> s . LOutS v1 s \<inter> LOutS v2 s) \<rparr>"
 
+(* need valid_weak? validb? *)
+
+(* valid set needs to be S1 \<inter> S2 I believe *)
 lemma merge_l_valid :
-  assumes H1 : "lifting_valid (l1 :: ('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme)"
-  assumes H2 : "lifting_valid (l2 :: ('x, 'a2, 'b :: Mergeable, 'z2) lifting_scheme)"
-  assumes Hort : "l_ortho l1 l2"
-  shows "lifting_valid (merge_l l1 l2)"
+  assumes H1 : "lifting_valid (l1 :: ('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme) S1"
+  assumes H2 : "lifting_valid (l2 :: ('x, 'a2, 'b :: Mergeable, 'z2) lifting_scheme) S2"
+  assumes Hort : "l_ortho l1 S1 l2 S2"
+  shows "lifting_valid (merge_l l1 l2) (\<lambda> s . (S1 s \<inter> S2 s))"
 proof(rule lifting_validI)
   fix s :: 'x
   fix a :: "'a1 * 'a2"
@@ -863,11 +1133,17 @@ proof(rule lifting_validI)
 
   obtain a1 a2 where A : "a = (a1, a2)" by (cases a; auto)
 
+
+  thus "LOut (merge_l l1 l2) s (LUpd (merge_l l1 l2) s a b) = a"
+    using Z1 Z2 A
+    apply(auto simp add: merge_lv_def merge_l_def split:prod.splits)
+
+
   obtain z where
     Zsup : "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} z" and
     Z1 : "LOut l1 s z = a1" and
     Z2 : "LOut l2 s z = a2"
-    using l_orthoD[OF Hort] by blast
+    using l_orthoDI[OF Hort] by blast
 
   have "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} [^ LUpd l1 s a1 b, LUpd l2 s a2 b ^]"
     using bsup_sup[OF Zsup bsup_spec] by auto
