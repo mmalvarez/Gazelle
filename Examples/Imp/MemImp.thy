@@ -1,5 +1,5 @@
 theory MemImp
-  imports Mem "../ImpCtl" 
+  imports Mem "../ImpCtl" "../../Lifting/XSem"
 begin
 
 datatype calc2 = 
@@ -58,9 +58,9 @@ definition calc2_key_lift :: "(syn, calc2_state, (str, int swr) oalist) lifting"
 "calc2_key_lift =
   schem_lift
         (SP NA (SP NB NC))
-        (SM (SL calc2_key1 (SPRK (SOT NA)))
-        (SM (SL calc2_key2 (SPRK (SOT NB)))
-            (SL calc2_key3 (SPRI (SOT NC)))))"
+        (SM (SL calc2_key1 (SPRK (SO NA)))
+        (SM (SL calc2_key2 (SPRK (SO NB)))
+            (SL calc2_key3 (SPRI (SO NC)))))"
 
 fun calc2_sem :: "calc2 \<Rightarrow> calc2_state \<Rightarrow> calc2_state" where
 "calc2_sem (Cadd) (x1, x2, x3) =
@@ -89,57 +89,77 @@ type_synonym state =
 
 definition imp_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "imp_sem_l =
-  l_map_s imp_trans
+  lift_map_s imp_trans
   (schem_lift
     (SP (SP NA (SP NB NC)) ND)
         (SP 
-          (SP (SOT NA)
-              (SP (SPRC imp_prio (SOT NB)) (SPRC imp_prio (SOT NC))))
-          (SP (SPRK (SOT ND)) NX)))
+          (SP (SO NA)
+              (SP (SPRC imp_prio (SO NB)) (SPRC imp_prio (SO NC))))
+          (SP (SPRK (SO ND)) NX)))
   imp_ctl_sem"
 
 definition calc2_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "calc2_sem_l =
-  l_map_s id
+  lift_map_s id
   (schem_lift
     NA (SP NX (SP NX (SINJ calc2_key_lift NA))))
   (calc2_sem o calc2_trans)"
 
 definition cond_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "cond_sem_l =
-  l_map_s id
+  lift_map_s id
   (schem_lift
     (SP NA NB)
     (SP NX
-        (SP (SPRI (SOT NA))
-            (SL cond_key (SPRK (SOT NB))))))
+        (SP (SPRI (SO NA))
+            (SL cond_key (SPRK (SO NB))))))
   (cond_sem o cond_trans)"
 
 definition mem_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "mem_sem_l = 
-  l_map_s mem_trans
-    (schem_lift NA (SP NX (SP NX NA)))
+  lift_map_s mem_trans
+    (schem_lift NA (SP NX (SP NX (SID NA))))
   mem_sem"
 
 definition seq_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "seq_sem_l =
-  l_map_s seq_trans 
-  (schem_lift NA (SP NA NX))
+  lift_map_s seq_trans 
+  (schem_lift NA (SP (SID NA) NX))
   Seq.seq_sem_l"
 
 definition sems where
 "sems = [imp_sem_l, calc2_sem_l, cond_sem_l, seq_sem_l, mem_sem_l]"
 
-definition sem_final :: "(syn, state) x_sem'" where
-"sem_final =
-  l_map_s id
+term "((LOut
+                (schem_lift (SP NA NB) 
+                            (SP (SP (SO NA) (SP (SPRK (SO NB)) NX)) NX))))"
+
+term "schem_lift NA (SFAN (LOut
+                (schem_lift (SP NA NB) 
+                            (SP (SP (SO NA) (SP (SPRK (SO NB)) NX)) NX))) NA)"
+
+term "(schem_lift
+      NA (SFAN (LOut
+                (schem_lift (SP NA NB) 
+                            (SP (SP (SO NA) (SP (SPRK (SO NB)) NX)) NX))) 
+          NA))"
+
+term "lift_map_s id
     (schem_lift
       NA (SFAN (LOut
                 (schem_lift (SP NA NB) 
-                            (SP (SP (SOT NA) (SP (SPRK (SOT NB)) NX)) NX))) 
-          NA))
-    (pcomps sems)"
+                            (SP (SP (SO NA) (SP (SPRK (SO NB)) NX)) NX))) 
+          NA))"
 
+definition sem_final :: "(syn, state) x_sem'" where
+"sem_final =
+  lift_map_s id
+    (schem_lift
+      NA (SFAN (LOut
+                (schem_lift (SP NA NB) 
+                            (SP (SP (SO (SID NA)) (SP (SPRK (SO (SID NB))) NX)) NX))) 
+          (SID NA)))
+    (pcomps sems)"
 
 definition gsx :: "syn gensyn \<Rightarrow> childpath \<Rightarrow> state \<Rightarrow> nat \<Rightarrow> state option" where
 "gsx =

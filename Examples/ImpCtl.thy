@@ -99,7 +99,7 @@ definition cond_trans :: "syn \<Rightarrow> cond_syn'" where
 
 definition printcalcseq_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "printcalcseq_sem_l =
-  l_map_s printcalc_trans
+  lift_map_s printcalc_trans
      (prod_l id_l (snd_l id_l))
      (pcomp print_calc_seq_lc)"
 
@@ -111,10 +111,10 @@ definition imp_prio :: "(syn' \<Rightarrow> nat)" where
   
 definition imp_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "imp_sem_l =
-  l_map_s imp_trans
+  lift_map_s imp_trans
     (schem_lift (SP (SP NA (SP NB NC)) ND)
-                (SP (SP (SOT NA) (SP (SPRC imp_prio (SOT NB)) (SPRC imp_prio (SOT NC))))
-                  (SP (SPRK (SOT ND)) NX)))
+                (SP (SP (SO NA) (SP (SPRC imp_prio (SO NB)) (SPRC imp_prio (SO NC))))
+                  (SP (SPRK (SO ND)) NX)))
     imp_ctl_sem"
 
 definition cond_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where

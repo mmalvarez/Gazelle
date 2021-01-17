@@ -24,7 +24,7 @@ type_synonym ('x, 'mstate, 'xr) x_sem =
     childpath \<Rightarrow>
     'mstate \<Rightarrow> 
     ('xr) gs_result * 'mstate"
-
+(*
 type_synonym ('x, 'mstate) x_sem' =
   "'x \<Rightarrow>
    ((gensyn_skel * unit gs_result) * 'mstate) \<Rightarrow>
@@ -34,7 +34,7 @@ definition xsem :: "('x, 'mstate) x_sem' \<Rightarrow> ('x, 'mstate, unit) x_sem
   "xsem f' x t cp m =
     (case f' x ((gs_sk t, (GRPath cp)), m) of
       ((t', r'), m') \<Rightarrow> (r', m'))"
-
+*)
 inductive gensyn_sem ::
   "('a, 'b, 'c) x_semr \<Rightarrow>
    ('a) gensyn \<Rightarrow>

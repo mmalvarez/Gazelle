@@ -235,7 +235,7 @@ declare lift_map_def [simp]
 (* trailing s = "with syntax" *)
 definition lift_map_s ::
     "('a1, 'b1) syn_lifting \<Rightarrow>
-     ('a1, 'a2 :: Pord, 'b2 :: Pord, 'z) lifting_scheme \<Rightarrow>
+     ('a1, 'a2 , 'b2 :: Pord, 'z) lifting_scheme \<Rightarrow>
      ('a1 \<Rightarrow> 'a2 \<Rightarrow> 'a2) \<Rightarrow>
      ('b1 \<Rightarrow> 'b2 \<Rightarrow> 'b2)" where
 "lift_map_s l' l sem syn st =
@@ -245,7 +245,7 @@ declare lift_map_s_def [simp]
 
 definition lower_map_s ::
   "('a1, 'b1) syn_lifting \<Rightarrow>
-   ('a1, 'a2 :: Pord, 'b2 :: Pord, 'z) lifting_scheme \<Rightarrow>
+   ('a1, 'a2, 'b2 :: Pord, 'z) lifting_scheme \<Rightarrow>
    ('b1 \<Rightarrow> 'b2 \<Rightarrow> 'b2) \<Rightarrow>
    ('a1 \<Rightarrow> 'a2 \<Rightarrow> 'a2)" where
 "lower_map_s l' l sem syn st =
@@ -267,91 +267,52 @@ declare lower_map_s_def [simp]
 *)
 definition l_ortho ::
   "('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme \<Rightarrow>
-   ('x, 'b) valid_set \<Rightarrow>
    ('x, 'a2, 'b, 'z2) lifting_scheme \<Rightarrow>
-   ('x, 'b) valid_set \<Rightarrow>
    bool" where
-"l_ortho l1 S1 l2 S2 =
+"l_ortho l1 l2 =
   (
-    (\<forall> s . LBase l1 s = LBase l2 s) \<and>
-    (\<forall> s a1 a2 b .
-      b \<in> S1 s \<longrightarrow> b \<in> S2 s \<longrightarrow>
-      (\<exists> z . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} z \<and>
-        LOut l1 s z = a1 \<and> LOut l2 s z = a2
-         )))" 
+  (\<forall> s a1 a2 b .
+    LUpd l1 s a1 (LUpd l2 s a2 b) = LUpd l2 s a2 (LUpd l1 s a1 b)) \<and>
+  (\<forall> s . LBase l1 s = LBase l2 s))"
 
+lemma l_orthoDI :
+  fixes s :: 'x
+  assumes H : "l_ortho (l1 :: ('x, 'a1, 'b ::Mergeable, 'z1) lifting_scheme)
+                       (l2 :: ('x, 'a2, 'b, 'z2) lifting_scheme)"
+  shows "LUpd l1 s a1 (LUpd l2 s a2 b) = LUpd l2 s a2 (LUpd l1 s a1 b)"
+  using assms
+  by(auto simp add: l_ortho_def; blast)
 
 lemma l_orthoDB :
   fixes s :: 'x
   assumes H : "l_ortho (l1 :: ('x, 'a1, 'b ::Mergeable, 'z1) lifting_scheme)
-                       S1
-                       (l2 :: ('x, 'a2, 'b, 'z2) lifting_scheme)
-                       S2"
+                       (l2 :: ('x, 'a2, 'b, 'z2) lifting_scheme)"
   shows "LBase l1 s = LBase l2 s"
-  using assms
-  by(auto simp add: l_ortho_def; blast)
-  
-lemma l_orthoDI :
-  fixes s :: 'x
-  fixes a1 :: 'a1
-  fixes a2 :: 'a2
-  fixes b :: "('b :: Mergeable)"
-  assumes H : "l_ortho (l1 :: ('x, 'a1, 'b, 'z1) lifting_scheme) S1
-                       (l2 :: ('x, 'a2, 'b, 'z2) lifting_scheme) S2"
-  assumes Hb1 : "b \<in> S1 s"
-  assumes Hb2 : "b \<in> S2 s"
-  obtains z where
-    "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} z"
-    "LOut l1 s z = a1"
-    "LOut l2 s z = a2"
   using assms
   by(auto simp add: l_ortho_def; blast)
 
 lemma l_orthoI [intro]:
+  assumes HI :
+    "\<And> s a1 a2 b . LUpd l1 s a1 (LUpd l2 s a2 b) = LUpd l2 s a2 (LUpd l1 s a1 b)"
   assumes HB :
     "\<And> s . LBase l1 s = LBase l2 s"
-  assumes HI :
-    "\<And> s a1 a2 b . b \<in> S1 s \<Longrightarrow> b \<in> S2 s \<Longrightarrow>
-      (\<exists> z . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} z \<and> 
-             LOut l1 s z = a1 \<and> LOut l2 s z = a2)"
-  shows "l_ortho l1 S1 l2 S2"
+  shows "l_ortho l1 l2"
   using assms
   by(auto simp add: l_ortho_def)
 
 lemma l_ortho_comm :
-  assumes H :"l_ortho (l1 :: ('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme) S1
-                      (l2 :: ('x, 'a2, 'b, 'z2) lifting_scheme) S2"
-  shows "l_ortho l2 S2 l1 S1"
+  assumes H :"l_ortho (l1 :: ('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme)
+                      (l2 :: ('x, 'a2, 'b, 'z2) lifting_scheme)"
+  shows "l_ortho l2 l1"
 proof(rule l_orthoI)
-  fix s
+  fix s a1 a2 b
 
-  show "LBase l2 s = LBase l1 s"
-    using l_orthoDB[OF H]
-    by auto
-
+  show "LUpd l2 s a1 (LUpd l1 s a2 b) = LUpd l1 s a2 (LUpd l2 s a1 b)"
+    using l_orthoDI[OF H] by auto
 next
-  fix s :: "'x"
-  fix a1 :: "'a1"
-  fix a2 :: "'a2"
-  fix b :: "'b"
-
-  assume Hb2 : "b \<in> S2 s"
-  assume Hb1 : "b \<in> S1 s"
-
-  obtain z where
-    Zsup : "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} z" and
-    Z1 : "LOut l1 s z = a1" and
-    Z2 : "LOut l2 s z = a2"
-    using l_orthoDI[OF H Hb1 Hb2] by blast
-
-  have "is_sup {LUpd l2 s a2 b, LUpd l1 s a1 b} z \<and> 
-                LOut l2 s z = a2 \<and> LOut l1 s z = a1"
-    using is_sup_comm2[OF Zsup] Z1 Z2
-    by auto
-
-  thus "\<exists>z. is_sup {LUpd l2 s a2 b, LUpd l1 s a1 b} z \<and> 
-                    LOut l2 s z = a2 \<and> LOut l1 s z = a1"
-    by auto
+  fix s
+  show "LBase l2 s = LBase l1 s"
+    using l_orthoDB[OF H] by auto
 qed
 
 end

@@ -1,4 +1,4 @@
-theory Hoare imports "../Lifting/LiftUtils"
+theory Hoare imports "../Lifting/LiftUtils" "../Lifting/LangComp"
 begin
 
 (*
@@ -61,6 +61,7 @@ for syn_triple (keyed on syntax). but maybe this wouldn't be a good idea.
 *)
 
 (* "valid triple, syntax." *)
+(*
 definition VTS ::
   "('x \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow>
    ('a \<Rightarrow> bool) \<Rightarrow> 'x \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool"
@@ -68,6 +69,26 @@ definition VTS ::
   where
 "VTS sem pre x post =
   VT pre (sem x) post"
+*)
+
+(* hmm. how to deal with syntax transformation when lifting predicates? *)
+(*
+definition VTS :: 
+  "('x \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow>
+   ('x \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> 'x \<Rightarrow> ('x \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> bool"
+  ("_: {{_}} _ {{_}}" [0,0,0,0] 62)
+  where
+"VTS sem pre x post =
+  VT (pre x) (sem x) (post x)"
+*)
+
+definition VTS :: 
+  "('x \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow>
+   ('a \<Rightarrow> bool) \<Rightarrow> 'x \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool"
+  ("_ % {{_}} _ {{_}}" [0,0,0,0] 63)
+  where
+"VTS sem pre x post =
+  VT (pre) (sem x) (post)"
 
 (* executable VTS. probably less useful than relational one. *)
 definition VTS' ::
@@ -77,8 +98,46 @@ definition VTS' ::
 "VTS' sem pre x post =
   VT pre (\<lambda> a b . sem x a = b) post"
 
-(* need to consider liftings. *)
+definition lift_pred_s ::
+  "('a1, 'b1) syn_lifting \<Rightarrow>
+   ('a1, 'a2, 'b2 :: Pord, 'z) lifting_scheme \<Rightarrow>
+   'b1 \<Rightarrow>
+   ('a2 \<Rightarrow> bool) \<Rightarrow>
+   ('b2 \<Rightarrow> bool)" where
+"lift_pred_s l' l syn P st =
+ P (LOut l (l' syn) st)"
 
+(* TODO: figure out why there is this ambiguity *)
+definition semprop2 ::
+  "('a1 \<Rightarrow> 'a2 \<Rightarrow> 'a3) \<Rightarrow>
+   ('a1 \<Rightarrow> 'a2 \<Rightarrow> 'a3 \<Rightarrow> bool)"
+  ("! _" [3] 61)
+  where
+"semprop2 f a1 a2 a3 =
+  (f a1 a2 = a3)"
+
+(* need to consider liftings. *)
+(* why is l' getting applied twice. *)
+lemma Vlift :
+  assumes Valid : "lifting_valid l v" 
+  assumes V: "(!sem) % {{P}} x {{Q}}"
+  assumes Syn : "l' x' = x"
+  shows "(! lift_map_s l' l sem) % {{lift_pred_s l' l x' P}} x' {{lift_pred_s l' l x' Q}}"
+ using V Syn
+  unfolding VTS_def VT_def semprop2_def lift_pred_s_def lift_map_s_def
+  by(auto simp add: lifting_validDO[OF Valid])
+
+(* need to fix up LangComp.thy. *)
+lemma Vmerge :
+  assumes Valid1 : "lifting_valid l1 v1" 
+  assumes Valid2 : "lifting_valid l2 v2"
+  assumes V1 : "(!sem) % {{P}} x {{Q}}"
+  assumes Syn1 : "l1' x1' = x1"
+  assumes Syn2 : "l2' x2' = x2"
+  shows "
+    (! ()
+            
+  apply(auto simp add: lift_pred_s_def semprop2_def)
 (* goal1: lifting (assuming liftability side conditions: *)
 (* {{P}} X {{Q}} \<Longrightarrow> {{lift l P}} lift_map l X {{lift l Q}} *)
 

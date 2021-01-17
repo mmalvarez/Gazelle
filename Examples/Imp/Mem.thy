@@ -65,10 +65,10 @@ rather than the inner prio contained. So rather than trying to merge the entire 
 we should be trying to merge specific keys/sub-lists *)
 definition mem_sem :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "mem_sem = 
-  l_map_s id
+  lift_map_s id
     (schem_lift (SP NA NB)
-                (SM (SL mem_key_src (SPRI (SOT NA)))
-                    (SL mem_key_dest (SPRIN 2 (SOT NB))))) mem0_sem"
+                (SM (SL mem_key_src (SPRI (SO NA)))
+                    (SL mem_key_dest (SPRIN 2 (SO NB))))) mem0_sem"
 
 definition test_store where
 "test_store = to_oalist
@@ -76,7 +76,7 @@ definition test_store where
   , (STR ''b'', Swr 2)
   , (STR ''z'', Swr (-1))]"
 
-value "mem_sem (Scopy (STR ''x'') (STR ''y'')) test_store"
+value "mem_sem (Scopy (STR ''b'') (STR ''y'')) test_store"
 
 (*
 definition t1 where

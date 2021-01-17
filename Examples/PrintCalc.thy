@@ -84,16 +84,16 @@ definition print_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 
 definition print_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
   "print_sem_l =
-    l_map_s print_trans
+    lift_map_s print_trans
     (schem_lift
-       (SP NA NB) (SP (SPR0 (SOT NA)) (SPRI (SOT NB))))
+       (SP NA NB) (SP (SPR0 (SO NA)) (SPRI (SO NB))))
     print_sem"
 
 definition calc_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "calc_sem_l =
-  l_map_s calc_trans
+  lift_map_s calc_trans
   (schem_lift
-    NA (SP (SPRI (SOT NA)) NX))
+    NA (SP (SPRI (SO NA)) NX))
    calc_sem"
 
 definition print_calc_lc :: "(syn, state) langcomp" where

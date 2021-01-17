@@ -90,11 +90,15 @@ definition seq_sem_l :: " syn \<Rightarrow> state \<Rightarrow> state" where
               (prio_l_inc (option_l (triv_l (id_l)))))) (seq_sem)"
 *)
 
+
+term "(schem_lift
+    (SP NA (SP NB NC)) (SP (SO NA) (SP (SPRI (SO NB)) (SPRI (SO NC)))))"
+
 definition seq_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "seq_sem_l =
-  l_map_s id
+  lift_map_s id
   (schem_lift
-    (SP NA (SP NB NC)) (SP (SOT NA) (SP (SPRI (SOT NB)) (SPRI (SOT NC)))))
+    (SP NA (SP NB NC)) (SP (SO NA) (SP (SPRI (SO NB)) (SPRI (SO NC)))))
   seq_sem"
 
 end
