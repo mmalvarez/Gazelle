@@ -117,7 +117,6 @@ definition semprop2 ::
   (f a1 a2 = a3)"
 
 (* need to consider liftings. *)
-(* why is l' getting applied twice. *)
 lemma Vlift :
   assumes Valid : "lifting_valid l v" 
   assumes V: "(!sem) % {{P}} x {{Q}}"
@@ -127,15 +126,26 @@ lemma Vlift :
   unfolding VTS_def VT_def semprop2_def lift_pred_s_def lift_map_s_def
   by(auto simp add: lifting_validDO[OF Valid])
 
-(* need to fix up LangComp.thy. *)
+(* need to fix up LangComp.thy.
+   ok, i think we can actually avoid talking about lifting here. just merging (?) *)
+(* maybe we actually do want to integrate these... *)
 lemma Vmerge :
   assumes Valid1 : "lifting_valid l1 v1" 
   assumes Valid2 : "lifting_valid l2 v2"
-  assumes V1 : "(!sem) % {{P}} x {{Q}}"
+  assumes V1 : "(!sem1) % {{P1}} x1 {{Q1}}"
+  assumes V2 : "(!sem2) % {{P2}} x2 {{Q2}}"
+
   assumes Syn1 : "l1' x1' = x1"
   assumes Syn2 : "l2' x2' = x2"
-  shows "
-    (! ()
+
+  
+
+shows "(! (pcomp sem1 sem2)) % {{(\<lambda> st . P1 st \<and> P2 st)}}
+        (
+       {{ (\<lambda> st .
+           \<exists> st1 st2 .
+             Q1 st1 \<and> Q2 st2 \<and>
+             st1 <[ st \<and> st2 <[ st )}}"
             
   apply(auto simp add: lift_pred_s_def semprop2_def)
 (* goal1: lifting (assuming liftability side conditions: *)
