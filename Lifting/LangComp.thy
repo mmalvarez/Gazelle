@@ -1,6 +1,14 @@
 theory LangComp imports LiftUtils
 begin
 
+
+(* TODO: how does sup_l fit into this?
+   the reason i thought we needed the (stronger) statement
+   that LUBs are preserved (rather than
+   just "inputs are equal \<Rightarrow> outputs have LUBs) was that
+   it seemed like you needed this to be able to relate
+   the Base elements of liftings
+*)
 type_synonym ('a, 'b) langcomp =
   "('a \<Rightarrow> 'b \<Rightarrow> 'b) * ('a \<Rightarrow> 'b \<Rightarrow> 'b)"
 
@@ -480,10 +488,6 @@ proof(induction arbitrary: f Fs' rule: sups_pres.induct)
     assume Hfin' : "finite Fsx'"
     assume H' : "Fs' = fst ` Fsx'"
     assume Hsup : "has_sup (snd ` Fsx')" 
- 
-    (* problem : how to come up with values for the functions (need Rest-fsx)...
-       maybe we can just replicate the given value (known to exist because nonempty)
-     *)
     
     obtain f_arb a where Hfa : 
       "(f_arb, a) \<in> Fsx'" using "1"(3) "1"(4) H' by(auto)
@@ -822,6 +826,11 @@ proof(cases rule: sups_pres.cases)
     by(auto)
 qed
 
+(* this is the key lemma that characterizes sups_pres.
+   in particular, it should imply that we can arbitrarily reorder
+   elements in the list.
+   it should also allow arbitrary reassociation because of
+   the subset-laws we have proven about sup. *)
 lemma sups_pres_pcomps_sup :
   assumes Hp : "sups_pres (set l)"
   assumes Hnemp : "l \<noteq> []"
@@ -893,8 +902,8 @@ next
     show ?thesis 
       using sup_union1[OF HSup Sup Conc'']
       by(auto simp add: Cons' Eqn)
-    
 qed
+
 
 (*
 lemma sups_pres_has_sup_pcomps' :
@@ -903,6 +912,9 @@ lemma sups_pres_has_sup_pcomps' :
   assumes H2 : "set l2 \<subseteq> S"
   shows "has_sup {pcomps' l1, pcomps' l2}"
 *)
+
+(* TODO: are these later lemmas necessary? *)
+(*
 lemma sups_pres_tl_pcomps'_sup :
   assumes Hp : "sups_pres (set (h1#h2#h3#l))"
   shows "has_sup {h1 syn state, h2 syn state,  (pcomps' (h3#l)) syn state}" using assms
@@ -1313,7 +1325,7 @@ proof(-)
   thus "lc_valid lc" by(auto simp add:Hlc lc_valid_def)
 qed
 *)
-
+*)
 
 lemma sup_l_comm :
   fixes ls1 :: "('x \<Rightarrow> 'x1)"
