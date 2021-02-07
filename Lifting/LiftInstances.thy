@@ -728,7 +728,6 @@ lemma prio_l_validb_strong_vsg' :
   shows "lifting_validb (prio_l f0 f1 t) S'"
   using prio_l_validb_strong_vsg[OF _ H Hzero Hmono] fun_eq_iff[of S' "\<lambda> _ . UNIV"] Hv by auto
 
-
 (*
 prio_ortho may not be useful as it would only work in cases where increment function
 is the same. this tends to not be where we use prio.

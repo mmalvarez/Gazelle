@@ -1,4 +1,4 @@
-theory Hoare imports "../Lifting/LiftUtils" "../Lifting/LangCompSimple"
+theory Hoare imports "../Lifting/LiftUtils" "../Lifting/LiftInstances" "../Lifting/LangCompSimple"
 begin
 
 (*
@@ -192,16 +192,17 @@ lemma Vmerge_mono :
   assumes Sem : "f \<in> set l"
   assumes Mono : "Pord.is_monop1 Q"
   assumes V : "(!f) % {{P}} x {{Q}}"
-  shows "(! pcomps l) % 
+  shows "(! pcomps' l) % 
          {{P}}
          x
          {{Q}}"
 proof(-)
-  have PC : "(! pcomps l) % {{P}} x {{\<lambda>st. \<exists>st_sub. Q st_sub \<and> st_sub <[ st}}"
+  have PC : "(! pcomps' l) % {{P}} x {{\<lambda>st. \<exists>st_sub. Q st_sub \<and> st_sub <[ st}}"
     using Vmerge[OF Pres Sem V]
+    unfolding semprop2_def
     by auto
 
-  show "(! pcomps l) % {{P}} x {{Q}}"
+  show "(! pcomps' l) % {{P}} x {{Q}}"
   proof(rule Vconseq_post[OF PC])
     show "(\<lambda>st. \<exists>st_sub. Q st_sub \<and> st_sub <[ st) *-> Q"
       unfolding predimp_def
@@ -215,45 +216,149 @@ proof(-)
   qed
 qed
 
-  proof(rule 
-  
-  sorry
+(* ok, should have a way of proving sups_pres holds on some lifted stuff
+   idea: for every input (?) lifted outputs have sup
+   this will look kind of similar to orthogonality
 
-(* ok, should have a way of proving sups_pres holds on some lifted stuff *)
+   do we need the more general version of sups_pres for this though?
+
+   goal is to show that sups_pres {lift_map_s l1 f1, lift_map_s l2 f2} for all f1, f2
+
+   this means that:
+    {lift_map_s l1 f1 syn st, lift_map_s l2 f2 syn st} have a sup
+
+   this means that:
+    {LUpd ln syn (fn syn (LOut ln syn st)) st} have a sup
+
+   one common(?) case: LUpd ln syn x1 , LUpd ln syn x2 always have a sup
+
+   - does l_ortho imply this?
+
+ *)
+
+(* a (almost) weaker version of l_ortho, that
+   talks about when liftings are orthogonal in the sense
+   that arbitrary lifted functions preserve sups at runtime *)
+definition l_ortho_run ::
+  "('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme \<Rightarrow>
+   ('x, 'a2, 'b, 'z2) lifting_scheme \<Rightarrow>
+   bool" where
+"l_ortho_run l1 l2 = 
+  (\<forall> x1 x2 . sups_pres {(\<lambda>syn . LUpd l1 syn x1), (\<lambda> syn . LUpd l2 syn x2)})"
+
+lemma leq_sup :
+  assumes H : "x1 <[ x2"
+  shows "is_sup {x1, x2} x2"
+proof(rule is_sup_intro)
+  fix x
+  assume "x \<in> {x1, x2}"
+  then show "x <[ x2" using H leq_refl by auto
+next
+  fix x'
+  assume "is_ub {x1, x2} x'"
+  then show "x2 <[ x'"
+    by(auto simp add: is_ub_def)
+qed
+
+(* TODO: why is 'b being forced to be Mergeableb? *)
+lemma prio_ortho_run :
+  fixes tf :: "('x, 'a1, 'b :: Mergeableb) lifting"
+  fixes tg :: "('x, 'a2, 'b ) lifting"
+  assumes H0 : "\<And> s p . f1 s p \<noteq> g1 s p"
+  shows "l_ortho_run (prio_l f0 f1 tf) (prio_l g0 g1 tg)"
+  unfolding l_ortho_run_def sups_pres_def
+proof(clarify)
+  fix x1 x2 syn
+  fix st :: "'b md_prio"
+
+  obtain p st' where St : "st = mdp p st'" by(cases st; auto)
+
+  have Conc' : "has_sup {(LUpd (prio_l f0 f1 tf) syn x1 st),
+                         (LUpd (prio_l g0 g1 tg) syn x2 st)}"
+  proof(cases "f1 syn p \<le> g1 syn p")
+    case True
+    then have True' : "f1 syn p < g1 syn p" using H0[of syn p] by auto
+    then have Gt : "(LUpd (prio_l f0 f1 tf) syn x1 st) <[ (LUpd (prio_l g0 g1 tg) syn x2 st)"
+      using St
+      by(auto simp add: prio_l_def prio_pleq)
+
+    show ?thesis using leq_sup[OF Gt] by (auto simp add: has_sup_def)
+  next
+    case False
+    then have False' : "g1 syn p < f1 syn p" using H0[of syn p] by auto
+    then have Gt : "(LUpd (prio_l g0 g1 tg) syn x2 st) <[ (LUpd (prio_l f0 f1 tf) syn x1 st)"
+      using St
+      by(auto simp add: prio_l_def prio_pleq)
+    show ?thesis using is_sup_comm2[OF leq_sup[OF Gt]] by (auto simp add: has_sup_def)
+  qed
+
+  thus "has_sup
+        ((\<lambda>f. f syn st) ` 
+         {\<lambda>syn. LUpd (prio_l f0 f1 tf) syn x1, \<lambda>syn. LUpd (prio_l g0 g1 tg) syn x2})"
+    by(auto)
+qed
+
+lemma l_ortho_imp_weak :
+
+  fixes tf :: "('x, 'a1, 'b :: Mergeable) lifting"
+  fixes tg :: "('x, 'a2, 'b ) lifting"
+(* TODO: make sure these really need to be the same valid-set
+   i don't intuitively understand why this should be *)
+
+  assumes Hvf :  "lifting_valid tf Sf"
+  assumes Hvg :  "lifting_valid tg Sg"
+  assumes Hs : "Sf = Sg"
+  assumes H: "l_ortho tf tg"
+  shows "l_ortho_run tf tg"
+  unfolding l_ortho_run_def sups_pres_def
+proof(clarify)
+  fix x1 x2 syn st
+
+  have Orth : "LUpd tf syn x1 (LUpd tg syn x2 st) = LUpd tg syn x2 (LUpd tf syn x1 st)"
+    using l_orthoDI[OF H, of syn x1 x2 st] by auto
+
+  have Ub : "is_ub {LUpd tf syn x1 st, LUpd tg syn x2 st} (LUpd tf syn x1 (LUpd tg syn x2 st))"
+  proof(rule is_ub_intro)
+    fix x
+    assume Hx : "x \<in> {LUpd tf syn x1 st, LUpd tg syn x2 st}"
+
+    then consider (1) "x = LUpd tf syn x1 st" |
+                  (2) "x = LUpd tg syn x2 st" by auto
+
+    then show "x <[ LUpd tf syn x1 (LUpd tg syn x2 st)"
+    proof cases
+      case 1
+
+      have Sg : "x \<in> Sg syn"
+        using lifting_validDP[OF Hvf] unfolding 1 Orth Hs by auto
+
+      then show ?thesis
+        using lifting_validDI[OF Hvg Sg]
+        unfolding 1 Orth by auto
+    next
+      case 2
+      have Sf : "x \<in> Sf syn"
+        using lifting_validDP[OF Hvg] unfolding 2 Orth Hs by auto
+
+      then show ?thesis
+        using lifting_validDI[OF Hvf Sf]
+        unfolding 2 sym[OF Orth] by auto
+    qed
+  qed
+
+  hence Ub' : "has_ub {LUpd tf syn x1 st, LUpd tg syn x2 st}"
+    by(auto simp add: has_ub_def)
+
+  have Sup : "has_sup {LUpd tf syn x1 st, LUpd tg syn x2 st}" 
+    using complete2[OF Ub'] by auto
+
+  thus "has_sup ((\<lambda>f. f syn st) ` {\<lambda>syn. LUpd tf syn x1, \<lambda>syn. LUpd tg syn x2})"
+    by auto
+qed
+
 (*
-lemma Vmerge :
-  assumes Valid1 : "lifting_valid l1 v1" 
-  assumes Valid2 : "lifting_valid l2 v2"
-  assumes V1 : "(!sem1) % {{P1}} x1 {{Q1}}"
-  assumes V2 : "(!sem2) % {{P2}} x2 {{Q2}}"
-
-  assumes Syn1 : "l1' x1' = x1"
-  assumes Syn2 : "l2' x2' = x2"
-
-  
-
-shows "(! (pcomp sem1 sem2)) % {{(\<lambda> st . P1 st \<and> P2 st)}}
-        (
-       {{ (\<lambda> st .
-           \<exists> st1 st2 .
-             Q1 st1 \<and> Q2 st2 \<and>
-             st1 <[ st \<and> st2 <[ st )}}"
-            
-  apply(auto simp add: lift_pred_s_def semprop2_def)
-
-*)
-(* goal1: lifting (assuming liftability side conditions: *)
-(* {{P}} X {{Q}} \<Longrightarrow> {{lift l P}} lift_map l X {{lift l Q}} *)
-
-(* goal2: merging (assuming liftability side conditions: *)
-(* {{P1}} X1 {{Q1}} \<Longrightarrow> {{P2}} X2 {{Q2}} \<Longrightarrow>
-   {{lift P1 \<and> lift P2}} X s.t. pi1 x = x1, pi2 x = x2
-   {{ (\<lambda> st' . \<exists> st x1' x2' .
-          P1 (LOut l1 st) \<and> P2 (LOut l2 st) \<and>
-          X1 (LOut l1 st) x1' \<and> X2 (LOut l2 st) x2' \<and>
-          Q1 x1' \<and> Q2 x2' \<and>
-          LUpd l1 x1' st <[ st' \<and>
-          LUpd l2 x2' st <[ st') }}
+  we also need a way to relate orthogonality as expressed in LiftInstances
+  (a binary operation) to a setwise version used here.
 *)
    
 

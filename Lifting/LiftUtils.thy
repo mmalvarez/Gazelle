@@ -264,6 +264,7 @@ declare lower_map_s_def [simp]
 (* we need to parameterize this by either
    - one set (union of two valid sets/bigger)
    - two sets (valid set of each lifting)
+   (TODO: do we?)
 *)
 definition l_ortho ::
   "('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme \<Rightarrow>
