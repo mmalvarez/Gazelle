@@ -1,4 +1,4 @@
-theory Hoare imports "../Lifting/LiftUtils" "../Lifting/LangComp"
+theory Hoare imports "../Lifting/LiftUtils" "../Lifting/LangCompSimple"
 begin
 
 (*
@@ -33,6 +33,19 @@ definition VT ::
 "VT pre x post =
   (\<forall> a b . pre a \<longrightarrow> x a b \<longrightarrow> post b)"
 
+lemma VTI :
+  assumes H1 : 
+    "\<And> a b . pre a \<Longrightarrow> x a b \<Longrightarrow> post b"
+  shows "VT pre x post" using assms
+  unfolding VT_def by auto
+
+lemma VTE :
+  assumes H : "VT pre x post"
+  assumes Ha : "pre a"
+  assumes Hb : "x a b"
+  shows "post b" using assms
+  unfolding VT_def by auto
+
 lemma Vtop :
   shows "{{P}} X {{C True}}"
   by(simp add:VT_def)
@@ -52,6 +65,13 @@ lemma Vconseq_post :
   assumes H2 : "Q *-> Q'"
   shows "{{P}} X {{Q'}}" using assms
   by(auto simp add: VT_def predimp_def)
+
+lemma VandI :
+  assumes H1 : "{{P1}} X {{Q1}}"
+  assumes H2 : "{{P2}} X {{Q2}}"
+  shows "{{(\<lambda> x . (P1 x \<and> P2 x))}} X {{(\<lambda> x . (Q1 x \<and> Q2 x))}}"
+    using assms
+    by(auto simp add: VT_def)
 
 type_synonym ('x, 'a) syn_triple =
   "('a \<Rightarrow> bool) \<Rightarrow> 'x \<Rightarrow> ('a \<Rightarrow> bool)"
@@ -82,12 +102,12 @@ definition VTS ::
   VT (pre x) (sem x) (post x)"
 *)
 
-definition VTS :: 
+abbreviation VTS :: 
   "('x \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow>
    ('a \<Rightarrow> bool) \<Rightarrow> 'x \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool"
   ("_ % {{_}} _ {{_}}" [0,0,0,0] 63)
   where
-"VTS sem pre x post =
+"VTS sem pre x post \<equiv>
   VT (pre) (sem x) (post)"
 
 (* executable VTS. probably less useful than relational one. *)
@@ -113,7 +133,7 @@ definition semprop2 ::
    ('a1 \<Rightarrow> 'a2 \<Rightarrow> 'a3 \<Rightarrow> bool)"
   ("! _" [3] 61)
   where
-"semprop2 f a1 a2 a3 =
+"semprop2 f a1 a2 a3 \<equiv>
   (f a1 a2 = a3)"
 
 (* need to consider liftings. *)
@@ -123,12 +143,84 @@ lemma Vlift :
   assumes Syn : "l' x' = x"
   shows "(! lift_map_s l' l sem) % {{lift_pred_s l' l x' P}} x' {{lift_pred_s l' l x' Q}}"
  using V Syn
-  unfolding VTS_def VT_def semprop2_def lift_pred_s_def lift_map_s_def
+  unfolding VT_def lift_pred_s_def lift_map_s_def semprop2_def
   by(auto simp add: lifting_validDO[OF Valid])
 
 (* need to fix up LangComp.thy.
    ok, i think we can actually avoid talking about lifting here. just merging (?) *)
 (* maybe we actually do want to integrate these... *)
+
+
+(* do we need explicit P0 ... Pn ?*)
+lemma Vmerge :
+  assumes Pres : "sups_pres (set l)"
+  assumes Sem : "f \<in> set l"
+  assumes V : "(!f) % {{P}} x {{Q}}"
+  shows "(! pcomps' l) % 
+         {{P}}
+         x
+         {{(\<lambda> st . \<exists> st_sub . Q st_sub \<and> st_sub <[ st)}}"
+proof(rule VTI)
+  fix a b
+  assume HP : "P a"
+  assume HS : "(! pcomps' l) x a b"
+
+  have Conc_f : "Q (f x a)"
+    using VTE[OF V HP]
+    unfolding semprop2_def by auto
+
+  have Elem : "f x a \<in> (\<lambda>f. f x a) ` set l"
+    using Sem by auto
+
+  have Nemp : "l \<noteq> []" using Sem by (cases l; auto)
+
+  have Conc' : "f x a <[ pcomps' l x a"
+    using is_sup_unfold1[OF sups_pres_pcomps_sup[OF Pres Nemp] Elem]
+    by auto
+
+  have Pc_l_b : "pcomps' l x a = b" using HS unfolding semprop2_def
+    by auto
+
+  show "\<exists>st_sub. Q st_sub \<and> st_sub <[ b"
+    using Conc_f Conc' unfolding Pc_l_b
+    by auto
+qed
+    
+
+lemma Vmerge_mono :
+  assumes Pres : "sups_pres (set l)"
+  assumes Sem : "f \<in> set l"
+  assumes Mono : "Pord.is_monop1 Q"
+  assumes V : "(!f) % {{P}} x {{Q}}"
+  shows "(! pcomps l) % 
+         {{P}}
+         x
+         {{Q}}"
+proof(-)
+  have PC : "(! pcomps l) % {{P}} x {{\<lambda>st. \<exists>st_sub. Q st_sub \<and> st_sub <[ st}}"
+    using Vmerge[OF Pres Sem V]
+    by auto
+
+  show "(! pcomps l) % {{P}} x {{Q}}"
+  proof(rule Vconseq_post[OF PC])
+    show "(\<lambda>st. \<exists>st_sub. Q st_sub \<and> st_sub <[ st) *-> Q"
+      unfolding predimp_def
+    proof(clarify)
+      fix x st_sub
+      assume Hi1 : "Q st_sub"
+      assume Hi2 : "st_sub <[ x"
+      show "Q x" using Hi1 Hi2 Mono unfolding is_monop1_def
+        by(auto)
+    qed
+  qed
+qed
+
+  proof(rule 
+  
+  sorry
+
+(* ok, should have a way of proving sups_pres holds on some lifted stuff *)
+(*
 lemma Vmerge :
   assumes Valid1 : "lifting_valid l1 v1" 
   assumes Valid2 : "lifting_valid l2 v2"
@@ -148,6 +240,8 @@ shows "(! (pcomp sem1 sem2)) % {{(\<lambda> st . P1 st \<and> P2 st)}}
              st1 <[ st \<and> st2 <[ st )}}"
             
   apply(auto simp add: lift_pred_s_def semprop2_def)
+
+*)
 (* goal1: lifting (assuming liftability side conditions: *)
 (* {{P}} X {{Q}} \<Longrightarrow> {{lift l P}} lift_map l X {{lift l Q}} *)
 
