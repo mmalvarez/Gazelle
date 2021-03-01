@@ -783,82 +783,82 @@ definition schem_lift_baseE ::  "('n :: n_E, 'n, 'x, 'a :: Bogus, 'a) schem_lift
 "schem_lift_baseE _ _ =
   id_l"
 
-definition schem_lift_recR_A_left ::
+definition schem_lift_prod_recR_A_left ::
   "('n, 'ls, 'x, 'a, 'b2) schem_lift \<Rightarrow>
    ('n :: n_A, ('ls, 'rs :: hasntA) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
-"schem_lift_recR_A_left rec n s =
+"schem_lift_prod_recR_A_left rec n s =
   (case s of
     SP ls rs \<Rightarrow>
       fst_l (rec n ls))"
 
-definition schem_lift_recR_A_right ::
+definition schem_lift_prod_recR_A_right ::
   "('n, 'rs, 'x, 'a, 'b2) schem_lift \<Rightarrow>
    ('n :: n_A, ('ls :: hasntA, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
-"schem_lift_recR_A_right rec n s =
+"schem_lift_prod_recR_A_right rec n s =
   (case s of
     SP ls rs \<Rightarrow>
       snd_l (rec n rs))"
 
-definition schem_lift_recR_B_left ::
+definition schem_lift_prod_recR_B_left ::
   "('n, 'ls, 'x, 'a, 'b2) schem_lift \<Rightarrow>
    ('n :: n_B, ('ls, 'rs :: hasntB) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
-"schem_lift_recR_B_left rec n s =
+"schem_lift_prod_recR_B_left rec n s =
   (case s of
     SP ls rs \<Rightarrow>
       fst_l  (rec n ls))"
 
-definition schem_lift_recR_B_right ::
+definition schem_lift_prod_recR_B_right ::
   "('n, 'rs, 'x, 'a, 'b2) schem_lift \<Rightarrow>
    ('n :: n_B, ('ls :: hasntB, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
-"schem_lift_recR_B_right rec n s =
+"schem_lift_prod_recR_B_right rec n s =
   (case s of
     SP ls rs \<Rightarrow>
       snd_l (rec n rs))"
 
-definition schem_lift_recR_C_left ::
+definition schem_lift_prod_recR_C_left ::
   "('n, 'ls, 'x, 'a, 'b2) schem_lift \<Rightarrow>
    ('n :: n_C, ('ls, 'rs :: hasntC) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
-"schem_lift_recR_C_left rec n s =
+"schem_lift_prod_recR_C_left rec n s =
   (case s of
     SP ls rs \<Rightarrow>
       fst_l  (rec n ls))"
 
-definition schem_lift_recR_C_right ::
+definition schem_lift_prod_recR_C_right ::
   "('n, 'rs, 'x, 'a, 'b2) schem_lift \<Rightarrow>
    ('n :: n_C, ('ls :: hasntC, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
-"schem_lift_recR_C_right rec n s =
+"schem_lift_prod_recR_C_right rec n s =
   (case s of
     SP ls rs \<Rightarrow>
       snd_l (rec n rs))"
 
-definition schem_lift_recR_D_left ::
+definition schem_lift_prod_recR_D_left ::
   "('n, 'ls, 'x, 'a, 'b2) schem_lift \<Rightarrow>
    ('n :: n_D, ('ls, 'rs :: hasntD) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
-"schem_lift_recR_D_left rec n s =
+"schem_lift_prod_recR_D_left rec n s =
   (case s of
     SP ls rs \<Rightarrow>
       fst_l  (rec n ls))"
 
-definition schem_lift_recR_D_right ::
+definition schem_lift_prod_recR_D_right ::
   "('n, 'rs, 'x, 'a, 'b2) schem_lift \<Rightarrow>
    ('n :: n_D, ('ls :: hasntD, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
-"schem_lift_recR_D_right rec n s =
+"schem_lift_prod_recR_D_right rec n s =
   (case s of
     SP ls rs \<Rightarrow>
       snd_l (rec n rs))"
 
-definition schem_lift_recR_E_left ::
+definition schem_lift_prod_recR_E_left ::
   "('n, 'ls, 'x, 'a, 'b2) schem_lift \<Rightarrow>
    ('n :: n_E, ('ls, 'rs :: hasntE) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
-"schem_lift_recR_E_left rec n s =
+"schem_lift_prod_recR_E_left rec n s =
   (case s of
     SP ls rs \<Rightarrow>
       fst_l  (rec n ls))"
 
-definition schem_lift_recR_E_right ::
+definition schem_lift_prod_recR_E_right ::
   "('n, 'rs, 'x, 'a, 'b2) schem_lift \<Rightarrow>
    ('n :: n_E, ('ls :: hasntE, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
-"schem_lift_recR_E_right rec n s =
+"schem_lift_prod_recR_E_right rec n s =
   (case s of
     SP ls rs \<Rightarrow>
       snd_l (rec n rs))"
@@ -879,16 +879,16 @@ adhoc_overloading schem_lift
   "schem_lift_baseC"
   "schem_lift_baseD"
   "schem_lift_baseE"
-  "schem_lift_recR_A_left schem_lift"
-  "schem_lift_recR_A_right schem_lift"
-  "schem_lift_recR_B_left schem_lift"
-  "schem_lift_recR_B_right schem_lift"
-  "schem_lift_recR_C_left schem_lift"
-  "schem_lift_recR_C_right schem_lift"
-  "schem_lift_recR_D_left schem_lift"
-  "schem_lift_recR_D_right schem_lift"
-  "schem_lift_recR_E_left schem_lift"
-  "schem_lift_recR_E_right schem_lift"
+  "schem_lift_prod_recR_A_left schem_lift"
+  "schem_lift_prod_recR_A_right schem_lift"
+  "schem_lift_prod_recR_B_left schem_lift"
+  "schem_lift_prod_recR_B_right schem_lift"
+  "schem_lift_prod_recR_C_left schem_lift"
+  "schem_lift_prod_recR_C_right schem_lift"
+  "schem_lift_prod_recR_D_left schem_lift"
+  "schem_lift_prod_recR_D_right schem_lift"
+  "schem_lift_prod_recR_E_left schem_lift"
+  "schem_lift_prod_recR_E_right schem_lift"
   "schem_lift_recL schem_lift schem_lift"
 
 (* need more constraints to prevent going down unhappy paths 

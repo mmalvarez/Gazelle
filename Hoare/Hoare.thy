@@ -73,6 +73,7 @@ lemma VandI :
     using assms
     by(auto simp add: VT_def)
 
+
 type_synonym ('x, 'a) syn_triple =
   "('a \<Rightarrow> bool) \<Rightarrow> 'x \<Rightarrow> ('a \<Rightarrow> bool)"
 
@@ -358,7 +359,7 @@ qed
 
 (*
   we also need a way to relate orthogonality as expressed in LiftInstances
-  (a binary operation) to a setwise version used here.
+  (a binary operation) to a setwise version used here. (do we?)
 *)
    
 

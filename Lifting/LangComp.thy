@@ -1327,6 +1327,7 @@ qed
 *)
 *)
 
+(*
 lemma sup_l_comm :
   fixes ls1 :: "('x \<Rightarrow> 'x1)"
   fixes ls2 :: "('x \<Rightarrow> 'x2)"
@@ -1354,7 +1355,7 @@ next
   thus "has_sup {LUpd l2 (ls2 s) a2 b1, LUpd l1 (ls1 s) a1 b2}"
     using sup_lDI[OF H Hs', of s a1 a2] by auto
 qed
-
+*)
 (* what might we want to show here?
 - pairwise sup_l implies entire composition is well formed?
 - something about associativity?

@@ -2,6 +2,10 @@ theory Gensyn_Sem_Multi
   imports "../Gensyn" "../Gensyn_Descend" "../MergeableTc/Mergeable"
 begin
 
+(*
+ * TODO: what is this for? Is this useful?
+*)
+
 (* TODO:
 break this file up into code and spec? *)
 
