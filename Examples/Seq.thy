@@ -9,10 +9,6 @@ datatype syn =
   Sseq
   | Sskip
 
-(* idea: these dir's are really defunctionalized continuations *)
-datatype dir =
-  Down 
-  | Up childpath
 
 type_synonym state' = "gensyn_skel * unit gs_result * dir"
 

@@ -137,6 +137,15 @@ definition semprop2 ::
 "semprop2 f a1 a2 a3 \<equiv>
   (f a1 a2 = a3)"
 
+lemma semprop2I :
+  "(!f) a1 a2 (f a1 a2)"
+  by(auto simp add: semprop2_def)
+
+lemma semprop2E :
+  assumes H : "(!f) a1 a2 a3"
+  shows "a3 = f a1 a2" using assms
+  by(auto simp add: semprop2_def)
+
 (* need to consider liftings. *)
 lemma Vlift :
   assumes Valid : "lifting_valid l v" 

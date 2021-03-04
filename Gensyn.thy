@@ -28,6 +28,12 @@ definition gs_sk :: "'a gensyn \<Rightarrow> gensyn_skel" where
 
 type_synonym childpath = "nat list"
 
+(* idea: these dir's are really defunctionalized continuations *)
+datatype dir =
+  Down 
+  | Up childpath
+
+(* possibly no longer needed *)
 datatype ('x) gs_result =
   GRPath childpath
   | GRCrash

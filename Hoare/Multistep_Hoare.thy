@@ -7,33 +7,53 @@ begin
  *)
 
 (*
-definition gsx_hoare :: 
-*)
-
-(* should we take an xsem or should we take a thing that we will package in xsem (xsem command)*)
-(* xsem also needs some extra packaging.
-   xsem is in Lifting/XSem
- *)
-
-(*
  * should we be explicit about how we pull out the gensyn_skel? 
- * basically capture this "fan-out" structure from e.g. MemImp
-   * do we need to make sure we have a lifting for the projection?
-   * i think just a function is probably fine.
+ * this would (e.g. if it is a lifting) enable explicitly updating
+ * however, we can probably handle this at the predicate level
 *)
 
-(* this version doesn't know about the how exactly we are pulling out the childpath
-*)
 (*
- * do we use the VT primitive, or build something else?
- * here is a version that doesn't use VT
+definition semprop_gsx ::
+  "('x, 'mstate) g_sem \<Rightarrow>
+   ('x gensyn \<Rightarrow> 'mstate \<Rightarrow> 'mstate \<Rightarrow> bool)"
+  ("|? _ ?|")  
+  where
+"semprop_gsx gs x m m' =
+  (\<exists> n flag . gensyn_sem_small_exec_many gs x n m = (m', flag))"
+
 *)
 
-(* x_sem' *)
+definition GVT ::
+  "('x, 'mstate) g_sem \<Rightarrow>
+   ('mstate \<Rightarrow> bool) \<Rightarrow>
+   'x gensyn \<Rightarrow>
+   ('mstate \<Rightarrow> bool) \<Rightarrow>
+   bool"
+  ("|? _ ?| %% {? _ ?} _ {? _ ?}")
+  where
+"GVT gs P prog Q =
+  (\<forall> st .
+    P st \<longrightarrow>
+    (\<exists> n st' . gensyn_sem_small_exec_many gs prog n st = (st', Ok) \<and>
+       Q st'))"
 
-(* forall then exists? exists then forall?
-   fuel vs pre state
- *)
+lemma GVTI [intro] :
+  assumes "(\<And> st . P st \<Longrightarrow> 
+              (\<exists> n st' . gensyn_sem_small_exec_many gs prog n st = (st', Ok) \<and> Q st'))"
+  shows "|? gs ?| %% {?P?} prog {?Q?}" using assms
+  unfolding GVT_def by auto
+
+lemma GVTE [elim]:
+  assumes "|? gs ?| %% {?P?} prog {?Q?}"
+  assumes "P st"
+  obtains n st' where 
+    "gensyn_sem_small_exec_many gs prog n st = (st', Ok)"
+    "Q st'"
+  using assms
+  unfolding GVT_def by auto
+
+(* now: (hopeufully) we can get "halted" case by just adding
+   halted to Q *)
 
 (* problem: how do we figure out when we are done executing?
    e.g. "gotten to the end of the statement"
@@ -41,122 +61,73 @@ definition gsx_hoare ::
    one approach: run until halt, and then express what happens
    with complex terms in terms of hoare logic rules on simpler terms
 *)
-definition VTSMx ::
-  "('x, 'mstate) g_sem \<Rightarrow>
-   ('mstate \<Rightarrow> bool) \<Rightarrow>
-   ('x gensyn) \<Rightarrow>
-   ('mstate \<Rightarrow> bool) \<Rightarrow>
-   bool"
-  (" |! _ !| !% {!_!} _ {!_!}")  
-  where
-"VTSMx gs P x Q =
-  (\<forall> m m' n . 
-    P m \<longrightarrow>
-    gensyn_sem_small_exec_many gs x n m = (m', Halt) \<longrightarrow>
-    Q m')"
 
-lemma VTSMI :
-  assumes
-    "\<And> m m' n .
-      P m \<Longrightarrow>
-      gensyn_sem_small_exec_many gs x n m = (m', Halt) \<Longrightarrow> Q m'"
-  shows "|! gs !| !% {!P!} x {!Q!}" using assms
-  by(auto simp add: VTSMx_def)
-
-lemma VTSME :
-  assumes H : "|! gs !| !% {!P!} x {!Q!}"
-  assumes H1 : "P m"
-  assumes H2 : "gensyn_sem_small_exec_many gs x n m = (m', Halt)"
-  shows "Q m'" using assms
-  by(auto simp add: VTSMx_def)
-
-lemma semprop2I :
-  "(!f) a1 a2 (f a1 a2)"
-  by(auto simp add: semprop2_def)
-
-lemma semprop2E :
-  assumes H : "(!f) a1 a2 a3"
-  shows "a3 = f a1 a2" using assms
-  by(auto simp add: semprop2_def)
+(* the original challenge was that we wanted to make VTSM be "regular" (VT)
+Hoare triples, but then the existential quantifier is in the wrong place. *)
 
 (* lifting Hoare rules from single step into VTSM *)
-
-lemma vtsm_lift_halt :
+lemma vtsm_lift_step :
   assumes H0 : "gs_sem f' = f"
   assumes Hstart : "\<And> st . P st \<Longrightarrow> gs_getpath f' st = Some p"
-  assumes Hend : "\<And> st . Q st \<Longrightarrow> gs_getpath f' st = None"
-  assumes Hp : "gensyn_get prog p = Some (G s l)"
+  assumes Hpath : "gensyn_get prog p = Some (G s l)"
   assumes H : "(!f) % {{P}} s {{Q}}"
-  shows "|! f' !| !% {!P!} prog {!Q!}" using assms
+  shows "|? f' ?| %% {?P?} prog {?Q?}" 
+proof
+  fix st
+  assume HP : "P st"
   
-  apply(cases f'; auto simp add: VTSMx_def VT_def)
-  apply(case_tac n; auto split: option.splits)
-  apply(drule_tac x = m in spec) apply(auto)
-  apply(drule_tac x = "f s m" in spec)
-  apply(case_tac nat; auto simp add: semprop2_def split:option.splits)
-  done
+  have Hf : "(!f) s st (f s st)" by(rule semprop2I)
 
-(* not totally sure this is true though.
-   plus even if it is it's probably going to be annoying to reason with *)
-lemma vtsm_lift_halt_p :
-  assumes H0 : "gs_sem f' = f"
-  assumes Hp : "gensyn_get prog p = Some (G s l)"
-  assumes H : "(!f) % {{P}} s {{Q}}"
-  assumes H' : "(!f) % {{(\<lambda> st . gs_getpath f' st = Some p)}} s
-                       {{(\<lambda> st . gs_getpath f' st = None)}}"
-  shows "|! f' !| !% {! (\<lambda> st . P st \<and> gs_getpath f' st = Some p) !} prog 
-                     {! (\<lambda> st . Q st \<and> gs_getpath f' st = None) !}" 
-proof-
-  have Combine :
-    "(! gs_sem f') % {{\<lambda>st. P st \<and> gs_getpath f' st = Some p}} s {{\<lambda>st. Q st \<and> gs_getpath f' st = None}}"
-    using Hoare.VandI[OF H H'] unfolding H0
-    by auto
-  show "|! f' !| !% {!\<lambda>st. P st \<and>
-                         gs_getpath f' st =
-                         Some p!} prog {!\<lambda>st. Q st \<and> gs_getpath f' st = None!}"
+  have Qf : "Q (f s st)" using VTE[OF H HP Hf] by auto
 
-  using vtsm_lift_halt[OF H0, of "(\<lambda> st . P st \<and> gs_getpath f' st = Some p)" p
-                                 "(\<lambda> st . Q st \<and> gs_getpath f' st = None)",
-                       OF _ _ Hp]
-  using Combine unfolding H0
-  by(auto)
+  have Start : "gs_getpath f' st = Some p"
+    using Hstart[OF HP] by auto
+
+  have Conc' :  "gensyn_sem_small_exec_many f' prog 1 st = (f s st, Ok)"
+    using Start Hpath H0
+    by(auto split:option.splits)
+
+  show "\<exists>n st'.
+         gensyn_sem_small_exec_many f' prog n st = (st', Ok) \<and> Q st'"  
+    using Conc' Qf by blast
 qed
+
 
 lemma vtsm_lift_cont :
   assumes H0 : "gs_sem f' = f"
   assumes Hstart : "\<And> st . P st \<Longrightarrow> gs_getpath f' st = Some p" 
-(*  assumes Hend : "\<And> st . Q st \<Longrightarrow> gs_getpath f' st = Some p'" *)
   assumes Hp : "gensyn_get prog p = Some (G s l)"
   assumes H : "(!f) % {{P}} s {{Q}}"
-  assumes H' : "|! f' !| !% {!Q!} prog {!Q'!}"
-  shows "|! f' !| !% {!P!} prog {!Q'!}" using assms
-  apply(cases f'; auto simp add: VTSMx_def VT_def)
-  apply(drule_tac x = m in spec) apply(auto)
-  apply(case_tac n; auto)
-  apply(drule_tac x = "f s m" in spec) apply(auto simp add: semprop2_def)
-  done
+  assumes H' : "|? f' ?| %% {?Q?} prog {?Q'?}"
+  shows "|? f' ?| %% {?P?} prog {?Q'?}"
+proof(rule GVTI)
 
-lemma vtsm_lift_cont_p :
-  assumes H0 : "gs_sem f' = f"
-  assumes Hp : "gensyn_get prog p = Some (G s l)"
-  assumes H : "(!f) % {{P}} s {{Q}}"
-  assumes Hrec : "|! f' !| !% {!Q!} prog {!Q'!}"
-  shows "|! f' !| !% {!(\<lambda> st . P st \<and> gs_getpath f' st = Some p)!} prog {!Q'!}" using assms
-proof-
+  fix st
+  assume HP : "P st"
 
-  have H' : "(!f) % {{(\<lambda>  st . gs_getpath f' st = Some p)}} s {{(\<lambda> st.  True)}}"
-    unfolding VT_def by auto
+(*
+  obtain getpath where H0' : "f' = \<lparr> gs_sem = f, gs_getpath = getpath \<rparr>" using H0
+    by(cases f'; auto)
+*)
+  have Hf : "(!f) s st (f s st)" by(rule semprop2I)
 
-  have Combine:
-    "(! gs_sem f') % {{\<lambda>st. P st \<and> gs_getpath f' st = Some p}} s {{\<lambda>st. Q st \<and> (\<lambda> x . True) st}}"
-    using Hoare.VandI[OF H H'] unfolding H0
-    by auto
+  have Qf : "Q (f s st)" using VTE[OF H HP Hf] by auto
 
-  show "|! f' !| !% {!\<lambda>st. P st \<and> gs_getpath f' st = Some p!} prog {!Q'!}"
-    using vtsm_lift_cont[OF H0, of "(\<lambda> st . P st \<and> gs_getpath f' st = Some p)" p,
-                         OF _ Hp, of Q Q']
-    using Combine Hrec unfolding H0
-    by(auto)
+  have Start : "gs_getpath f' st = Some p"
+    using Hstart[OF HP] by auto
+
+  obtain st' n where
+    Exc : "gensyn_sem_small_exec_many f' prog n (f s st) = (st', Ok)" and
+    Q' : "Q' st'"
+    using GVTE[OF H' Qf] by auto
+
+  have Conc' : "gensyn_sem_small_exec_many f' prog (n+1) st = (st', Ok)"
+    using Exc Start H0 Hp
+    by(auto split: option.splits)
+
+  show "\<exists>n st'.
+           gensyn_sem_small_exec_many f' prog n st = (st', Ok) \<and> Q' st'"
+    using Conc' Q' by blast
 qed
 
 
@@ -194,32 +165,157 @@ we also need a non-halting version; what would that look like?
 this only works if the small program halts from reaching top
 can we distinguish that case?
 
-
+do we need Up/Down?
 
 *)
+
+(*
+  idea: sub-program has halted but big program has not
+
+  small prog
+    steps from path p to None w/ success
+  big prog
+    steps from path (pref @ p) to Some p' w/ success
+
+  (idea: we need to know that p is the last path (?))
+*)
+
+(*
+  do we need direction?
+  idea
+  - start w/ (p, Down)
+  - sub program goes from ([], Down) to ([], Up)
+  - end w/ (p, Up)
+*)
+
+(*
+  halt vs regular.
+
+  - halt implies regular and (conclusion implies halt?)
+  - regular and (conclusion implies halted) implies halt
+*)
+
+lemma gsxm_steps_steps :
+  assumes H1 : "gensyn_sem_small_exec_many f' prog n1 st = (st1, Ok)"
+  assumes H2 : "gensyn_sem_small_exec_many f' prog n2 st1 = (st2, f2)"
+  shows "gensyn_sem_small_exec_many f' prog (n1 + n2) st = (st2, f2)" using assms
+proof(induction n1 arbitrary: st st1 st2 f2 n2)
+  case 0
+  then show ?case by auto
+next
+  case (Suc n1)
+  show ?case 
+  proof(cases "gs_getpath f' st")
+    case None
+    then show ?thesis using Suc.prems by(cases n2; auto)
+  next
+    case (Some p)
+    show ?thesis
+    proof(cases "gensyn_get prog p")
+      case None' : None
+      then show ?thesis using Suc.prems Some by(auto)
+    next
+      case Some' : (Some prog')
+
+      obtain x l where Prog' : "prog' = G x l" by(cases prog'; auto)
+
+      have GS1 : "gensyn_sem_small_exec_many f' prog n1 (gs_sem f' x st) = (st1, Ok)"
+        using Suc.prems Some Some' Prog'
+        by(auto)
+
+      show ?thesis using Suc.IH[OF GS1] Suc.prems Some Some' Prog'
+        by(auto)
+    qed
+  qed
+qed
+
+lemma vtsm_seq :
+  assumes H1 : "|? f' ?| %% {?P?} prog {?Q?}"
+  assumes H2 : "|? f' ?| %% {?Q?} prog {?Q'?}"
+  shows "|? f' ?| %% {?P?} prog {?Q'?}"
+proof(rule GVTI)
+  fix st
+  assume HP : "P st"
+
+  obtain n1 st1 where
+    Ex1 : "gensyn_sem_small_exec_many f' prog n1 st = (st1, Ok)" and
+    Q1 : "Q st1"
+    using GVTE[OF H1 HP] by auto
+
+  obtain n2 st2 where
+    Ex2 : "gensyn_sem_small_exec_many f' prog n2 st1 = (st2, Ok)" and
+    Q'2 : "Q' st2" using GVTE[OF H2 Q1] by auto
+
+  have Conc' : "gensyn_sem_small_exec_many f' prog (n1 + n2) st = (st2, Ok)"
+    using gsxm_steps_steps[OF Ex1 Ex2] by auto
+
+  show "\<exists>n st'. gensyn_sem_small_exec_many f' prog n st = (st', Ok) \<and> Q' st'"
+    using Q'2 Conc' by blast
+qed
+
+(*
+  next, we need to decide how we want to represent the path constraints
+  probably "implies" is best.
+*)
+
+abbreviation GVT_halt ::
+  "('x, 'mstate) g_sem \<Rightarrow>
+   ('mstate \<Rightarrow> bool) \<Rightarrow>
+   'x gensyn \<Rightarrow>
+   ('mstate \<Rightarrow> bool) \<Rightarrow>
+   bool"
+  ("|! _ !| %% {! _ !} _ {! _ !}")
+  where
+"GVT_halt gs P prog Q \<equiv>
+  ( |? gs ?| %% {? P ?} prog {? (\<lambda> st . Q st \<and>  gs_getpath gs st = None) ?})"
+
+(*
 lemma vtsm_ctx :
-  assumes H1 : "gs_sem f'1 = f"
-  assumes H2 : "gs_sem f'2 = f"
+  assumes H0 : "gs_sem f' = f"
   assumes Hp : "gensyn_get prog1 p = Some prog2"
-  assumes Exc1' : "|! f'1 !| % {{(\<lambda> st . P st \<and> gs_getpath f'1 st = p}} 
+
+ok, we do need to (?) distinguish a "halt because we ran out of program" state
+*)
+lemma vtsm_sub :
+  assumes Hp : "gensyn_get prog1 ppre = Some prog2"
+  assumes Exc : "|? f' ?| %% {? (\<lambda> st . P st \<and> gs_getpath f' st = Some p) ?}
+                             prog2
+                             {? (\<lambda> st . Q st \<and> gs_getpath f' st = Some p') ?}"
+  shows "|? f' ?| %% {? (\<lambda> st . P st \<and> gs_getpath f' st = Some (ppre@p))?}
+                     prog1
+                     {? (\<lambda> st . Q st \<and> gs_getpath f' st = Some (ppre@p'))?}"
+proof
+  fix st
+  assume Hin : "P st \<and> gs_getpath f' st = Some (ppre @ p)"
+  hence Hin1 : "P st" and Hin2 : "gs_getpath f' st = Some (ppre @ p)"
+    by auto
+
+  show "\<exists>n st'. gensyn_sem_small_exec_many f' prog1 n st = (st', Ok) \<and>
+                Q st' \<and> gs_getpath f' st' = Some (ppre @ p')"
+    using GVTE[OF Exc]
+
+    obtain n st' where Exc' :"gensyn_sem_small_exec_many f' prog2 n ?st = (st', Ok)" and
+                       Q' : "Q st'" and
+                       Path' : "gs_getpath f' st' = Some p'"
+    Exc' : 
+
+(*
+  assumes Exc1' : "|? f'1 ?| % {{(\<lambda> st . P st \<and> gs_getpath f'1 st = p)}} 
                                prog1
                                {{(\<lambda> st . gs_getpath f'1 st = None)}}"
-  assumes Exc2 : "|! f'2 !| % {{(\<lambda> st . P st \<and> gs_getpath f'2 st = Some []}} 
+  assumes Exc2 : "|! f'2 !| % {{(\<lambda> st . P st \<and> gs_getpath f'2 st = Some [])}} 
                               prog2
                               {{Q}}"
-  assumes Halt1 : "|! f'1 !| % {{(\<lambda> st . P st \<and> gs_getpath f'1 st = p}} 
+  assumes Halt1 : "|! f'1 !| % {{(\<lambda> st . P st \<and> gs_getpath f'1 st = p)}} 
                               prog1
                               {{(\<lambda> st . gs_getpath f'1 st = None)}}"
-
-  shows Exc1 : "|! f'1 !| % {{(\<lambda> st . P st \<and> gs_getpath f'1 st = p}} 
+  shows Exc1 : "|! f'1 !| % {{(\<lambda> st . P st \<and> gs_getpath f'1 st = p)}} 
                               prog1
-                              {{Q}}"
- 
+                            {{Q}}"
+*)
 
   (*assumes Hp2 : "gensyn_get x1 p = Some x2"*)
-  
-  assumes Hstart1 : "\<And> st . P st \<Longrightarrow> gs_getpath f' st = Some p"
-  
+    
 (* then we need a non-halting version of this *)
 
 (* OK, so new plan.
