@@ -52,19 +52,6 @@ lemma GVTE [elim]:
   using assms
   unfolding GVT_def by auto
 
-(* now: (hopeufully) we can get "halted" case by just adding
-   halted to Q *)
-
-(* problem: how do we figure out when we are done executing?
-   e.g. "gotten to the end of the statement"
-
-   one approach: run until halt, and then express what happens
-   with complex terms in terms of hoare logic rules on simpler terms
-*)
-
-(* the original challenge was that we wanted to make VTSM be "regular" (VT)
-Hoare triples, but then the existential quantifier is in the wrong place. *)
-
 (* lifting Hoare rules from single step into VTSM *)
 lemma vtsm_lift_step :
   assumes H0 : "gs_sem f' = f"
@@ -269,6 +256,16 @@ abbreviation GVT_halt ::
 "GVT_halt gs P prog Q \<equiv>
   ( |? gs ?| %% {? P ?} prog {? (\<lambda> st . Q st \<and>  gs_getpath gs st = None) ?})"
 
+
+(* should we constrain P? 
+   "there is a satisfying assignment for any path"?
+*)
+
+(* another option is just to use liftings here.
+   the problem with that is that these liftings tend to modify
+   other things *)
+
+
 (*
 lemma vtsm_ctx :
   assumes H0 : "gs_sem f' = f"
@@ -276,6 +273,58 @@ lemma vtsm_ctx :
 
 ok, we do need to (?) distinguish a "halt because we ran out of program" state
 *)
+
+definition path_shift ::
+  "('x, 'mstate) g_sem \<Rightarrow>
+   (childpath \<Rightarrow> childpath) \<Rightarrow>
+   ('mstate \<Rightarrow> bool) \<Rightarrow>
+   ('mstate \<Rightarrow> bool) \<Rightarrow>
+   bool" where
+"path_shift f cpt P P' =
+  (\<forall> st p . P st \<longrightarrow>
+            gs_getpath f st = Some p \<longrightarrow>
+            (\<exists> st'. P' st' \<and> gs_getpath f st' = Some (cpt p)))"
+
+lemma path_shiftE [elim] :
+  assumes H0 : "path_shift f cpt P P'"
+  assumes HP : "P st"
+  assumes Hpath : "gs_getpath f st = Some p"
+  obtains st' where
+    "P' st'" "gs_getpath f st' = Some (cpt p)"
+  using assms unfolding path_shift_def by auto
+          
+
+lemma vtsm_sub :
+  assumes Hp : "gensyn_get prog1 ppre = Some prog2"
+
+  assumes HPP' :
+    "\<And> st psuf . P st \<Longrightarrow> gs_getpath f' st = Some (ppre @ psuf) \<Longrightarrow> P' st"
+
+  assumes Exc : "|? f' ?| %% {? P' ?}
+                             prog2
+                             {? Q' ?}"
+  
+  shows "|? f' ?| %% {? (\<lambda> st . P st \<and> gs_getpath f' st = Some (ppre@p))?}
+                     prog1
+                     {? (\<lambda> st . Q st \<and> gs_getpath f' st = Some (ppre@p'))?}"
+proof
+  fix st1
+  assume Hin : "P st1 \<and> gs_getpath f' st1 = Some (ppre @ p)"
+  hence Hin1 : "P st1" and Hin2 : "gs_getpath f' st1 = Some (ppre @ p)"
+    by auto
+
+  (* hmmmmmm.... *)
+
+  have HP' : "P' st1" using HPP'[OF Hin1 Hin2] by auto
+
+  obtain n1 st'1 where 
+    Ex2 : "gensyn_sem_small_exec_many f' prog2 n1 st'1 = (st', Ok)" and
+    Post2 :
+
+  show "\<exists>n st'. gensyn_sem_small_exec_many f' prog1 n st1 = (st', Ok) \<and>
+                Q st' \<and> gs_getpath f' st' = Some (ppre @ p')"
+    using GVTE[OF Exc HP']
+
 lemma vtsm_sub :
   assumes Hp : "gensyn_get prog1 ppre = Some prog2"
   assumes Exc : "|? f' ?| %% {? (\<lambda> st . P st \<and> gs_getpath f' st = Some p) ?}
@@ -285,18 +334,24 @@ lemma vtsm_sub :
                      prog1
                      {? (\<lambda> st . Q st \<and> gs_getpath f' st = Some (ppre@p'))?}"
 proof
-  fix st
-  assume Hin : "P st \<and> gs_getpath f' st = Some (ppre @ p)"
-  hence Hin1 : "P st" and Hin2 : "gs_getpath f' st = Some (ppre @ p)"
+  fix st1
+  assume Hin : "P st1 \<and> gs_getpath f' st1 = Some (ppre @ p)"
+  hence Hin1 : "P st1" and Hin2 : "gs_getpath f' st1 = Some (ppre @ p)"
     by auto
+
+  obtain st2 where "P st2 \<and> gs_getpath f' st2 = Some p"
+
+  obtain n st' where Exc' :"gensyn_sem_small_exec_many f' prog2 n st = (st', Ok)" and
+                     Q' : "Q st'" and
+                     Path' : "gs_getpath f' st' = Some p'"
+    using GVTE[OF Exc]
+
 
   show "\<exists>n st'. gensyn_sem_small_exec_many f' prog1 n st = (st', Ok) \<and>
                 Q st' \<and> gs_getpath f' st' = Some (ppre @ p')"
-    using GVTE[OF Exc]
 
-    obtain n st' where Exc' :"gensyn_sem_small_exec_many f' prog2 n ?st = (st', Ok)" and
-                       Q' : "Q st'" and
-                       Path' : "gs_getpath f' st' = Some p'"
+
+      using 
     Exc' : 
 
 (*
