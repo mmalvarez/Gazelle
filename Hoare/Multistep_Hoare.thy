@@ -23,42 +23,48 @@ definition semprop_gsx ::
 
 *)
 
+(* will concrete childpaths be sufficient here? *)
 definition GVT ::
   "('x, 'mstate) g_sem \<Rightarrow>
-   ('mstate \<Rightarrow> bool) \<Rightarrow>
-   'x gensyn \<Rightarrow>
-   ('mstate \<Rightarrow> bool) \<Rightarrow>
+  childpath \<Rightarrow>
+   (('mstate) \<Rightarrow> bool) \<Rightarrow> 
+   'x gensyn \<Rightarrow> 
+   gensyn_small_result \<Rightarrow>
+   (('mstate) \<Rightarrow> bool) \<Rightarrow>
    bool"
-  ("|? _ ?| %% {? _ ?} _ {? _ ?}")
+  ("|? _ ?| % {? _, _ ?} _ {? _, _ ?}")
   where
-"GVT gs P prog Q =
+"GVT gs cp1 P prog res Q =
   (\<forall> st .
-    P st \<longrightarrow>
-    (\<exists> n st' . gensyn_sem_small_exec_many gs prog n st = (st', Ok) \<and>
-       Q st'))"
+    P (st) \<longrightarrow>
+    (\<exists> n st' . gensyn_sem_small_exec_many gs cp1 prog n st = (st', res) \<and>
+       Q (st')))"
 
 lemma GVTI [intro] :
-  assumes "(\<And> st . P st \<Longrightarrow> 
-              (\<exists> n st' . gensyn_sem_small_exec_many gs prog n st = (st', Ok) \<and> Q st'))"
-  shows "|? gs ?| %% {?P?} prog {?Q?}" using assms
-  unfolding GVT_def by auto
+  assumes "(\<And> st . P st  \<Longrightarrow> 
+              (\<exists> n st' . gensyn_sem_small_exec_many gs cp prog n st = (st', res) \<and> Q (st')))"
+  shows "|? gs ?| % {?cp, P?} prog {?res, Q?}" using assms
+  unfolding GVT_def 
+  by(auto)
 
 lemma GVTE [elim]:
-  assumes "|? gs ?| %% {?P?} prog {?Q?}"
-  assumes "P st"
+  assumes "|? gs ?| % {?cp, P?} prog {?res, Q?}"
+  assumes "P (st)"
   obtains n st' where 
-    "gensyn_sem_small_exec_many gs prog n st = (st', Ok)"
-    "Q st'"
+    "gensyn_sem_small_exec_many gs cp prog n st = (st', res)"
+    "Q (st')"
   using assms
-  unfolding GVT_def by auto
+  unfolding GVT_def 
+  by blast
 
 (* lifting Hoare rules from single step into VTSM *)
-lemma vtsm_lift_step :
+(* TODO: make this more general now that childpaths aren't concrete. *)
+lemma vtsm_lift_step_cont :
   assumes H0 : "gs_sem f' = f"
-  assumes Hstart : "\<And> st . P st \<Longrightarrow> gs_getpath f' st = Some p"
-  assumes Hpath : "gensyn_get prog p = Some (G s l)"
+  assumes Hend : "\<And> st . Q st \<Longrightarrow> childpath_update cp (gs_getpath f' st) = Some cp'"
+  assumes Hpath : "gensyn_get prog cp = Some (G s l)"
   assumes H : "(!f) % {{P}} s {{Q}}"
-  shows "|? f' ?| %% {?P?} prog {?Q?}" 
+  shows "|? f' ?| % {?cp,P?} prog {? Ok cp',Q?}"
 proof
   fix st
   assume HP : "P st"
@@ -67,176 +73,128 @@ proof
 
   have Qf : "Q (f s st)" using VTE[OF H HP Hf] by auto
 
-  have Start : "gs_getpath f' st = Some p"
-    using Hstart[OF HP] by auto
+  have End : "childpath_update cp (gs_getpath f' (f s st)) = Some cp'"
+    using Hend[OF Qf] by auto
 
-  have Conc' :  "gensyn_sem_small_exec_many f' prog 1 st = (f s st, Ok)"
-    using Start Hpath H0
-    by(auto split:option.splits)
+  have Conc' :  "gensyn_sem_small_exec_many f' cp prog 1 st = (f s st, Ok cp')"
+    using H0 Hpath End by auto
 
-  show "\<exists>n st'.
-         gensyn_sem_small_exec_many f' prog n st = (st', Ok) \<and> Q st'"  
+  show "\<exists>n st'. gensyn_sem_small_exec_many f' cp prog n st = (st', Ok cp') \<and> Q st'"  
     using Conc' Qf by blast
 qed
 
+lemma vtsm_step_halt :
+  assumes H0 : "gs_sem f' = f"
+  assumes Hend : "\<And> st . Q st \<Longrightarrow> childpath_update cp (gs_getpath f' st) = None"
+  assumes Hpath : "gensyn_get prog cp = Some (G s l)"
+  assumes H : "(!f) % {{P}} s {{Q}}"
+  shows "|? f' ?| % {?cp,P?} prog {? Halted,Q?}"
+proof
+  fix st
+  assume HP : "P st"
+  
+  have Hf : "(!f) s st (f s st)" by(rule semprop2I)
+
+  have Qf : "Q (f s st)" using VTE[OF H HP Hf] by auto
+
+  have End : "childpath_update cp (gs_getpath f' (f s st)) = None"
+    using Hend[OF Qf] by auto
+
+  have Conc' :  "gensyn_sem_small_exec_many f' cp prog 1 st = (f s st, Halted)"
+    using H0 Hpath End by auto
+
+  show "\<exists>n st'. gensyn_sem_small_exec_many f' cp prog n st = (st', Halted) \<and> Q st'"  
+    using Conc' Qf by blast
+qed
 
 lemma vtsm_lift_cont :
   assumes H0 : "gs_sem f' = f"
-  assumes Hstart : "\<And> st . P st \<Longrightarrow> gs_getpath f' st = Some p" 
-  assumes Hp : "gensyn_get prog p = Some (G s l)"
+  assumes Hstart : "\<And> st . Q st \<Longrightarrow> childpath_update p1 (gs_getpath f' st) = Some p2" 
+  assumes Hp1 : "gensyn_get prog p1 = Some (G s l)"
+(*  assumes Hstart' : "\<And> st . Q st \<Longrightarrow> gs_pathD (gs_getpath f' st) p2 = Some p3" *)
   assumes H : "(!f) % {{P}} s {{Q}}"
-  assumes H' : "|? f' ?| %% {?Q?} prog {?Q'?}"
-  shows "|? f' ?| %% {?P?} prog {?Q'?}"
+  assumes H' : "|? f' ?| % {?p2,Q?} prog {?res,Q'?}"
+  shows "|? f' ?| % {?p1,P?} prog {?res,Q'?}"
 proof(rule GVTI)
 
   fix st
   assume HP : "P st"
 
-(*
-  obtain getpath where H0' : "f' = \<lparr> gs_sem = f, gs_getpath = getpath \<rparr>" using H0
-    by(cases f'; auto)
-*)
   have Hf : "(!f) s st (f s st)" by(rule semprop2I)
 
   have Qf : "Q (f s st)" using VTE[OF H HP Hf] by auto
 
-  have Start : "gs_getpath f' st = Some p"
-    using Hstart[OF HP] by auto
+  have Start : "childpath_update p1 (gs_getpath f' (f s st)) = Some p2"
+    using Hstart[OF Qf] by auto
 
   obtain st' n where
-    Exc : "gensyn_sem_small_exec_many f' prog n (f s st) = (st', Ok)" and
+    Exc : "gensyn_sem_small_exec_many f' p2 prog n (f s st) = (st', res)" and
     Q' : "Q' st'"
     using GVTE[OF H' Qf] by auto
 
-  have Conc' : "gensyn_sem_small_exec_many f' prog (n+1) st = (st', Ok)"
-    using Exc Start H0 Hp
-    by(auto split: option.splits)
+  have Conc' : "gensyn_sem_small_exec_many f' p1 prog (n+1) st = (st', res)"
+    using Exc Start H0 Hp1
+    by(auto)
 
   show "\<exists>n st'.
-           gensyn_sem_small_exec_many f' prog n st = (st', Ok) \<and> Q' st'"
+           gensyn_sem_small_exec_many f' p1 prog n st = (st', res) \<and> Q' st'"
     using Conc' Q' by blast
 qed
 
-
-
-(* i think now we need more rules to deal with context.
-   for instance, describing partial executions (?)
-*)
-
-(*we need a way to relate sub-trees to entire trees.
-  this means we probably need some kind of actual lifting for the child-path
-
-*)
-
-(* we need a way to constrain P and Q's ability to talk about the path
-   substitution?
-   have path as another parameter?
-   maybe we can get away with just AND-ing
-*)
-
-(* sub-prog *)
-
-(* idea: sub program at path p1 in prog1
-   same sub program at path p2 in prog2
-
-   {{P \<and> path = p1}} prog1 {{Q \<and> halt}}
-   {{P \<and> path = p2}} prog2 {{Q \<and> halt}}
-   
-*)
-
-(*
-
-we also need a non-halting version; what would that look like?
-(or - halt in small program but not big)
-
-this only works if the small program halts from reaching top
-can we distinguish that case?
-
-do we need Up/Down?
-
-*)
-
-(*
-  idea: sub-program has halted but big program has not
-
-  small prog
-    steps from path p to None w/ success
-  big prog
-    steps from path (pref @ p) to Some p' w/ success
-
-  (idea: we need to know that p is the last path (?))
-*)
-
-(*
-  do we need direction?
-  idea
-  - start w/ (p, Down)
-  - sub program goes from ([], Down) to ([], Up)
-  - end w/ (p, Up)
-*)
-
-(*
-  halt vs regular.
-
-  - halt implies regular and (conclusion implies halt?)
-  - regular and (conclusion implies halted) implies halt
-*)
-
 lemma gsxm_steps_steps :
-  assumes H1 : "gensyn_sem_small_exec_many f' prog n1 st = (st1, Ok)"
-  assumes H2 : "gensyn_sem_small_exec_many f' prog n2 st1 = (st2, f2)"
-  shows "gensyn_sem_small_exec_many f' prog (n1 + n2) st = (st2, f2)" using assms
-proof(induction n1 arbitrary: st st1 st2 f2 n2)
+  assumes H1 : "gensyn_sem_small_exec_many f' cp1 prog n1 st1 = (st2, Ok cp2)"
+  assumes H2 : "gensyn_sem_small_exec_many f' cp2 prog n2 st2 = (st3, res)"
+  shows "gensyn_sem_small_exec_many f' cp1 prog (n1 + n2) st1 = (st3, res)" using assms
+proof(induction n1 arbitrary: st1 st2 cp1 cp2 n2 res)
   case 0
-  then show ?case by auto
+  then show ?case by(auto)
 next
   case (Suc n1)
   show ?case 
-  proof(cases "gs_getpath f' st")
+  proof(cases "gensyn_get prog cp1")
     case None
-    then show ?thesis using Suc.prems by(cases n2; auto)
+    then show ?thesis using Suc by(auto)
   next
-    case (Some p)
-    show ?thesis
-    proof(cases "gensyn_get prog p")
+    case (Some x1)
+
+    obtain x1l x1t where X1 : "x1 = G x1l x1t" by(cases x1; auto)
+
+    show ?thesis 
+    proof(cases "childpath_update cp1 (gs_getpath f' (gs_sem f' x1l st1))")
       case None' : None
-      then show ?thesis using Suc.prems Some by(auto)
+      then show ?thesis using Suc Some X1 by auto
     next
-      case Some' : (Some prog')
+      case Some' : (Some cp2')
 
-      obtain x l where Prog' : "prog' = G x l" by(cases prog'; auto)
+      have Cp2 : "cp2' = cp2'"
+        using Suc Some Some' X1 by auto
 
-      have GS1 : "gensyn_sem_small_exec_many f' prog n1 (gs_sem f' x st) = (st1, Ok)"
-        using Suc.prems Some Some' Prog'
-        by(auto)
-
-      show ?thesis using Suc.IH[OF GS1] Suc.prems Some Some' Prog'
-        by(auto)
+      then show ?thesis using Suc Some X1 Some' by(auto)
     qed
   qed
 qed
 
 lemma vtsm_seq :
-  assumes H1 : "|? f' ?| %% {?P?} prog {?Q?}"
-  assumes H2 : "|? f' ?| %% {?Q?} prog {?Q'?}"
-  shows "|? f' ?| %% {?P?} prog {?Q'?}"
+  assumes H1 : "|? f' ?| % {?cp1,P1?} prog {?Ok cp2,P2?}"
+  assumes H2 : "|? f' ?| % {?cp2,P2?} prog {?res,P3?}"
+  shows "|? f' ?| % {?cp1,P1?} prog {?res,P3?}"
 proof(rule GVTI)
-  fix st
-  assume HP : "P st"
+  fix st1
+  assume HP : "P1 st1"
 
-  obtain n1 st1 where
-    Ex1 : "gensyn_sem_small_exec_many f' prog n1 st = (st1, Ok)" and
-    Q1 : "Q st1"
+  obtain n1 st2 where
+    Ex1 : "gensyn_sem_small_exec_many f' cp1 prog n1 st1 = (st2, Ok cp2)" and
+    Q1 : "P2 st2"
     using GVTE[OF H1 HP] by auto
 
-  obtain n2 st2 where
-    Ex2 : "gensyn_sem_small_exec_many f' prog n2 st1 = (st2, Ok)" and
-    Q'2 : "Q' st2" using GVTE[OF H2 Q1] by auto
+  obtain n2 st3 where
+    Ex2 : "gensyn_sem_small_exec_many f' cp2 prog n2 st2 = (st3, res)" and
+    Q'2 : "P3 st3" using GVTE[OF H2 Q1] by auto
 
-  have Conc' : "gensyn_sem_small_exec_many f' prog (n1 + n2) st = (st2, Ok)"
+  have Conc' : "gensyn_sem_small_exec_many f' cp1 prog (n1 + n2) st1 = (st3, res)"
     using gsxm_steps_steps[OF Ex1 Ex2] by auto
 
-  show "\<exists>n st'. gensyn_sem_small_exec_many f' prog n st = (st', Ok) \<and> Q' st'"
+  show "\<exists>n st'. gensyn_sem_small_exec_many f' cp1 prog n st1 = (st', res) \<and> P3 st'"
     using Q'2 Conc' by blast
 qed
 
@@ -244,18 +202,6 @@ qed
   next, we need to decide how we want to represent the path constraints
   probably "implies" is best.
 *)
-
-abbreviation GVT_halt ::
-  "('x, 'mstate) g_sem \<Rightarrow>
-   ('mstate \<Rightarrow> bool) \<Rightarrow>
-   'x gensyn \<Rightarrow>
-   ('mstate \<Rightarrow> bool) \<Rightarrow>
-   bool"
-  ("|! _ !| %% {! _ !} _ {! _ !}")
-  where
-"GVT_halt gs P prog Q \<equiv>
-  ( |? gs ?| %% {? P ?} prog {? (\<lambda> st . Q st \<and>  gs_getpath gs st = None) ?})"
-
 
 (* should we constrain P? 
    "there is a satisfying assignment for any path"?
