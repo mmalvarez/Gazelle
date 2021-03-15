@@ -112,7 +112,7 @@ fun gensyn_sem_small_exec ::
       ( let m' = gs_sem gs x m in
         (case childpath_update cp (gs_getpath gs m') of
           None \<Rightarrow> (m', Halted)
-          | Some cp' \<Rightarrow> (gs_sem gs x m, Ok cp'))))"
+          | Some cp' \<Rightarrow> (m', Ok cp'))))"
 
 (*
 (case gs_pathD (gs_getpath gs m') cp of
