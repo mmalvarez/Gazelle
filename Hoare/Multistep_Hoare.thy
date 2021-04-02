@@ -64,20 +64,20 @@ lemma vtsm_lift_step_cont :
   assumes H0 : "gs_sem f' = f"
   assumes Hend : "\<And> st . Q st \<Longrightarrow> childpath_update cp (gs_getpath f' st) = Some cp'"
   assumes Hpath : "gensyn_get prog cp = Some (G s l)"
-  assumes H : "(!f) % {{P}} s {{Q}}"
+  assumes H : "(!f) % {{P}} (s, gs_sk (G s l)) {{Q}}"
   shows "|? f' ?| % {?cp,P?} prog {? Ok cp',Q?}"
 proof
   fix st
   assume HP : "P st"
   
-  have Hf : "(!f) s st (f s st)" by(rule semprop2I)
+  have Hf : "(!f) (s, gs_sk (G s l)) st (f (s, gs_sk (G s l)) st)" by(rule semprop2I)
 
-  have Qf : "Q (f s st)" using VTE[OF H HP Hf] by auto
+  have Qf : "Q (f (s, gs_sk (G s l)) st)" using VTE[OF H HP Hf] by auto
 
-  have End : "childpath_update cp (gs_getpath f' (f s st)) = Some cp'"
+  have End : "childpath_update cp (gs_getpath f' (f (s, gs_sk (G s l)) st)) = Some cp'"
     using Hend[OF Qf] by auto
 
-  have Conc' :  "gensyn_sem_small_exec_many f' cp prog 1 st = (f s st, Ok cp')"
+  have Conc' :  "gensyn_sem_small_exec_many f' cp prog 1 st = (f (s, gs_sk (G s l)) st, Ok cp')"
     using H0 Hpath End by auto
 
   show "\<exists>n st'. gensyn_sem_small_exec_many f' cp prog n st = (st', Ok cp') \<and> Q st'"  
@@ -88,20 +88,20 @@ lemma vtsm_step_halt :
   assumes H0 : "gs_sem f' = f"
   assumes Hend : "\<And> st . Q st \<Longrightarrow> childpath_update cp (gs_getpath f' st) = None"
   assumes Hpath : "gensyn_get prog cp = Some (G s l)"
-  assumes H : "(!f) % {{P}} s {{Q}}"
+  assumes H : "(!f) % {{P}} (s, gs_sk (G s l)) {{Q}}"
   shows "|? f' ?| % {?cp,P?} prog {? Halted,Q?}"
 proof
   fix st
   assume HP : "P st"
   
-  have Hf : "(!f) s st (f s st)" by(rule semprop2I)
+  have Hf : "(!f) (s, gs_sk (G s l)) st (f (s, gs_sk (G s l)) st)" by(rule semprop2I)
 
-  have Qf : "Q (f s st)" using VTE[OF H HP Hf] by auto
+  have Qf : "Q (f (s, gs_sk (G s l)) st)" using VTE[OF H HP Hf] by auto
 
-  have End : "childpath_update cp (gs_getpath f' (f s st)) = None"
+  have End : "childpath_update cp (gs_getpath f' (f (s, gs_sk (G s l)) st)) = None"
     using Hend[OF Qf] by auto
 
-  have Conc' :  "gensyn_sem_small_exec_many f' cp prog 1 st = (f s st, Halted)"
+  have Conc' :  "gensyn_sem_small_exec_many f' cp prog 1 st = (f (s, gs_sk (G s l)) st, Halted)"
     using H0 Hpath End by auto
 
   show "\<exists>n st'. gensyn_sem_small_exec_many f' cp prog n st = (st', Halted) \<and> Q st'"  
@@ -113,7 +113,7 @@ lemma vtsm_lift_cont :
   assumes Hstart : "\<And> st . Q st \<Longrightarrow> childpath_update p1 (gs_getpath f' st) = Some p2" 
   assumes Hp1 : "gensyn_get prog p1 = Some (G s l)"
 (*  assumes Hstart' : "\<And> st . Q st \<Longrightarrow> gs_pathD (gs_getpath f' st) p2 = Some p3" *)
-  assumes H : "(!f) % {{P}} s {{Q}}"
+  assumes H : "(!f) % {{P}} (s, gs_sk (G s l)) {{Q}}"
   assumes H' : "|? f' ?| % {?p2,Q?} prog {?res,Q'?}"
   shows "|? f' ?| % {?p1,P?} prog {?res,Q'?}"
 proof(rule GVTI)
@@ -121,15 +121,15 @@ proof(rule GVTI)
   fix st
   assume HP : "P st"
 
-  have Hf : "(!f) s st (f s st)" by(rule semprop2I)
+  have Hf : "(!f) (s, gs_sk (G s l)) st (f (s, gs_sk (G s l)) st)" by(rule semprop2I)
 
-  have Qf : "Q (f s st)" using VTE[OF H HP Hf] by auto
+  have Qf : "Q (f (s, gs_sk (G s l)) st)" using VTE[OF H HP Hf] by auto
 
-  have Start : "childpath_update p1 (gs_getpath f' (f s st)) = Some p2"
+  have Start : "childpath_update p1 (gs_getpath f' (f (s, gs_sk (G s l)) st)) = Some p2"
     using Hstart[OF Qf] by auto
 
   obtain st' n where
-    Exc : "gensyn_sem_small_exec_many f' p2 prog n (f s st) = (st', res)" and
+    Exc : "gensyn_sem_small_exec_many f' p2 prog n (f (s, gs_sk (G s l)) st) = (st', res)" and
     Q' : "Q' st'"
     using GVTE[OF H' Qf] by auto
 
@@ -161,7 +161,7 @@ next
     obtain x1l x1t where X1 : "x1 = G x1l x1t" by(cases x1; auto)
 
     show ?thesis 
-    proof(cases "childpath_update cp1 (gs_getpath f' (gs_sem f' x1l st1))")
+    proof(cases "childpath_update cp1 (gs_getpath f' (gs_sem f' (x1l, gs_sk x1) st1))")
       case None' : None
       then show ?thesis using Suc Some X1 by auto
     next
@@ -370,17 +370,17 @@ next
     using gensyn_get_comp[OF X Hp] by auto
 
   obtain cp_next where Cnext :
-    "childpath_update cp1 (gs_getpath f' (gs_sem f' xl st1)) = Some cp_next"
+    "childpath_update cp1 (gs_getpath f' (gs_sem f' (xl, gs_sk (G xl xd)) st1)) = Some cp_next"
     using Suc.prems X 
-    by(cases "childpath_update cp1 (gs_getpath f' (gs_sem f' xl st1))"; auto simp add: Let_def)
+    by(cases "childpath_update cp1 (gs_getpath f' (gs_sem f' (xl, gs_sk (G xl xd)) st1))"; auto simp add: Let_def)
 
   have Next :
-    "gensyn_sem_small_exec_many f' cp_next prog2 n (gs_sem f' xl st1) = (st2, Ok cp2)"
+    "gensyn_sem_small_exec_many f' cp_next prog2 n (gs_sem f' (xl, gs_sk (G xl xd)) st1) = (st2, Ok cp2)"
     using Suc.prems X Cnext
     by(auto simp add: Let_def)
 
   have Cp2_pre :
-    "childpath_update (ppre @ cp1) (gs_getpath f' (gs_sem f' xl st1)) = Some (ppre @ cp_next)"
+    "childpath_update (ppre @ cp1) (gs_getpath f' (gs_sem f' (xl, gs_sk (G xl xd)) st1)) = Some (ppre @ cp_next)"
     using childpath_update_prefix[OF Cnext] by auto
 
   show ?case using Suc.IH[OF Hp Next] Comp Cp2_pre
@@ -426,7 +426,7 @@ proof(induction n arbitrary: cp1 cp2 st1 st2 st3 ppre ppre' prog1 prog2)
     using 0 Comp X
     by(cases "gensyn_get prog1 (ppre @ cp1)"; auto)
 
-  have Sub_None: "childpath_update cp2 (gs_getpath f' (gs_sem f' xl st2)) = None"
+  have Sub_None: "childpath_update cp2 (gs_getpath f' (gs_sem f' (xl, gs_sk (G xl xd)) st2)) = None"
     using 0 X Comp X'
     by(auto split:option.splits simp add: Let_def)
 
@@ -439,7 +439,7 @@ proof(induction n arbitrary: cp1 cp2 st1 st2 st3 ppre ppre' prog1 prog2)
   have Ppre' : "ppreb = ppre'"
     using 0 droplast_snoc[of ppreb pprex] Ppre by auto
     
-  have Upd : "childpath_update (ppre@cp2) (gs_getpath f' (gs_sem f' xl st2)) = Some ppreb" 
+  have Upd : "childpath_update (ppre@cp2) (gs_getpath f' (gs_sem f' (xl, gs_sk (G xl xd)) st2)) = Some ppreb" 
     using childpath_update_prefix_None[OF Sub_None, of ppreb pprex] Ppre
     by(auto)
 
@@ -468,7 +468,7 @@ next
     using Suc droplast_snoc[of ppreb pprex] Ppre by auto
 
   show ?case
-  proof(cases "childpath_update cp1 (gs_getpath f' (gs_sem f' xl st1))")
+  proof(cases "childpath_update cp1 (gs_getpath f' (gs_sem f' (xl, gs_sk (G xl xd)) st1))")
     case None
     then show ?thesis 
     proof(cases ppre)
@@ -493,7 +493,7 @@ next
     next
       case Some' : (Some desc1a)
 
-      have Upd : "childpath_update (ppre@cp1) (gs_getpath f' (gs_sem f' xl st1)) = Some (ppre@cp1a)" 
+      have Upd : "childpath_update (ppre@cp1) (gs_getpath f' (gs_sem f' (xl, gs_sk (G xl xd)) st1)) = Some (ppre@cp1a)" 
         using childpath_update_prefix[OF Some, of ppre] Ppre Ppre'
         by(auto)
 
@@ -559,7 +559,7 @@ next
     by(cases "gensyn_get prog1 (ppre @ cp1)"; auto)
 
   show ?case using Suc
-  proof(cases "childpath_update cp1 (gs_getpath f' (gs_sem f' xl st1))")
+  proof(cases "childpath_update cp1 (gs_getpath f' (gs_sem f' (xl, gs_sk (G xl xd)) st1))")
     case None
 
     show ?thesis
@@ -577,11 +577,11 @@ next
       have Ppre' : "ppreb = ppre'"
         using Suc.prems(2) droplast_snoc[of ppreb pprex] Ppre by auto
         
-      have Upd : "childpath_update (ppre@cp1) (gs_getpath f' (gs_sem f' xl st1)) = Some ppreb" 
+      have Upd : "childpath_update (ppre@cp1) (gs_getpath f' (gs_sem f' (xl, gs_sk (G xl xd)) st1)) = Some ppreb" 
         using childpath_update_prefix_None[OF None, of ppreb pprex] Ppre
         by(auto)
 
-      have CpNil : "cp1 = []" and Par : "(gs_getpath f' (gs_sem f' xl st1)) = Parent"
+      have CpNil : "cp1 = []" and Par : "(gs_getpath f' (gs_sem f' (xl, gs_sk (G xl xd)) st1)) = Parent"
         using childpath_update_None[OF None] by auto
 
       (* in this case we halt immediately. *)
@@ -605,11 +605,11 @@ next
     next
       case Some' : (Some desc1a)
 
-      have Exec : "gensyn_sem_small_exec_many f' cp1a prog2 n (gs_sem f' xl st1) = (st2, Halted)"
+      have Exec : "gensyn_sem_small_exec_many f' cp1a prog2 n (gs_sem f' (xl, gs_sk (G xl xd)) st1) = (st2, Halted)"
         using Some Suc.prems  X Comp X' 
         by(auto split:option.splits simp add: Let_def)
 
-      have Upd : "childpath_update cp1 (gs_getpath f' (gs_sem f' xl st1)) = Some cp1a"
+      have Upd : "childpath_update cp1 (gs_getpath f' (gs_sem f' (xl, gs_sk (G xl xd)) st1)) = Some cp1a"
         using Some Suc.prems  X Comp X' Some'
         by(auto)
 

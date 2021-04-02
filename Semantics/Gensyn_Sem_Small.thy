@@ -10,6 +10,23 @@ datatype gensyn_small_result =
   | NoFuel
   | Halted (* this means we executed _past_ the end *)
 
+(* idea: here we are keeping track of which child of the parent we are, so that we
+   can navigate back up correctly.
+
+Q: could we just as easily keep entire childpath down to node?
+
+type_synonym gensyn_skel_nav =
+  "nat option * gensyn_skel"
+
+*)
+
+(*
+  New concept:
+  maybe we can use gensyns rooted at a node instead as our syntax.
+
+  'x option gensyn - idea is that we can look at rooted subtree
+*)
+
 (* new approach to childpath: descend to an arbitrary descendent,
    or "bubble up" to immediate parent
 *)
@@ -23,7 +40,7 @@ record ('x, 'mstate) g_semr =
   gsr_getpath :: "'mstate \<Rightarrow> gs_path \<Rightarrow> bool"
 *)
 record ('x, 'mstate) g_sem =
-  gs_sem :: "'x \<Rightarrow> 'mstate \<Rightarrow> 'mstate"
+  gs_sem :: "('x * gensyn_skel) \<Rightarrow> 'mstate \<Rightarrow> 'mstate"
   gs_getpath :: "'mstate \<Rightarrow> rel_update"
 (*  gs_getdir :: "'mstate \<Rightarrow> dir" *)
 
@@ -99,6 +116,8 @@ fun gs_pathD :: "gs_path \<Rightarrow> childpath \<Rightarrow> childpath option"
 
   
 *)
+
+
 fun gensyn_sem_small_exec ::
   "('x, 'mstate) g_sem \<Rightarrow>
    childpath \<Rightarrow>
@@ -108,11 +127,19 @@ fun gensyn_sem_small_exec ::
 "gensyn_sem_small_exec gs cp syn m =
   (case gensyn_get syn cp  of
       None \<Rightarrow> (m, BadPath)
-      | Some (G x _) \<Rightarrow> 
-      ( let m' = gs_sem gs x m in
+      | Some (G x l) \<Rightarrow> 
+      ( let m' = gs_sem gs (x, gs_sk (G x l)) m in
         (case childpath_update cp (gs_getpath gs m') of
           None \<Rightarrow> (m', Halted)
           | Some cp' \<Rightarrow> (m', Ok cp'))))"
+
+(* problem: control flow instructions like Seq still need access to the tree (skel)
+   we still need to find a way to make sure that the tree is getting updated
+   in a consistent way (w/r/t e.g. subtrees)
+
+   otherwise this isn't going to work because the paths will be the same but the
+   states will not...
+*)
 
 (*
 (case gs_pathD (gs_getpath gs m') cp of
