@@ -5,8 +5,10 @@ theory Gensyn_Sem_Small imports "../Gensyn" "../Gensyn_Descend" "../Mergeable/Me
 begin
 
 datatype gensyn_small_result =
-  Ok childpath
+  Done
+  | Cont "childpath list"
   | BadPath
+  | Exit
   | NoFuel
   | Halted (* this means we executed _past_ the end *)
 
@@ -41,7 +43,7 @@ record ('x, 'mstate) g_semr =
 *)
 record ('x, 'mstate) g_sem =
   gs_sem :: "('x * gensyn_skel) \<Rightarrow> 'mstate \<Rightarrow> 'mstate"
-  gs_getpath :: "'mstate \<Rightarrow> rel_update"
+  gs_getpaths :: "'mstate \<Rightarrow> rel_update list"
 (*  gs_getdir :: "'mstate \<Rightarrow> dir" *)
 
 (*
@@ -117,21 +119,39 @@ fun gs_pathD :: "gs_path \<Rightarrow> childpath \<Rightarrow> childpath option"
   
 *)
 
+(*
+  idea: we have an initial childpath, and then a sequence of
+  targets; these targets are relative so they need to be updated
+*)
+definition cp_list_update :: 
+  "childpath \<Rightarrow>
+   childpath list \<Rightarrow>
+   rel_update list \<Rightarrow>
+   childpath list option" where
+"cp_list_update cph cpt ups =
+  (case those (map (childpath_update cph) ups) of
+      Some cps' \<Rightarrow> Some (cps' @ cpt)
+      | None \<Rightarrow> None)"
+
 
 fun gensyn_sem_small_exec ::
   "('x, 'mstate) g_sem \<Rightarrow>
-   childpath \<Rightarrow>
+   childpath list \<Rightarrow>
    'x gensyn \<Rightarrow>
    'mstate \<Rightarrow>
    ('mstate * gensyn_small_result)" where
-"gensyn_sem_small_exec gs cp syn m =
-  (case gensyn_get syn cp  of
-      None \<Rightarrow> (m, BadPath)
-      | Some (G x l) \<Rightarrow> 
-      ( let m' = gs_sem gs (x, gs_sk (G x l)) m in
-        (case childpath_update cp (gs_getpath gs m') of
-          None \<Rightarrow> (m', Halted)
-          | Some cp' \<Rightarrow> (m', Ok cp'))))"
+"gensyn_sem_small_exec gs cps syn m =
+(case cps of
+  [] \<Rightarrow> (m, Halted)
+  | cph#cpt \<Rightarrow>
+    (case gensyn_get syn cph  of
+        None \<Rightarrow> (m, BadPath)
+        | Some (G x l) \<Rightarrow> 
+        ( let m' = gs_sem gs (x, gs_sk (G x l)) m in
+          (case cp_list_update cph cpt (gs_getpaths gs m') of
+            \<comment> \<open>is badpath the right thing here?\<close>
+            None \<Rightarrow> (m', Exit)
+            | Some cps' \<Rightarrow> (m', Cont (cps' @ cpt))))))"
 
 (* problem: control flow instructions like Seq still need access to the tree (skel)
    we still need to find a way to make sure that the tree is getting updated
@@ -165,16 +185,16 @@ fun gensyn_sem_small_exec ::
 
 fun gensyn_sem_small_exec_many ::
   "('x, 'mstate) g_sem \<Rightarrow>
-   childpath \<Rightarrow>
+   childpath list \<Rightarrow>
    'x gensyn \<Rightarrow>
    nat \<Rightarrow>
    'mstate \<Rightarrow>
    ('mstate * gensyn_small_result)" where
-"gensyn_sem_small_exec_many gs cp syn 0 m =
-  (m, Ok cp)"
-| "gensyn_sem_small_exec_many gs cp syn (Suc n) m =
-  (case gensyn_sem_small_exec gs cp syn m of
-      (m', Ok cp') \<Rightarrow> gensyn_sem_small_exec_many gs cp' syn n m'
+"gensyn_sem_small_exec_many gs cps syn 0 m =
+  (m, Cont cps)"
+| "gensyn_sem_small_exec_many gs cps syn (Suc n) m =
+  (case gensyn_sem_small_exec gs cps syn m of
+      (m', Cont cps') \<Rightarrow> gensyn_sem_small_exec_many gs cps' syn n m'
       | (m', x) \<Rightarrow> (m', x))"
 
 (*
