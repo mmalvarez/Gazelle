@@ -18,7 +18,7 @@ record ('x, 'mstate) g_semr =
 record ('x, 'mstate) g_sem =
   gs_sem :: "'x \<Rightarrow> 'mstate \<Rightarrow> 'mstate"
   gs_getpath :: "'mstate \<Rightarrow> childpath option"
-  gs_getdir :: "'mstate \<Rightarrow> dir"
+  (*gs_getdir :: "'mstate \<Rightarrow> dir"*)
 
 fun gs_halted :: "('x, 'mstate) g_sem \<Rightarrow> 'mstate \<Rightarrow> bool" where
 "gs_halted gs m = (gs_getpath gs m = None)"

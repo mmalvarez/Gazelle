@@ -1,7 +1,7 @@
 theory Seq
   imports "../Gensyn" "../Gensyn_Descend" "../Mergeable/Mergeable" "../Mergeable/MergeableInstances"
           "../Lifting/LiftUtils" "../Lifting/LiftInstances"
-          "../Lifting/AutoLift"
+          "../Lifting/AutoLift" "../Semantics/Gensyn_Sem_Small"
 
 begin
 
@@ -24,8 +24,10 @@ fun getlast :: "'a list \<Rightarrow> 'a option" where
       None \<Rightarrow> (sk, GRDone, Up cp)
       | Some cp' \<Rightarrow> (sk, GRPath cp', Up xcp))
 *)
-(* TODO: when we "re-throw" exceptions (e.g. in the Sskip case)
-   should we use our own path as a parameter to Up? *)
+(*
+  Seq will always "catch-and-rethrow" exceptions from below
+  
+*)
 definition seq_sem :: "syn \<Rightarrow> state' \<Rightarrow> state'" where
 "seq_sem x st =
 (case st of (sk, GRPath cp, d) \<Rightarrow>
@@ -44,12 +46,12 @@ definition seq_sem :: "syn \<Rightarrow> state' \<Rightarrow> state'" where
               Some (xcph#xcpt) \<Rightarrow> 
                            (case gensyn_get sk (cp @ [1+xcph]) of
                               None \<Rightarrow> (case gensyn_cp_parent sk cp of
-                                        None \<Rightarrow> (sk, GRDone, Up xcp)
-                                        | Some cp' \<Rightarrow> (sk, GRPath cp', Up xcp))
+                                        None \<Rightarrow> (sk, GRDone, Up cp)
+                                        | Some cp' \<Rightarrow> (sk, GRPath cp', Up cp))
                               | Some _ \<Rightarrow> (sk, GRPath (cp @ [1+xcph]), Down))
                 | _ \<Rightarrow> (case gensyn_cp_parent sk cp of
-                          None \<Rightarrow> (sk, GRDone, Up xcp)
-                | Some cp' \<Rightarrow> (sk, GRPath cp', Up xcp)))))
+                          None \<Rightarrow> (sk, GRDone, Up cp)
+                         | Some cp' \<Rightarrow> (sk, GRPath cp', Up cp)))))
   | _ \<Rightarrow> st)"
 
 
@@ -76,6 +78,12 @@ definition dir_bogus :
 instance proof qed
 end
 
+definition seq_path :: "state \<Rightarrow> childpath option" where
+"seq_path s =
+  (case s of
+    (_, (mdp _ (Some (mdt (GRPath p)))), _) \<Rightarrow> Some p
+    | _ \<Rightarrow> None)"
+
 (*
 definition seq_sem_l :: " syn \<Rightarrow> state \<Rightarrow> state" where
 "seq_sem_l  =
@@ -96,5 +104,10 @@ definition seq_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
   (schem_lift
     (SP NA (SP NB NC)) (SP (SO NA) (SP (SPRI (SO NB)) (SPRI (SO NC)))))
   seq_sem"
+
+definition seq_gsem :: "(syn, state) g_sem" where
+"seq_gsem \<equiv>
+  \<lparr> gs_sem = seq_sem_l
+  , gs_getpath = seq_path \<rparr>"
 
 end

@@ -293,7 +293,7 @@ lemma path_shiftE [elim] :
     "P' st'" "gs_getpath f st' = Some (cpt p)"
   using assms unfolding path_shift_def by auto
           
-
+(*
 lemma vtsm_sub :
   assumes Hp : "gensyn_get prog1 ppre = Some prog2"
 
@@ -353,7 +353,7 @@ proof
 
       using 
     Exc' : 
-
+*)
 (*
   assumes Exc1' : "|? f'1 ?| % {{(\<lambda> st . P st \<and> gs_getpath f'1 st = p)}} 
                                prog1

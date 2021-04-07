@@ -153,6 +153,7 @@ fun get_suffix :: "childpath \<Rightarrow> childpath \<Rightarrow> childpath opt
   (if h1 = h2 then get_suffix t1 t2 else None)"
 
 
+
 (* another option for defining cp_next. this should work for our purposes as well *)
 (*
 fun gensyn_cp_next2' :: "('b, 'r, 'g) gensyn \<Rightarrow> childpath \<Rightarrow> childpath option" where

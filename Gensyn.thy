@@ -98,4 +98,31 @@ qed }
     done
 qed
 
+lemma gensyn_induct_full:
+  assumes Lr : "(\<And> (x :: 'x) (l :: ('x) gensyn list) . P2 l \<Longrightarrow> P1  (G x l))"
+  and Lrn : "P2 []"
+  and Lrc : "\<And>t l . P1 (t :: 'x gensyn) \<Longrightarrow>
+                         P2 l \<Longrightarrow>
+                         P2 (t # l)"
+  shows "P1 (t) \<and> P2 (l)"
+proof-
+  {   fix t
+      have "P1 t \<and> (! x l . t = G x l \<longrightarrow> P2 l)"
+      proof(induction t)
+        case (G x l)
+        then show ?case
+          apply(induct l) using Lr Lrn Lrc
+           apply(clarsimp)
+          apply(clarsimp)
+          apply(auto)
+           apply(rule_tac Lr)
+           apply(rule_tac Lrc) apply(auto)
+          apply(rule_tac Lrc) apply(auto)
+          done
+ qed
+     }
+  thus ?thesis by auto
+qed
+
+
 end
