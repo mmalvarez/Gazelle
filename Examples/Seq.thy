@@ -32,7 +32,7 @@ definition seq_sem :: "syn \<Rightarrow> state' \<Rightarrow> state'" where
 "seq_sem x st =
 (case st of (sk, GRPath cp, d) \<Rightarrow>
   (case x of
-    Sskip \<Rightarrow> (case gensyn_cp_parent sk cp of
+    Sskip \<Rightarrow> (case cp_parent cp of
                     None \<Rightarrow> (sk, GRDone, Up cp)
                     | Some cp' \<Rightarrow> (sk, GRPath cp', Up cp))
     | Sseq \<Rightarrow>
@@ -45,13 +45,17 @@ definition seq_sem :: "syn \<Rightarrow> state' \<Rightarrow> state'" where
              (case get_suffix cp xcp of
               Some (xcph#xcpt) \<Rightarrow> 
                            (case gensyn_get sk (cp @ [1+xcph]) of
-                              None \<Rightarrow> (case gensyn_cp_parent sk cp of
+                              None \<Rightarrow> (case cp_parent cp of
                                         None \<Rightarrow> (sk, GRDone, Up cp)
                                         | Some cp' \<Rightarrow> (sk, GRPath cp', Up cp))
                               | Some _ \<Rightarrow> (sk, GRPath (cp @ [1+xcph]), Down))
-                | _ \<Rightarrow> (case gensyn_cp_parent sk cp of
-                          None \<Rightarrow> (sk, GRDone, Up cp)
-                         | Some cp' \<Rightarrow> (sk, GRPath cp', Up cp)))))
+                | _ \<Rightarrow> (if cp = xcp 
+                        \<comment> \<open>if our signal is not coming from a child, it should come from us,
+                            otherwise this is an error\<close>
+                        then (case cp_parent cp of
+                               None \<Rightarrow> (sk, GRDone, Up cp)
+                               | Some cp' \<Rightarrow> (sk, GRPath cp', Up cp))
+                        else (sk, GRCrash, Up cp)))))
   | _ \<Rightarrow> st)"
 
 

@@ -133,6 +133,10 @@ fun gensyn_cp_parent :: "'x gensyn \<Rightarrow> childpath \<Rightarrow> childpa
 "gensyn_cp_parent _ [] = None"
 | "gensyn_cp_parent g (h#t) = Some (butlast (h#t))"
 
+fun cp_parent :: "childpath \<Rightarrow> childpath option" where
+"cp_parent [] = None"
+| "cp_parent (h#t) = Some (butlast (h#t))"
+
 (* is the second argument an extension of the first? *)
 fun gensyn_cp_is_desc :: "childpath \<Rightarrow> childpath \<Rightarrow> bool" where
 "gensyn_cp_is_desc [] cp = True"
