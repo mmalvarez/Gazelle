@@ -96,13 +96,13 @@ definition cond_trans :: "syn \<Rightarrow> cond_syn'" where
   (case s of
     Scond x \<Rightarrow> x
     | _ \<Rightarrow> Sskip_cond)"
-
+(*
 definition printcalcseq_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "printcalcseq_sem_l =
   lift_map_s printcalc_trans
      (prod_l id_l (snd_l id_l))
      (pcomp print_calc_seq_lc)"
-
+*)
 definition imp_prio :: "(syn' \<Rightarrow> nat)" where
 "imp_prio x =
 (case x of
@@ -116,14 +116,15 @@ definition imp_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
                 (SP (SP (SO NA) (SP (SPRC imp_prio (SO NB)) (SPRC imp_prio (SO NC))))
                   (SP (SPRK (SO ND)) NX)))
     imp_ctl_sem"
-
+(*
 definition cond_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "cond_sem_l =
   l_map_s cond_trans
     (schem_lift (SP NA NB)
                  (SP NX (SP (SPRI (SOT NA)) (SP (SPRK (SOT NB)) NX))))
   cond_sem"
-
+*)
+(*
 definition pcs_cond_lc :: "(syn, state) langcomp" where
 "pcs_cond_lc =
   \<lparr> Sem1 = printcalcseq_sem_l
@@ -215,5 +216,6 @@ lemma what:
         print_sem_l_def calc_sem_l_def
         imp_trans_def print_trans_def calc_trans_def cond_trans_def seq_trans_def
         )
+*)
 *)
 end

@@ -267,6 +267,38 @@ proof(rule VTI)
     qed
   qed
 qed
+
+(* is there a nicer way to express this?
+   e.g. can we rely on the assumption that control flow is "well bracketed"
+   to make a more streamlined statement?
+*)
+
+(*
+
+first of all, if there were no control flow weirdness, what would the rule for n-ary Seq look like?
+
+- we would probably want a list rule as a helper
+- {P}* [] {P}
+  - relating to the location?
+
+- {P} h {Q}
+  {Q}* t {R}
+------------
+
+  {P}* h#t {R}
+
+------------
+
+{P}* l {Q} \<Longrightarrow> {P} Seq l {Q}
+
+-------------
+
+-------------
+
+
+
+*)
+
 (*
 lemma SeqH :
   assumes Hget : "gensyn_get prog p = Some (G Sseq l)"
