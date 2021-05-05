@@ -3,11 +3,15 @@ theory Gensyn_Sem_Small imports "../Gensyn" "../Gensyn_Descend" "../Mergeable/Me
 
 begin
 
+(* Ranjit: eval should use exactly correct n.
+   if n is too small return None. *)
+
 datatype gensyn_small_error =
-  Ok
+  Exec
   | BadPath
   | NoFuel
-  | Halted (* this means we executed _past_ the end *)
+  | Done
+  | Halted 
 
 
 record ('x, 'mstate) g_semr =
@@ -51,6 +55,16 @@ definition gensyn_sem_small_many_halt ::
  (\<forall> cp . \<not> gsr_getpath gsr m' cp))"
 *)
 
+(* flow
+- enter
+- iteration 1
+  - look up path
+  - if empty, return Halted
+  - otherwise, run a step
+  - pass returned state/flag into next iteration
+*)
+
+(*
 fun gensyn_sem_small_exec ::
   "('x, 'mstate) g_sem \<Rightarrow>
    'x gensyn \<Rightarrow>
@@ -63,6 +77,8 @@ fun gensyn_sem_small_exec ::
     (case gensyn_get syn cp of
      None \<Rightarrow> (m, BadPath)
      | Some (G x _) \<Rightarrow> (gs_sem gs x m, Ok)))"
+*)
+
 
 (*
 fun gensyn_sem_small_exec_many ::
@@ -83,7 +99,6 @@ fun gensyn_sem_small_exec_many ::
             | (m', f) \<Rightarrow> (m', f)))"
 *)
 
-(* one approach: just don't keep out of fuel flag. *)
 fun gensyn_sem_small_exec_many ::
   "('x, 'mstate) g_sem \<Rightarrow>
    'x gensyn \<Rightarrow>
@@ -91,13 +106,18 @@ fun gensyn_sem_small_exec_many ::
    'mstate \<Rightarrow>
    ('mstate * gensyn_small_error)" where
 "gensyn_sem_small_exec_many gs syn 0 m =
-  (m, Ok)"
+  (case gs_getpath gs m of
+   None \<Rightarrow> (m, Done)
+   | _ \<Rightarrow> (m, NoFuel))"
 | "gensyn_sem_small_exec_many gs syn (Suc n) m =
    (case gs_getpath gs m of
-    None \<Rightarrow> (m, Ok)
-    | _ \<Rightarrow> (case gensyn_sem_small_exec gs syn m of
-            (m', Ok) \<Rightarrow> gensyn_sem_small_exec_many gs syn n m'
-            | (m', f) \<Rightarrow> (m', f)))"
+    None \<Rightarrow> (m, Halted)
+    | Some cp \<Rightarrow> 
+      (case gensyn_get syn cp of
+        None \<Rightarrow> (m, BadPath)
+        | Some (G x _) \<Rightarrow> 
+          gensyn_sem_small_exec_many gs syn n (gs_sem gs x m)))"
+
 
 (*
 fun gensyn_sem_small_exec_many ::
@@ -115,6 +135,7 @@ fun gensyn_sem_small_exec_many ::
 *)
 
 (* TODO: the ordering of checks is weird here and will lead to weird traces. *)
+(*
 fun gensyn_sem_small_exec_trace' ::
   "('x, 'mstate) g_sem \<Rightarrow>
    'x gensyn \<Rightarrow>
@@ -141,6 +162,6 @@ fun gensyn_sem_small_exec_trace ::
 "gensyn_sem_small_exec_trace gs syn n m =
  (case gensyn_sem_small_exec_trace' gs syn n [] m of
   (l, f) \<Rightarrow> (rev l, f))"
-
+*)
 
 end

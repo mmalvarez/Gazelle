@@ -34,25 +34,26 @@ definition GVT ::
 "GVT gs P prog Q =
   (\<forall> st .
     P st \<longrightarrow>
-    (\<exists> n st' . gensyn_sem_small_exec_many gs prog n st = (st', Ok) \<and>
+    (\<forall> n st' . gensyn_sem_small_exec_many gs prog n st = (st', Ok) \<longrightarrow>
        Q st'))"
 
 lemma GVTI [intro] :
-  assumes "(\<And> st . P st \<Longrightarrow> 
-              (\<exists> n st' . gensyn_sem_small_exec_many gs prog n st = (st', Ok) \<and> Q st'))"
+  assumes "(\<And> st n st' . P st \<Longrightarrow> 
+            gensyn_sem_small_exec_many gs prog n st = (st', Ok) \<Longrightarrow>
+            Q st')"
   shows "|? gs ?| %% {?P?} prog {?Q?}" using assms
   unfolding GVT_def by auto
 
 lemma GVTE [elim]:
   assumes "|? gs ?| %% {?P?} prog {?Q?}"
   assumes "P st"
-  obtains n st' where 
-    "gensyn_sem_small_exec_many gs prog n st = (st', Ok)"
-    "Q st'"
+  assumes "gensyn_sem_small_exec_many gs prog n st = (st', Ok)"
+  shows "Q st'"
   using assms
   unfolding GVT_def by auto
 
 (* lifting Hoare rules from single step into VTSM *)
+(* hmm... we have an issue here around how we know when to halt  *)
 lemma vtsm_lift_step :
   assumes H0 : "gs_sem f' = f"
   assumes Hstart : "\<And> st . P st \<Longrightarrow> gs_getpath f' st = Some p"
@@ -60,9 +61,9 @@ lemma vtsm_lift_step :
   assumes H : "(!f) % {{P}} s {{Q}}"
   shows "|? f' ?| %% {?P?} prog {?Q?}" 
 proof
-  fix st
+  fix st n st'
   assume HP : "P st"
-  
+  assume HExec : "gensyn_sem_small_exec_many f' prog n st = (st', Ok)"
   have Hf : "(!f) s st (f s st)" by(rule semprop2I)
 
   have Qf : "Q (f s st)" using VTE[OF H HP Hf] by auto
@@ -72,11 +73,14 @@ proof
 
   have Conc' :  "gensyn_sem_small_exec_many f' prog 1 st = (f s st, Ok)"
     using Start Hpath H0
-    by(auto split:option.splits)
+    apply(auto split:option.splits)
 
+
+(*
   show "\<exists>n st'.
          gensyn_sem_small_exec_many f' prog n st = (st', Ok) \<and> Q st'"  
     using Conc' Qf by blast
+*)
 qed
 
 
