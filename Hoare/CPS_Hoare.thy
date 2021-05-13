@@ -141,16 +141,23 @@ definition safe :: "('x, 'mstate) sem \<Rightarrow> 'mstate \<Rightarrow> bool" 
 
 (* classic question: want constraint on command below or above line? *)
 (* universally quantify over gs? *)
-definition G :: "('x, 'mstate) sem \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'x \<Rightarrow> bool" where
-"G gs P c =
-  (\<forall> m . P m \<longrightarrow> s_next gs m = Exec c \<longrightarrow> safe gs m)"
+(* G = guarded (by a predicate *)
+(* still need to figure out a sane way to get syntactic versions of these. *)
+definition G :: "('x, 'mstate) sem \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> bool" where
+"G gs P =
+  (\<forall> m . P m \<longrightarrow> safe gs m)"
 
 (* tricky - now we need to quantify over programs
 that would be gs
 this is why we are splitting up gs
+
+hmm... need a notion of sequencing to make the CPS approach work....
  *)
+
+(*
 definition HT :: "('x, 'mstate) sem \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'x \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> bool" where
-"HT gs P c P' =
-  
+"HT gs P Q =
+  (\<forall> gs' . (s_sem gs = s_sem gs') \<longrightarrow> G gs' Q \<longrightarrow> G gs P)"
+*)
 
 end
