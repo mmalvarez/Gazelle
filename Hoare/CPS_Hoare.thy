@@ -23,14 +23,11 @@ fun s_error_safe :: "s_error \<Rightarrow> bool" where
 
 (* we also need to be able to separate sub-syntax from entire tree *)
 
-(* childpath representation
-   
-*)
 
 record ('syn, 'mstate) sem' =
   s_sem :: "'syn \<Rightarrow> 'mstate \<Rightarrow> 'mstate"
 
-(* TODO: more granular errors? (e.g. s_error)? *)
+(* TODO: list updates *)
 record ('syn, 'mstate) sem = "('syn, 'mstate) sem'" +
   s_cont :: "'mstate \<Rightarrow> 'syn gensyn list option"
 
@@ -149,25 +146,36 @@ definition safe :: "('x, 'mstate) sem \<Rightarrow> 'mstate \<Rightarrow> bool" 
 "safe gs m \<equiv>
   (\<forall> m' . sem_exec_p gs m m' \<longrightarrow> imm_safe gs m')"
 
-(* classic question: want constraint on command below or above line? *)
-(* universally quantify over gs? *)
-(* G = guarded (by a predicate *)
-(* still need to figure out a sane way to get syntactic versions of these. *)
-definition G :: "('x, 'mstate) sem \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> bool" where
-"G gs P =
-  (\<forall> m . P m \<longrightarrow> safe gs m)"
+(* TODO: syntax *)
+definition G :: "('x, 'mstate) sem \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'x gensyn list \<Rightarrow> bool"
+("|_| {_} _")
+ where
+"G gs P c =
+  (\<forall> m . P m \<longrightarrow> s_cont gs m = Some c \<longrightarrow> safe gs m)"
 
-(* tricky - now we need to quantify over programs
-that would be gs
-this is why we are splitting up gs
+definition HT :: "('x, 'mstate) sem \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'x gensyn list \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> bool" 
+  ("|_| {-_-} _ {-_-}")
+  where
+"HT gs P c Q =
+  (\<forall> c' . G gs Q (c@c') \<longrightarrow> G gs P c)"
 
-hmm... need a notion of sequencing to make the CPS approach work....
- *)
 
-(*
-definition HT :: "('x, 'mstate) sem \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'x \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> bool" where
-"HT gs P Q =
-  (\<forall> gs' . (s_sem gs = s_sem gs') \<longrightarrow> G gs' Q \<longrightarrow> G gs P)"
-*)
+lemma HConseq :
+  assumes H : "|gs| {- P' -} c {-Q'-}"
+  assumes H' : "\<And> st . P st \<Longrightarrow> P' st"
+  assumes H'' : "\<And> st . Q' st \<Longrightarrow> Q st"
+  shows "|gs| {-P-} c {-Q-}" using H
+
+  unfolding HT_def G_def safe_def imm_safe_def
+  apply(auto)
+   apply(rotate_tac -1)
+   apply(drule_tac x = "c'" in spec) apply(auto)
+   apply(drule_tac H'') 
+   apply(auto)
+
+  apply(drule_tac H')
+  apply(rotate_tac -1)
+     apply(drule_tac x = "m" in spec) apply(auto)
+  done
 
 end
