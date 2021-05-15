@@ -1,7 +1,7 @@
 theory CPS_Hoare imports 
  "../Gensyn" "../Gensyn_Descend" "../Mergeable/Mergeable"
  "../Lifting/LiftUtils" "../Lifting/LiftInstances" "../Lifting/LangCompSimple"
- "../Relpath" "../Semantics/Gensyn_Sem_Small"
+ "../Relpath" "../Semantics/Gensyn_Sem_Small" "Hoare"
 begin
 
 (* ok, so in order to adapt CPS hoare triples into this context,
@@ -29,7 +29,7 @@ record ('syn, 'mstate) sem' =
 
 (* TODO: list updates *)
 record ('syn, 'mstate) sem = "('syn, 'mstate) sem'" +
-  s_cont :: "'mstate \<Rightarrow> 'syn gensyn list option"
+  s_cont :: "'mstate \<Rightarrow> 'syn gensyn list"
 
 (* OK, for CPS approach we need to have each control-flow state
    be able to manipulate and return a list of targets *)
@@ -56,9 +56,8 @@ definition sem_step ::
    ('mstate option)" where
 "sem_step gs m =
   (case s_cont gs m of
-    None \<Rightarrow> None
-    | Some [] \<Rightarrow> None
-    | Some ((G x l)#tt) \<Rightarrow> Some (s_sem gs x m))"
+    [] \<Rightarrow> None
+    | ((G x l)#tt) \<Rightarrow> Some (s_sem gs x m))"
 
 (* Another option: leave an "open port" in all control flow modules?
 
@@ -74,20 +73,18 @@ fun sem_exec ::
    ('mstate * s_error)" where
 "sem_exec gs 0 m = 
   (case s_cont gs m of
-    Some [] \<Rightarrow> (m, Done)
-    | Some _ \<Rightarrow> (m, NoFuel)
-    | None \<Rightarrow> (m, Crash))"
+    [] \<Rightarrow> (m, Done)
+    | _ \<Rightarrow> (m, NoFuel))"
 | "sem_exec gs (Suc n) m =
    (case s_cont gs m of
-    Some [] \<Rightarrow> (m, Halted)
-    | Some ((G x l)#tt) \<Rightarrow> sem_exec gs n (s_sem gs x m)
-    | None \<Rightarrow> (m, Crash))"
+    [] \<Rightarrow> (m, Halted)
+    | ((G x l)#tt) \<Rightarrow> sem_exec gs n (s_sem gs x m))"
 
 inductive sem_step_p ::
   "('x, 'mstate) sem \<Rightarrow> 'mstate \<Rightarrow> 'mstate \<Rightarrow> bool"
   where
-"\<And> (m :: 'mstate) (m' :: 'mstate) tt .
- s_cont gs m = Some ((G x l)#tt) \<Longrightarrow> 
+"\<And> gs (m :: 'mstate) (m' :: 'mstate) x l  tt .
+ s_cont gs m = ((G x l)#tt) \<Longrightarrow> 
  s_sem gs x m = m' \<Longrightarrow>
  sem_step_p gs m m'"
 
@@ -139,7 +136,7 @@ qed
    that is, a new prefix to prepend *)
 definition imm_safe :: "('x, 'mstate) sem \<Rightarrow> 'mstate \<Rightarrow> bool" where
 "imm_safe gs m \<equiv>
- ((s_cont gs m = Some []) \<or>
+ ((s_cont gs m = []) \<or>
   (\<exists> m' . sem_step_p gs m m'))"
 
 definition safe :: "('x, 'mstate) sem \<Rightarrow> 'mstate \<Rightarrow> bool" where
@@ -147,18 +144,26 @@ definition safe :: "('x, 'mstate) sem \<Rightarrow> 'mstate \<Rightarrow> bool" 
   (\<forall> m' . sem_exec_p gs m m' \<longrightarrow> imm_safe gs m')"
 
 (* TODO: syntax *)
-definition G :: "('x, 'mstate) sem \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'x gensyn list \<Rightarrow> bool"
+definition guarded :: "('x, 'mstate) sem \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'x gensyn list \<Rightarrow> bool"
 ("|_| {_} _")
  where
-"G gs P c =
-  (\<forall> m . P m \<longrightarrow> s_cont gs m = Some c \<longrightarrow> safe gs m)"
+"guarded gs P c =
+  (\<forall> m . P m \<longrightarrow> s_cont gs m = c \<longrightarrow> safe gs m)"
 
 definition HT :: "('x, 'mstate) sem \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'x gensyn list \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> bool" 
   ("|_| {-_-} _ {-_-}")
   where
 "HT gs P c Q =
-  (\<forall> c' . G gs Q (c@c') \<longrightarrow> G gs P c)"
+  (\<forall> c' .  |gs| {Q} (c') \<longrightarrow> |gs| {P} (c @ c'))"
 
+(* maybe there is another way we can achieve some kind of separation of concerns between control/continuation
+   and the rest of the state... 
+   heavy(ier) weight approach: just use lens (identity lifting)
+   or just directly require that it be a product
+    - continuation list
+    - result continuation change (does this even need to be separate?)
+    - other state
+*)
 
 lemma HConseq :
   assumes H : "|gs| {- P' -} c {-Q'-}"
@@ -166,16 +171,56 @@ lemma HConseq :
   assumes H'' : "\<And> st . Q' st \<Longrightarrow> Q st"
   shows "|gs| {-P-} c {-Q-}" using H
 
-  unfolding HT_def G_def safe_def imm_safe_def
+  unfolding HT_def guarded_def safe_def imm_safe_def
   apply(auto)
-   apply(rotate_tac -1)
-   apply(drule_tac x = "c'" in spec) apply(auto)
-   apply(drule_tac H'') 
-   apply(auto)
+   apply(drule_tac x = "c'" in spec) 
+  apply(auto)
+   apply(drule_tac H'')
+  apply(auto)
 
   apply(drule_tac H')
   apply(rotate_tac -1)
-     apply(drule_tac x = "m" in spec) apply(auto)
+  apply(drule_tac x = "m" in spec) apply(auto)
   done
+
+(* this is not true - need to further constrain that we halt after the first step,
+   or do something else to strengthen the assumptions *)
+
+(* need to say something about how the continuation changes when
+   we execute the first instruction
+*)
+
+(* issue might have to do with how we represent errors.
+   returning empty list vs returning None
+   we could just not distinguish these cases.
+*)
+(*
+  or. another thought.
+*)
+lemma HStep : 
+  assumes H : "(! sem ) % {{P}} c {{Q}}"
+  assumes Hgs : "s_sem gs = sem"
+  shows "|gs| {-P-} [G c l] {-Q-}" using H Hgs 
+  unfolding HT_def guarded_def safe_def imm_safe_def semprop2_def VT_def 
+  apply(auto)
+  apply(simp add: sem_exec_p_def)
+
+  apply(drule_tac x = m in spec) apply(auto)
+  apply(drule_tac x = "(s_sem gs c m) " in spec) apply(auto)
+   apply(case_tac "sem_step gs m'")
+    apply(simp add: sem_step_def )
+    apply(case_tac "s_cont gs m'")
+     apply(auto)
+  apply(drule_tac sem_step_sem_step_p)
+   apply(auto)
+
+   apply(case_tac "sem_step gs m'")
+    apply(simp add: sem_step_def )
+    apply(case_tac "s_cont gs m'")
+     apply(auto)
+  apply(drule_tac sem_step_sem_step_p)
+  apply(auto)
+  done
+
 
 end
