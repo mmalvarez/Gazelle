@@ -8,6 +8,8 @@ begin
    we need a more "normal-looking" system where we can separate
    continuations from state *)
 
+(* TODO: we don't really need gensyn_sem_small i think? *)
+
 datatype s_error =
   Exec childpath
   | BadPath
