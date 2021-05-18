@@ -2,6 +2,8 @@ theory Lift
   imports "../Mergeable/MergeableInstances"
 begin
 
+(* DEPRECATED *)
+
 (* (yet another) LiftUtils implementation
    this one makes use of the orderings on data to get a version of the
    "proj, then inj" law that is a compromise between the too-strict one
