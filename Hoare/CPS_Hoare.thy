@@ -25,19 +25,29 @@ fun s_error_safe :: "s_error \<Rightarrow> bool" where
 
 (* we also need to be able to separate sub-syntax from entire tree *)
 
-
 record ('syn, 'mstate) sem' =
   s_sem :: "'syn \<Rightarrow> 'mstate \<Rightarrow> 'mstate"
 
 (* TODO: this should be an entire lifting (at least a weak lifting.) *)
+(*
 record ('syn, 'full, 'mstate) sem = "('syn, 'mstate) sem'" +
   s_cont :: "'mstate \<Rightarrow> 'full gensyn list"
+*)
 
+record ('syn, 'full, 'mstate) sem = "('syn, 'mstate) sem'" +
+  s_l :: "('syn, 'full gensyn list, 'mstate) lifting"
+
+(* problem: what to put for syntax? *)
+definition s_cont :: "('syn :: Bogus, 'full, ('mstate :: Pord)) sem \<Rightarrow> 'mstate \<Rightarrow> 'full gensyn list" where
+"s_cont gs m == 
+  (LOut (s_l gs) bogus m)"
+
+(*
 definition close :: "('syn, 'full, 'mstate) sem \<Rightarrow> ('full \<Rightarrow> 'syn) \<Rightarrow> ('full, 'full, 'mstate) sem" where
 "close s f =
   \<lparr> s_sem = (s_sem s o f)
   , s_cont = s_cont s \<rparr>"
-
+*)
 (* "closed" sem
    we obtain this when our "full" syntax becomes the same as
    our "individual syntax"
@@ -51,8 +61,8 @@ definition s_semt :: "('syn, 'full, 'mstate) semt \<Rightarrow> 'full \<Rightarr
 "s_semt s = s_sem s o s_transl s"
 
 definition sem_step ::
-  "('syn, 'mstate) semc \<Rightarrow>
-   'mstate \<Rightarrow>
+  "('syn :: Bogus, 'mstate) semc \<Rightarrow>
+   ('mstate :: Pord) \<Rightarrow>
    ('mstate option)" where
 "sem_step gs m =
   (case s_cont gs m of
@@ -66,7 +76,7 @@ see if this will break any typeclasses...
 *)
 
 fun sem_exec ::
-  "('x, 'mstate) semc \<Rightarrow>
+  "('x :: Bogus, 'mstate :: Pord) semc \<Rightarrow>
    nat \<Rightarrow>
    'mstate \<Rightarrow>
    ('mstate * s_error)" where
@@ -80,7 +90,7 @@ fun sem_exec ::
     | ((G x l)#tt) \<Rightarrow> sem_exec gs n (s_sem gs x m))"
 
 inductive sem_step_p ::
-  "('x, 'mstate) semc \<Rightarrow> 'mstate \<Rightarrow> 'mstate \<Rightarrow> bool"
+  "('x :: Bogus, 'mstate :: Pord) semc \<Rightarrow> 'mstate \<Rightarrow> 'mstate \<Rightarrow> bool"
   where
 "\<And> gs (m :: 'mstate) (m' :: 'mstate) x l  tt .
  s_cont gs m = ((G x l)#tt) \<Longrightarrow> 
@@ -88,7 +98,7 @@ inductive sem_step_p ::
  sem_step_p gs m m'"
 
 definition sem_exec_p ::
-  "('x, 'mstate) semc \<Rightarrow> 'mstate \<Rightarrow> 'mstate \<Rightarrow> bool" where
+  "('x :: Bogus, 'mstate :: Pord) semc \<Rightarrow> 'mstate \<Rightarrow> 'mstate \<Rightarrow> bool" where
 "sem_exec_p gs \<equiv>
   (rtranclp (sem_step_p gs))"
 
@@ -126,7 +136,7 @@ lemma sem_exec1_step :
 
 (* have the state contain a delta to the continuation list?
    that is, a new prefix to prepend *)
-definition imm_safe :: "('x, 'mstate) semc \<Rightarrow> 'mstate \<Rightarrow> bool" where
+definition imm_safe :: "('x :: Bogus, 'mstate :: Pord) semc \<Rightarrow> 'mstate \<Rightarrow> bool" where
 "imm_safe gs m \<equiv>
  ((s_cont gs m = []) \<or>
   (\<exists> m' . sem_step_p gs m m'))"
@@ -148,7 +158,7 @@ lemma imm_safeD :
   unfolding imm_safe_def by auto
 
 
-definition safe :: "('x, 'mstate) semc \<Rightarrow> 'mstate \<Rightarrow> bool" where
+definition safe :: "('x :: Bogus, 'mstate :: Pord) semc \<Rightarrow> 'mstate \<Rightarrow> bool" where
 "safe gs m \<equiv>
   (\<forall> m' . sem_exec_p gs m m' \<longrightarrow> imm_safe gs m')"
 
@@ -164,7 +174,7 @@ lemma safeD :
   unfolding safe_def by auto
 
 (* TODO: syntax *)
-definition guarded :: "('x, 'mstate) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'x gensyn list \<Rightarrow> bool"
+definition guarded :: "('x :: Bogus, 'mstate :: Pord) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'x gensyn list \<Rightarrow> bool"
 ("|_| {_} _")
  where
 "guarded gs P c =
@@ -182,7 +192,7 @@ lemma guardedD :
   shows "safe gs m" using assms
   unfolding guarded_def by auto
 
-definition HT :: "('x, 'mstate) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'x gensyn list \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> bool" 
+definition HT :: "('x :: Bogus, 'mstate :: Pord) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'x gensyn list \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> bool" 
   ("|_| {-_-} _ {-_-}")
   where
 "HT gs P c Q =
@@ -339,8 +349,8 @@ definition blind :: "('x, 'mstate) semc \<Rightarrow> ('mstate \<Rightarrow> boo
 "blind gs P =
   (\<forall> x y . gs_cont x = gs_cont
 *)
-
-definition blind' :: "('x, 'mstate) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> bool" where
+(*
+definition blind' :: "('x, 'mstate :: Pord) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> bool" where
 "blind' gs P =
   (\<forall> c x . P x \<longrightarrow> (\<exists> x' . s_cont gs x' = c \<and> P x'))"
 
@@ -354,5 +364,5 @@ lemma blind'E :
 lemma blind'I [intro] :
   assumes H : "(\<And> c x . P x \<Longrightarrow> (\<exists> x' . s_cont gs x' = c \<and> P x'))"
   shows "blind' gs P" using H unfolding blind'_def by auto
-
+*)
 end

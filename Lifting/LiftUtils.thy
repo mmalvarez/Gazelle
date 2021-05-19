@@ -257,6 +257,47 @@ declare lower_map_s_def [simp]
 (* TODO (later): predicate lifting/lowering.
    This will be similar to LiftUtilsOrd. *)
 
+
+(* validity of lifting implies validity of syntax-translated lifting.
+TODO
+*)
+
+(* syntax-translation of lifting *)
+definition l_synt ::
+  "('a1, 'b1) syn_lifting \<Rightarrow>
+   ('a1, 'a2, 'b2 :: Pord, 'z) lifting_scheme \<Rightarrow>
+   ('b1, 'a2, 'b2) lifting" where
+"l_synt l' l =
+  \<lparr> LUpd = (LUpd l) o l'
+  , LOut = (LOut l) o l'
+  , LBase = (LBase l) o l'\<rparr>"
+
+lemma l_synt_valid_weak :
+  assumes H : "lifting_valid_weak l S"
+  shows "lifting_valid_weak (l_synt l' l) (S o l')" using H
+  unfolding lifting_valid_weak_def l_synt_def
+  by(auto)
+
+lemma l_synt_valid :
+  assumes H : "lifting_valid l S"
+  shows "lifting_valid (l_synt l' l) (S o l')" using H
+  unfolding lifting_valid_def l_synt_def
+  by(auto)
+
+lemma l_synt_valid_weakb :
+  assumes H : "lifting_valid_weakb l S"
+  shows "lifting_valid_weakb (l_synt l' l) (S o l')" using H
+  unfolding lifting_valid_weakb_def lifting_valid_weak_def l_synt_def
+  by(auto)
+
+lemma l_synt_validb :
+  assumes H : "lifting_validb l S"
+  shows "lifting_validb (l_synt l' l) (S o l')" using H
+  unfolding lifting_validb_def lifting_valid_def l_synt_def
+  by(auto)
+
+
+
 (* Orthogonality of liftings
    Used to define valid merge-liftings. *)
 (* could weaken this to require just that bases have a LUB

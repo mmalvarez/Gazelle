@@ -11,6 +11,11 @@ datatype syn =
   Sseq
   | Sskip
 
+instantiation syn :: Bogus begin
+definition syn_bogus : "bogus = Sskip"
+instance proof qed
+end
+
 (* TODO: need additional data? (E.g. to capture error cases *)
 type_synonym 'x state' = "'x gensyn list"
 
@@ -42,8 +47,7 @@ definition seq_sem_l :: "syn \<Rightarrow> 'x state \<Rightarrow> 'x state" wher
 definition seq_sem :: "(syn, 'x, 'x state) sem" where
 "seq_sem \<equiv>
   \<lparr> s_sem = seq_sem_l
-  , s_cont = 
-    LOut (seq_sem_lifting) Sseq \<rparr>"
+  , s_l = seq_sem_lifting \<rparr>"
 
 definition seq_sem_l_gen ::
   "('s \<Rightarrow> syn) \<Rightarrow>
@@ -63,9 +67,8 @@ definition seq_semx ::
  ('s, 'x, ('y :: Pord)) sem" where
 "seq_semx lfts lft \<equiv>
   \<lparr> s_sem = seq_sem_l_gen lfts lft
-  , s_cont =
-    LOut lft Sseq \<rparr>"
-  
+  , s_l = l_synt lfts lft\<rparr>"
+
 
 (* 
   question
@@ -102,8 +105,12 @@ proof
       Step : "sem_step_p gs m m1" and
       CM1 : "s_cont gs m1 = cs @ c'"
       using CM lifting_valid_weakDO[OF HV] unfolding H0
-      by(simp add: sem_step_p_eq sem_step_def seq_semx_def seq_sem_l_gen_def seq_sem'_def H1)
+      apply(simp add: sem_step_p_eq sem_step_def seq_semx_def seq_sem_l_gen_def seq_sem'_def l_synt_def s_cont_def H1)
 
+(* is lifting the right abstraction here?
+maybe we actually do want something different.
+but, if we can use existing lifting stuff that is a big win
+so i'm not ready to give up on using lifting as is, yet. *)
 
     have M1_eq : "LUpd lft Sseq (cs @ c') m = m1" using Step CM H1 unfolding sem_step_p_eq H0 CM
       by(simp add: sem_step_p_eq sem_step_def seq_semx_def seq_sem_l_gen_def seq_sem'_def split: option.splits list.splits)
