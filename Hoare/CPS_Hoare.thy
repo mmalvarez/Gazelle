@@ -25,6 +25,15 @@ fun s_error_safe :: "s_error \<Rightarrow> bool" where
 
 (* we also need to be able to separate sub-syntax from entire tree *)
 
+(*
+  new approach:
+  - structure the state as a pair: continuations, everything else
+  - OR. we keep going forward with the lifting approach, figure out the syntax issue
+*)
+
+type_synonym ('full, 'mstate) control =
+  "('full gensyn list md_triv option md_prio * 'mstate)"
+
 record ('syn, 'mstate) sem' =
   s_sem :: "'syn \<Rightarrow> 'mstate \<Rightarrow> 'mstate"
 
@@ -34,13 +43,19 @@ record ('syn, 'full, 'mstate) sem = "('syn, 'mstate) sem'" +
   s_cont :: "'mstate \<Rightarrow> 'full gensyn list"
 *)
 
+(*
 record ('syn, 'full, 'mstate) sem = "('syn, 'mstate) sem'" +
   s_l :: "('syn, 'full gensyn list, 'mstate) lifting"
+*)
 
-(* problem: what to put for syntax? *)
-definition s_cont :: "('syn :: Bogus, 'full, ('mstate :: Pord)) sem \<Rightarrow> 'mstate \<Rightarrow> 'full gensyn list" where
-"s_cont gs m == 
-  (LOut (s_l gs) bogus m)"
+record ('syn, 'full, 'mstate) sem = 
+  s_sem :: "'syn \<Rightarrow> ('full, 'mstate) control \<Rightarrow> ('full, 'mstate) control"
+
+definition s_cont :: "('full, 'mstate) control \<Rightarrow> 'full gensyn list" where
+"s_cont m \<equiv>
+  (case m of
+    ((mdp _ (Some (mdt x))), _) \<Rightarrow> x
+    | _ \<Rightarrow> [])"
 
 (*
 definition close :: "('syn, 'full, 'mstate) sem \<Rightarrow> ('full \<Rightarrow> 'syn) \<Rightarrow> ('full, 'full, 'mstate) sem" where
@@ -57,15 +72,16 @@ type_synonym ('syn, 'mstate) semc = "('syn, 'syn, 'mstate) sem"
 record ('syn, 'full, 'mstate) semt = "('syn, 'full, 'mstate) sem" +
   s_transl :: "'full \<Rightarrow> 'syn"
 
+(*
 definition s_semt :: "('syn, 'full, 'mstate) semt \<Rightarrow> 'full \<Rightarrow> 'mstate \<Rightarrow> 'mstate" where
 "s_semt s = s_sem s o s_transl s"
-
+*)
 definition sem_step ::
-  "('syn :: Bogus, 'mstate) semc \<Rightarrow>
-   ('mstate :: Pord) \<Rightarrow>
-   ('mstate option)" where
+  "('syn, 'mstate) semc \<Rightarrow>
+   ('syn, 'mstate) control \<Rightarrow>
+   ('syn, 'mstate) control option" where
 "sem_step gs m =
-  (case s_cont gs m of
+  (case s_cont m of
     [] \<Rightarrow> None
     | ((G x l)#tt) \<Rightarrow> Some (s_sem gs x m))"
 
@@ -76,29 +92,29 @@ see if this will break any typeclasses...
 *)
 
 fun sem_exec ::
-  "('x :: Bogus, 'mstate :: Pord) semc \<Rightarrow>
+  "('syn, 'mstate) semc \<Rightarrow>
    nat \<Rightarrow>
-   'mstate \<Rightarrow>
-   ('mstate * s_error)" where
+   ('syn, 'mstate) control \<Rightarrow>
+   (('syn, 'mstate) control * s_error)" where
 "sem_exec gs 0 m = 
-  (case s_cont gs m of
+  (case s_cont  m of
     [] \<Rightarrow> (m, Done)
     | _ \<Rightarrow> (m, NoFuel))"
 | "sem_exec gs (Suc n) m =
-   (case s_cont gs m of
+   (case s_cont m of
     [] \<Rightarrow> (m, Halted)
     | ((G x l)#tt) \<Rightarrow> sem_exec gs n (s_sem gs x m))"
 
 inductive sem_step_p ::
-  "('x :: Bogus, 'mstate :: Pord) semc \<Rightarrow> 'mstate \<Rightarrow> 'mstate \<Rightarrow> bool"
+  "('syn, 'mstate) semc  \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> bool"
   where
-"\<And> gs (m :: 'mstate) (m' :: 'mstate) x l  tt .
- s_cont gs m = ((G x l)#tt) \<Longrightarrow> 
+"\<And> gs m m' x l  tt .
+ s_cont m = ((G x l)#tt) \<Longrightarrow> 
  s_sem gs x m = m' \<Longrightarrow>
  sem_step_p gs m m'"
 
 definition sem_exec_p ::
-  "('x :: Bogus, 'mstate :: Pord) semc \<Rightarrow> 'mstate \<Rightarrow> 'mstate \<Rightarrow> bool" where
+  "('syn, 'mstate) semc  \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> bool" where
 "sem_exec_p gs \<equiv>
   (rtranclp (sem_step_p gs))"
 
@@ -120,8 +136,8 @@ lemma sem_step_sem_step_p :
 
 lemma sem_step_p_eq :
   "(sem_step_p gs m m') = (sem_step gs m = Some m') "
-  using sem_step_p_sem_step sem_step_sem_step_p
-  by auto
+  using sem_step_p_sem_step[of gs m m'] sem_step_sem_step_p[of gs m m']
+  by(auto)
 
 lemma sem_step_exec1 :
   assumes H : "sem_step gs m = Some m'"
@@ -134,31 +150,36 @@ lemma sem_exec1_step :
   shows "sem_step gs m = Some m'" using assms
   by(auto simp add: sem_step_def split:option.splits list.splits)
 
+abbreviation spred :: "('b \<Rightarrow> bool) \<Rightarrow> ('a * 'b) \<Rightarrow> bool" ("\<star>_")
+  where
+"\<star>P \<equiv> P o snd"
+
 (* have the state contain a delta to the continuation list?
    that is, a new prefix to prepend *)
-definition imm_safe :: "('x :: Bogus, 'mstate :: Pord) semc \<Rightarrow> 'mstate \<Rightarrow> bool" where
+definition imm_safe :: "('syn, 'mstate) semc \<Rightarrow> ('syn, 'mstate) control  \<Rightarrow> bool" where
 "imm_safe gs m \<equiv>
- ((s_cont gs m = []) \<or>
+ ((s_cont m = []) \<or>
   (\<exists> m' . sem_step_p gs m m'))"
 
 lemma imm_safeI_Done :
-  assumes H : "s_cont gs m = []"
+  assumes H : "s_cont m = []"
   shows "imm_safe gs m" using H
   unfolding imm_safe_def by auto
 
 lemma imm_safeI_Step :
   assumes H : "sem_step_p gs m m'"
   shows "imm_safe gs m" using H
-  unfolding imm_safe_def by auto
+  unfolding imm_safe_def
+  by(cases m'; auto)
 
 lemma imm_safeD :
   assumes H : "imm_safe gs m"
-  shows "((s_cont gs m = []) \<or>
+  shows "((s_cont m = []) \<or>
   (\<exists> m' . sem_step_p gs m m'))" using H
-  unfolding imm_safe_def by auto
+  unfolding imm_safe_def by (auto)
 
 
-definition safe :: "('x :: Bogus, 'mstate :: Pord) semc \<Rightarrow> 'mstate \<Rightarrow> bool" where
+definition safe :: "('syn, 'mstate) semc \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> bool" where
 "safe gs m \<equiv>
   (\<forall> m' . sem_exec_p gs m m' \<longrightarrow> imm_safe gs m')"
 
@@ -171,28 +192,29 @@ lemma safeD :
   assumes H : "safe gs m"
   assumes Hx : "sem_exec_p gs m m'"
   shows "imm_safe gs m'" using H Hx
-  unfolding safe_def by auto
+  unfolding safe_def by blast
 
 (* TODO: syntax *)
-definition guarded :: "('x :: Bogus, 'mstate :: Pord) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'x gensyn list \<Rightarrow> bool"
+definition guarded :: "('syn, 'mstate) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'syn gensyn list \<Rightarrow> bool"
 ("|_| {_} _")
  where
 "guarded gs P c =
-  (\<forall> m . P m \<longrightarrow> s_cont gs m = c \<longrightarrow> safe gs m)"
+  (\<forall> m . P (snd m) \<longrightarrow> s_cont m = c \<longrightarrow> safe gs m)"
 
 lemma guardedI [intro] :
-  assumes H : "\<And> m . P m \<Longrightarrow> s_cont gs m = c \<Longrightarrow> safe gs m"
+  assumes H : "\<And> m . P (snd m) \<Longrightarrow> s_cont m = c \<Longrightarrow> safe gs m"
   shows "guarded gs P c" using H
-  unfolding guarded_def by auto
+  unfolding guarded_def
+  by auto
 
 lemma guardedD :
   assumes H : "guarded gs P c"
-  assumes HP : "P m"
-  assumes Hcont : "s_cont gs m = c"
+  assumes HP : "P (snd m)"
+  assumes Hcont : "s_cont m = c"
   shows "safe gs m" using assms
-  unfolding guarded_def by auto
+  unfolding guarded_def by blast
 
-definition HT :: "('x :: Bogus, 'mstate :: Pord) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'x gensyn list \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> bool" 
+definition HT :: "('syn, 'mstate) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'syn gensyn list \<Rightarrow> ('mstate \<Rightarrow> bool)\<Rightarrow> bool" 
   ("|_| {-_-} _ {-_-}")
   where
 "HT gs P c Q =
@@ -223,54 +245,61 @@ lemma HConseq :
   assumes H : "|gs| {- P' -} c {-Q'-}"
   assumes H' : "\<And> st . P st \<Longrightarrow> P' st"
   assumes H'' : "\<And> st . Q' st \<Longrightarrow> Q st"
-  shows "|gs| {-P-} c {-Q-}" using H
+  shows "|gs| {-P-} c {-Q-}"
+proof(rule HTI)
+  fix c'
+  assume Exec : "|gs| {Q} c'"
 
-  unfolding HT_def guarded_def safe_def imm_safe_def
-  apply(auto)
-   apply(drule_tac x = "c'" in spec) 
-  apply(auto)
-   apply(drule_tac H'')
-  apply(auto)
+  then have Exec' : "|gs| {Q'} c'"
+    unfolding guarded_def using H'' by blast
 
-  apply(drule_tac H')
-  apply(rotate_tac -1)
-  apply(drule_tac x = "m" in spec) apply(auto)
-  done
+  then have Exec'' :"|gs| {P'} c@c'"
+    using HTE[OF H Exec'] by auto
 
-(* this is not true - need to further constrain that we halt after the first step,
-   or do something else to strengthen the assumptions *)
+  then show "|gs| {P} c @ c'"
+    unfolding guarded_def using H' by blast
+qed
 
-(* need to say something about how the continuation changes when
-   we execute the first instruction
-*)
-
-(* issue might have to do with how we represent errors.
-   returning empty list vs returning None
-   we could just not distinguish these cases.
-*)
 lemma HStep : 
-  assumes H : "(! sem ) % {{P}} c {{Q}}"
+  assumes H : "(! sem ) % {{P o snd}} c {{Q o snd}}"
   assumes Hgs : "s_sem gs = sem"
-  shows "|gs| {-P-} [G c l] {-Q-}" using H Hgs 
-  unfolding HT_def guarded_def safe_def imm_safe_def semprop2_def VT_def 
-  apply(auto)
+  shows "|gs| {-P-} [G c l] {-Q-}" 
+proof(rule HTI)
+  fix c'
+  assume Exec : "|gs| {Q} c'"
 
-  apply(drule_tac x = m in spec) apply(auto)
-  apply(drule_tac x = "(s_sem gs c m) " in spec) apply(auto)
-   apply(case_tac "sem_step gs m'")
-    apply(simp add: sem_step_def )
-    apply(case_tac "s_cont gs m'")
-     apply(auto)
-  apply(drule_tac sem_step_sem_step_p)
-   apply(auto)
+  show "|gs| {P} [G c l] @ c'"
+  proof(rule guardedI)
+    fix m :: "('a, 'b) control"
 
-   apply(case_tac "sem_step gs m'")
-    apply(simp add: sem_step_def )
-    apply(case_tac "s_cont gs m'")
-     apply(auto)
-  apply(drule_tac sem_step_sem_step_p)
-  apply(auto)
-  done
+    assume P : "P (snd m)"
+    obtain ms mc where M: "m = (mc, ms)" and P' : "P ms"
+      using P by (cases m; auto)
+
+    assume Cont : "s_cont m = [G c l] @ c'"
+
+    have Q: "Q (snd (s_sem gs c m))"
+      using H P M unfolding semprop2_def VT_def Hgs
+      by(auto)
+
+    show "safe gs m"
+    proof(rule safeI)
+      fix m'
+      assume Exec' : "sem_exec_p gs m m'"
+      show "imm_safe gs m'"
+
+      proof(cases "s_cont m'")
+        case Nil
+        then show ?thesis unfolding imm_safe_def by auto
+      next
+        case (Cons a list)
+        then show ?thesis using Exec' unfolding sem_exec_p_def imm_safe_def sem_step_p_eq sem_step_def
+          by(cases m; auto)
+      qed
+    qed
+  qed
+qed
+
 
 (* sequencing lemma *)
 lemma HCat :

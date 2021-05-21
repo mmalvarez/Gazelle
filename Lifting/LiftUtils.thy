@@ -254,13 +254,6 @@ definition lower_map_s ::
 
 declare lower_map_s_def [simp]
 
-(* TODO (later): predicate lifting/lowering.
-   This will be similar to LiftUtilsOrd. *)
-
-
-(* validity of lifting implies validity of syntax-translated lifting.
-TODO
-*)
 
 (* syntax-translation of lifting *)
 definition l_synt ::
