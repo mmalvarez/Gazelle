@@ -158,9 +158,6 @@ proof
     assume M : "P1 (snd m)"
     assume CM : "s_cont m = [G Sseq' cs] @ c'"
 
-
-(* lifting_validDI[OF lifting_validbDV[OF seq_sem_lifting_gen_validb]]  *)
-
     show "(safe gs m)"
     proof(cases "(sem_step gs m)")
       case None

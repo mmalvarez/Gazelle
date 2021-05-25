@@ -366,10 +366,6 @@ proof(clarify)
     by auto
 qed
 
-(*
-  we also need a way to relate orthogonality as expressed in LiftInstances
-  (a binary operation) to a setwise version used here. (do we?)
-*)
    
 
 end

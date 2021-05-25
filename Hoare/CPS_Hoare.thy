@@ -4,6 +4,8 @@ theory CPS_Hoare imports
  "../Relpath" "../Semantics/Gensyn_Sem_Small" "Hoare"
 begin
 
+(* TODO: use general version of langcomp? *)
+
 (* ok, so in order to adapt CPS hoare triples into this context,
    we need a more "normal-looking" system where we can separate
    continuations from state *)
@@ -76,6 +78,7 @@ record ('syn, 'full, 'mstate) semt = "('syn, 'full, 'mstate) sem" +
 definition s_semt :: "('syn, 'full, 'mstate) semt \<Rightarrow> 'full \<Rightarrow> 'mstate \<Rightarrow> 'mstate" where
 "s_semt s = s_sem s o s_transl s"
 *)
+(* will integrating this with s_cont help? *)
 definition sem_step ::
   "('syn, 'mstate) semc \<Rightarrow>
    ('syn, 'mstate) control \<Rightarrow>
@@ -346,7 +349,7 @@ proof
   show "b = b'" using H1 H2 unfolding sem_step_p_eq by auto
 qed
 
-(* helpful lemma for reasoning about compound executions *)
+(* lemma for reasoning about compound executions *)
 lemma rtranclp_bisect1 :
   assumes H0 : "determ R"
   assumes H : "R\<^sup>*\<^sup>* xi xp"
@@ -368,30 +371,133 @@ next
   show ?case using rtranclp.intros(2)[OF X1z step.prems(3)] by auto
 qed
 
-
 (*
-  Restriction requiring that predicates cannot look at continuation
+
+need a lemma that shows that
+  - if executing computation 1 (big) goes m \<rightarrow> m'
+  - 
+
+do we need execution function to be monotone?
+
 *)
 
+(* merging multi-step computations *)
+lemma Hmerge :
+  assumes Pres : "sups_pres (set l)"
+  assumes Sem : "s_sem gs1 \<in> set l"
+  assumes V : "|gs1| {-P-} x {-Q-}"
+  shows "|\<lparr> s_sem = pcomps' l \<rparr>| 
+         {-P-}
+         x
+         {-(\<lambda> st . \<exists> st_sub . Q st_sub \<and> st_sub <[ st)-}"
+proof
+  fix c'
+
+  assume HQ : "|\<lparr>sem.s_sem = pcomps' l\<rparr>| {\<lambda>st. \<exists>st_sub. Q st_sub \<and> st_sub <[ st} c'"
+
+  have HQ' :
+    "|\<lparr>sem.s_sem = pcomps' l\<rparr>| {Q} c'"
+  proof
+    fix m :: "('a, 'b) control"
+    assume Q : "Q (snd m)"
+    assume HCont : "s_cont m = c'"
+
+    have "Q (snd m) \<and> snd m <[ snd m"
+      using Q leq_refl[of "snd m"]
+      by auto
+
+    hence Convert : "\<exists>st_sub. Q st_sub \<and> st_sub <[ snd m"
+      by blast
+
+    show "safe \<lparr>sem.s_sem = pcomps' l\<rparr> m"
+      using guardedD[OF HQ Convert HCont] by auto
+  qed
+
+
+  show "|\<lparr>sem.s_sem = pcomps' l\<rparr>| {P} x @ c'"
 (*
-definition blind :: "('x, 'mstate) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> bool" where
-"blind gs P =
-  (\<forall> x y . gs_cont x = gs_cont
+  proof(cases x)
+    case Nil
+    then show ?thesis using HTE[OF V]
+  next
+    case (Cons a list)
+    then show ?thesis sorry
+  qed
+*)
+
+  proof
+    fix m :: "('a, 'b) control"
+    assume HP : "P (snd m)"
+    assume HCont : "s_cont m = x @ c'"
+
+(*
+(* cases on sem_step *)
+    obtain m1 where "sem_step gs m = Some m1" using HCont unfolding sem_step_def
+      apply(auto)
+*)      
+
+    show "safe \<lparr>sem.s_sem = pcomps' l\<rparr> m"
+
+    proof
+      fix m'
+      assume Exec' : "sem_exec_p \<lparr>sem.s_sem = pcomps' l\<rparr> m m'"
+        (* idea: change ordering on control data so that it is
+              option of prio of triv of cont (but this doesn't work...)
+              somehow make it so that if any one semantics is safe, they all are?
+
+is this theorem true as we've stated it?
+what do we want instead if it isn't?
+*)
+
+      show "imm_safe \<lparr>sem.s_sem = pcomps' l\<rparr> m'"
+      proof(cases "sem_step \<lparr>sem.s_sem = pcomps' l\<rparr> m")
+        case None
+  
+        then have Done : "s_cont m = []"
+          using None by(cases "s_cont m"; auto simp add: sem_step_def)
+   
+        show ?thesis using Exec' unfolding sem_exec_p_def
+        proof(cases rule: rtranclp.cases)
+          case rtrancl_refl
+          then show ?thesis using None Done unfolding imm_safe_def
+            by(auto)
+        next
+          case (rtrancl_into_rtrancl b)
+          then show ?thesis using 
+              rtranclp_bisect1[OF sem_step_determ ] sorry
+  (* need a lemma here but shouldn't be a big deal *)
+        qed
+      next
+        case (Some m1)
+        then show ?thesis using HTE[OF V]
+
+        
+
+(* one? way to think about this:
+  
+
 *)
 (*
-definition blind' :: "('x, 'mstate :: Pord) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> bool" where
-"blind' gs P =
-  (\<forall> c x . P x \<longrightarrow> (\<exists> x' . s_cont gs x' = c \<and> P x'))"
+    proof
+      fix m'
+      assume Exec : "sem_exec_p \<lparr>sem.s_sem = pcomps' l\<rparr> m m'"
 
-lemma blind'E : 
-  assumes H : "blind' gs P"
-  assumes HP : "P x"
-  shows "\<exists> x' . s_cont gs x' = c \<and> P x'" using assms
-  unfolding blind'_def
-  by auto
-
-lemma blind'I [intro] :
-  assumes H : "(\<And> c x . P x \<Longrightarrow> (\<exists> x' . s_cont gs x' = c \<and> P x'))"
-  shows "blind' gs P" using H unfolding blind'_def by auto
+      show "imm_safe \<lparr>sem.s_sem = pcomps' l\<rparr> m'" using Exec unfolding sem_exec_p_def
+      proof(cases rule: rtranclp.cases)
+      case rtrancl_refl
+      then show ?thesis using HCont unfolding imm_safe_def
+        apply(cases x; auto)
+         apply(simp add: sem_step_p_eq sem_step_def)
+         apply(cases "s_cont m"; auto)
+         apply(case_tac "pcomps' l x1 m"; auto)
+         apply(simp add: sem_step_p_eq sem_step_def)
+        done
+      next
+        case (rtrancl_into_rtrancl b)
+        then show ?thesis
+          using HTE[OF V] guardedD[OF HQ]
+          
+          using HP HCont unfolding sem_step_p_eq
+      qed
 *)
 end
