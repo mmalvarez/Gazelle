@@ -20,10 +20,6 @@ abbreviation Sem2 ::
   "('a, 'b) langcomp \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> 'b)" where
 "Sem2 \<equiv> snd"
 
-(* TODO: need to show that this formulation works
-   in the sense that if all semantics have LUBs in
-   pairwise (?) fashion, then this is equivalent to
-   any ordering of langcomp's *)
 type_synonym ('a, 'b) langcomps =
   "('a \<Rightarrow> 'b \<Rightarrow> 'b) list"
 
@@ -826,6 +822,7 @@ proof(cases rule: sups_pres.cases)
     by(auto)
 qed
 
+(*
 (* this is the key lemma that characterizes sups_pres.
    in particular, it should imply that we can arbitrarily reorder
    elements in the list.
@@ -903,7 +900,7 @@ next
       using sup_union1[OF HSup Sup Conc'']
       by(auto simp add: Cons' Eqn)
 qed
-
+*)
 
 (*
 lemma sups_pres_has_sup_pcomps' :
