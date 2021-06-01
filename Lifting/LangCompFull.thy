@@ -23,18 +23,19 @@ lemma scross_inD  :
   unfolding scross_def
   by blast
 
-(* NB: we strengthen this by addding subsets of functions Fs' *)
 (* TODO: do we really need the nonemptiness requirement for Fs'? *)
+(* TODO: unlike scott continuity, we don't have the "closure" property
+   here (that the set is closed under LUBs 
+*)
 definition sups_pres :: 
   "('a \<Rightarrow> ('b :: Mergeable) \<Rightarrow> 'b) set \<Rightarrow> bool" where
 "sups_pres Fs =
-  (\<forall> x syn Xs Fs' f .
+  (\<forall> x sup syn Xs .
     x \<in> Xs \<longrightarrow>
     finite Xs \<longrightarrow>
-    has_sup Xs \<longrightarrow>
-    Fs' \<subseteq> Fs \<longrightarrow>
-    f \<in> Fs' \<longrightarrow>
-    has_sup (scross ((\<lambda> f . f syn) ` Fs') Xs))"
+    is_sup Xs sup \<longrightarrow>
+    (\<exists> sup' . is_sup ((\<lambda> f . f syn sup) ` Fs) sup' \<and>
+     is_sup (scross ((\<lambda> f . f syn) ` Fs) Xs) sup'))"
 
 (* for this version, syntaxes are assumed to match.
    i think this will always be the case...
@@ -42,19 +43,28 @@ definition sups_pres ::
 
 
 lemma sups_presI [intro] :
-  assumes "\<And> x syn Xs Fs' f . has_sup Xs \<Longrightarrow> finite Xs \<Longrightarrow> x \<in> Xs \<Longrightarrow>  Fs' \<subseteq> Fs \<Longrightarrow> f \<in> Fs' \<Longrightarrow>
-   has_sup (scross ((\<lambda> f . f syn) ` Fs') Xs)"
+  assumes "\<And> x sup syn Xs  . 
+           x \<in> Xs \<Longrightarrow>
+           finite Xs \<Longrightarrow> 
+           is_sup Xs sup \<Longrightarrow>
+          (\<exists> sup' . is_sup ((\<lambda> f . f syn sup) ` Fs) sup' \<and>
+           is_sup (scross ((\<lambda> f . f syn) ` Fs) Xs) sup')"
   shows "sups_pres Fs"
   using assms unfolding sups_pres_def by blast
 
+(* should we require that mapping fs preserves the upper bound?
+or just its existence? 
+
+the former would look more like Scott continuity.  but we neeed to make sure that
+it is realistic for  the kinds of cases we care about
+*)
 lemma sups_presD :
   assumes "sups_pres Fs"
-  assumes "has_sup Xs"
-  assumes "finite Xs"
   assumes "x \<in> Xs"
-  assumes "Fs' \<subseteq> Fs"
-  assumes "f \<in> Fs'"
-  shows "has_sup (scross ((\<lambda> f . f syn) ` Fs') Xs)" using assms
+  assumes "finite Xs"
+  assumes "is_sup Xs sp"
+  shows "(\<exists> sup' . is_sup ((\<lambda> f . f syn sp) ` Fs) sup' \<and>
+           is_sup (scross ((\<lambda> f . f syn) ` Fs) Xs) sup')" using assms
   unfolding sups_pres_def 
   by blast
 
@@ -106,44 +116,46 @@ lemma sups_pres_subset :
   assumes Hnemp : "f \<in> Fs'"
   shows "sups_pres Fs'"
 proof(rule sups_presI)
+  fix el :: "'b"
+  fix sup1 :: "'b"
   fix syn 
   fix Xs :: "'b set"
-  fix el :: "'b"
   fix Fs_sub :: "('a \<Rightarrow> 'b \<Rightarrow> 'b) set"
-  fix g :: "'a \<Rightarrow> 'b \<Rightarrow> 'b"
 
-  assume H' : "has_sup Xs"
   assume Hfin_Xs : "finite Xs"
+  assume H' : "is_sup Xs sup1"
   assume Hnemp_Xs : "el \<in> Xs"
-  assume HFs_sub : "Fs_sub \<subseteq> Fs'"
-  assume HFs_nemp : "g \<in> Fs_sub"
 
-  have HFs_sub_sub : "Fs_sub \<subseteq> Fs" using HFs_sub Hsub by auto
-
-  obtain Rest where Rest : "Fs_sub \<union> Rest = Fs" using HFs_sub_sub by blast
-
-  have El' : "g \<in> Fs" using HFs_sub Hsub HFs_nemp by auto
+  obtain Rest where Rest : "Fs' \<union> Rest = Fs" using Hsub by blast
 
   have Rfin : "finite Rest" using Rest Hfin by auto
 
-  have Conc' : "has_sup (scross ((\<lambda>f. f syn) ` (Fs_sub \<union> Rest)) Xs)" unfolding Rest
-    using sups_presD[OF H H' Hfin_Xs Hnemp_Xs _ El'] by auto
+  obtain supr where Supr1 : 
+    "is_sup (scross ((\<lambda>f. f syn) ` (Fs' \<union> Rest)) Xs) supr" and
+    Supr2 : 
+    "(is_sup ((\<lambda>f. f syn sup1) ` (Fs' \<union> Rest))) supr"
+    unfolding Rest
+    using sups_presD[OF H Hnemp_Xs Hfin_Xs H']
+    unfolding has_sup_def
+    by(auto)
 
-  then obtain supr where Supr :
-    "is_sup (scross ((\<lambda>f. f syn) ` (Fs_sub \<union> Rest)) Xs) supr"
-    by(auto simp add: has_sup_def)
-
-  have Subset' : "(\<lambda>f. f syn) ` Fs_sub \<subseteq> (\<lambda>f. f syn) ` Fs"
+  have Subset' : "(\<lambda>f. f syn) ` Fs' \<subseteq> (\<lambda>f. f syn) ` Fs"
     unfolding sym[OF Rest] by blast
 
-  have Subset : "(scross ((\<lambda>f. f syn) ` (Fs_sub)) Xs)  \<subseteq> (scross ((\<lambda>f. f syn) ` (Fs_sub \<union> Rest)) Xs)"    
+  have Subset : "(scross ((\<lambda>f. f syn) ` (Fs')) Xs)  \<subseteq> (scross ((\<lambda>f. f syn) ` (Fs' \<union> Rest)) Xs)"    
     using scross_subset[OF Subset', of Xs Xs]
     unfolding Rest
     by blast
 
-  have Nemp : "(g syn el) \<in> scross ((\<lambda>f. f syn) ` Fs_sub) Xs"
-    using HFs_nemp Hnemp_Xs
+  have Subset2: "(\<lambda>f. f syn sup1) ` Fs' \<subseteq> (\<lambda>f. f syn sup1) ` (Fs' \<union> Rest)"
+    by blast
+
+  have Nemp : "(f syn el) \<in> scross ((\<lambda>f. f syn) ` Fs') Xs"
+    using Hnemp Hnemp_Xs
     unfolding scross_def by auto
+
+  have Nemp2 : "f syn sup1 \<in> (\<lambda>f. f syn sup1) ` Fs'"
+    using Hnemp by auto
 
   have Hfin_full' : "finite ((\<lambda>f. f syn) ` (Fs))"
     using Hfin by blast
@@ -152,7 +164,19 @@ proof(rule sups_presI)
     using scross_finite[OF Hfin_full' Hfin_Xs]
     by auto
 
-  show "has_sup (scross ((\<lambda>f. f syn) ` Fs_sub) Xs)"
+  have Fin_full2 : "finite ((\<lambda>f. f syn sup1) ` ((Fs' \<union> Rest)))"
+    using Hfin
+    sorry
+
+  obtain sup2 where Sup2 : "is_sup (scross ((\<lambda>f. f syn) ` Fs') Xs) sup2"
+    using has_sup_subset[OF _ Supr1 Subset Nemp] Fin_full unfolding Rest has_sup_def
+    by auto
+
+  obtain sup2' where Sup2' : "is_sup ((\<lambda>f. f syn sup1) ` (Fs')) sup2'"
+    using has_sup_subset[OF Fin_full2 Supr2 Subset2 Nemp2]  unfolding Rest has_sup_def
+    by auto
+
+  show "\<exists>sup'. is_sup ((\<lambda>f. f syn sup1) ` Fs') sup' \<and> is_sup (scross ((\<lambda>f. f syn) ` Fs') Xs) sup'"
     using has_sup_subset[OF _ Supr Subset Nemp] Fin_full unfolding Rest
     by auto
 qed
@@ -380,7 +404,17 @@ next
       using has_sup_subset[OF Hd_finite Hsup1 Hd_cross_subset Hd_nemp]
       unfolding has_sup_def by auto
 
-    have Conc' : "has_sup ({hsup2, tsup})"
+    have Cross_fact : 
+      "(scross ((\<lambda>f. f syn) ` set (fh1 # ft1)) Xs) =
+       (scross {fh1 syn} Xs) \<union> 
+       (scross ((\<lambda>f. f syn) ` set (ft1)) Xs)"
+      unfolding scross_def
+      by(simp; blast)
+
+    
+
+    have Conc' : "has_sup ({hsup2, tsup})" sorry
+(*
     proof-
 (*
       have Eq3 : "(\<lambda>f. f sem) ` (\<lambda>f. f syn) ` set (h1 # t1) = {h1 syn sem} \<union> (\<lambda>f. f syn sem) ` set t1"
@@ -421,21 +455,40 @@ next
 
       have Test4 : "fh1 \<in> set (fh1 # ft1)" by auto
 
-(*
+*)
+
+    obtain cx where Cx : "is_sup ({hsup2, tsup}) cx"
+      using Conc'
+      unfolding has_sup_def
+      by auto
+
+    have Thing : "is_sup ((scross {fh1 syn} Xs) \<union> (pcomps' ft1 syn ` Xs)) cx"
+      using sup_union1[OF Hsup2 Tsup Cx] by auto
+
+
       have Reassoc : "(scross {fh1 syn} Xs \<union> (pcomps' ft1 syn ` Xs)) =
                       (scross ((\<lambda>f. f syn) ` set (fh1 # ft1)) Xs)" 
         unfolding sym[OF scross_alt_eq] scross_alt_def
-      proof
+        sorry
+(*      proof
         show "(\<lambda>(f, y). f y) ` ({fh1 syn} \<times> Xs) \<union> pcomps' ft1 syn ` Xs
     \<subseteq> (\<lambda>(f, y). f y) ` ((\<lambda>f. f syn) ` set (fh1 # ft1) \<times> Xs)"
-          apply(simp)
-        apply(simp)
+          sorry
+      qed
+*)
+
+      obtain final where Conc'' : "is_sup ({hsup2, tsup}) final"
+        using Conc'
+        unfolding has_sup_def
+        by auto
 
       show ?thesis using (*sups_presD[OF Cons.prems(1) (*Test0 Test1 Test2 Test3 Test4*)] *)
-        sup_union2[OF Hsup2 Tsup, of hsup1] Hsup1 
+        sup_union1[OF Hsup2 Tsup Conc''] Hsup1
         unfolding Reassoc has_sup_def
+        using Cons'
+        apply(simp add: pcomps'.simps)
         by auto
-*)
+
 
     then obtain s' where S' : "is_sup {hsup2, tsup} s'"
       by(auto simp add: has_sup_def)
@@ -446,7 +499,7 @@ next
     sorry
 
   have Conc_help : "is_sup (scross {fh1 syn} Xs \<union> pcomps' ft1 syn ` Xs) s'"
-    using sup_union1[OF Hsup2 Tsup S']
+    using sup_union1[OF Hsup2 Tsup]
     by auto
 
   have Fin_help : "finite (scross {fh1 syn} Xs \<union> pcomps' ft1 syn ` Xs)"
