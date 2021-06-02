@@ -470,7 +470,7 @@ what do we want instead if it isn't?
       next
         case (Some m1)
         then show ?thesis using HTE[OF V]
-
+sups_presD[OF Pres]
         
 
 (* one? way to think about this:
