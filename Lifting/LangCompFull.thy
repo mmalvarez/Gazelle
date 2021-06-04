@@ -447,6 +447,69 @@ next
   qed
 qed
 
+lemma sups_pres_mono :
+  assumes H : "sups_pres S"
+  assumes Hf : "f \<in> S"
+  assumes Hxy : "x <[ y"
+  shows "f syn x <[ f syn y"
+proof-
+
+  have Ysup : "is_sup {x, y} y" using Hxy
+    unfolding is_sup_def is_least_def is_ub_def
+    by(auto simp add: leq_refl)
+
+  obtain supr where
+    Supr1 : "is_sup ((\<lambda>f. f syn y) ` {f}) supr" and Supr2 : "is_sup (scross ((\<lambda>f. f syn) ` {f}) {x, y}) supr"
+    using sups_presD[OF H _ _ Ysup, of x "{f}" f syn] Hf
+    by auto
+
+  have Supr_eq : "supr = f syn y" using Supr1
+      is_sup_unique[OF sup_singleton[of "f syn y"], of supr]
+    by(simp)
+
+  have Supr_leq : "f syn x <[ supr"
+    using is_sup_unfold1[OF Supr2, of "f syn x"]
+    by(simp add: scross_singleton1)
+
+  show ?thesis
+    using Supr_leq unfolding Supr_eq
+    by auto
+qed
+
+lemma pcomps'_mono :
+  assumes H : "sups_pres (set l)"
+  assumes Hnemp : "f \<in> set l"
+  assumes Hxy : "x <[ y"
+  shows "pcomps' l syn x <[ pcomps' l syn y" using assms
+proof(induction l arbitrary: f x y syn)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons fh1 ft1)
+
+  then show ?case 
+  proof(cases ft1)
+    case Nil' : Nil
+    then show ?thesis using sups_pres_mono[OF Cons.prems(1) _ Cons.prems(3), of fh1 syn]
+      by(auto)
+  next
+    case Cons' : (Cons fh2 ft2)
+
+    have SP' : "LangCompFull.sups_pres (set ft1)"
+      using sups_pres_subset[OF Cons.prems(1), of "set ft1" fh2] unfolding Cons'
+      by auto
+
+    have Ind : "pcomps' ft1 syn x <[ pcomps' ft1 syn y"
+      using Cons.IH[OF SP' _ Cons.prems(3), of fh2 syn] unfolding Cons'
+      by auto
+
+    show ?thesis using Cons'
+      apply(auto)
+  qed
+qed
+
+
+
 (* has_sup of pcomps' l syn applied to xs? *)
 (* do we need this? i think the idea here is to say that
 pcomps' preserves sup ( ? )

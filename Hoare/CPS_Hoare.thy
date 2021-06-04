@@ -1,6 +1,6 @@
 theory CPS_Hoare imports 
  "../Gensyn" "../Gensyn_Descend" "../Mergeable/Mergeable"
- "../Lifting/LiftUtils" "../Lifting/LiftInstances" "../Lifting/LangCompSimple"
+ "../Lifting/LiftUtils" "../Lifting/LiftInstances" "../Lifting/LangCompFull"
  "../Relpath" "../Semantics/Gensyn_Sem_Small" "Hoare"
 begin
 
@@ -381,7 +381,118 @@ do we need execution function to be monotone?
 
 *)
 
+(* x' vs y' ? *)
+(* need to handle early halting. 
+to do this we can either make the semantics monotone, or have some way of handling this
+we can also punt on the issue by requiring that the execution not have halted yet
+*)
+(*
+need to account for the possibility that the sub-language ends early.
+one approach: perhaps we could weaken this:
+- whenever sem_exec_p of sub language can step to some state,
+there will exist a state that sem_exec_p of big language steps to
+*)
+lemma sups_pres_merge :
+  assumes Pres : "sups_pres (set l)"
+  assumes Sem : "s_sem gs1 \<in> set l"
+  assumes Exec : "(sem_exec_p \<lparr>sem.s_sem = pcomps' l\<rparr>) x x'"
+  assumes Y : "y <[ x"
+  shows "\<exists> y' . sem_exec_p gs1 y y' \<and> y' <[ x'"
+  using Exec Pres Sem Y
+  unfolding sem_exec_p_def
+proof(induction arbitrary: gs1 y rule: rtranclp_induct)
+  case base
+
+  then have C1 : "(sem_step_p gs1)\<^sup>*\<^sup>* y y"
+    by(auto)
+
+  thus ?case using base
+    by blast
+next
+  case (step y1 z1)
+(* need to obtain a syn. for y1? *)
+
+  obtain y' where Y' : "(sem_step_p gs1)\<^sup>*\<^sup>* y y'" and Y'_leq : "y' <[ y1"
+    using step.IH[OF step.prems(1) step.prems(2) step.prems(3)]
+    by auto
+
+  obtain y1chs y1chl y1ct where Y1_cont : "s_cont y1 = (G y1chs y1chl)#y1ct"
+    using step.hyps(2) unfolding sem_step_p_eq sem_step_def
+    by (cases "s_cont y1"; auto)
+
+  have Y'_in : "y' \<in> {y', y1}" by auto
+  have Y'_fin : "finite {y', y1}" by auto
+  have Y1_sup : "is_sup {y', y1} y1"
+    using Y'_leq unfolding is_sup_def is_least_def is_ub_def
+    by(auto simp add: leq_refl)
+(*  have Gs1_sub : "{s_sem gs1} \<subseteq> set l" using step.prems(2) by auto *)
+  have Gs1_sub : "set l \<subseteq> set l" by auto
+  have Gs1_in : "s_sem gs1 \<in> set l" using step.prems(2) by auto
+
+(*
+  obtain supr where Supr1 : "is_sup ((\<lambda>f. f y1chs y1) ` set l) supr" 
+  and Supr2 : "is_sup (scross ((\<lambda>f. f y1chs) ` set l) {y', y1}) supr"
+    using sups_presD[OF step.prems(1) Y'_in Y'_fin Y1_sup Gs1_sub Gs1_in, of y1chs] 
+    by auto
+*)
+
+  have Supr : "is_sup (scross ((\<lambda> f . f y1chs) ` set l) {y', y1}) (pcomps' l y1chs y1)"
+    using sups_pres_pcomps'_gen[OF step.prems(1) Gs1_in Y'_fin Y'_in Y1_sup, of y1chs]
+    by auto
+
+(* need this or next *)
+  have Step_in : "s_sem gs1 y1chs y1 \<in> ((\<lambda>f. f y1chs y1) ` set l)"
+    using step.prems(2)
+    by auto
+
+(* need this or prev *)
+  have Step_in2 : "s_sem gs1 y1chs y' \<in> (scross ((\<lambda>f. f y1chs) ` set l) {y', y1})"
+  proof(rule scross_inI)
+    show "s_sem gs1 y1chs \<in> (\<lambda>f. f y1chs) ` set l" using step.prems(2) by auto
+    show "y' \<in> {y', y1}" by auto
+    show "sem.s_sem gs1 y1chs y' = sem.s_sem gs1 y1chs y'" by auto
+  qed
+
+  have Compare : "s_sem gs1 y1chs y' <[ (pcomps' l y1chs y1)"
+    using is_sup_unfold1[OF Supr Step_in2]
+    by auto
+(*
+  have Step' : "sem_step_p gs1 y' (s_sem gs1 y1chs y')"
+    using sem_step_p.intros[OF Y1_cont]
+*)
+  show ?case using step.prems step.hyps
+  qed
+
+(* this one seems maybe not true... *)
+lemma sups_pres_guard :
+  assumes Pres : "sups_pres (set l)"
+  assumes Sem : "s_sem gs1 \<in> set l"
+  assumes Hguard : "|gs1| {X} c"
+  shows "|\<lparr>s_sem = pcomps' l\<rparr>| {X} c"
+proof
+  fix m :: "('a gensyn list md_triv option md_prio \<times> 'b)"
+
+  assume X : "X (snd m)"
+
+  assume Xc : "s_cont m = c"
+
+  show "safe \<lparr>sem.s_sem = pcomps' l\<rparr> m"
+  proof
+
+    fix m'
+    (* we still have the problem that if gs1 terdminates early, we may miss the fact that
+       the entire computation may not terminate... *)
+    assume "sem_exec_p \<lparr>sem.s_sem = pcomps' l\<rparr> m m'"
+(*
+    using guardedD[OF Hguard X Xc]
+    apply(cases m)
+  *)
+
+
+
 (* merging multi-step computations *)
+(* i think we need either induction or some kind of inductive lemma. *)
+(* it really feels like we are missing some information about Q... *)
 lemma Hmerge :
   assumes Pres : "sups_pres (set l)"
   assumes Sem : "s_sem gs1 \<in> set l"
@@ -469,9 +580,24 @@ what do we want instead if it isn't?
         qed
       next
         case (Some m1)
+
+        show ?thesis
+        proof(cases "s_cont m")
+          case Nil
+          then show ?thesis sorry
+        next
+          case (Cons mch mct)
+          then show ?thesis 
+            using Some Exec' HTE[OF V] guardedD[OF HQ] HCont HP
+          apply(simp add: sem_step_def)
+
+        qed
+
         then show ?thesis using HTE[OF V]
+(*
 sups_presD[OF Pres]
-        
+  *)
+          apply(simp add: sem_step_def)
 
 (* one? way to think about this:
   
