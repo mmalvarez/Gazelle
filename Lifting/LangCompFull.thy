@@ -476,6 +476,17 @@ proof-
     by auto
 qed
 
+(* all or any? *)
+(*
+lemma sups_pres_monoc :
+  assumes H : "sups_pres S"
+  assumes Hf : "f \<in> S"
+  assumes "f syn x <[ f syn y"
+  shows Hxy : "x <[ y"
+proof-
+*)
+
+
 lemma pcomps'_mono :
   assumes H : "sups_pres (set l)"
   assumes Hnemp : "f \<in> set l"
@@ -503,12 +514,125 @@ next
       using Cons.IH[OF SP' _ Cons.prems(3), of fh2 syn] unfolding Cons'
       by auto
 
-    show ?thesis using Cons'
-      apply(auto)
+    have Mono : "fh1 syn x <[ fh1 syn y"
+      using sups_pres_mono[OF Cons.prems(1) _ Cons.prems(3), of fh1 syn]
+      by auto
+
+    have SupX :
+      "is_sup
+        (scross ((\<lambda>f. f syn) ` set (fh1 # ft1)) {x})
+        (pcomps' (fh1 # ft1) syn x)"
+      using sups_pres_pcomps'_gen[OF Cons.prems(1) _ _ _ sup_singleton[of x], of fh1  x syn]
+      by(auto)
+  
+    have SupX_tail :  "is_sup
+        (scross ((\<lambda>f. f syn) ` set (ft1)) {x})
+        (pcomps' (ft1) syn x)"
+      using sups_pres_pcomps'_gen[OF SP' _ _ _ sup_singleton[of x], of fh2  x syn] unfolding Cons'
+      by(auto)
+  
+    have RewriteX : "(scross ((\<lambda>f. f syn) ` set (fh1 # ft1)) {x}) = 
+                      ({fh1 syn x} \<union> ((\<lambda> f . f syn x) ` set ft1))"
+      unfolding scross_singleton2 by auto
+  
+    have SupX2 : "is_sup {fh1 syn x, pcomps' ft1 syn x} (pcomps' (fh1 # ft1) syn x)"
+      using sup_union2[OF sup_singleton[of "fh1 syn x"] SupX_tail] SupX unfolding RewriteX scross_singleton2
+      by(auto)
+  
+    have SupY :
+      "is_sup
+        (scross ((\<lambda>f. f syn) ` set (fh1 # ft1)) {y})
+        (pcomps' (fh1 # ft1) syn y)"
+      using sups_pres_pcomps'_gen[OF Cons.prems(1) _ _ _ sup_singleton[of y], of fh1 y syn]
+      by(auto)
+  
+    have SupY_tail :  "is_sup
+        (scross ((\<lambda>f. f syn) ` set (ft1)) {y})
+        (pcomps' (ft1) syn y)"
+      using sups_pres_pcomps'_gen[OF SP' _ _ _ sup_singleton[of y], of fh2  y syn] unfolding Cons'
+      by(auto)
+  
+    have RewriteY : "(scross ((\<lambda>f. f syn) ` set (fh1 # ft1)) {y}) = 
+                      ({fh1 syn y} \<union> ((\<lambda> f . f syn y) ` set ft1))"
+      unfolding scross_singleton2 by auto
+  
+    have SupY2 : "is_sup {fh1 syn y, pcomps' ft1 syn y} (pcomps' (fh1 # ft1) syn y)"
+      using sup_union2[OF sup_singleton[of "fh1 syn y"] SupY_tail] SupY unfolding RewriteY scross_singleton2
+      by(auto)
+  
+    have Ub_conc : "is_ub {fh1 syn x, pcomps' ft1 syn x} (pcomps' (fh1 # ft1) syn y)"
+    proof-
+      have Leq1 : "fh1 syn x <[ (pcomps' (fh1 # ft1) syn y)"
+        using leq_trans[OF Mono, of "pcomps' (fh1 # ft1) syn y"] is_sup_unfold1[OF SupY2, of "fh1 syn y"]
+        by auto
+
+      have Leq2 : "pcomps' ft1 syn x <[ (pcomps' (fh1 # ft1) syn y)"
+        using leq_trans[OF Ind, of "(pcomps' (fh1 # ft1) syn y)"]
+          is_sup_unfold1[OF SupY2, of "pcomps' ft1 syn y"]
+        by auto
+
+      show ?thesis
+        unfolding is_ub_def using Leq1 Leq2
+        by auto
+    qed
+
+    show ?thesis using is_sup_unfold2[OF SupX2 Ub_conc]
+      by auto
   qed
 qed
+  
+(* YOU ARE HERE
 
+"dominance":
+for a given syntax, which language is guaranteed to give the LUB?
 
+*)
+
+definition dominant ::
+  "('a \<Rightarrow> ('b :: Mergeable) \<Rightarrow> 'b) \<Rightarrow> ('a \<Rightarrow> ('b :: Mergeable) \<Rightarrow> 'b) set \<Rightarrow> 'a \<Rightarrow> bool"
+("_ \<downharpoonleft> _ _")
+where
+"(f \<downharpoonleft> S x) =
+ (\<forall> b . is_sup ((\<lambda> g . g x b) ` S) (f x b))"
+
+lemma dominantI [intro] :
+  assumes "\<And> b . is_sup ((\<lambda> g . g x b) ` S) (f x b)"
+  shows "(f \<downharpoonleft> S x)" using assms
+  unfolding dominant_def by auto
+
+lemma dominantE [elim] :
+  assumes "(f \<downharpoonleft> S x)"
+  shows "is_sup ((\<lambda> g . g x b) ` S) (f x b)" using assms
+  unfolding dominant_def by auto
+
+lemma dominant_pcomps' :
+  assumes Hpres : "sups_pres (set l)"
+  assumes Hne : "z \<in> set l"
+  assumes H : "(f \<downharpoonleft> (set l) x)"
+  shows "pcomps' l x b = f x b"
+proof-
+
+  have B : "is_sup {b} b"
+    using sup_singleton by auto
+
+  have Sup1 : "is_sup (scross ((\<lambda>f. f x) ` set l) {b}) (pcomps' l x b)"
+    using sups_pres_pcomps'_gen[OF Hpres Hne, of "{b}" b b x] B
+    by auto
+
+  have Rewrite1 : "(\<lambda>f. f b) ` (\<lambda>f. f x) ` set l = (\<lambda> f . f x b) ` set l"
+    by blast
+
+  have Sup2 : "is_sup ((\<lambda>f. f x b) ` set l) (pcomps' l x b)"
+    using Sup1
+    unfolding scross_singleton2 Rewrite1
+    by auto
+
+  have Sup2' : "is_sup ((\<lambda>f. f x b) ` set l) (f x b)"
+    using dominantE[OF H, of b]
+    by auto
+
+  show ?thesis using is_sup_unique[OF Sup2 Sup2'] by auto
+qed
 
 (* has_sup of pcomps' l syn applied to xs? *)
 (* do we need this? i think the idea here is to say that

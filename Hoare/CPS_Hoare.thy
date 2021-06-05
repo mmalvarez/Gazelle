@@ -371,15 +371,46 @@ next
   show ?case using rtranclp.intros(2)[OF X1z step.prems(3)] by auto
 qed
 
-(*
-
-need a lemma that shows that
-  - if executing computation 1 (big) goes m \<rightarrow> m'
-  - 
-
-do we need execution function to be monotone?
-
+(* lemma for lifting composed languages in the case where
+   one "always wins" for a given syntax element
 *)
+lemma HDominant :
+  assumes H0 : "gs = \<lparr> s_sem = pcomps' fs \<rparr>"
+  assumes Hdom : "(f \<downharpoonleft> (set fs) x)"
+  assumes Hpres : "sups_pres (set fs)"
+(* x or x cons t *)
+  assumes Htrip : "|\<lparr> s_sem = f \<rparr>| {- P1 -} [G x l] {- P2 -}"
+  shows "|gs| {- P1 -} [G x l] {- P2 -}"
+proof
+  fix c'
+  assume Guard :  "|gs| {P2} c'"
+
+  show "|gs| {P1} [G x l] @ c'"
+  proof
+    fix m :: "('a, 'b) control"
+
+    assume P1 : "P1 (snd m)"
+    assume Cont1 : "s_cont m = [G x l] @ c'"
+
+    show "safe gs m"
+    proof
+      fix m'
+
+      assume Exec : "sem_exec_p gs m m'"
+
+      then show "imm_safe gs m'"
+        unfolding sem_exec_p_def
+      proof(cases rule: rtranclp.cases)
+        case rtrancl_refl
+        then show ?thesis using Cont1 
+          by(simp add: imm_safe_def sem_step_p_eq sem_step_def)
+      next
+        case (rtrancl_into_rtrancl b)
+
+
+
+        then show ?thesis using HTE[OF Htrip]
+      qed
 
 (* x' vs y' ? *)
 (* need to handle early halting. 
@@ -392,6 +423,11 @@ one approach: perhaps we could weaken this:
 - whenever sem_exec_p of sub language can step to some state,
 there will exist a state that sem_exec_p of big language steps to
 *)
+(* TODO: the following is the wrong approach.
+instead we should quantify over arbitrary extensions
+of each semantics
+*)
+(*
 lemma sups_pres_merge :
   assumes Pres : "sups_pres (set l)"
   assumes Sem : "s_sem gs1 \<in> set l"
@@ -456,12 +492,17 @@ next
   have Compare : "s_sem gs1 y1chs y' <[ (pcomps' l y1chs y1)"
     using is_sup_unfold1[OF Supr Step_in2]
     by auto
+
+(* this works but i don't think it's what we want. *)
 (*
+  have Hmm : "y1 <[ z1" using step.prems step.hyps
+  *)
+
   have Step' : "sem_step_p gs1 y' (s_sem gs1 y1chs y')"
-    using sem_step_p.intros[OF Y1_cont]
-*)
-  show ?case using step.prems step.hyps
-  qed
+    using sem_step_p.intros[OF ]
+    sorry
+  show ?case using Y' step.prems step.hyps Y' Y'_leq Compare
+qed
 
 (* this one seems maybe not true... *)
 lemma sups_pres_guard :
@@ -625,5 +666,6 @@ sups_presD[OF Pres]
           
           using HP HCont unfolding sem_step_p_eq
       qed
+*)
 *)
 end
