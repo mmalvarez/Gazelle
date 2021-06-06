@@ -580,13 +580,6 @@ next
       by auto
   qed
 qed
-  
-(* YOU ARE HERE
-
-"dominance":
-for a given syntax, which language is guaranteed to give the LUB?
-
-*)
 
 definition dominant ::
   "('a \<Rightarrow> ('b :: Mergeable) \<Rightarrow> 'b) \<Rightarrow> ('a \<Rightarrow> ('b :: Mergeable) \<Rightarrow> 'b) set \<Rightarrow> 'a \<Rightarrow> bool"

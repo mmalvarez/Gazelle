@@ -350,6 +350,7 @@ proof
 qed
 
 (* lemma for reasoning about compound executions *)
+(* this is actually a special case of next 2 lemmas *)
 lemma rtranclp_bisect1 :
   assumes H0 : "determ R"
   assumes H : "R\<^sup>*\<^sup>* xi xp"
@@ -371,9 +372,31 @@ next
   show ?case using rtranclp.intros(2)[OF X1z step.prems(3)] by auto
 qed
 
+lemma rtranclp_bisect_start :
+  assumes H0 : "determ R"
+  assumes H : "R\<^sup>*\<^sup>* xi xp"
+  assumes H1 : "R xi x1"
+  shows "R\<^sup>*\<^sup>* x1 xf" using H H0 H1 
+proof(induction arbitrary: x1 xf rule: rtranclp_induct)
+  case base
+
+  have Eq : "x1 = xf" using determE[OF H0 base(2)] by auto
+
+  then show ?case using base by auto
+next
+  case (step y z)
+
+  have X1z : "R\<^sup>*\<^sup>* x1 z" using step.IH[OF step.prems(1) step.prems(2) step.hyps(2)]
+    by auto
+
+  show ?case using rtranclp.intros(2)[OF X1z step.prems(3)] by auto
+qed
+
+
 (* lemma for lifting composed languages in the case where
    one "always wins" for a given syntax element
 *)
+(*
 lemma HDominant :
   assumes H0 : "gs = \<lparr> s_sem = pcomps' fs \<rparr>"
   assumes Hdom : "(f \<downharpoonleft> (set fs) x)"
@@ -411,7 +434,7 @@ proof
 
         then show ?thesis using HTE[OF Htrip]
       qed
-
+*)
 (* x' vs y' ? *)
 (* need to handle early halting. 
 to do this we can either make the semantics monotone, or have some way of handling this
