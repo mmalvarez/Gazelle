@@ -11,10 +11,6 @@ datatype syn =
   Sseq
   | Sskip
 
-instantiation syn :: Bogus begin
-definition syn_bogus : "bogus = Sskip"
-instance proof qed
-end
 
 (* TODO: need additional data? (E.g. to capture error cases *)
 type_synonym 'x state' = "'x gensyn list"
@@ -72,7 +68,7 @@ definition seq_semx ::
 (* TODO: see if there is a way to update the auto lifter so that
    it works with parameterized stuff *)
 
-definition seq_sem_lifting_gen' :: "(syn, 'x state', ('x, 'y :: Pordb) control) lifting"
+definition seq_sem_lifting_gen' :: "(syn, 'x state', ('x, _ :: Pordb) control) lifting"
   where
 "seq_sem_lifting_gen' = schem_lift
     NC (SP (SPRI (SO NC)) NX) "
@@ -94,7 +90,7 @@ lemma fst_l_S_univ :
   by(blast)
 
 lemma seq_sem_lifting_gen_validb :
-  "lifting_validb (seq_sem_lifting_gen :: (syn, 'x state', ('x, 'y :: Pordb) control) lifting) 
+  "lifting_validb (seq_sem_lifting_gen :: (syn, 'x state', ('x, _ :: Pordb) control) lifting) 
                   (\<lambda> _ . UNIV)" unfolding seq_sem_lifting_gen_def
   unfolding seq_sem_lifting'_def
   apply(simp only: sym[OF fst_l_S_univ])
@@ -114,12 +110,32 @@ definition seq_sem_l_gen ::
   seq_sem_lifting_gen
   seq_sem'"
 
+definition seq_sem_l_gen' ::
+  "('s \<Rightarrow> syn) \<Rightarrow>
+   's \<Rightarrow> (('x, 'y :: Pordb) control) \<Rightarrow> (('x, 'y :: Pordb) control)" where
+"seq_sem_l_gen' lfts =
+  lift_map_s lfts
+  seq_sem_lifting_gen'
+  seq_sem'"
+
 
 definition seq_semx :: 
 "('s \<Rightarrow> syn) \<Rightarrow>
  ('s, 'x, 'z :: Pordb) sem" where
 "seq_semx lfts \<equiv>
   \<lparr> s_sem = seq_sem_l_gen lfts \<rparr>"
+
+definition seq_semx' :: 
+"('s \<Rightarrow> syn) \<Rightarrow>
+ ('s, 'x, 'z :: Pordb) sem" where
+"seq_semx' lfts \<equiv>
+  \<lparr> s_sem = seq_sem_l_gen' lfts \<rparr>"
+
+
+definition prog where
+"prog = (G Sseq [G Sseq [], G Sseq []])"
+
+value "sem_exec (seq_semx' id) 1 (mdp 0 (Some (mdt [prog])), Some ())"
 
 (* 
   question
@@ -211,14 +227,6 @@ proof
 qed
 
 
-(*
-one idea:
-- distill down into a "dominant" language for certain syntax
-  - or syntax/state combination
-- this dominant language may be a subset
-*)
-
-(* the issue now is, what if Sseq' gets overriden? *)
 (* TODO: do we need the assumption that
 fs is nonempty? *)
 lemma HSeq_gen :
@@ -233,10 +241,10 @@ lemma HSeq_gen :
   shows "|gs| {- P1 -} [G Sseq' cs] {- P2 -}"
 proof
   fix c'
-  assume Safe : "|gs| {P2} c'"
+  assume Guard : "|gs| {P2} c'"
 
   have Guarded : "|gs| {P1} cs @ c'"
-    using HTE[OF H Safe]
+    using HTE[OF H Guard]
     by auto
 
   show "|gs| {P1} [G Sseq' cs] @ c'"

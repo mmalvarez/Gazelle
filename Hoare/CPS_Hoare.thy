@@ -372,36 +372,25 @@ next
   show ?case using rtranclp.intros(2)[OF X1z step.prems(3)] by auto
 qed
 
-lemma rtranclp_bisect_start :
-  assumes H0 : "determ R"
-  assumes H : "R\<^sup>*\<^sup>* xi xp"
-  assumes H1 : "R xi x1"
-  shows "R\<^sup>*\<^sup>* x1 xf" using H H0 H1 
-proof(induction arbitrary: x1 xf rule: rtranclp_induct)
-  case base
-
-  have Eq : "x1 = xf" using determE[OF H0 base(2)] by auto
-
-  then show ?case using base by auto
-next
-  case (step y z)
-
-  have X1z : "R\<^sup>*\<^sup>* x1 z" using step.IH[OF step.prems(1) step.prems(2) step.hyps(2)]
-    by auto
-
-  show ?case using rtranclp.intros(2)[OF X1z step.prems(3)] by auto
-qed
-
-
 (* lemma for lifting composed languages in the case where
    one "always wins" for a given syntax element
 *)
+
+(* A general version of this may be provable. for now let's just prove
+different ones for each thing. *)
+
 (*
 lemma HDominant :
   assumes H0 : "gs = \<lparr> s_sem = pcomps' fs \<rparr>"
   assumes Hdom : "(f \<downharpoonleft> (set fs) x)"
+  assumes Hnemp : "g \<in> set fs"
+
   assumes Hpres : "sups_pres (set fs)"
-(* x or x cons t *)
+
+(* this does not quite work. we would need that the tail evaluates in
+the big semantics. so maybe it's easier to just
+do this on a case by case basis, one for each language element that
+needs a multi-step treatment. *)
   assumes Htrip : "|\<lparr> s_sem = f \<rparr>| {- P1 -} [G x l] {- P2 -}"
   shows "|gs| {- P1 -} [G x l] {- P2 -}"
 proof
@@ -416,6 +405,70 @@ proof
     assume Cont1 : "s_cont m = [G x l] @ c'"
 
     show "safe gs m"
+    proof(cases "sem_step gs m")
+      case None
+      then show ?thesis using Cont1 H0
+        by(auto simp add: sem_step_def)
+    next
+      case (Some m')
+
+      have F_eq : "sem_step \<lparr> s_sem = f \<rparr> m = Some m'"
+        using sym[OF dominant_pcomps'[OF Hpres Hnemp Hdom]] Cont1 Some H0
+        by(simp add: sem_step_def)
+
+      then show ?thesis
+      proof(cases "s_cont m'")
+        case Nil
+        then show ?thesis sorry (* halted means safe *)
+      next
+        case (Cons ch ct)
+
+        have Step : "sem_step_p gs m m'" using Some
+          unfolding sem_step_p_eq
+          by auto
+
+        have Safe' : "safe gs m'" using guardedD[OF Guard M' Fcont] by auto
+
+
+        show "safe gs m"
+        proof
+          fix m''
+
+          assume Exec : "sem_exec_p gs m m''"
+          hence Exec' : "(sem_step_p gs)\<^sup>*\<^sup>* m m''"
+            unfolding sem_exec_p_def by auto
+  
+          show "imm_safe gs m''" using Exec'
+          proof(cases rule: rtranclp.cases)
+            case rtrancl_refl
+            then show ?thesis 
+              using Some 
+              unfolding imm_safe_def sem_step_p_eq
+              by(auto)
+          next
+            case (rtrancl_into_rtrancl b)
+  
+            have Exec_final : "sem_exec_p gs m' m''"
+              using rtranclp_bisect1
+                [OF sem_step_determ rtrancl_into_rtrancl(1)
+                    Step rtrancl_into_rtrancl(2)]
+              unfolding sem_exec_p_def
+              by auto
+  
+            show ?thesis using safeD[OF Safe' Exec_final] by auto
+          qed
+        qed
+      qed
+    qed
+
+        have M' : "P1 (snd m')"
+          using HTE[OF Htrip]
+
+        then show ?thesis 
+      qed
+    qed
+
+
     proof
       fix m'
 
@@ -430,7 +483,7 @@ proof
       next
         case (rtrancl_into_rtrancl b)
 
-
+        
 
         then show ?thesis using HTE[OF Htrip]
       qed
