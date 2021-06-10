@@ -9,6 +9,9 @@ begin
   hopefully we can just get away with an intros: set
 *)
 
+(* vsg versions add a side condition on equality of the valid set,
+   which might make them more useful. *)
+
 lemmas schem_lift_defs =
   schem_lift_base_trivA_def
   schem_lift_base_trivB_def
@@ -156,6 +159,7 @@ lemmas lifting_valid_vsg' =
   fst_l_valid_vsg
   fst_l_valid_weakb_vsg
   fst_l_validb_vsg
+
 
   snd_l_valid_weak_vsg
   snd_l_valid_vsg

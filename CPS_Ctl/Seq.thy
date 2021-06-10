@@ -2,7 +2,7 @@ theory Seq
 
   imports "../Gensyn" "../Gensyn_Descend" "../Mergeable/Mergeable" "../Mergeable/MergeableInstances"
           "../Lifting/LiftUtils" "../Lifting/LiftInstances"
-          "../Lifting/AutoLift" "../Hoare/CPS_Hoare" "../Lifting/LangCompFull"
+          "../Lifting/AutoLift" "../Lifting/AutoLiftProof"  "../Hoare/CPS_Hoare" "../Lifting/LangCompFull"
           "Utils"
 
 begin
@@ -15,74 +15,36 @@ datatype syn =
 (* TODO: need additional data? (E.g. to capture error cases *)
 type_synonym 'x state' = "'x gensyn list"
 
-definition seq_sem' :: "syn \<Rightarrow> 'x state' \<Rightarrow> 'x state'" where
-"seq_sem' x st =
+definition seq_sem :: "syn \<Rightarrow> 'x state' \<Rightarrow> 'x state'" where
+"seq_sem x st =
   (case st of [] \<Rightarrow> []
    | (G s l)#t \<Rightarrow>
      (case x of
       Sskip \<Rightarrow> t
       | Sseq \<Rightarrow> l@t))"
 
-type_synonym 'x state = 
-  "('x, unit option) control"
+type_synonym ('s, 'x) state = 
+  "('s, 'x) control"
 
-term "(schem_lift
-    (SP NA (SP NB NC)) (SP (SO NA) (SP (SPRI (SO NB)) (SPRI (SO NC)))))"
+(* concrete state *)
+type_synonym 's cstate = "('s, unit option) state"
 
 
-definition seq_sem_lifting :: "(syn, 'x state', 'x state) lifting"
+(* TODO: make sure there aren't any weird corner cases in how the auto lifter
+   interacts with parameterized stuff *)
+
+(* TODO: the lifter seems to be fine with this, but chokes on anything more complicated... *)
+
+definition seq_sem_lifting_gen :: "(syn, 'x state', ('x, 'a :: Pordb) control) lifting"
   where
-"seq_sem_lifting = schem_lift
+"seq_sem_lifting_gen = schem_lift
     NC (SP (SPRI (SO NC)) NX) "
 
-definition seq_sem_l :: "syn \<Rightarrow> 'x state \<Rightarrow> 'x state" where
-"seq_sem_l =
-  lift_map_s id
-  seq_sem_lifting
-  seq_sem'"
-
-definition seq_sem :: "(syn, 'x, unit option) sem" where
-"seq_sem \<equiv>
-  \<lparr> s_sem = seq_sem_l \<rparr>"
-
-
-(* TODO: the next thing is making
-   sure this all still works in the face of a true merge
-   with multiple liftings. *)
-(* TODO: are all these parameters necessary?
-   ('s as well as 'x)
-*)
-
-(* this isn't quite right. we need to constrain the lifting so that the
-   control data is being lifted into the second component *)
-(*
-definition seq_semx :: 
-"('s \<Rightarrow> syn) \<Rightarrow>
- (syn, 'x state', ('x, 'z :: Pord) control) lifting \<Rightarrow>
- ('s, 'x, 'z) sem" where
-"seq_semx lfts lft \<equiv>
-  \<lparr> s_sem = seq_sem_l_gen lfts lft \<rparr>"
-*)
-
-
-(* TODO: see if there is a way to update the auto lifter so that
-   it works with parameterized stuff *)
-
-definition seq_sem_lifting_gen' :: "(syn, 'x state', ('x, _ :: Pordb) control) lifting"
-  where
-"seq_sem_lifting_gen' = schem_lift
-    NC (SP (SPRI (SO NC)) NX) "
-
-term  "seq_sem_lifting_gen' :: (syn, unit state', (unit, unit option) control) lifting"
-
+(* alternate definition that doesn't rely on auto lifter *)
 definition seq_sem_lifting' :: "(syn, 'x state', 'x state' md_triv option md_prio) lifting"
   where
 "seq_sem_lifting' =
   (prio_l (\<lambda> _ . 0) (\<lambda> _ z . 1 + z) (option_l (triv_l)))"
-
-definition seq_sem_lifting_gen :: "(syn, 'x state', ('x, 'y :: Pordb) control) lifting"
-  where
-"seq_sem_lifting_gen = fst_l (seq_sem_lifting')"
 
 lemma fst_l_S_univ : 
   "(fst_l_S (\<lambda> _ . UNIV)) = (\<lambda> _ . UNIV)"
@@ -92,7 +54,8 @@ lemma fst_l_S_univ :
 lemma seq_sem_lifting_gen_validb :
   "lifting_validb (seq_sem_lifting_gen :: (syn, 'x state', ('x, _ :: Pordb) control) lifting) 
                   (\<lambda> _ . UNIV)" unfolding seq_sem_lifting_gen_def
-  unfolding seq_sem_lifting'_def
+  unfolding seq_sem_lifting'_def schem_lift_defs
+  apply(auto intro: lifting_valid lifting_ortho)
   apply(simp only: sym[OF fst_l_S_univ])
   apply(rule fst_l_validb)
   apply(rule prio_l_validb_strong)
@@ -108,15 +71,7 @@ definition seq_sem_l_gen ::
 "seq_sem_l_gen lfts =
   lift_map_s lfts
   seq_sem_lifting_gen
-  seq_sem'"
-
-definition seq_sem_l_gen' ::
-  "('s \<Rightarrow> syn) \<Rightarrow>
-   's \<Rightarrow> (('x, 'y :: Pordb) control) \<Rightarrow> (('x, 'y :: Pordb) control)" where
-"seq_sem_l_gen' lfts =
-  lift_map_s lfts
-  seq_sem_lifting_gen'
-  seq_sem'"
+  seq_sem"
 
 
 definition seq_semx :: 
@@ -125,28 +80,11 @@ definition seq_semx ::
 "seq_semx lfts \<equiv>
   \<lparr> s_sem = seq_sem_l_gen lfts \<rparr>"
 
-definition seq_semx' :: 
-"('s \<Rightarrow> syn) \<Rightarrow>
- ('s, 'x, 'z :: Pordb) sem" where
-"seq_semx' lfts \<equiv>
-  \<lparr> s_sem = seq_sem_l_gen' lfts \<rparr>"
-
 
 definition prog where
 "prog = (G Sseq [G Sseq [], G Sseq []])"
 
-value "sem_exec (seq_semx' id) 1 (mdp 0 (Some (mdt [prog])), Some ())"
-
-(* 
-  question
-    - is it enough to say "we have a GS that extends Seq"
-    - do we need to account for multiple "layers" of composition?
-
-    - if we have a big compound, we would need a bunch of
-GS, one for each sub-language
-    - type parameter (local syntax) would vary
-    - 
-*)
+value "sem_exec (seq_semx id) 1 (mdp 0 (Some (mdt [prog])), Some ())"
 
 (* TODO: this proof is currently rather nasty, as it
    involves unfolding a bunch of liftings *)
@@ -188,13 +126,13 @@ proof
 (*TODO: make this less bad *)
       have CM1 :  "s_cont m' = cs @ c'"
         using Some CM H0 H1
-        by(cases m; cases m'; auto simp add: sem_step_def seq_semx_def seq_sem_l_gen_def seq_sem'_def s_cont_def seq_sem_lifting_gen_def fst_l_def seq_sem_lifting'_def
+        by(cases m; cases m'; auto simp add: schem_lift_defs sem_step_def seq_semx_def seq_sem_l_gen_def seq_sem_def s_cont_def seq_sem_lifting_gen_def fst_l_def
             prio_l_def option_l_def triv_l_def split: md_prio.splits option.splits md_triv.splits)
 
 (*TODO: make this less bad *)
       have M1_eq : "snd m' = snd m"
         using Some H0
-        by(cases m; cases m'; auto simp add: sem_step_def seq_semx_def seq_sem_l_gen_def seq_sem'_def s_cont_def seq_sem_lifting_gen_def fst_l_def seq_sem_lifting'_def
+        by(cases m; cases m'; auto simp add: schem_lift_defs sem_step_def seq_semx_def seq_sem_l_gen_def seq_sem_def s_cont_def seq_sem_lifting_gen_def fst_l_def
             prio_l_def option_l_def triv_l_def split: md_prio.splits option.splits md_triv.splits list.split_asm)
 
       have M1 : "P1 (snd m')" using M unfolding M1_eq by auto
@@ -271,13 +209,13 @@ proof
       have Fcont : "s_cont m' = cs @ c'"
         using HF F_eq CM H2
 (* TODO: lifting automation here *)
-        apply(cases m; cases m'; auto simp add: sem_step_def seq_sem_l_gen_def sem_step_def seq_semx_def seq_sem_l_gen_def seq_sem'_def s_cont_def seq_sem_lifting_gen_def fst_l_def seq_sem_lifting'_def
+        apply(cases m; cases m'; auto simp add: schem_lift_defs sem_step_def seq_sem_l_gen_def sem_step_def seq_semx_def seq_sem_l_gen_def seq_sem_def s_cont_def seq_sem_lifting_gen_def fst_l_def seq_sem_lifting'_def
             prio_l_def option_l_def triv_l_def split: md_prio.splits option.splits md_triv.splits list.split_asm)
         done
 
       have Fstate : "snd m' = snd m"
         using HF F_eq CM H2
-        by(cases m; cases m'; auto simp add: sem_step_def seq_sem_l_gen_def sem_step_def seq_semx_def seq_sem_l_gen_def seq_sem'_def s_cont_def seq_sem_lifting_gen_def fst_l_def seq_sem_lifting'_def
+        by(cases m; cases m'; auto simp add: schem_lift_defs sem_step_def seq_sem_l_gen_def sem_step_def seq_semx_def seq_sem_l_gen_def seq_sem_def s_cont_def seq_sem_lifting_gen_def fst_l_def seq_sem_lifting'_def
             prio_l_def option_l_def triv_l_def split: md_prio.splits option.splits md_triv.splits list.split_asm)
 
       hence M' :  "P1 (snd m')" using M unfolding Fstate by auto
