@@ -350,7 +350,6 @@ proof
 qed
 
 (* lemma for reasoning about compound executions *)
-(* this is actually a special case of next 2 lemmas *)
 lemma rtranclp_bisect1 :
   assumes H0 : "determ R"
   assumes H : "R\<^sup>*\<^sup>* xi xp"
@@ -371,6 +370,46 @@ next
 
   show ?case using rtranclp.intros(2)[OF X1z step.prems(3)] by auto
 qed
+
+(* lemma for reasoning about executions which cannot step  *)
+lemma rtranclp_nostep :
+  assumes H0 : "determ R"
+  assumes H : "R\<^sup>*\<^sup>* x1 x2"
+  assumes H1 : "\<And> x1' . R x1 x1' \<Longrightarrow> False"
+  shows "x1 = x2" using H H0 H1
+proof(induction  rule: rtranclp_induct)
+  case base
+  then show ?case by auto
+next
+  case (step y z)
+
+  have Xeq : "x1 = y"
+    using step.IH[OF step.prems(1) step.prems(2), of id]
+    by auto
+
+  show ?case using step.hyps step.prems(2) unfolding Xeq
+    by auto
+qed
+
+
+definition diverges :: "('syn, 'mstate) semc \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> bool" where
+"diverges gs st =
+  (\<forall> st' . sem_exec_p gs st st' \<longrightarrow> (\<exists> st'' . sem_step_p gs st' st''))"
+
+lemma divergesI :
+  assumes H : "\<And> st' . sem_exec_p gs st st' \<Longrightarrow> (\<exists> st'' . sem_step_p gs st' st'')"
+  shows "diverges gs st" using H unfolding diverges_def by auto
+
+lemma divergesD :
+  assumes H : "diverges gs st"
+  assumes Hst : "sem_exec_p gs st st'"
+  shows "\<exists> st'' . sem_step_p gs st' st''"
+    using assms unfolding diverges_def by blast
+
+lemma diverges_safe :
+  assumes H : "diverges gs st"
+  shows "safe gs st" using H
+  unfolding diverges_def safe_def imm_safe_def by blast
 
 (* lemma for lifting composed languages in the case where
    one "always wins" for a given syntax element

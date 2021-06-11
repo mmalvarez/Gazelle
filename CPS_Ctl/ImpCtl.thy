@@ -177,8 +177,8 @@ definition get_cond ::
       (mdp _ (Some (mdt b'))) \<Rightarrow> Some b'
       | _ \<Rightarrow> None))"
 
-term "imp_sem_l_gen"
-term "seq_sem_l_gen"
+
+
 (*
 do we need to take into account "separation" between imp and cond?
 we probably need to model cond running for possibly multiple steps.
@@ -188,7 +188,7 @@ we probably need to model cond running for possibly multiple steps.
    besides this should be fine. *)
 (* we need to enforce that the initial state is valid.
 that is, that it falls into the valid set given by the imp lifting. *)
-lemma HImp_gen :
+lemma HIf_gen :
   assumes H0 : "gs = \<lparr> s_sem = pcomps' fs \<rparr>"
   (*assumes H1 : "seq_sem_l_gen lfts \<in> set fs" *)
   assumes HF : "f = imp_sem_l_gen lfts"
@@ -196,7 +196,9 @@ lemma HImp_gen :
   assumes Hnemp : "g \<in> set fs"
   assumes Hdom : "(f \<downharpoonleft> (set fs) Sif')"
   assumes Hsyn : "lfts Sif' = Sif"
-  (* TODO: generalize *)
+  (* TODO: generalize. these should be expressed using valid-sets *)
+  assumes P1_valid : "\<And> st.  P1 st \<Longrightarrow> get_cond st \<noteq> None"
+  assumes P2_valid : "\<And> st . P2 st \<Longrightarrow> get_cond st \<noteq> None"
 
   assumes Hcond : "|gs| {- P1 -} [cond] {- P2 -}"
   assumes Htrue : "|gs| {- (\<lambda> st . P2 st \<and> get_cond st = Some True) -} [body]
@@ -246,14 +248,16 @@ proof
           split: md_prio.splits md_triv.splits option.splits)
 
       (* this will need to be shown using valid-sets. *)
-      have M'_valid : "\<And> p . fst (snd m) \<noteq> mdp p None" sorry
+      have M'_valid : "\<And> p . fst (snd m) \<noteq> mdp p None" using P1_valid[OF M]
+        by(auto simp add: get_cond_def split:prod.splits)
 
       have Sm' : "snd m = snd m'"
-        using CM Hsyn F_eq M'_valid unfolding HF
+        using CM Hsyn F_eq M'_valid  unfolding HF
         by(cases m; cases m'; auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
            schem_lift_defs 
           merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
           split: md_prio.splits md_triv.splits option.splits)
+
 
       hence P1sm' : "P1 (snd m')" using M unfolding Sm' by auto
 
@@ -270,8 +274,9 @@ proof
         show "safe gs mp2"
         proof(cases "get_cond (snd mp2)")
           case None
-
-          show ?thesis sorry (* rule out this case with valid-sets constraints on predicates *)
+          then have False using P2_valid[OF MP2]
+            by(auto)
+          then show ?thesis by auto
         next
           case Some' : (Some cnd)
           then show ?thesis 
@@ -290,11 +295,8 @@ proof
               using sym[OF dominant_pcomps'[OF Hpres Hnemp Hdom]] Cont2 Some'' H0
               by(simp add: sem_step_def)
 
-            (* this will need to be shown using valid-sets. *)
-            have MP2'_valid : "\<And> p . fst (snd (snd mp2)) \<noteq> mdp p None" sorry
-
             have Mp2'_p2 : "P2 (snd mp2')"
-              using Cont2 Hsyn H0 MP2 F_eq' MP2'_valid Some' unfolding HF
+              using Cont2 Hsyn H0 MP2 F_eq' P2_valid[OF MP2] Some' unfolding HF
               by(cases mp2; cases mp2'; 
                   auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
                   schem_lift_defs 
@@ -308,7 +310,7 @@ proof
               case True
         
               have Mp2'_cond : "get_cond (snd mp2') = Some True" 
-                using Cont2 Hsyn H0 MP2 F_eq' MP2'_valid True Some' unfolding HF
+                using Cont2 Hsyn H0 MP2 F_eq' P2_valid[OF MP2] True Some' unfolding HF
                 by(cases mp2; cases mp2'; 
                     auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
                     schem_lift_defs 
@@ -321,7 +323,7 @@ proof
                 by auto
 
               have Mp2'_cont : "s_cont mp2' = [body] @ c'"
-                using Cont2 Hsyn H0 MP2 F_eq' MP2'_valid True Some' unfolding HF
+                using Cont2 Hsyn H0 MP2 F_eq' P2_valid[OF MP2] True Some' unfolding HF
                 by(cases mp2; cases mp2'; 
                     auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
                     schem_lift_defs 
@@ -368,7 +370,7 @@ proof
               case False
 
               have Mp2'_cond : "get_cond (snd mp2') = Some False" 
-                using Cont2 Hsyn H0 MP2 F_eq' MP2'_valid False Some' unfolding HF
+                using Cont2 Hsyn H0 MP2 F_eq' P2_valid[OF MP2] False Some' unfolding HF
                 by(cases mp2; cases mp2'; 
                     auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
                     schem_lift_defs 
@@ -381,7 +383,7 @@ proof
                 by auto
 
               have Mp2'_cont : "s_cont mp2' = [] @ c'"
-                using Cont2 Hsyn H0 MP2 F_eq' MP2'_valid False Some' unfolding HF
+                using Cont2 Hsyn H0 MP2 F_eq' P2_valid[OF MP2] False Some' unfolding HF
                 by(cases mp2; cases mp2'; 
                     auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
                     schem_lift_defs 
@@ -469,5 +471,361 @@ proof
     qed
   qed
 qed
+
+
+lemma HWhile_gen :
+  assumes H0 : "gs = \<lparr> s_sem = pcomps' fs \<rparr>"
+  (*assumes H1 : "seq_sem_l_gen lfts \<in> set fs" *)
+  assumes HF : "f = imp_sem_l_gen lfts"
+  assumes Hpres : "sups_pres (set fs)"
+  assumes Hnemp : "g \<in> set fs"
+  assumes Hdom : "(f \<downharpoonleft> (set fs) Swhile')"
+  assumes Hsyn : "lfts Swhile' = Swhile"
+  (* TODO: generalize. these should be expressed using valid-sets *)
+  assumes P1_valid : "\<And> st.  P1 st \<Longrightarrow> get_cond st \<noteq> None"
+  assumes P2_valid : "\<And> st . P2 st \<Longrightarrow> get_cond st \<noteq> None"
+
+  assumes Hcond : "|gs| {- P1 -} [cond] {- P2 -}"
+  assumes Htrue : "|gs| {- (\<lambda> st . P2 st \<and> get_cond st = Some True) -} [body]
+                        {- P1 -}"
+  assumes Hfalse : "|gs| {- (\<lambda> st . P2 st \<and> get_cond st = Some False) -} []
+                        {- P1 -}"
+  shows "|gs| {- P1 -} [G Swhile' [cond, body]] {- (\<lambda> st . P2 st \<and> get_cond st = Some False) -}"
+proof
+  fix c'
+  assume Guard : "|gs| {\<lambda>st. P2 st \<and> get_cond st = Some False} c'"
+
+  show "|gs| {P1} [G Swhile' [cond, body]] @ c'"
+  proof
+    fix m :: "('a, 'b) state"
+
+    assume M : "P1 (snd m)"
+    assume CM : "s_cont m = [G Swhile' [cond, body]] @ c'"
+
+    show "(safe gs m)"
+    proof(cases "(sem_step gs m)")
+      case None
+
+      then have False using CM H0
+        by(auto simp add: sem_step_def)
+
+      then show ?thesis by auto
+    next
+      case (Some m')
+
+      have F_eq : "sem_step \<lparr> s_sem = f \<rparr> m = Some m'"
+        using sym[OF dominant_pcomps'[OF Hpres Hnemp Hdom]] CM Some H0
+        by(simp add: sem_step_def)
+
+      have CM' : "s_cont m' = [cond] @ ([ G Swhile' [body]] @ c')" 
+        using CM Hsyn F_eq unfolding HF
+        by(cases m; cases m'; auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
+           schem_lift_defs 
+          merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def
+          split: md_prio.splits md_triv.splits option.splits)
+
+      (* this will need to be shown using valid-sets. *)
+      have M'_valid : "\<And> p . fst (snd m) \<noteq> mdp p None" using P1_valid[OF M]
+        by(auto simp add: get_cond_def split:prod.splits)
+
+      have Sm' : "snd m = snd m'"
+        using CM Hsyn F_eq M'_valid  unfolding HF
+        by(cases m; cases m'; auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
+           schem_lift_defs 
+          merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
+          split: md_prio.splits md_triv.splits option.splits)
+
+      hence P1sm' : "P1 (snd m')" using M unfolding Sm' by auto
+
+      (* next: step to the end of cond. *)
+
+      have Sub : "|gs| {P2} [G Swhile' [body]] @ c'"
+      proof
+        fix mp2 :: "('a, 'b) state"
+
+        assume MP2 : "P2 (snd mp2)"
+
+        assume Cont2 : "s_cont mp2 = [G Swhile' [body]] @ c'"
+
+        show "safe gs mp2"
+        proof(cases "get_cond (snd mp2)")
+          case None
+          then have False using P2_valid[OF MP2]
+            by(auto)
+          then show ?thesis by auto
+        next
+          case Some' : (Some cnd)
+          then show ?thesis 
+          proof(cases "sem_step gs mp2")
+            case None'' : None
+
+            then have False using Cont2 H0
+              by(auto simp add: sem_step_def)
+
+            then show ?thesis by auto
+
+          next
+            case Some'' : (Some mp2')
+
+            have F_eq' : "sem_step \<lparr> s_sem = f \<rparr> mp2 = Some mp2'"
+              using sym[OF dominant_pcomps'[OF Hpres Hnemp Hdom]] Cont2 Some'' H0
+              by(simp add: sem_step_def)
+
+            have Mp2'_p2 : "P2 (snd mp2')"
+              using Cont2 Hsyn H0 MP2 F_eq' P2_valid[OF MP2] Some' unfolding HF
+              by(cases mp2; cases mp2'; 
+                  auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
+                  schem_lift_defs 
+                  merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
+                  get_cond_def
+                  split: md_prio.splits md_triv.splits option.splits)
+
+            show ?thesis
+            proof(cases cnd)
+              case True
+        
+              have Mp2'_cond : "get_cond (snd mp2') = Some True" 
+                using Cont2 Hsyn H0 MP2 F_eq' P2_valid[OF MP2] True Some' unfolding HF
+                by(cases mp2; cases mp2'; 
+                    auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
+                    schem_lift_defs 
+                    merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
+                    get_cond_def
+                    split: md_prio.splits md_triv.splits option.splits)
+
+              have Mp2'_p2_true :  "P2 (snd mp2') \<and> get_cond (snd mp2') = Some True"
+                using Mp2'_p2 Mp2'_cond
+                by auto
+
+              have Mp2'_cont : "s_cont mp2' = [body] @ [G Swhile' [body]] @ c'"
+                using Cont2 Hsyn H0 MP2 F_eq' P2_valid[OF MP2] True Some' unfolding HF
+                by(cases mp2; cases mp2'; 
+                    auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
+                    schem_lift_defs 
+                    merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
+                    get_cond_def
+                    split: md_prio.splits md_triv.splits option.splits)
+
+
+(* hmm... is this not right? *)
+
+              have LoopGuarded' : "|gs| {(\<lambda> st . P2 st \<and> get_cond st = Some True)} [body] @ [G Swhile' [body]] @ c' "
+                using HTE[OF Htrue] guardedD[OF Guard]
+                sorry
+
+              have LoopGuarded' : "|gs| {(\<lambda> st . P2 st \<and> get_cond st = Some True)} [body] @ [G Swhile' [body]] @ c' "
+              proof
+                fix mz :: "('a, 'b) state"
+                assume Hz : "P2 (snd mz) \<and> get_cond (snd mz) = Some True"
+                assume Contz : "s_cont mz = [body] @ [G Swhile' [body]] @ c'"
+
+                have F_eq'' : "sem_step \<lparr> s_sem = f \<rparr> mp2 = Some mp2'"
+                  using sym[OF dominant_pcomps'[OF Hpres Hnemp Hdom]] Cont2 Some'' H0
+                  by(simp add: sem_step_def)
+
+
+                show "safe gs mz"
+                proof
+                  fix mz' :: "('a, 'b) state"
+
+                  assume Stepz : "sem_exec_p gs mz mz'"
+
+                  show "imm_safe gs mz'"
+                  proof(cases "sem_step gs mz")
+                    case None
+                    then show ?thesis 
+                      unfolding imm_safe_def sem_step_p_eq sem_step_def
+                      using Contz F_eq'
+                      by(auto)
+                  next
+                    case SomeZ : (Some mz'1)
+
+                    show ?thesis using Stepz  unfolding sem_exec_p_def
+                    proof(induction rule: rtranclp_induct)
+                      case base
+
+                      have "sem_step_p gs mz mz'1" using SomeZ unfolding sem_step_p_eq by auto
+
+                      then show ?case unfolding imm_safe_def by blast
+                    next
+                      case (step y z)
+                      then show ?case using guardedD[OF Guard]
+
+                    qed
+
+                  qed
+                    
+                    
+                    
+                    unfolding sem_exec_p_def
+                  proof(induction rule: rtranclp_induct)
+                    case base
+                    then show ?case unfolding imm_safe_def sem_step_p_eq sem_step_def
+                      using Contz F_eq'
+                      apply(auto)
+
+                      apply(auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
+                        schem_lift_defs 
+                        merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
+                        get_cond_def
+                        split: md_prio.splits md_triv.splits option.splits prod.splits)
+                  next
+                    case (step y z)
+                    then show ?case sorry
+                  qed
+
+
+
+(*                using HTE[OF Htrue]
+              proof
+*)
+(* what is the analogous false case? *)
+(*
+              have Mp2'_safe : "safe gs mp2'"
+                using guardedD[OF LoopGuarded Mp2'_p2 Mp2'_cont] by auto
+*)
+              have Mp2'_safe : "safe gs mp2'" using guardedD[OF LoopGuarded' Mp2'_p2_true Mp2'_cont] by auto
+
+
+              show ?thesis
+              proof
+                fix mz
+                assume Exec : "sem_exec_p gs mp2 mz"
+
+                show "imm_safe gs mz" using Exec unfolding sem_exec_p_def
+                proof(cases rule: rtranclp.cases)
+                  case rtrancl_refl
+
+                  then have "(\<exists>m'. sem_step gs mz = Some m')"
+                    using Some'' unfolding imm_safe_def sem_step_p_eq
+                    by(cases mp2'; auto)
+
+                  then show ?thesis unfolding imm_safe_def sem_step_p_eq by auto
+                next
+                  case (rtrancl_into_rtrancl b)
+
+                  have Step : "sem_step_p gs mp2 mp2'" using Some''
+                    unfolding sem_step_p_eq
+                    by auto
+        
+                  have Exec_final : "sem_exec_p gs mp2' mz"
+                    using rtranclp_bisect1
+                      [OF sem_step_determ rtrancl_into_rtrancl(1)
+                          Step rtrancl_into_rtrancl(2)]
+                    unfolding sem_exec_p_def
+                    by auto
+        
+                  show ?thesis using safeD[OF Mp2'_safe Exec_final] by auto 
+                qed
+              qed
+
+            next
+              case False
+
+              have Mp2'_cond : "get_cond (snd mp2') = Some False" 
+                using Cont2 Hsyn H0 MP2 F_eq' P2_valid[OF MP2] False Some' unfolding HF
+                by(cases mp2; cases mp2'; 
+                    auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
+                    schem_lift_defs 
+                    merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
+                    get_cond_def
+                    split: md_prio.splits md_triv.splits option.splits)
+
+              have Mp2'_p2_false :  "P2 (snd mp2') \<and> get_cond (snd mp2') = Some False"
+                using Mp2'_p2 Mp2'_cond
+                by auto
+
+              have Mp2'_cont : "s_cont mp2' = [] @ c'"
+                using Cont2 Hsyn H0 MP2 F_eq' P2_valid[OF MP2] False Some' unfolding HF
+                by(cases mp2; cases mp2'; 
+                    auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
+                    schem_lift_defs 
+                    merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
+                    get_cond_def
+                    split: md_prio.splits md_triv.splits option.splits)
+
+              have Mp2'_safe : "safe gs mp2'"
+                using guardedD[OF Guard Mp2'_p2_false] Mp2'_cont
+                by auto
+
+              show ?thesis
+              proof
+                fix mz
+                assume Exec : "sem_exec_p gs mp2 mz"
+
+                show "imm_safe gs mz" using Exec unfolding sem_exec_p_def
+                proof(cases rule: rtranclp.cases)
+                  case rtrancl_refl
+
+                  then have "(\<exists>m'. sem_step gs mz = Some m')"
+                    using Some'' unfolding imm_safe_def sem_step_p_eq
+                    by(cases mp2'; auto)
+
+                  then show ?thesis unfolding imm_safe_def sem_step_p_eq by auto
+                next
+                  case (rtrancl_into_rtrancl b)
+
+                  have Step : "sem_step_p gs mp2 mp2'" using Some''
+                    unfolding sem_step_p_eq
+                    by auto
+        
+                  have Exec_final : "sem_exec_p gs mp2' mz"
+                    using rtranclp_bisect1
+                      [OF sem_step_determ rtrancl_into_rtrancl(1)
+                          Step rtrancl_into_rtrancl(2)]
+                    unfolding sem_exec_p_def
+                    by auto
+        
+                  show ?thesis using safeD[OF Mp2'_safe Exec_final] by auto 
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+
+      have Guard' : "|gs| {P1} [cond] @ ([G Swhile' [body]] @ c')"
+        using HTE[OF Hcond Sub] by auto
+
+      have Safe' : "safe gs m'" using guardedD[OF Guard' P1sm' CM'] by auto
+
+      show "safe gs m"
+      proof
+        fix mz
+
+        assume Z: "sem_exec_p gs m mz"
+
+        then show "imm_safe gs mz" unfolding sem_exec_p_def
+        proof(cases rule: rtranclp.cases)
+          case rtrancl_refl
+
+          then have "(\<exists>m'. sem_step gs mz = Some m')"
+            using Some unfolding imm_safe_def sem_step_p_eq
+            by(cases m'; auto)
+
+          then show ?thesis using Some unfolding imm_safe_def sem_step_p_eq
+            by(auto)
+        next
+          case (rtrancl_into_rtrancl b)
+
+          have Step : "sem_step_p gs m m'" using Some
+            unfolding sem_step_p_eq
+            by auto
+
+          have Exec_final : "sem_exec_p gs m' mz"
+            using rtranclp_bisect1
+              [OF sem_step_determ rtrancl_into_rtrancl(1)
+                  Step rtrancl_into_rtrancl(2)]
+            unfolding sem_exec_p_def
+            by auto
+
+          show ?thesis using safeD[OF Safe' Exec_final] by auto
+        qed
+      qed
+    qed
+  qed
+qed
+
+*)
 
 end
