@@ -84,7 +84,7 @@ definition seq_semx ::
 definition prog where
 "prog = (G Sseq [G Sseq [], G Sseq []])"
 
-value "sem_exec (seq_semx id) 1 (mdp 0 (Some (mdt [prog])), Some ())"
+value "sem_exec (seq_semx id) 3 (mdp 0 (Some (mdt [prog])), (mdp 0 None, Some ()))"
 
 (* TODO: this proof is currently rather nasty, as it
    involves unfolding a bunch of liftings *)
@@ -109,36 +109,36 @@ proof
   show "|gs| {P1} [G Sseq' cs] @ c'"
   proof
     fix m :: "('a, 'b) control"
-    assume M : "P1 (snd m)"
-    assume CM : "s_cont m = [G Sseq' cs] @ c'"
+    assume M : "P1 (payload m)"
+    assume CM : "s_cont m = Inl ([G Sseq' cs] @ c')"
 
     show "(safe gs m)"
     proof(cases "(sem_step gs m)")
-      case None
+      case (Inr bad)
 
       then have False using CM H0
         by(auto simp add: sem_step_def)
 
       then show ?thesis by auto
     next
-      case (Some m')
+      case (Inl m')
 
 (*TODO: make this less bad *)
-      have CM1 :  "s_cont m' = cs @ c'"
-        using Some CM H0 H1
+      have CM1 :  "s_cont m' = Inl (cs @ c')"
+        using Inl CM H0 H1
         by(cases m; cases m'; auto simp add: schem_lift_defs sem_step_def seq_semx_def seq_sem_l_gen_def seq_sem_def s_cont_def seq_sem_lifting_gen_def fst_l_def
-            prio_l_def option_l_def triv_l_def split: md_prio.splits option.splits md_triv.splits)
+            prio_l_def option_l_def triv_l_def split: md_prio.splits option.splits md_triv.splits sum.splits)
 
 (*TODO: make this less bad *)
-      have M1_eq : "snd m' = snd m"
-        using Some H0
+      have M1_eq : "payload m' = payload m"
+        using Inl H0
         by(cases m; cases m'; auto simp add: schem_lift_defs sem_step_def seq_semx_def seq_sem_l_gen_def seq_sem_def s_cont_def seq_sem_lifting_gen_def fst_l_def
             prio_l_def option_l_def triv_l_def split: md_prio.splits option.splits md_triv.splits list.split_asm)
 
-      have M1 : "P1 (snd m')" using M unfolding M1_eq by auto
+      have M1 : "P1 (payload m')" using M unfolding M1_eq by auto
 
       have Step : "sem_step_p gs m m'"
-        using sem_step_sem_step_p[OF Some] by auto
+        using sem_step_sem_step_p[OF Inl] by auto
 
       have Conc' : "safe gs m'" using guardedD[OF Guarded M1 CM1]
         by auto
@@ -188,45 +188,44 @@ proof
   show "|gs| {P1} [G Sseq' cs] @ c'"
   proof
     fix m :: "('a, 'b) control"
-    assume M : "P1 (snd m)"
-    assume CM : "s_cont m = [G Sseq' cs] @ c'"
+    assume M : "P1 (payload m)"
+    assume CM : "s_cont m = Inl ([G Sseq' cs] @ c')"
 
     show "(safe gs m)"
     proof(cases "(sem_step gs m)")
-      case None
+      case (Inr bad)
 
       then have False using CM H0
         by(auto simp add: sem_step_def)
 
       then show ?thesis by auto
     next
-      case (Some m')
+      case (Inl m')
 
-      have F_eq : "sem_step \<lparr> s_sem = f \<rparr> m = Some m'"
-        using sym[OF dominant_pcomps'[OF Hpres Hnemp Hdom]] CM Some H0
+      have F_eq : "sem_step \<lparr> s_sem = f \<rparr> m = Inl m'"
+        using sym[OF dominant_pcomps'[OF Hpres Hnemp Hdom]] CM Inl H0
         by(simp add: sem_step_def)
 
-      have Fcont : "s_cont m' = cs @ c'"
+      have Fcont : "s_cont m' = Inl (cs @ c')"
         using HF F_eq CM H2
 (* TODO: lifting automation here *)
         apply(cases m; cases m'; auto simp add: schem_lift_defs sem_step_def seq_sem_l_gen_def sem_step_def seq_semx_def seq_sem_l_gen_def seq_sem_def s_cont_def seq_sem_lifting_gen_def fst_l_def seq_sem_lifting'_def
             prio_l_def option_l_def triv_l_def split: md_prio.splits option.splits md_triv.splits list.split_asm)
         done
 
-      have Fstate : "snd m' = snd m"
+      have Fstate : "payload m' = payload m"
         using HF F_eq CM H2
         by(cases m; cases m'; auto simp add: schem_lift_defs sem_step_def seq_sem_l_gen_def sem_step_def seq_semx_def seq_sem_l_gen_def seq_sem_def s_cont_def seq_sem_lifting_gen_def fst_l_def seq_sem_lifting'_def
             prio_l_def option_l_def triv_l_def split: md_prio.splits option.splits md_triv.splits list.split_asm)
 
-      hence M' :  "P1 (snd m')" using M unfolding Fstate by auto
+      hence M' :  "P1 (payload m')" using M unfolding Fstate by auto
 
       have Safe' : "safe gs m'" using guardedD[OF Guarded M' Fcont] by auto
 
-      have Step : "sem_step_p gs m m'" using Some
+      have Step : "sem_step_p gs m m'" using Inl
         unfolding sem_step_p_eq
         by auto
 
-(* should be easy from this point: just compose executions *)
       show "safe gs m" 
       proof(rule safeI)
         fix m''
@@ -239,9 +238,9 @@ proof
         proof(cases rule: rtranclp.cases)
           case rtrancl_refl
           then show ?thesis 
-            using Some 
+            using Inl 
             unfolding imm_safe_def sem_step_p_eq
-            by(auto)
+            by(blast)
         next
           case (rtrancl_into_rtrancl b)
 

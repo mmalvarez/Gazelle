@@ -34,7 +34,14 @@ fun s_error_safe :: "s_error \<Rightarrow> bool" where
 *)
 
 type_synonym ('full, 'mstate) control =
-  "('full gensyn list md_triv option md_prio * 'mstate)"
+  "('full gensyn list md_triv option md_prio * String.literal md_triv option md_prio * 'mstate)"
+
+definition payload :: "('full, 'mstate) control \<Rightarrow> 'mstate" where
+"payload c =
+  (case c of
+    (_, _, m) \<Rightarrow> m)"
+
+declare payload_def [simp add]
 
 record ('syn, 'mstate) sem' =
   s_sem :: "'syn \<Rightarrow> 'mstate \<Rightarrow> 'mstate"
@@ -53,11 +60,16 @@ record ('syn, 'full, 'mstate) sem = "('syn, 'mstate) sem'" +
 record ('syn, 'full, 'mstate) sem = 
   s_sem :: "'syn \<Rightarrow> ('full, 'mstate) control \<Rightarrow> ('full, 'mstate) control"
 
-definition s_cont :: "('full, 'mstate) control \<Rightarrow> 'full gensyn list" where
+
+type_synonym 'x orerror =
+  "('x + String.literal)"
+
+definition s_cont :: "('full, 'mstate) control \<Rightarrow> ('full gensyn list orerror)" where
 "s_cont m \<equiv>
   (case m of
-    ((mdp _ (Some (mdt x))), _) \<Rightarrow> x
-    | _ \<Rightarrow> [])"
+    ((mdp _ (Some (mdt x))), (mdp _ None), _) \<Rightarrow> Inl x
+    | ((mdp _ None), _, _) \<Rightarrow> Inr (STR ''Hit bottom in continuation field'') 
+    | ((mdp _ _), (mdp _ (Some (mdt msg))), _) \<Rightarrow> Inr msg)"
 
 (*
 definition close :: "('syn, 'full, 'mstate) sem \<Rightarrow> ('full \<Rightarrow> 'syn) \<Rightarrow> ('full, 'full, 'mstate) sem" where
@@ -82,11 +94,12 @@ definition s_semt :: "('syn, 'full, 'mstate) semt \<Rightarrow> 'full \<Rightarr
 definition sem_step ::
   "('syn, 'mstate) semc \<Rightarrow>
    ('syn, 'mstate) control \<Rightarrow>
-   ('syn, 'mstate) control option" where
+   ('syn, 'mstate) control orerror" where
 "sem_step gs m =
   (case s_cont m of
-    [] \<Rightarrow> None
-    | ((G x l)#tt) \<Rightarrow> Some (s_sem gs x m))"
+    Inr msg \<Rightarrow> Inr msg
+    | Inl [] \<Rightarrow> Inr (STR ''Halted'')
+    | Inl ((G x l)#tt) \<Rightarrow> Inl (s_sem gs x m))"
 
 (* Another option: leave an "open port" in all control flow modules?
 
@@ -98,21 +111,23 @@ fun sem_exec ::
   "('syn, 'mstate) semc \<Rightarrow>
    nat \<Rightarrow>
    ('syn, 'mstate) control \<Rightarrow>
-   (('syn, 'mstate) control * s_error)" where
+   (('syn, 'mstate) control orerror)" where
 "sem_exec gs 0 m = 
-  (case s_cont  m of
-    [] \<Rightarrow> (m, Done)
-    | _ \<Rightarrow> (m, NoFuel))"
+  (case s_cont m of
+    Inr msg \<Rightarrow> Inr msg
+    | Inl [] \<Rightarrow> Inl m
+    | _ \<Rightarrow> Inr (STR ''No fuel left''))"
 | "sem_exec gs (Suc n) m =
    (case s_cont m of
-    [] \<Rightarrow> (m, Halted)
-    | ((G x l)#tt) \<Rightarrow> sem_exec gs n (s_sem gs x m))"
+    Inr msg \<Rightarrow> Inr msg
+    | Inl [] \<Rightarrow> Inr (STR ''Excess fuel'')
+    | Inl ((G x l)#tt) \<Rightarrow> sem_exec gs n (s_sem gs x m))"
 
 inductive sem_step_p ::
   "('syn, 'mstate) semc  \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> bool"
   where
 "\<And> gs m m' x l  tt .
- s_cont m = ((G x l)#tt) \<Longrightarrow> 
+ s_cont m = Inl ((G x l)#tt) \<Longrightarrow> 
  s_sem gs x m = m' \<Longrightarrow>
  sem_step_p gs m m'"
 
@@ -125,7 +140,7 @@ declare sem_exec_p_def [simp add]
 
 lemma sem_step_p_sem_step :
   assumes H : "sem_step_p gs m m'"
-  shows "sem_step gs m = Some m'" using H
+  shows "sem_step gs m = Inl m'" using H
 proof(cases rule: sem_step_p.cases)
   case (1 sub)
   then show ?thesis 
@@ -133,39 +148,42 @@ proof(cases rule: sem_step_p.cases)
 qed
 
 lemma sem_step_sem_step_p :
-  assumes H : "sem_step gs m = Some m'"
+  assumes H : "sem_step gs m = Inl m'"
   shows "sem_step_p gs m m'" using H
-  by(auto simp add: sem_step_def split: s_error.splits list.splits option.splits intro: sem_step_p.intros)
+  by(auto simp add: sem_step_def split: s_error.splits list.splits option.splits sum.splits intro: sem_step_p.intros)
+
 
 lemma sem_step_p_eq :
-  "(sem_step_p gs m m') = (sem_step gs m = Some m') "
+  "(sem_step_p gs m m') = (sem_step gs m = Inl m') "
   using sem_step_p_sem_step[of gs m m'] sem_step_sem_step_p[of gs m m']
   by(auto)
 
+(*
 lemma sem_step_exec1 :
-  assumes H : "sem_step gs m = Some m'"
-  shows "\<exists> s . (sem_exec gs 1 m = (m', s))" using H
-  by(auto simp add: sem_step_def  split:list.splits option.splits)
+  assumes H : "sem_step gs m = Inl m'"
+  shows "\<exists> s . (sem_exec gs 1 m = Inl m')" using H
+  byy(auto simp add: sem_step_def  split:list.splits option.splits sum.splits)
 
 lemma sem_exec1_step :
   assumes H : "(sem_exec gs 1 m = (m', s))"
   assumes H' : "s_error_safe s"
   shows "sem_step gs m = Some m'" using assms
   by(auto simp add: sem_step_def split:option.splits list.splits)
+*)
 
-abbreviation spred :: "('b \<Rightarrow> bool) \<Rightarrow> ('a * 'b) \<Rightarrow> bool" ("\<star>_")
+abbreviation spred :: "('c \<Rightarrow> bool) \<Rightarrow> ('a * 'b * 'c) \<Rightarrow> bool" ("\<star>_")
   where
-"\<star>P \<equiv> P o snd"
+"\<star>P \<equiv> P o snd o snd"
 
 (* have the state contain a delta to the continuation list?
    that is, a new prefix to prepend *)
 definition imm_safe :: "('syn, 'mstate) semc \<Rightarrow> ('syn, 'mstate) control  \<Rightarrow> bool" where
 "imm_safe gs m \<equiv>
- ((s_cont m = []) \<or>
+ ((s_cont m = Inl []) \<or>
   (\<exists> m' . sem_step_p gs m m'))"
 
 lemma imm_safeI_Done :
-  assumes H : "s_cont m = []"
+  assumes H : "s_cont m = Inl []"
   shows "imm_safe gs m" using H
   unfolding imm_safe_def by auto
 
@@ -177,7 +195,7 @@ lemma imm_safeI_Step :
 
 lemma imm_safeD :
   assumes H : "imm_safe gs m"
-  shows "((s_cont m = []) \<or>
+  shows "((s_cont m = Inl []) \<or>
   (\<exists> m' . sem_step_p gs m m'))" using H
   unfolding imm_safe_def by (auto)
 
@@ -202,18 +220,18 @@ definition guarded :: "('syn, 'mstate) semc \<Rightarrow> ('mstate \<Rightarrow>
 ("|_| {_} _")
  where
 "guarded gs P c =
-  (\<forall> m . P (snd m) \<longrightarrow> s_cont m = c \<longrightarrow> safe gs m)"
+  (\<forall> m . P (payload m) \<longrightarrow> s_cont m = Inl c \<longrightarrow> safe gs m)"
 
 lemma guardedI [intro] :
-  assumes H : "\<And> m . P (snd m) \<Longrightarrow> s_cont m = c \<Longrightarrow> safe gs m"
+  assumes H : "\<And> m . P (payload m) \<Longrightarrow> s_cont m = Inl c \<Longrightarrow> safe gs m"
   shows "guarded gs P c" using H
   unfolding guarded_def
   by auto
 
 lemma guardedD :
   assumes H : "guarded gs P c"
-  assumes HP : "P (snd m)"
-  assumes Hcont : "s_cont m = c"
+  assumes HP : "P (payload m)"
+  assumes Hcont : "s_cont m = Inl c"
   shows "safe gs m" using assms
   unfolding guarded_def by blast
 
@@ -263,8 +281,12 @@ proof(rule HTI)
     unfolding guarded_def using H' by blast
 qed
 
+(* TODO: this lemma was pretty broken before.
+   but something like it will be useful when lifting e.g. arithmetic.
+*)
+(*
 lemma HStep : 
-  assumes H : "(! sem ) % {{P o snd}} c {{Q o snd}}"
+  assumes H : "(! sem ) % {{P o payload}} c {{Q o payload}}"
   assumes Hgs : "s_sem gs = sem"
   shows "|gs| {-P-} [G c l] {-Q-}" 
 proof(rule HTI)
@@ -275,15 +297,22 @@ proof(rule HTI)
   proof(rule guardedI)
     fix m :: "('a, 'b) control"
 
-    assume P : "P (snd m)"
-    obtain ms mc where M: "m = (mc, ms)" and P' : "P ms"
+    assume P : "P (payload m)"
+    obtain ms mm mc where M: "m = (mc, mm, ms)" and P' : "P ms"
       using P by (cases m; auto)
 
-    assume Cont : "s_cont m = [G c l] @ c'"
+    assume Cont : "s_cont m = Inl ([G c l] @ c')"
 
-    have Q: "Q (snd (s_sem gs c m))"
+    have Q: "Q (payload (s_sem gs c m))"
       using H P M unfolding semprop2_def VT_def Hgs
       by(auto)
+
+    have "s_cont (sem.s_sem gs c m) = Inl c' " using Hgs
+      apply(auto simp add: s_cont_def split: prod.splits md_prio.splits option.splits md_triv.splits)
+
+(* *)
+(* idea: sem will only modify the payload. *)
+    show "safe gs m" using guardedD[OF Exec Q]
 
     show "safe gs m"
     proof(rule safeI)
@@ -292,6 +321,8 @@ proof(rule HTI)
       show "imm_safe gs m'"
 
       proof(cases "s_cont m'")
+        case (Inr bad)
+        then have False using Cont by auto
         case Nil
         then show ?thesis unfolding imm_safe_def by auto
       next
@@ -302,7 +333,7 @@ proof(rule HTI)
     qed
   qed
 qed
-
+*)
 
 (* sequencing lemma *)
 lemma HCat :
@@ -410,6 +441,38 @@ lemma diverges_safe :
   assumes H : "diverges gs st"
   shows "safe gs st" using H
   unfolding diverges_def safe_def imm_safe_def by blast
+
+lemma guard_emp :
+  "|gs| {P} []"
+proof
+  fix m :: "('a, 'b) control"
+  assume H : "P (payload m)"
+
+  assume Hc : "s_cont m = Inl []"
+
+  show "safe gs m"
+  proof
+    fix m'
+
+    assume Exec : "sem_exec_p gs m m'"
+
+    hence Exec' : "rtranclp (sem_step_p gs) m m'"
+      unfolding sem_exec_p_def by auto
+
+    have Nostep : "(\<And>x1'. sem_step_p gs m x1' \<Longrightarrow> False)"
+      unfolding sem_step_p_eq using Hc
+      by(simp add: sem_step_def)
+
+    have Meq : "m = m'"
+      using rtranclp_nostep[OF sem_step_determ Exec' Nostep]
+      by auto
+
+    show "imm_safe gs m'"
+      using Hc
+      unfolding Meq imm_safe_def
+      by blast
+  qed
+qed
 
 (* lemma for lifting composed languages in the case where
    one "always wins" for a given syntax element
