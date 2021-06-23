@@ -643,33 +643,38 @@ to the continuation
 
 *)
 
-(*
-lemma HWhile_gen :
-  assumes H0 : "gs = \<lparr> s_sem = pcomps' fs \<rparr>"
-  (*assumes H1 : "seq_sem_l_gen lfts \<in> set fs" *)
-  assumes HF : "f = imp_sem_l_gen lfts"
-  assumes Hpres : "sups_pres (set fs)"
-  assumes Hnemp : "g \<in> set fs"
-  assumes Hdom : "(f \<downharpoonleft> (set fs) Swhile')"
-  assumes Hsyn : "lfts Swhile' = Swhile"
-  (* TODO: generalize. these should be expressed using valid-sets *)
-  assumes P1_valid : "\<And> st.  P1 st \<Longrightarrow> get_cond st \<noteq> None"
-  assumes P2_valid : "\<And> st.  P2 st \<Longrightarrow> get_cond st \<noteq> None"
-  assumes Hcond : "|gs| {- P1 -} [cond] {- P1 -}"
-  assumes Htrue : "|gs| {- (\<lambda> st . P1 st \<and> get_cond st = Some True) -} [body]
-                        {- P1 -}"
-(*
-  assumes Hfalse : "\<And> st . P2 st \<and> get_cond st = Some False \<Longrightarrow> P1 st" 
-*)
-  shows "|gs| {- P1 -} [G Swhile' [cond, body]] {- (\<lambda> st . P1 st ) -}"
-proof-
 
-*)
 
-(* proof sketch idea: need to show that we don't crash after n steps.
-   0 steps easy, we start with a valid continuation
 
-we took n steps. wlog we are in thhe body somewhere.
+
+definition fuel_bound :: "('syn, 'mstate) semc \<Rightarrow> ('syn gensyn list) \<Rightarrow> nat \<Rightarrow> bool" where
+"fuel_bound gs cont n =
+  (\<forall> st n' st' . s_cont st = Inl cont \<longrightarrow> 
+     sem_exec_c_p gs st n' st' \<longrightarrow>
+     s_cont st' = Inl [] \<longrightarrow>
+     n' \<le> n)"
+
+lemma fuel_boundI :
+  assumes "\<And> st n' st' . s_cont st = Inl cont \<Longrightarrow>
+     sem_exec_c_p gs st n' st' \<Longrightarrow>
+     s_cont st' = Inl [] \<Longrightarrow>
+     n' \<le> n"
+  shows "fuel_bound gs cont n" using assms
+  unfolding fuel_bound_def by blast
+
+lemma fuel_boundD :
+  assumes H : "fuel_bound gs cont n"
+  assumes H1 : "s_cont st = Inl cont"
+  assumes H2 : "sem_exec_c_p gs st n' st'"
+  assumes H3 : "s_cont st' = Inl []"
+  shows "n' \<le> n" using assms
+  unfolding fuel_bound_def by blast
+
+(* TODO: I think finiteness is necessary, but there is probably
+a way to avoid this requirement if we introduce ghost variables or similar
+(the reason it arises is that we need to pick a single fuel bound
+for the entire state space (of terminating executions), but this is
+possible only if the state is finite (?)
 *)
 
 lemma HWhileC_gen :
@@ -682,10 +687,10 @@ lemma HWhileC_gen :
   assumes Hsyn : "lfts Swhile' = SwhileC"
   (* TODO: generalize. these should be expressed using valid-sets *)
   assumes PX_valid : "\<And> n st.  PX n st \<Longrightarrow> get_cond st \<noteq> None"
-  assumes Htrue : "\<And> n . |gs| {-(\<lambda> st . PX n st)-} [body] {-(\<lambda> st . PX (n - 1) st)-}"
+  assumes Htrue : "\<And> n .  |gs| {-(\<lambda> st . PX n st)-} [body] {-(\<lambda> st . PX (n - 1) st)-}"
   assumes PX_P1 : "\<And> n st . PX n st \<Longrightarrow> P1 st"
   assumes PX_P1' : "\<And> st . P1 st \<Longrightarrow> PX ni st"
-  assumes Donefor : "\<And> st . PX 0 st \<Longrightarrow> False"
+  assumes Donefor : "\<And> stx c . PX 0 (payload stx) \<Longrightarrow> s_cont stx = Inl ([G SwhileC' [body]] @ c) \<Longrightarrow> safe gs stx"
   shows "|gs| {- PX (ni :: nat)  -} [G SwhileC' [body]] {- (\<lambda> st . (\<exists> n . n \<le> ni \<and> PX n st \<and> get_cond st = Some False) ) -}"
 proof
   fix c'
@@ -699,7 +704,7 @@ proof
       fix m :: "('a, 'b) state"
       assume P0 : "PX 0 (payload m)" 
       assume C : "s_cont m = Inl ([G SwhileC' [body]] @ c')" 
-      show  "safe gs m" using Donefor[OF P0] by auto
+      show  "safe gs m" using Donefor[OF P0 C] by auto
     qed
   next
     case (Suc ni)
@@ -810,7 +815,50 @@ proof
     qed
   qed
 qed
+*)
 
 
+lemma HWhileC_gen :
+  fixes PX :: "nat \<Rightarrow> (bool md_triv option md_prio \<times>
+  int md_triv option md_prio \<times> 'b :: Mergeableb) \<Rightarrow> bool"
+  assumes H0 : "gs = \<lparr> s_sem = pcomps' fs \<rparr>"
+  (*assumes H1 : "seq_sem_l_gen lfts \<in> set fs" *)
+  assumes HF : "f = imp_sem_l_gen lfts"
+  assumes Hpres : "sups_pres (set fs)"
+  assumes Hnemp : "g \<in> set fs"
+  assumes Hdom : "(f \<downharpoonleft> (set fs) SwhileC')"
+  assumes Hsyn : "lfts Swhile' = SwhileC"
+  (* TODO: generalize. these should be expressed using valid-sets *)
+  assumes PX_valid : "\<And> n st.  PX n st \<Longrightarrow> get_cond st \<noteq> None"
+  assumes Htrue : "\<And> n .  |gs| {-(\<lambda> st . PX n st)-} [body] {-(\<lambda> st . PX (n - 1) st)-}"
+  assumes PX_P1 : "\<And> n st . PX n st \<Longrightarrow> P1 st"
+  assumes PX_P1' : "\<And> st . P1 st \<Longrightarrow> PX (getn st) st"
+  assumes Donefor : "\<And> stx c . PX 0 (payload stx) \<Longrightarrow> s_cont stx = Inl ([G SwhileC' [body]] @ c) \<Longrightarrow> safe gs stx"
+  shows "|gs| {- (\<lambda> st . PX (getn st) st)  -} [G SwhileC' [body]] {- (\<lambda> st . (\<exists> n . PX n st \<and> get_cond st = Some False) ) -}"
+proof
+  fix c'
+  assume Guard : "|gs| {\<lambda>st. (\<exists> n .  PX n st \<and> get_cond st = Some False)} c'"
+
+  show "|gs| {\<lambda>st. PX (getn st) st} [G SwhileC' [body]] @ c'"
+  proof
+    fix m :: "('a, 'b) state"
+    assume HX : "PX (getn (payload m)) (payload m)"
+
+    assume Hcont : "s_cont m = Inl ([G SwhileC' [body]] @ c')"
+
+    show "safe gs m" using Guard HX Hcont
+    proof(induction "getn (payload m)" arbitrary: c' m)
+      case 0
+      then show ?case using Donefor[OF _ "0"(4)] by auto
+    next
+      case (Suc x)
+      then show ?case
+    qed
+
+
+(* Now, to finish the argument, we need to show that terminating programs will always have a maximum number of 
+fuel they consume before they terminate, and that nonterminating programs are safe anyway.
+
+so, we can use this maximum fuel as an upper bound for ni, and we should be done. *)
 
 end

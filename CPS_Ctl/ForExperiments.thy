@@ -345,6 +345,7 @@ next
   qed
 qed
 
+
 lemma HWhile_gen0 :
   assumes H0 : "gs = \<lparr> s_sem = pcomps' fs \<rparr>"
   (*assumes H1 : "seq_sem_l_gen lfts \<in> set fs" *)
@@ -396,7 +397,7 @@ proof
 
 
       (* gross low-level deconstruction of m to build a new state *)
-      obtain m1 m2 m3 m4 m5 where Mcomp : "m = (m1, m2, m3, m4, m5)"
+      obtain m1 m2xx m3 m4 m5 where Mcomp : "m = (m1, m2xx, m3, m4, m5)"
         by(cases m; auto)
 
       obtain malt :: "('a, 'b) state" where Malt :
@@ -415,6 +416,24 @@ proof
         
       have Malt_safe : "safe gs malt" using guardedD[OF Guard' Malt_P Malt_cont] by auto
 
+      obtain m2 where M2 : "sem_step_p gs m m2" and M2_cont : "s_cont m2 = Inl (body # ([G Swhile'C [body]] @ c'))" and M2_pay : "payload m2 = payload m"
+        sorry
+
+      obtain maltb :: "('a, 'b) state" where Maltb :
+        "maltb = (mdp 0 (Some (mdt (body # []))), 
+                 mdp 0 None,
+                 m3,
+                 m4,
+                 m5)" by simp
+
+      have Maltb_pl : "payload maltb = payload m" using Maltb Mcomp by auto
+
+      hence Maltb_P : "P1 (payload maltb)" using P unfolding Maltb_pl by auto
+
+      have Maltb_cont : "s_cont maltb = Inl (body # [])"
+        using Maltb by (auto simp add: s_cont_def)
+
+
       show "imm_safe gs m'" using N
       proof(cases rule: sem_exec_c_p.cases)
         case Excp_0
@@ -423,7 +442,7 @@ proof
 
         then show ?thesis using Excp_0 by auto
       next
-        (* We are just doing this to get the fact that n > 0 *)
+        (* We are just doing this to get the fact that n > 0. or should be we doing an actual induction? *)
         case (Excp_Suc mz2 n')
    
         have Malt_cont' : "s_cont malt = Inl (body # ((replicate n' body @ [G SwhileC' [G Sskip' []]]) @ c'))"
@@ -454,10 +473,7 @@ proof
 
           have "imm_safe gs malt'" sorry (* since malt is known to be safe *)
 
-          obtain m2 where M2 : "sem_step_p gs m m2" and M2_cont : "s_cont m2 = Inl (body # ([G Swhile'C [body]] @ c'))" and M2_pay : "payload m2 = payload m"
-            sorry
-
-          then obtain m2' ::"('a, 'b) state" where "sem_exec_c_p gs m2 n m2' \<and> payload m2' = m'x \<and> s_cont m2' = Inl (prefix @ ([G Swhile'C [body]] @ c'))"
+          obtain m2' ::"('a, 'b) state" where "sem_exec_c_p gs m2 n m2' \<and> payload m2' = m'x \<and> s_cont m2' = Inl (prefix @ ([G Swhile'C [body]] @ c'))"
             using M2_cont M2_pay Absorbed
             by blast
 
@@ -488,402 +504,242 @@ proof
             Ilt : "i < n" and Iabs : "absorbs gs body (payload m) i" and Imax : "\<not> absorbs gs body (payload m) (Suc i)"
             using absorbs_at_most[OF False] by blast
 
-          then show ?thesis sorry
-        qed
-      qed
-    qed
-  qed
-qed
-(* idea: after n steps we are either in body; loop or just loop.
- either way though we're stuck. *)
+          have M2_cont' : "s_cont m2 = Inl (body # ([G Swhile'C [body]] @ c'))" using M2_cont by auto
 
-    proof(induction n arbitrary: c')
-      case 0
-      then show ?case by auto
-    next
-      case (Suc n1)
-
-      show ?thesis using Suc
-
-      have "|gs| {P1} replicate 1 (G SwhileC' [body]) @ c'"
-      proof
-        fix mx :: "('a, 'b) state"
-
-        assume X1 : "P1 (payload mx)" 
-        assume X2 : "s_cont mx = Inl (replicate 1 (G SwhileC' [body]) @ c')"
-
-        show "safe gs mx" using Suc.IH Suc.prems
-
-
-      have Cont' : "s_cont m = Inl ((replicate (n1) (G SwhileC' [body])) @ c')"
-        using Suc
-        by(simp add: replicate_append_same)
-
-      have "|gs| {P1} [G SwhileC' [body]] @ c'"
-        using Suc.IH Suc.prems
-
-      show ?case using Suc.prems Suc.IH[OF _ Cont']
-
-        
-
-
-      proof(cases n')
-        case Z' : 0
-
-        then show ?thesis sorry (* should be easy i think *)
-      next
-        case Suc' : (Suc n'1)
-
-        have Cont' : "s_cont m = Inl (replicate (n'1) (G SwhileC' [body]) @ ((G SwhileC' [body]) # c'))"
-          using Suc Suc'
-          by(simp add: replicate_append_same)
-
-
-        have "|gs| {\<lambda>st. P1 st } ((G SwhileC' [body]) # c')"
-        proof
-          fix mx :: "('a, 'b) state"
-
-          assume HX : "P1 (payload mx)"
-
-          assume ContX : "s_cont mx = Inl (G SwhileC' [body] # c')"
-          hence ContX' : "s_cont mx = Inl (replicate 1 (G SwhileC' [body]) @ c')" by auto
-
-          have "n'1 < n1" using Suc.prems Suc' by auto
-
-          show "safe gs mx" using Suc.IH Suc.prems
-
-      show ?case using Suc
-
-    qed
-
-
-      fix m'
-      assume Exec : "sem_exec_p gs m m'"
-      show "imm_safe gs m'"
-
-      proof(cases "(sem_step gs m)")
-        case (Inr bad)
+          have "\<exists>prefix st'.
+                \<forall>k m_full.
+                   s_cont m_full = Inl (body # k) \<longrightarrow>
+                   payload m_full = payload m \<longrightarrow> (\<exists>m_full'. sem_exec_c_p gs m_full i m_full' \<and> payload m_full' = st' \<and> s_cont m_full' = Inl (prefix @ k))"
+            using Iabs unfolding absorbs_def by auto
   
-        then have False using Cont H0
-          by(auto simp add: sem_step_def)
   
-        then show ?thesis by auto
-      next
-        case (Inl m2)
+          then obtain prefix and m'x :: "(bool md_triv option md_prio * int md_triv option md_prio * 'b)" where 
+              Absorbed : "\<forall>k m_full.
+                   s_cont m_full = Inl (body # k) \<longrightarrow>
+                   payload m_full = payload m \<longrightarrow> (\<exists>m_full'. sem_exec_c_p gs m_full i m_full' \<and> payload m_full' = m'x \<and> s_cont m_full' = Inl (prefix @ k))"
+            by blast
+
+          hence Absorbed' :
+            "\<And> k m_full.
+                   s_cont m_full = Inl (body # k) \<Longrightarrow>
+                   payload m_full = payload m \<Longrightarrow> (\<exists>m_full'. sem_exec_c_p gs m_full i m_full' \<and> payload m_full' = m'x \<and> s_cont m_full' = Inl (prefix @ k))"
+            by blast
   
-        have F_eq : "sem_step \<lparr> s_sem = f \<rparr> m = Inl m2"
-          using sym[OF dominant_pcomps'[OF Hpres Hnemp Hdom]] Cont Inl H0
-          by(simp add: sem_step_def)
+          obtain m2' ::"('a, 'b) state"  where M2_exec :
+            "(sem_exec_c_p gs m2 i m2' \<and> payload m2' = m'x \<and> s_cont m2' = Inl (prefix @ (([G Swhile'C [body]] @ c'))))"
+            using Absorbed'[OF M2_cont'  M2_pay]
+            by blast
 
-        (* this will need to be shown using valid-sets. *)
-        have M_valid : "\<And> p . fst (payload m) \<noteq> mdp p None" using P1_valid[OF P]
-          by(auto simp add: get_cond_def split:prod.splits)
+          obtain malt' ::"('a, 'b) state"  where Malt_exec :
+            "(sem_exec_c_p gs malt i malt' \<and> payload malt' = m'x \<and> s_cont malt' = Inl (prefix @ ((replicate n' body @ [G SwhileC' [G Sskip' []]]) @ c')))"
+            using Absorbed' Malt_cont' Malt_pl
+            by blast
 
-        show ?thesis
-        proof(cases "get_cond (payload m)")
-          case None
+          have "imm_safe gs malt'" sorry (* since malt is known to be safe *)
 
-          then have False using P1_valid[OF P]
-            by(auto simp add: get_cond_def split: prod.splits md_prio.splits md_triv.splits option.splits)
+          obtain maltb' ::"('a, 'b) state"  where Maltb' :
+            "(sem_exec_c_p gs maltb i maltb' \<and> payload maltb' = m'x \<and> s_cont maltb' = Inl (prefix @ []))"
+            using Absorbed'[OF Maltb_cont Maltb_pl] Maltb_cont
+            by blast
 
-          then show ?thesis by auto
+          obtain j where 
+            Jleq : "j \<le> Suc i"
+            and Imax' : "\<not> (\<exists>prefix st'.
+                          \<forall>k m_full.
+                             s_cont m_full = Inl (body # k) \<longrightarrow>
+                             payload m_full = payload m \<longrightarrow>
+                             (\<exists>m_full'.
+                                 sem_exec_c_p gs m_full j m_full' \<and>
+                                 payload m_full' = st' \<and>
+                                 s_cont m_full' = Inl (prefix @ k)))"
+            using Imax unfolding absorbs_def
+            by auto
 
-        next
-          case Some : (Some cnd)
-          then show ?thesis 
-          proof(cases cnd)
-            case True
+          show "imm_safe gs m'"
+          proof(cases "j = Suc i")
+            case False' : False
 
-            have M2_cont : "s_cont m2 = Inl ([body, G SwhileC' [body]] @ c')"
-              using Inl True Cont Some Hsyn F_eq M_valid  unfolding HF
-              by(cases m2; cases m; 
-                  auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
-                  schem_lift_defs 
-                  merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
-                  get_cond_def
-                  split: md_prio.splits md_triv.splits option.splits)
+            hence Jleq' : "j \<le> i" using Jleq by auto
 
-            show ?thesis
-              using HTE[OF Htrue]
+            have Uhoh : "(\<exists>prefix st'.
+                          \<forall>k m_full.
+                             s_cont m_full = Inl (body # k) \<longrightarrow>
+                             payload m_full = payload m \<longrightarrow>
+                             (\<exists>m_full'.
+                                 sem_exec_c_p gs m_full j m_full' \<and>
+                                 payload m_full' = st' \<and>
+                                 s_cont m_full' = Inl (prefix @ k)))"
+              using Iabs Jleq' unfolding absorbs_def
+              by blast
 
-              sorry
-          next
-
-            case False
-            then show ?thesis sorry
-          qed
-
-          proof(cases "sem_step gs m2")
-            case (Inr bad)
-
-            then have False using Cont2 H0
-              by(auto simp add: sem_step_def)
+            have False
+              using Imax' Uhoh by blast
 
             then show ?thesis by auto
-
           next
-            case (Inl mp2')
+            case True' : True
+(* case split on whether prefix is [].
+if it is nil, "apply induction on the case n-j" (i.e., spill over into next iteration *)
 
-            have F_eq' : "sem_step \<lparr> s_sem = f \<rparr> mp2 = Inl mp2'"
-              using sym[OF dominant_pcomps'[OF Hpres Hnemp Hdom]] Cont2 Inl H0
-              by(simp add: sem_step_def)
+(* if prefix is non-nil, we need some fact about how the resulting continuation
+will be the same between malt' and m2'
 
-            have Mp2'_p2 : "P2 (payload mp2')"
-              using Cont2 Hsyn H0 MP2 F_eq' P2_valid[OF MP2] Some' unfolding HF
-              by(cases mp2; cases mp2'; 
-                  auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
-                  schem_lift_defs 
-                  merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
-                  get_cond_def
-                  split: md_prio.splits md_triv.splits option.splits)
+*)
 
-            show ?thesis
-            proof(cases cnd)
-              case True
-        
-              have Mp2'_cond : "get_cond (payload mp2') = Some True" 
-                using Cont2 Hsyn H0 MP2 F_eq' P2_valid[OF MP2] True Some' unfolding HF
-                by(cases mp2; cases mp2'; 
-                    auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
-                    schem_lift_defs 
-                    merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
-                    get_cond_def
-                    split: md_prio.splits md_triv.splits option.splits)
-
-              have Mp2'_p2_true :  "P2 (payload mp2') \<and> get_cond (payload mp2') = Some True"
-                using Mp2'_p2 Mp2'_cond
-                by auto
-
-      have CM' : "s_cont m' = Inl ([body] @ ([ G SwhileC' [body]] @ c'))" 
-        using Cont Hsyn F_eq unfolding HF
-        by(cases m; cases m'; auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
-           schem_lift_defs 
-          merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def
-          split: md_prio.splits md_triv.splits option.splits)
-
-      (* this will need to be shown using valid-sets. *)
-      have M'_valid : "\<And> p . fst (payload m) \<noteq> mdp p None" using P1_valid[OF M]
-        by(auto simp add: get_cond_def split:prod.splits)
-
-      have Sm' : "payload m = payload m'"
-        using CM Hsyn F_eq M'_valid  unfolding HF
-        by(cases m; cases m'; auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
-           schem_lift_defs 
-          merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
-          split: md_prio.splits md_triv.splits option.splits)
-
-      hence P1sm' : "P1 (payload m')" using M unfolding Sm' by auto
-
-      (* next: step to the end of cond. *)
-
-      have Sub : "|gs| {P2} [G Sif' [body]] @ c'"
-      proof
-        fix mp2 :: "('a, 'b) state"
-
-        assume MP2 : "P2 (payload mp2)"
-
-        assume Cont2 : "s_cont mp2 = Inl ([G Sif' [body]] @ c')"
-
-        show "safe gs mp2"
-        proof(cases "get_cond (payload mp2)")
-          case None
-
-          then have False using P2_valid[OF MP2]
-            by(auto simp add: get_cond_def split: prod.splits md_prio.splits md_triv.splits option.splits)
-          then show ?thesis by auto
-
-        next
-          case Some' : (Some cnd)
-          then show ?thesis 
-          proof(cases "sem_step gs mp2")
-            case (Inr bad)
-
-            then have False using Cont2 H0
-              by(auto simp add: sem_step_def)
-
-            then show ?thesis by auto
-
-          next
-            case (Inl mp2')
-
-            have F_eq' : "sem_step \<lparr> s_sem = f \<rparr> mp2 = Inl mp2'"
-              using sym[OF dominant_pcomps'[OF Hpres Hnemp Hdom]] Cont2 Inl H0
-              by(simp add: sem_step_def)
-
-            have Mp2'_p2 : "P2 (payload mp2')"
-              using Cont2 Hsyn H0 MP2 F_eq' P2_valid[OF MP2] Some' unfolding HF
-              by(cases mp2; cases mp2'; 
-                  auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
-                  schem_lift_defs 
-                  merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
-                  get_cond_def
-                  split: md_prio.splits md_triv.splits option.splits)
-
-            show ?thesis
-            proof(cases cnd)
-              case True
-        
-              have Mp2'_cond : "get_cond (payload mp2') = Some True" 
-                using Cont2 Hsyn H0 MP2 F_eq' P2_valid[OF MP2] True Some' unfolding HF
-                by(cases mp2; cases mp2'; 
-                    auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
-                    schem_lift_defs 
-                    merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
-                    get_cond_def
-                    split: md_prio.splits md_triv.splits option.splits)
-
-              have Mp2'_p2_true :  "P2 (payload mp2') \<and> get_cond (payload mp2') = Some True"
-                using Mp2'_p2 Mp2'_cond
-                by auto
-
-              have Mp2'_cont : "s_cont mp2' = Inl ([body] @ c')"
-                using Cont2 Hsyn H0 MP2 F_eq' P2_valid[OF MP2] True Some' unfolding HF
-                by(cases mp2; cases mp2'; 
-                    auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
-                    schem_lift_defs 
-                    merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
-                    get_cond_def
-                    split: md_prio.splits md_triv.splits option.splits)
-
-              have Mp2'_safe : "safe gs mp2'"
-                using guardedD[OF Gtrue Mp2'_p2_true Mp2'_cont] by auto
-
-              show ?thesis
-              proof
-                fix mz
-                assume Exec : "sem_exec_p gs mp2 mz"
-
-                show "imm_safe gs mz" using Exec unfolding sem_exec_p_def
-                proof(cases rule: rtranclp.cases)
-                  case rtrancl_refl
-
-                  then have "(\<exists>m'. sem_step gs mz = Inl m')"
-                    using Inl unfolding imm_safe_def sem_step_p_eq
-                    by(cases mp2'; auto)
-
-                  then show ?thesis unfolding imm_safe_def sem_step_p_eq by auto
-                next
-                  case (rtrancl_into_rtrancl b)
-
-                  have Step : "sem_step_p gs mp2 mp2'" using Inl
-                    unfolding sem_step_p_eq
-                    by auto
-        
-                  have Exec_final : "sem_exec_p gs mp2' mz"
-                    using rtranclp_bisect1
-                      [OF sem_step_determ rtrancl_into_rtrancl(1)
-                          Step rtrancl_into_rtrancl(2)]
-                    unfolding sem_exec_p_def
-                    by auto
-        
-                  show ?thesis using safeD[OF Mp2'_safe Exec_final] by auto 
-                qed
-              qed
-
+            show "imm_safe gs m'"
+            proof(cases prefix)
+              case Nil
+              then show ?thesis (* do an inductive thingy, n - j < n *) sorry
             next
-              case False
+              case (Cons preh pret)
 
-              have Mp2'_cond : "get_cond (payload mp2') = Some False" 
-                using Cont2 Hsyn H0 MP2 F_eq' P2_valid[OF MP2] False Some' unfolding HF
-                by(cases mp2; cases mp2'; 
-                    auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
-                    schem_lift_defs 
-                    merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
-                    get_cond_def
-                    split: md_prio.splits md_triv.splits option.splits)
+              obtain mfin1 mfin1p kfin1 where "sem_exec_c_p gs m2' 1 mfin1 \<and> payload mfin1 = mfin1p \<and> s_cont mfin1 = kfin1" sorry
 
-              have Mp2'_p2_false :  "P2 (payload mp2') \<and> get_cond (payload mp2') = Some False"
-                using Mp2'_p2 Mp2'_cond
-                by auto
+(* we know we are safe here (malt') *)
 
-              have Mp2'_cont : "s_cont mp2' = Inl ([] @ c')"
-                using Cont2 Hsyn H0 MP2 F_eq' P2_valid[OF MP2] False Some' unfolding HF
-                by(cases mp2; cases mp2'; 
-                    auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
-                    schem_lift_defs 
-                    merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
-                    get_cond_def
-                    split: md_prio.splits md_triv.splits option.splits)
+              obtain mfin2 mfin2p kfin2 where "sem_exec_c_p gs malt' 1 mfin2 \<and> payload mfin2 = mfin2p \<and> s_cont mfin2 = kfin2"
+                sorry
 
-              have Mp2'_safe : "safe gs mp2'"
-                using guardedD[OF Gfalse Mp2'_p2_false Mp2'_cont] by auto
+              show "imm_safe gs m'"
+                using HTE[OF Htrue] 
 
-              show ?thesis
-              proof
-                fix mz
-                assume Exec : "sem_exec_p gs mp2 mz"
+(* idea: we are looking at some kind of function f where 
+f ((ph#pt) @ ((replicate n' body @ [G SwhileC' [G Sskip' []]]) @ c'))) =
+f ((ph#pt) @ (([G Swhile'C [body]] @ c')))
+*)
 
-                show "imm_safe gs mz" using Exec unfolding sem_exec_p_def
-                proof(cases rule: rtranclp.cases)
-                  case rtrancl_refl
+(* executing preh should be imm. safe - regardless of whether this happens in maltb' or malt' *)
+(* we need to be able to use the fact that lack of suffix implies escape happens. but unlike appel's system,
+our continuations might be too free-form to make this work.
 
-                  then have "(\<exists>m'. sem_step gs mz = Inl m')"
-                    using Inl unfolding imm_safe_def sem_step_p_eq
-                    by(cases mp2'; auto)
+i don't think this is quite it... it's that we cant' say much about the resulting continuation after escaping
+whereas in appel's system blocks seem to help.
 
-                  then show ?thesis unfolding imm_safe_def sem_step_p_eq by auto
-                next
-                  case (rtrancl_into_rtrancl b)
+we cannot allow arbitrary modification of k.
+prepending seems ok. postpending seems probably ok.
 
-                  have Step : "sem_step_p gs mp2 mp2'" using Inl
-                    unfolding sem_step_p_eq
-                    by auto
-        
-                  have Exec_final : "sem_exec_p gs mp2' mz"
-                    using rtranclp_bisect1
-                      [OF sem_step_determ rtrancl_into_rtrancl(1)
-                          Step rtrancl_into_rtrancl(2)]
-                    unfolding sem_exec_p_def
-                    by auto
-        
-                  show ?thesis using safeD[OF Mp2'_safe Exec_final] by auto 
-                qed
-              qed
+another view: dropping from beginning seems fine. adding on end seems fine.
+
+another view: something about dependence between data and control (? not making
+structural decisions about shape of control using data? vice versa?)
+*)
+              then show ?thesis sorry
             qed
+
+
+(*
+"\<And>prefix a aa b.
+       (\<And> k m_full.
+          s_cont m_full = Inl (body # k) \<Longrightarrow>
+          payload m_full = payload m \<Longrightarrow>
+          (\<exists>m_full'.
+              sem_exec_c_p gs m_full j m_full' \<and>
+              payload m_full' = (a, aa, b) \<and> s_cont m_full' = Inl (prefix @ k))) \<Longrightarrow> False"
+*)
+
+(* idea: 2 possibilities at this point
+- stepping into prefix results in an empty continuation \<Rightarrow> we are done
+- stepping into the prefix results in "escape" beyond the loop.
+however, can we cheat at this point? use information from the continuation list to do
+different things in different cases in a way that is bad?
+*)
+
+(* we still have n-i steps to go ... we need to know something about the behavior of the prefix. *)
+
+(* one idea: prefix cannot choose whether to fail based on data (or shape) of continuation *)
+(* another idea: just based on data of continuation *)
+
+(* prefix should be safe for any state that was produced from running body starting at P1 *)
+(* {-?-} prefix {-P1-} *)
+
+            have "|gs| {-(\<lambda> st . st = m'x)-} prefix {-P1-}"
+            proof
+              fix cx
+
+              assume G : "|gs| {P1} cx"
+              show "|gs| {\<lambda>st. st = m'x} prefix @ cx"
+              proof
+                fix mp :: "('a, 'b) state"
+                assume Hmp : "(payload mp) = m'x"
+                assume Hmpc : "s_cont mp = Inl (prefix @ cx)"
+
+                have "|gs| {P1} [body] @ cx" using HTE[OF Htrue G] by auto
+
+                show "safe gs mp" 
+                proof
+                  fix mp'
+
+                  assume "sem_exec_p gs mp mp'"
+                  show "imm_safe gs mp'"
+
+
+            then show ?thesis 
           qed
-        qed
-      qed
 
-      have Guard' : "|gs| {P1} [cond] @ ([G Sif' [body]] @ c')"
-        using HTE[OF Hcond Sub] by auto
+          have False using Imax Iabs unfolding absorbs_def
 
-      have Safe' : "safe gs m'" using guardedD[OF Guard' P1sm' CM'] by auto
+(*
+exists Suc i where
+forall prefix st'
+exists k, m_full where
+s_cont m_full \<noteq> Inl (body # k) \<and>
+payload m_full 
+*)
 
-      show "safe gs m"
-      proof
-        fix mz
-
-        assume Z: "sem_exec_p gs m mz"
-
-        then show "imm_safe gs mz" unfolding sem_exec_p_def
-        proof(cases rule: rtranclp.cases)
-          case rtrancl_refl
-
-          then have "(\<exists>m'. sem_step gs mz = Inl m')"
-            using Inl unfolding imm_safe_def sem_step_p_eq
-            by(cases m'; auto)
-
-          then show ?thesis using Inl unfolding imm_safe_def sem_step_p_eq
-            by(auto)
-        next
-          case (rtrancl_into_rtrancl b)
-
-          have Step : "sem_step_p gs m m'" using Inl
-            unfolding sem_step_p_eq
-            by auto
-
-          have Exec_final : "sem_exec_p gs m' mz"
-            using rtranclp_bisect1
-              [OF sem_step_determ rtrancl_into_rtrancl(1)
-                  Step rtrancl_into_rtrancl(2)]
-            unfolding sem_exec_p_def
-            by auto
-
-          show ?thesis using safeD[OF Safe' Exec_final] by auto
+(* idea: we know prefix must be something that throws away the continuation. the appel paper does a specific case analysis on "non-local"
+control flow at this point. perhaps we need to do the same? this would require a "closed world" of non-local control flow when we instantiate
+this theorem, which isn't unreasonable. *)
+          then show ?thesis using  Imax unfolding absorbs_def
         qed
       qed
     qed
   qed
 qed
 
+
+(*
+lemma HWhile_gen0 :
+  assumes H0 : "gs = \<lparr> s_sem = pcomps' fs \<rparr>"
+  (*assumes H1 : "seq_sem_l_gen lfts \<in> set fs" *)
+  assumes HF : "f = imp_sem_l_gen lfts"
+  assumes Hpres : "sups_pres (set fs)"
+  assumes Hnemp : "g \<in> set fs"
+  assumes Hdom_while : "(f \<downharpoonleft> (set fs) SwhileC')"
+  assumes Hdom_skip : "(f \<downharpoonleft> (set fs) Sskip')"
+  assumes Hwhile : "lfts SwhileC' = SwhileC"
+  assumes Hskip : "lfts Sskip' = ImpCtl.Sskip"
+  (* TODO: generalize. these should be expressed using valid-sets *)
+  assumes P1_valid : "\<And> st.  P1 st \<Longrightarrow> get_cond st = Some True"
+  assumes Htrue : "|gs| {- P1 -} [body]
+                        {- P1 -}"
+  shows "|gs| {- P1  -} [(G Swhile'C [body])] {- (\<lambda> st . False ) -}"
+proof
+  fix c'
+  assume Guard : " |gs| {C False} c'"
+
+  show "|gs| {P1} ([G Swhile'C [body]]) @ c'"
+  proof
+    fix m :: "('a, 'b) state"
+    assume Mp : "P1 (payload m)"
+    assume Mc : "s_cont m = Inl (([G Swhile'C [body]]) @ c')"
+    show "safe gs m"
+    proof
+      fix m' :: "('a, 'b) state"
+
+      assume Exec : "sem_exec_p gs m m'"
+
+      obtain cnt where Exec' : "sem_exec_c_p gs m cnt m'"
+        using exec_p_imp_exec_c_p[OF Exec] by auto
+
+      have "|gs| {- P1  -} replicate cnt body @ [(G Swhile'C [body])] {- (\<lambda> st . False ) -}"
+
+      then show "imm_safe gs m'" using Guard Mp Mc
+      proof(induction arbitrary: c' rule: sem_exec_c_p.induct)
+        case (Excp_0 m0)
+        then show ?case unfolding imm_safe_def sorry
+      next
+        case (Excp_Suc m1 m2 n m3)
+        then show ?case 
+      qed
+*)
 end

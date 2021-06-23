@@ -422,7 +422,6 @@ next
     by auto
 qed
 
-
 definition diverges :: "('syn, 'mstate) semc \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> bool" where
 "diverges gs st =
   (\<forall> st' . sem_exec_p gs st st' \<longrightarrow> (\<exists> st'' . sem_step_p gs st' st''))"
@@ -473,6 +472,104 @@ proof
       by blast
   qed
 qed
+
+lemma rtranclp_paths_step :
+  assumes H0 : "determ R"
+  assumes H1 : "R\<^sup>*\<^sup>* x1 y"
+  assumes H2 : "R x1 x2"
+  shows "(x1 = y \<or> R\<^sup>*\<^sup>* x2 y)" using H1 H2
+proof(induction arbitrary: x2 rule:rtranclp_induct)
+  case base
+  then show ?case by auto
+next
+  case (step nxt last)
+
+  have Opts : "x1 = nxt \<or> R\<^sup>*\<^sup>* x2 nxt"
+    using step.IH[OF step.prems(1)] by auto
+
+  then show ?case
+  proof(cases "x1 = nxt")
+    case True
+
+    then have X1alt : "R x1 last" 
+      using step.hyps by auto
+
+    then have X2alt : "x2 = last"
+      using determE[OF H0 X1alt step.prems(1)]
+      by auto
+
+    hence "R\<^sup>*\<^sup>* x2 last"
+      by auto
+
+    thus ?thesis by auto
+  next
+    case False
+
+    then have False' : "R\<^sup>*\<^sup>* x2 nxt" using Opts by auto
+
+    show ?thesis using rtranclp.intros(2)[OF False' step.hyps(2)]
+      by auto
+  qed
+qed
+
+
+lemma rtranclp_paths :
+  assumes H0 : "determ R"
+  assumes H1 : "R\<^sup>*\<^sup>* x y1"
+  assumes H2 : "R\<^sup>*\<^sup>* x y2"
+  shows
+    "(R\<^sup>*\<^sup>* y2 y1) \<or>
+     (R\<^sup>*\<^sup>* y1 y2)" using H1 H2
+proof(induction arbitrary: y2 rule:rtranclp_induct)
+  case base
+  then show ?case by auto
+next
+  case (step nxt last)
+
+  have Alts : "R\<^sup>*\<^sup>* y2 nxt \<or> R\<^sup>*\<^sup>* nxt y2"
+    using step.IH[OF step.prems(1)] by auto
+
+  show ?case 
+  proof(cases "R\<^sup>*\<^sup>* y2 nxt")
+    case True
+
+    then have "R\<^sup>*\<^sup>* y2 last"
+      using rtranclp.intros(2)[OF True step.hyps(2)] by auto
+
+    then show ?thesis by auto
+  next
+    case False
+
+    then have False' : "R\<^sup>*\<^sup>* nxt y2" using Alts by auto
+
+    have Alts' : "nxt = y2 \<or> R\<^sup>*\<^sup>* last y2"
+      using rtranclp_paths_step[OF H0 False' step.hyps(2)]
+      by auto
+
+    show ?thesis
+    proof(cases "nxt = y2")
+      case True
+
+      then have "R\<^sup>*\<^sup>* y2 last" using step.hyps(2) by auto
+
+      then show ?thesis by auto
+    next
+      case False
+
+      hence False'' : "R\<^sup>*\<^sup>* last y2" using Alts' by auto
+
+      then show ?thesis by auto
+    qed
+  qed
+qed
+      
+lemma imm_unsafe :
+  assumes H : "\<not> (imm_safe gs st)"
+  shows "\<exists> bads. s_cont st = Inr bad"
+  using H
+  unfolding imm_safe_def sem_step_p_eq sem_step_def
+  apply(cases "s_cont st"; auto)
+
 
 (* lemma for lifting composed languages in the case where
    one "always wins" for a given syntax element
