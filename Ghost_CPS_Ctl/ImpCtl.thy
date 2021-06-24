@@ -1,7 +1,7 @@
 theory ImpCtl
   imports "../Gensyn" "../Gensyn_Descend" "../Mergeable/Mergeable" "../Mergeable/MergeableInstances"
           "../Lifting/LiftUtils" "../Lifting/LiftInstances"
-          "../Lifting/AutoLift" "../Hoare/CPS_Hoare" "../Hoare/CPS_Hoare_Step" "../Lifting/LangCompFull"
+          "../Lifting/AutoLift" "../Hoare/Hoare_Ghost" "../Hoare/CPS_Hoare_Step" "../Lifting/LangCompFull"
           "Utils"
           "./Seq"
 begin
@@ -115,33 +115,6 @@ definition imp_prio :: "(syn' \<Rightarrow> nat)" where
     Sskip \<Rightarrow> 0
     | _ \<Rightarrow> 2)"
 
-(* failed experiments in trying to coax the auto-lifter *)
-
-(*
-definition imp_sem_l :: "syn \<Rightarrow> 'x state \<Rightarrow> 'x state" where
-"imp_sem_l =
-  lift_map_s imp_trans
-    (schem_lift (SP NA (SP NB NC))
-                (SP (SPRC imp_prio (SO NA)) (SP (SPRK (SO NB)) (SPRK (SO NC)))))
-  imp_ctl_sem"
-*)
-(*
-definition imp_sem_lifting_gen_huh ::  "(ImpCtl.syn', 'x gensyn list * int, 
-                                      ('a :: Pordb ) *
-                                      ('x gensyn list md_triv option md_prio * int md_triv option md_prio)) lifting" where
-"imp_sem_lifting_gen_huh = 
- (schem_lift (SP NA NB) (SP NX (SP (SPRI (SO NA)) (SPRI (SO NB)))))"
-*)
-
-(*
-definition imp_sem_lifting_gen_huh ::  "(ImpCtl.syn', 'x gensyn list, 
-                                      ('x gensyn list md_triv option md_prio * 
-                                           ('a :: Pordb ))) lifting" where
-"imp_sem_lifting_gen_huh = 
- (schem_lift NA (SP (SPRI (SO NA)) NX))"
-*)
-
-
 
 definition imp_sem_lifting_gen :: "(ImpCtl.syn', 'x imp_state', 
                                    ('x, _ ) state) lifting" where
@@ -170,10 +143,6 @@ definition sem_final :: "(syn, 'x, bool md_triv option md_prio *
 definition prog where
 "prog = (G (Seq Sseq) [(G (Seq Sseq) []), 
                         (G (Simp Sif) [(G (Seq Sseq) []), (G (Seq Sseq) [])])])"
-
-(* TODO: correctness theorem would be cleaner if we had a way to say that
-   boolean expressions can't affect control flow (also in terms of domination?)
-*)
 
 definition get_cond :: 
 "bool md_triv option md_prio * 
@@ -206,32 +175,38 @@ lemma HIf_gen :
   assumes Hdom : "(f \<downharpoonleft> (set fs) Sif')"
   assumes Hsyn : "lfts Sif' = Sif"
   (* TODO: generalize. these should be expressed using valid-sets *)
-  assumes P1_valid : "\<And> st.  P1 st \<Longrightarrow> get_cond st \<noteq> None"
-  assumes P2_valid : "\<And> st . P2 st \<Longrightarrow> get_cond st \<noteq> None"
+  assumes P1_valid : "\<And> st g.  P1 st g \<Longrightarrow> get_cond st \<noteq> None"
+  assumes P2_valid : "\<And> st g . P2 st g \<Longrightarrow> get_cond st \<noteq> None"
 
-  assumes Hcond : "|gs| {- P1 -} [cond] {- P2 -}"
-  assumes Htrue : "|gs| {- (\<lambda> st . P2 st \<and> get_cond st = Some True) -} [body]
-                        {- P3 -}"
-  assumes Hfalse : "|gs| {- (\<lambda> st . P2 st \<and> get_cond st = Some False) -} [] {-P3-}"
-  shows "|gs| {- P1 -} [G Sif' [cond, body]] {- P3 -}"
+  assumes Hcond : "|gs| {-R1-} {= P1 =} [cond] {= P2 =}"
+  assumes Htrue : "|gs| {-R2-} {= (\<lambda> st g . P2 st g \<and> get_cond st = Some True) =} [body]
+                        {= P3 =}"
+  assumes Hfalse : "|gs| {-R2-} {= (\<lambda> st g . P2 st g \<and> get_cond st = Some False) =} [] {=P3=}"
+  shows "|gs| {-(R1 OO R2)-} {= P1 =} [G Sif' [cond, body]] {= P3 =}"
 proof
   fix c'
-  assume Guard : "|gs| {P3} c'"
+  fix g g''
 
+  assume R: "(R1 OO R2) g g''"
+
+  assume Guard : "|gs| {P3} g'' c'"
+
+  obtain g' where G'1 : "R1 g g'" and G'2 : "R2 g' g''"
+    using R unfolding OO_def by blast
 
 (* need to think about how we are structuring states. *)
 (* where will the data of interest be *)
-  have Gtrue : "|gs| {\<lambda>st. P2 st \<and> get_cond st = Some True} [body] @ c'"
-    using HTE[OF Htrue Guard] by auto
+  have Gtrue : "|gs| {\<lambda>st gx. P2 st gx \<and> get_cond st = Some True} g' ([body] @ c')"
+    using HTE[OF Htrue G'2 Guard] by auto
 
-  have Gfalse : "|gs| {\<lambda>st. P2 st \<and> get_cond st = Some False} [] @ c'"
-    using HTE[OF Hfalse Guard] by auto
+  have Gfalse : "|gs| {\<lambda>st gx. P2 st gx \<and> get_cond st = Some False} g' ([] @ c')"
+    using HTE[OF Hfalse G'2 Guard] by auto
 
-  show "|gs| {P1} [G Sif' [cond, body]] @ c'"
+  show "|gs| {P1} g ([G Sif' [cond, body]] @ c')"
   proof
     fix m :: "('a, 'b) state"
 
-    assume M : "P1 (payload m)"
+    assume M : "P1 (payload m) g"
     assume CM : "s_cont m = Inl ([G Sif' [cond, body]] @ c')"
 
     show "(safe gs m)"
@@ -267,15 +242,15 @@ proof
           merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
           split: md_prio.splits md_triv.splits option.splits)
 
-      hence P1sm' : "P1 (payload m')" using M unfolding Sm' by auto
+      hence P1sm' : "P1 (payload m') g" using M unfolding Sm' by auto
 
       (* next: step to the end of cond. *)
 
-      have Sub : "|gs| {P2} [G Sif' [body]] @ c'"
+      have Sub : "|gs| {P2} g' ([G Sif' [body]] @ c')"
       proof
         fix mp2 :: "('a, 'b) state"
 
-        assume MP2 : "P2 (payload mp2)"
+        assume MP2 : "P2 (payload mp2) g'"
 
         assume Cont2 : "s_cont mp2 = Inl ([G Sif' [body]] @ c')"
 
@@ -305,7 +280,7 @@ proof
               using sym[OF dominant_pcomps'[OF Hpres Hnemp Hdom]] Cont2 Inl H0
               by(simp add: sem_step_def)
 
-            have Mp2'_p2 : "P2 (payload mp2')"
+            have Mp2'_p2 : "P2 (payload mp2') g'"
               using Cont2 Hsyn H0 MP2 F_eq' P2_valid[OF MP2] Some' unfolding HF
               by(cases mp2; cases mp2'; 
                   auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
@@ -327,7 +302,7 @@ proof
                     get_cond_def
                     split: md_prio.splits md_triv.splits option.splits)
 
-              have Mp2'_p2_true :  "P2 (payload mp2') \<and> get_cond (payload mp2') = Some True"
+              have Mp2'_p2_true :  "P2 (payload mp2') g' \<and> get_cond (payload mp2') = Some True"
                 using Mp2'_p2 Mp2'_cond
                 by auto
 
@@ -387,7 +362,7 @@ proof
                     get_cond_def
                     split: md_prio.splits md_triv.splits option.splits)
 
-              have Mp2'_p2_false :  "P2 (payload mp2') \<and> get_cond (payload mp2') = Some False"
+              have Mp2'_p2_false :  "P2 (payload mp2') g' \<and> get_cond (payload mp2') = Some False"
                 using Mp2'_p2 Mp2'_cond
                 by auto
 
@@ -439,8 +414,8 @@ proof
         qed
       qed
 
-      have Guard' : "|gs| {P1} [cond] @ ([G Sif' [body]] @ c')"
-        using HTE[OF Hcond Sub] by auto
+      have Guard' : "|gs| {P1} g ([cond] @ ([G Sif' [body]] @ c'))"
+        using HTE[OF Hcond G'1 Sub] by auto
 
       have Safe' : "safe gs m'" using guardedD[OF Guard' P1sm' CM'] by auto
 
@@ -618,35 +593,6 @@ next
 qed
 
 (*
-lemma rtranclp_induct_alt_stronger :
-  "rtranclp r a b \<Longrightarrow> P a \<Longrightarrow>
-   (\<And> y z . rtranclp r a y \<Longrightarrow> rtranclp r y z \<Longrightarrow> P y \<Longrightarrow> P z) \<Longrightarrow> P b"
-proof(induction rule: rtranclp_induct)
-  case base
-  then show ?case by auto
-next
-  case (step y z)
-
-  have Py : "P y" using step.IH[OF step.prems(1) step.prems(2)]
-    by auto
-
-  have Rz : "rtranclp r y z" using step.hyps
-    by(auto)
-
-  show ?case using step.prems(2)[OF step.hyps(1) Rz Py] by auto
-qed
-*)
-
-(* the issue here is that we don't really have any way of describing what might happen after
-executing a prefix before the loop, since that prefix might do all kinds of crazy stuff
-to the continuation
-
-*)
-
-
-
-
-
 definition fuel_bound :: "('syn, 'mstate) semc \<Rightarrow> ('syn gensyn list) \<Rightarrow> nat \<Rightarrow> bool" where
 "fuel_bound gs cont n =
   (\<forall> st n' st' . s_cont st = Inl cont \<longrightarrow> 
@@ -669,6 +615,7 @@ lemma fuel_boundD :
   assumes H3 : "s_cont st' = Inl []"
   shows "n' \<le> n" using assms
   unfolding fuel_bound_def by blast
+*)
 
 (* TODO: I think finiteness is necessary, but there is probably
 a way to avoid this requirement if we introduce ghost variables or similar
@@ -676,6 +623,9 @@ a way to avoid this requirement if we introduce ghost variables or similar
 for the entire state space (of terminating executions), but this is
 possible only if the state is finite (?)
 *)
+
+definition ridem :: "('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> bool" where
+"ridem R \<equiv> ((R OO R) = R)"
 
 lemma HWhileC_gen :
   assumes H0 : "gs = \<lparr> s_sem = pcomps' fs \<rparr>"
@@ -687,61 +637,76 @@ lemma HWhileC_gen :
   assumes Hsyn : "lfts Swhile' = SwhileC"
   (* TODO: generalize. these should be expressed using valid-sets *)
   assumes PX_valid : "\<And> n st.  PX n st \<Longrightarrow> get_cond st \<noteq> None"
-  assumes Htrue : "\<And> n .  |gs| {-(\<lambda> st . PX n st)-} [body] {-(\<lambda> st . PX (n - 1) st)-}"
+  (* is this correct? *)
+  assumes Htrue : "|gs| {-(\<lambda> g g' . g' = g - 1)-} {=(\<lambda> st g . PX g st) =} [body] {=(\<lambda> st g . PX g st) =}"
   assumes PX_P1 : "\<And> n st . PX n st \<Longrightarrow> P1 st"
-  assumes PX_P1' : "\<And> st . P1 st \<Longrightarrow> PX ni st"
+  assumes P1_PX : "\<And> st . P1 st \<Longrightarrow> PX (getn st) st"
+  assumes PX_closed : "\<And> n st . PX n st \<Longrightarrow> PX (n + 1) st"
   assumes Donefor : "\<And> stx c . PX 0 (payload stx) \<Longrightarrow> s_cont stx = Inl ([G SwhileC' [body]] @ c) \<Longrightarrow> safe gs stx"
-  shows "|gs| {- PX (ni :: nat)  -} [G SwhileC' [body]] {- (\<lambda> st . (\<exists> n . n \<le> ni \<and> PX n st \<and> get_cond st = Some False) ) -}"
+(* next thing to try: rewrite this to g = g', and then constrain in conclusion (this way it looks more like original *)
+(* also look at where the last proof in ImpCtl.thy goes wrong. *)
+  shows "|gs| {- (\<lambda> (g :: nat) g' . (g' = g)) -} {= (\<lambda> st g . g = getn st \<and> PX g st)  =} [G SwhileC' [body]] {= (\<lambda> st g . (\<exists> n . n \<le> g \<and> PX n st \<and> get_cond st = Some False)) =}"
 proof
   fix c'
-  assume Guard : "|gs| {\<lambda>st. (\<exists> n . n \<le> ni \<and> PX n st \<and> get_cond st = Some False)} c'"
 
-  show "|gs| {PX ni} [G SwhileC' [body]] @ c'" using Guard
-  proof(induction ni arbitrary: c')
+  fix g g' :: nat
+
+  assume Gleq : "g'=g"
+
+  assume Guard : "|gs| {\<lambda>st g. \<exists>n\<le>g. PX n st \<and> get_cond st = Some False} g' c'"
+
+  show "|gs| {\<lambda>st g. g = getn st \<and> PX g st} g ([G SwhileC' [body]] @ c')" 
+    using Gleq Guard
+  proof(induction g arbitrary: g' c')
     case 0
     show ?case
     proof
       fix m :: "('a, 'b) state"
-      assume P0 : "PX 0 (payload m)" 
-      assume C : "s_cont m = Inl ([G SwhileC' [body]] @ c')" 
-      show  "safe gs m" using Donefor[OF P0 C] by auto
+      assume Hm : "0 = getn (payload m) \<and> PX 0 (payload m)"
+      then have Hm' : "PX 0 (payload m)" by auto
+
+      assume Hcontm : "s_cont m = Inl ([G SwhileC' [body]] @ c')" 
+      show "safe gs m" using Donefor[OF Hm' Hcontm] by auto
     qed
   next
-    case (Suc ni)
-    show ?case
+    case (Suc g)
+    show ?case 
     proof
       fix m :: "('a, 'b) state"
-      assume PX : "PX (Suc ni) (payload m)" 
-      assume C : "s_cont m = Inl ([G SwhileC' [body]] @ c')" 
+      assume Hm : "Suc g = getn (payload m) \<and> PX (Suc g) (payload m)" 
+      then have Pay : "Suc g = getn (payload m)" and Px : "PX (Suc g) (payload m)"
+        by auto
+
+      assume Hcontm : "s_cont m = Inl ([G SwhileC' [body]] @ c')" 
       show  "safe gs m" 
 
       proof(cases "(sem_step gs m)")
         case (Inr bad)
   
-        then have False using C H0
+        then have False using Hcontm H0
           by(auto simp add: sem_step_def)
   
         then show ?thesis by auto
       next
         case (Inl m')
-  
+
         have F_eq : "sem_step \<lparr> s_sem = f \<rparr> m = Inl m'"
-          using sym[OF dominant_pcomps'[OF Hpres Hnemp Hdom]] C Inl H0
+          using sym[OF dominant_pcomps'[OF Hpres Hnemp Hdom]] Hcontm Inl H0
           by(simp add: sem_step_def)
   
-        have M_P1 : "PX (Suc ni) (payload m)" using PX C by auto
+        have M_P1 : "PX (Suc g) (payload m)" using Px Hcontm by auto
   
         have M'_valid : "\<And> p . fst (payload m) \<noteq> mdp p None" using PX_valid[OF M_P1]
           by(auto simp add: get_cond_def split:prod.splits)
   
         have Sm' : "payload m = payload m'"
-          using C Hsyn F_eq M'_valid  unfolding HF
+          using Hcontm Hsyn F_eq M'_valid  unfolding HF
           by(cases m; cases m'; auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
              schem_lift_defs 
             merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
             split: md_prio.splits md_triv.splits option.splits)
   
-        have M' : "PX (Suc ni) (payload m')" using Sm' M_P1 by auto
+        have M' : "PX (Suc g) (payload m')" using Sm' M_P1 by auto
 
         show "safe gs m"
         proof(cases "get_cond (payload m)")
@@ -754,40 +719,231 @@ proof
         next
           case Some' : (Some cnd)
 
-          have Haa : "|gs| {\<lambda>st. \<exists>n\<le>ni. PX n st \<and> get_cond st = Some False} c'"
+          have Haa : "|gs| {\<lambda>st g. \<exists>n\<le>g. PX n st \<and> get_cond st = Some False} g c'"
           proof
             fix ml :: "('a, 'b) state"
-            assume Hpay : "\<exists>n\<le>ni . PX n (payload ml) \<and> get_cond (payload ml) = Some False"
+            assume Hpay : "\<exists>n\<le>g . PX n (payload ml) \<and> get_cond (payload ml) = Some False"
             assume Hcont : "s_cont ml = Inl c'"
 
-            obtain nnew where Nnew_leq  : "nnew \<le> ni" and Nnew_spec : "PX nnew (payload ml) \<and> get_cond (payload ml) = Some False"
+            obtain nnew where Nnew_leq  : "nnew \<le> g" and Nnew_spec : "PX nnew (payload ml) \<and> get_cond (payload ml) = Some False"
               using Hpay by auto
 
-            have Nnew_leq' : "nnew \<le> Suc ni" using Nnew_leq by auto
+            have Nnew_leq' : "nnew \<le> Suc g" using Nnew_leq by auto
 
-            have Hpay' : "\<exists>n\<le>Suc ni . PX n (payload ml) \<and> get_cond (payload ml) = Some False"
-              using Nnew_leq' Nnew_spec by auto
+            have Hpay' : "\<exists>n\<le>g' . PX n (payload ml) \<and> get_cond (payload ml) = Some False"
+              using Nnew_leq' Nnew_spec Suc.prems by auto
 
-            show "safe gs ml" using guardedD[OF Suc.prems Hpay' Hcont] Suc.prems
+            show "safe gs ml" using guardedD[OF Suc.prems(2) Hpay' Hcont]
               by auto
           qed
 
+          show ?thesis
+          proof(cases cnd)
+            case True
 
+            have Mp2'_cont : "s_cont m' = Inl ([body, G SwhileC' [body]] @ c')" sorry
+
+            have G1 : "|gs| {\<lambda>st g. g = getn st \<and> PX g st} g ([G SwhileC' [body]] @ c')"
+              using Suc.IH[OF refl Haa]
+              by auto
+
+            hence G1' : "|gs| {\<lambda>st g. g = getn st \<and> PX g st} (Suc g - 1) ([G SwhileC' [body]] @ c')"
+              by auto
+
+(*
+            have Htrue' : "|gs| {-(\<lambda> g g' . g' = g - 1)-} {=(\<lambda> st g . PX g st) =} [body] {=(\<lambda> st g . g = getn st \<and> PX g st) =}"
+            proof
+              fix c'' 
+              fix gx gx' :: nat
+              assume Gx : "gx' = gx - 1"
+              assume "|gs| {\<lambda>st g. g = getn st \<and> PX g st} gx' c''"
+
+              show "|gs| {\<lambda>st g. PX g st} gx ([body] @ c'')"
+                using HTE[OF Htrue Gx]
+*)
+            have Ggood : "|gs| {\<lambda>st g. PX g st} (Suc g)  ([body] @ [G SwhileC' [body]] @ c')"
+              using  (*HTE[OF Htrue' _ G1, of "Suc g"] Htrue by auto *)
+HTE[OF Htrue]
+
+
+            have Almost :  "safe gs m'" using guardedD[OF Ggood M'] Mp2'_cont
+              by auto
+
+            show "safe gs m" using
+            proof
+              fix mfin
+
+
+            then show ?thesis sorry
+          next
+            case False
+            then show ?thesis sorry
+          qed
+
+  qed
+
+
+    fix m :: "('a, 'b) state"
+    assume "g = getn (payload m) \<and> PX g (payload m)"
+    hence Pg : "PX g (payload m)" and Getn_g : "getn (payload m) = g" by auto
+    assume Hc : "s_cont m = Inl ([G SwhileC' [body]] @ c')"
+  
+    show "safe gs m"
+(*
+      proof(cases "(sem_step gs m)")
+        case (Inr bad)
+  
+        then have False using Hc H0
+          by(auto simp add: sem_step_def)
+  
+        then show ?thesis by auto
+      next
+        case (Inl m')
+  
+        have F_eq : "sem_step \<lparr> s_sem = f \<rparr> m = Inl m'"
+          using sym[OF dominant_pcomps'[OF Hpres Hnemp Hdom]] Hc Inl H0
+          by(simp add: sem_step_def)
+  
+        have M_P1 : "PX ( g) (payload m)" using Pg Hc by auto
+  
+        have M'_valid : "\<And> p . fst (payload m) \<noteq> mdp p None" using PX_valid[OF M_P1]
+          by(auto simp add: get_cond_def split:prod.splits)
+  
+        have Sm' : "payload m = payload m'"
+          using Hc Hsyn F_eq M'_valid  unfolding HF
+          by(cases m; cases m'; auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
+             schem_lift_defs 
+            merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
+            split: md_prio.splits md_triv.splits option.splits)
+  
+        have M' : "PX (g) (payload m')" using Sm' M_P1 by auto
+  
+        show "safe gs m"
+        proof(cases "get_cond (payload m)")
+          case None
+  
+          then have False using PX_valid[OF M_P1]
+            by(auto simp add: get_cond_def split: prod.splits md_prio.splits md_triv.splits option.splits)
+          then show ?thesis by auto
+  
+        next
+          case Some' : (Some cnd)
           then show ?thesis 
           proof(cases cnd)
             case True
 
             have Mp2'_cont : "s_cont m' = Inl ([body, G SwhileC' [body]] @ c')" sorry
 
-            have G1 : "|gs| {PX ni} [G SwhileC' [body]] @ c'"
-              using Suc.IH[OF Haa] Suc.IH
+            show "safe gs m" using HTE[OF Htrue TrueI]
+(* problem, as before: what if g' = Suc gi? *)
+
+            have G1 : "|gs| {\<lambda>st gx.  getn st \<le> gx \<and> PX gx st} (g) ([G SwhileC' [body]] @ c')"
+              using 
               by auto
 
-            hence G1' : "|gs| {PX (Suc ni - 1)} [G SwhileC' [body]] @ c'"
+            hence G1' : "|gs| {\<lambda>st gx.  gx = getn st \<and> PX gx st} (Suc gi - 1) ([G SwhileC' [body]] @ c')"
+              by auto
+*)
+    using Guard Gleq Pg Getn_g Hc
+  proof(induction g arbitrary: g' c' m)
+    case 0
+    have "imm_safe gs m" using 0
+      apply(cases "sem_step gs m")
+       apply(auto simp add: sem_step_def imm_safe_def sem_step_p_eq)
+      done
+
+  next
+    case (Suc gi)
+    show ?case
+    proof(cases "(sem_step gs m)")
+      case (Inr bad)
+
+      then have False using Suc.prems H0
+        by(auto simp add: sem_step_def)
+
+      then show ?thesis by auto
+    next
+      case (Inl m')
+
+      have F_eq : "sem_step \<lparr> s_sem = f \<rparr> m = Inl m'"
+        using sym[OF dominant_pcomps'[OF Hpres Hnemp Hdom]] Suc.prems Inl H0
+          by(simp add: sem_step_def)
+  
+        have M_P1 : "PX (Suc gi) (payload m)" using Suc.prems by auto
+  
+        have M'_valid : "\<And> p . fst (payload m) \<noteq> mdp p None" using PX_valid[OF M_P1]
+          by(auto simp add: get_cond_def split:prod.splits)
+  
+        have Sm' : "payload m = payload m'"
+          using Suc.prems Hsyn F_eq M'_valid  unfolding HF
+          by(cases m; cases m'; auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
+             schem_lift_defs 
+            merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
+            split: md_prio.splits md_triv.splits option.splits)
+  
+        have M' : "PX (Suc gi) (payload m')" using Sm' M_P1 by auto
+
+        show "safe gs m"
+        proof(cases "get_cond (payload m)")
+          case None
+  
+          then have False using PX_valid[OF M_P1]
+            by(auto simp add: get_cond_def split: prod.splits md_prio.splits md_triv.splits option.splits)
+          then show ?thesis by auto
+  
+        next
+          case Some' : (Some cnd)
+          then show ?thesis 
+          proof(cases cnd)
+            case True
+
+            have Mp2'_cont : "s_cont m' = Inl ([body, G SwhileC' [body]] @ c')" sorry
+
+
+            have Hmm : "|gs| {\<lambda>st g. PX g st \<and> get_cond st = Some False} (g'-1) c'" 
+            proof
+              fix ml :: "('a, 'b) state"
+
+              assume 0 : "PX (g' - 1) (payload ml) \<and> get_cond (payload ml) = Some False"
+              assume 1: "s_cont ml = Inl c'"
+
+              have Boo : "PX (g' - 1) (payload ml)" using 0 by auto
+
+              show "safe gs ml" using Suc.prems Suc.IH HTE[OF Htrue]
+(*
+              proof(cases g')
+                case 0
+                then show ?thesis using Donefor
+              next
+                case (Suc nat)
+                then show ?thesis sorry
+              qed
+*)
+
+            have IHR : "|gs| {\<lambda>st g. g = getn st \<and> PX g st} gi ([G SwhileC' [body]] @ c')"
+              using Suc.IH[OF Hmm] Suc.prems by auto
+
+            show ?thesis using HTE[OF Htrue, of "Suc gi" "gi"]
+            proof(cases "g' = Suc gi")
+
+              show "safe gs m" using Suc.prems Suc.IH
+        
+
+(* problem, as before: what if g' = Suc gi? *)
+
+            have G1 : "|gs| {\<lambda>st gx.  getn st \<le> gx \<and> PX gx st} (gi) ([G SwhileC' [body]] @ c')"
+              using Suc.IH[OF ] Suc.prems HTE[OF Htrue]
               by auto
 
-            have Ggood : "|gs| {PX (Suc ni)} [body] @ [G SwhileC' [body]] @ c'"
-              using HTE[OF Htrue G1'] Htrue by auto
+            hence G1' : "|gs| {\<lambda>st gx.  gx = getn st \<and> PX gx st} (Suc gi - 1) ([G SwhileC' [body]] @ c')"
+              by auto
+
+(*
+            have G1'' : "|gs| {\<lambda>st gx. PX gx st} (Suc gi - 1) ([G SwhileC' [body]] @ c')"
+            proof
+*)
+            have Ggood : "|gs| {\<lambda>st gx.  gx = getn st \<and> PX gx st} (Suc gi) ([body] @ [G SwhileC' [body]] @ c')"
+              using HTE[OF Htrue] Suc.prems by auto
 
             have Almost :  "safe gs m'" using guardedD[OF Ggood M'] Mp2'_cont
               by auto
@@ -814,33 +970,10 @@ proof
           next
             case False
 
-            have Mp2'_cont : "s_cont m' = Inl ( c')" sorry
+            have Mp2'_cont : "s_cont m' = Inl (c')" sorry
 
-            have Haa' : "|gs| {\<lambda>st. \<exists>n\<le>Suc ni. PX n st \<and> get_cond st = Some False} c'"
-            proof
-              fix ml :: "('a, 'b) state"
-              assume Hpay : "\<exists>n\<le>Suc ni . PX n (payload ml) \<and> get_cond (payload ml) = Some False"
-              assume Hcont : "s_cont ml = Inl c'"
-  
-  
-              show "safe gs ml" using guardedD[OF Suc.prems Hpay Hcont] Suc.prems
-                by auto
-            qed
+            show "safe gs m" using guardedD[OF ] Suc.prems
 
-            have "
-     PX (Suc ni) (CPS_Hoare.payload m') \<and>
-     get_cond (CPS_Hoare.payload m') = Some False"
-              using False M' Sm' Some'
-              by(auto)
-
-              hence NewHyp : "\<exists>n\<le>Suc ni.
-     PX (n) (CPS_Hoare.payload m') \<and>
-     get_cond (CPS_Hoare.payload m') = Some False"
-                by auto
-
-              have "safe gs m'" using guardedD[OF Haa' NewHyp Mp2'_cont] by auto
-
-            show "safe gs m" sorry (* as in True case, just extend one step. *)
           qed
         qed
       qed
@@ -848,163 +981,5 @@ proof
   qed
 qed
 
-
-lemma HWhileC_gen :
-  fixes PX :: "nat \<Rightarrow> (bool md_triv option md_prio \<times>
-  int md_triv option md_prio \<times> 'b :: Mergeableb) \<Rightarrow> bool"
-  assumes H0 : "gs = \<lparr> s_sem = pcomps' fs \<rparr>"
-  (*assumes H1 : "seq_sem_l_gen lfts \<in> set fs" *)
-  assumes HF : "f = imp_sem_l_gen lfts"
-  assumes Hpres : "sups_pres (set fs)"
-  assumes Hnemp : "g \<in> set fs"
-  assumes Hdom : "(f \<downharpoonleft> (set fs) SwhileC')"
-  assumes Hsyn : "lfts Swhile' = SwhileC"
-  (* TODO: generalize. these should be expressed using valid-sets *)
-  assumes PX_valid : "\<And> n st.  PX n st \<Longrightarrow> get_cond st \<noteq> None"
-  (* problem is here. *)
-  assumes Htrue : "\<And> f .  |gs| {-(\<lambda> st . PX (f st) st)-} [body] {-(\<lambda> st . PX (f st - 1) st)-}"
-  assumes PX_P1 : "\<And> n st . PX n st \<Longrightarrow> P1 st"
-  assumes PX_P1' : "\<And> st x . getn st \<le> x \<Longrightarrow> P1 st \<Longrightarrow> PX x st"
-  assumes Donefor : "\<And> stx c . PX 0 (payload stx) \<Longrightarrow> s_cont stx = Inl ([G SwhileC' [body]] @ c) \<Longrightarrow> safe gs stx"
-  shows "|gs| {- (\<lambda> st . PX (getn st) st)  -} [G SwhileC' [body]] {- (\<lambda> st . (\<exists> n . n \<le> getn st \<and> PX n st \<and> get_cond st = Some False) ) -}"
-proof
-  fix c'
-  assume Guard : "|gs| {\<lambda>st. \<exists>n\<le>getn st. PX n st \<and> get_cond st = Some False} c'"
-
-  show "|gs| {\<lambda>st. PX (getn st) st} [G SwhileC' [body]] @ c'"
-  proof
-    fix m :: "('a, 'b) state"
-    assume HX : "PX (getn (payload m)) (payload m)"
-
-    assume Hcont : "s_cont m = Inl ([G SwhileC' [body]] @ c')"
-
-    have Cont' : "\<And> z . getn (payload m) \<le> z \<Longrightarrow> PX z (payload m) \<Longrightarrow> safe gs m"
-    proof-
-      fix z
-      assume Hi1 : "getn (payload m) \<le> z" 
-      assume Hi2 : "PX z (payload m)"
-      show "safe gs m" using Hcont Hi1 Hi2 Guard
-      proof(induction z arbitrary: c' m)
-        case 0
-        then show ?case using Donefor[OF _] by auto
-      next
-        case (Suc ni)
-        show ?case
-        proof(cases "(sem_step gs m)")
-          case (Inr bad)
-    
-          then have False using Suc.prems H0
-            by(auto simp add: sem_step_def)
-    
-          then show ?thesis by auto
-        next
-          case (Inl m2)
-    
-          have F_eq : "sem_step \<lparr> s_sem = f \<rparr> m = Inl m2"
-            using sym[OF dominant_pcomps'[OF Hpres Hnemp Hdom]] Suc.prems Inl H0
-            by(simp add: sem_step_def)
-    
-          have M_P1 : "PX (Suc ni) (payload m)" using Suc.prems by auto
-    
-          have M'_valid : "\<And> p . fst (payload m) \<noteq> mdp p None" using PX_valid[OF M_P1]
-            by(auto simp add: get_cond_def split:prod.splits)
-    
-          have Sm' : "payload m = payload m2"
-            using Suc.prems Hsyn F_eq M'_valid  unfolding HF
-            by(cases m; cases m2; auto simp add: s_cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
-               schem_lift_defs 
-              merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
-              split: md_prio.splits md_triv.splits option.splits)
-    
-          have M' : "PX (Suc ni) (payload m2)" using Sm' M_P1 by auto
-  
-          show "?thesis"
-          proof(cases "get_cond (payload m)")
-            case None
-    
-            then have False using PX_valid[OF M_P1]
-              by(auto simp add: get_cond_def split: prod.splits md_prio.splits md_triv.splits option.splits)
-            then show ?thesis by auto
-    
-          next
-            case Some' : (Some cnd)
-            then show ?thesis 
-            proof(cases cnd)
-              case True
-
-              have Mp2'_cont : "s_cont m2 = Inl ([body, G SwhileC' [body]] @ c')" sorry
-
-
-              show "safe gs m" using Suc.IH
-              proof
-                fix m'
-
-                assume Exec : "sem_exec_p gs m m'"
-
-                obtain nstep where Nstep : "sem_exec_c_p gs m nstep m'"
-                  using exec_p_imp_exec_c_p[OF Exec] by blast
-
-
-(*                show "imm_safe gs m'" *)
-
- 
-
-                have Haa : "|gs| {\<lambda>st. \<exists>n\<le> getn st. PX n st \<and> get_cond st = Some False} c'"
-                proof
-                  fix ml :: "('a, 'b) state"
-                  assume Hpay : "\<exists>n\<le>getn (payload ml) . PX n (payload ml) \<and> get_cond (payload ml) = Some False"
-                  assume Hcont : "s_cont ml = Inl c'"
-    
-                  obtain nnew where Nnew_leq  : "nnew \<le> getn (payload ml)" and Nnew_spec : "PX nnew (payload ml) \<and> get_cond (payload ml) = Some False"
-                    using Hpay by auto
-    
-                  have Nnew_leq' : "nnew \<le> Suc (getn (payload ml))" using Nnew_leq by auto
-    
-                  have Hpay' : "\<exists>n\<le>Suc (getn (payload ml)) . PX n (payload ml) \<and> get_cond (payload ml) = Some False"
-                    using Nnew_leq' Nnew_spec by auto
-    
-                  show "safe gs ml" using guardedD[OF Suc.prems(4) Hpay Hcont]
-                    by auto
-                qed
-                
-
-              have G1 : "|gs| {PX ni} [G SwhileC' [body]] @ c'"
-                using guardedD[OF Suc.prems(4)] HTE[OF Htrue]
-                by auto
-
-            hence G1' : "|gs| {PX (Suc ni - 1)} [G SwhileC' [body]] @ c'"
-              by auto
-
-            have Ggood : "|gs| {PX (Suc ni)} [body] @ [G SwhileC' [body]] @ c'"
-              using HTE[OF Htrue G1'] HTE[OF Htrue] by auto
-
-            have Almost :  "safe gs m2" using guardedD[OF Ggood M'] Mp2'_cont
-              by auto
-
-            show "safe gs m" 
-            proof
-              fix mfin
-
-              assume "sem_exec_p gs m mfin"
-              then show "imm_safe gs mfin" unfolding sem_exec_p_def
-              proof(cases rule: rtranclp.cases)
-                case rtrancl_refl
-                then have "sem_step_p gs mfin m'" using Inl unfolding sem_step_p_eq by auto
-                then show ?thesis unfolding imm_safe_def by blast
-              next
-                case (rtrancl_into_rtrancl b)
-
-                have Step : "sem_step_p gs m m'" using Inl unfolding sem_step_p_eq by auto
-                have Steps : "sem_exec_p gs m' mfin" using rtranclp_bisect1[OF sem_step_determ rtrancl_into_rtrancl(1) Step rtrancl_into_rtrancl(2)] unfolding sem_exec_p_def
-                  by auto
-                show ?thesis using safeD[OF Almost Steps] by auto
-
-    qed
-
-
-(* Now, to finish the argument, we need to show that terminating programs will always have a maximum number of 
-fuel they consume before they terminate, and that nonterminating programs are safe anyway.
-
-so, we can use this maximum fuel as an upper bound for ni, and we should be done. *)
 
 end

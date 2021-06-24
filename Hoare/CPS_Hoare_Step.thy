@@ -1,4 +1,4 @@
-theory CPS_Hoare_Step imports CPS_Hoare
+theory CPS_Hoare_Step imports Hoare_Core
 
 begin
 
@@ -186,6 +186,7 @@ next
   show ?case using Excp_Suc.IH[OF M2_copy2'] by auto
 qed
 
+(*
 definition safe_for :: "('syn, 'mstate) semc \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> nat \<Rightarrow> bool" where
 "safe_for gs m n =
   (\<forall> n' m' . n' < n \<longrightarrow> sem_exec_c_p gs m n' m' \<longrightarrow> imm_safe gs m')"
@@ -207,7 +208,7 @@ lemma safe_for_safe : "(\<And> n . safe_for gs m n) \<Longrightarrow> safe gs m"
 
 lemma safe_safe_for : "safe gs m \<Longrightarrow> safe_for gs m n"
   sorry
-
+*)
 
 
 end
