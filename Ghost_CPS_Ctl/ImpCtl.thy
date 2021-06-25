@@ -638,7 +638,7 @@ lemma HWhileC_gen :
   (* TODO: generalize. these should be expressed using valid-sets *)
   assumes PX_valid : "\<And> n st.  PX n st \<Longrightarrow> get_cond st \<noteq> None"
   (* is this correct? maybe we can either use different getn functions between body and conclusion,
-     or else not need getn in conclusion of Htrue premise. Or both...*)
+     or else not need getn in conclusion of Htrue premise*)
   assumes Htrue : "|gs| {-(\<lambda> g g' . g' = g - 1)-} {=(\<lambda> st g . getn st \<ge> g \<and> PX g st) =} [body] {=(\<lambda> st g . getn st \<ge> g \<and> PX g st) =}"
 (*  assumes Htrue' : "|gs| {-(\<lambda> g g' . g' = g)-} {=(\<lambda> st g . g = getn st \<and> P g st) =} [body] {= (\<lambda> st g . PX (g - 1) st)=}" *)
   assumes PX_P1 : "\<And> n st . PX n st \<Longrightarrow> P1 st"
@@ -782,19 +782,6 @@ proof
             case False
 
             have Mp2'_cont : "s_cont m' = Inl ( c')" sorry
-
-(*
-            have Haa' : "|gs| {\<lambda>st g. getn st \<le> g \<and> (\<exists>n\<le>g. PX n st \<and> get_cond st = Some False)} g c'"  
-            proof
-              fix ml :: "('a, 'b) state"
-              assume Hpay : "getn (payload ml) \<le> g \<and> (\<exists>n\<le>g . PX n (payload ml) \<and> get_cond (payload ml) = Some False)"
-              assume Hcont : "s_cont ml = Inl c'"
-    
-  
-              show "safe gs ml" using guardedD[OF Suc.prems(2) ] Suc.prems
-                by auto
-            qed
-*)
 
             have M'_full' : "(\<exists>n\<le>g'. PX n (payload m') \<and> get_cond (payload m') = Some False)"
               using M'_full False Some' unfolding Suc.prems(1) Sm'
@@ -1210,7 +1197,11 @@ lemma step_limit_state_f_step_limit :
   unfolding step_limit_state_def step_limit_state_f_def
   by auto
 
+(* another definition - "sleekness" + adding a suffix onto a continuation won't 
+   decrease the step limit.
+*)
 
+(* this proof is just wrong. we do need the general one. *)
 lemma HWhileC:
   assumes H0 : "gs = \<lparr> s_sem = pcomps' fs \<rparr>"
   (*assumes H1 : "seq_sem_l_gen lfts \<in> set fs" *)
@@ -1230,11 +1221,19 @@ proof
   fix g g' :: nat
 
   assume True
-  term "gs"
+
   assume Cnc : "|gs| {\<lambda>st. C (P1 st \<and> get_cond st = Some False)} g' c'"
 
+(*
   obtain PX where PX_def : "PX = (\<lambda> (n :: nat) st . (P1 st \<and> 
     (\<forall> c st' . n = 0 \<longrightarrow> payload st' = st \<longrightarrow> s_cont st' = Inl ([G SwhileC' [body]] @ c) \<longrightarrow> safe gs st')))"
+    by simp
+*)
+
+  obtain PX where PX_def : "PX = (\<lambda> (n :: nat) st . (P1 st \<and> (n > 0 \<or> n = step_limit_state_f gs st ([G SwhileC' [body]] ))))"
+    by simp
+
+  obtain getn where getn_def : "getn = (\<lambda> st . step_limit_state_f gs st ([G SwhileC' [body]] ))"
     by simp
 
   have PX_cond : "(\<And>n st. PX n st \<Longrightarrow> get_cond st \<noteq> None)"
@@ -1242,22 +1241,37 @@ proof
     using P1_valid
     by blast
 
-  have BodySpec : "|gs| {-\<lambda>g g'. g' = g - 1-} {=\<lambda>st g. step_limit_state_f gs st [body] st \<le> g \<and> PX g st=} [body] {=\<lambda>st g. getn st \<le> g \<and> PX g st=}"
 
-
-  have PX_imp : "(\<And>n st. PX n st \<Longrightarrow> P1 st)"
+  have PX_P1 : "(\<And>n st. PX n st \<Longrightarrow> P1 st)"
     unfolding PX_def by auto
-(*
-  have "(\<And>st. P1 (payload st) \<Longrightarrow> PX (step_limit_f gs st) (payload st))"
-*)
 
+(* now this is wrong... *)
+  have P1_PX : "(\<And>(st :: ('a, 'b) state). P1 (payload st) \<Longrightarrow> PX (step_limit_state_f gs (payload st) [G SwhileC' [body]]) (payload st))"
+  proof-
+
+    term "P1 o payload"
+    fix st :: "('a, 'b) state"
+    assume P1 : "P1 (payload st)"
+
+    show "PX (step_limit_state_f gs (payload st) [G SwhileC' [body]]) (payload st)"
+      unfolding PX_def using P1 
+      apply(auto)
+      sorry
+  qed
+
+  have Donefor : "\<And> stx c . PX 0 (payload stx) \<Longrightarrow> s_cont stx = Inl ([G SwhileC' [body]] @ c) \<Longrightarrow> safe gs stx"
+    unfolding PX_def
+(* how do we rule out crashes here? *)
+    sorry
+
+(*
   have Gen : "|gs| {-\<lambda>g g'.
             g' = g-} {=\<lambda>st g. step_limit_state_f gs st [G SwhileC' [body]]  \<ge> g \<and> PX g st=} [G SwhileC' [body]] {=\<lambda>st g. (\<exists>n\<le>g. PX n st \<and> get_cond st = Some False)=}"
   proof
     fix c' 
     fix g g' :: nat
     assume Geq : "g' = g"
-    assume Gd : "|gs| {\<lambda>st g. \<exists>n\<le>g. PX n st \<and> get_cond st = Some False} g' c'"
+    assume Gd : "|gs| {\<lambda>st g. \<exists>n\<le>g. PX n st \<and> get_cond st = Some False} g' c'" (* NB we don't actually use this anywhere. *)
     show "|gs| {\<lambda>st g. step_limit_state_f gs st [G SwhileC' [body]] \<ge> g \<and> PX g st} g
         ([G SwhileC' [body]] @ c')"
     proof
@@ -1309,6 +1323,11 @@ proof
           unfolding Lim'_def
           by auto
 
+(* do we want to show that
+  - adding a suffix just increases step limit?
+  -
+*)
+
         have Full_cont_eq : "s_cont full = s_cont mw" using Full_cont Contw
           by auto
 
@@ -1322,7 +1341,7 @@ proof
             using exec_p_imp_exec_c_p[OF Execw'] by blast
 
           show "imm_safe gs mw'" using guardedD[OF Gd]
-            using sleek_exec[OF Hsleek Full_pay]
+            (*using sleek_exec[OF Hsleek Full_pay]*)
             sorry
         qed
       qed
@@ -1353,10 +1372,40 @@ proof
     using HTE[OF Gen refl Rest[of ga]] 
     by auto
   qed
+*)
 
-  show "|gs| {\<lambda>st. C (P1 st)} g ([G SwhileC' [body]] @ c')"
-    using HWhileC_gen[OF H0 HF Hpres Hnemp Hdom Hsyn]
+  have Body : "|gs| {-\<lambda>g g'. g' = g - 1-} {=\<lambda>st g. g \<le> getn st \<and> PX g st=} [body] {=\<lambda>st g. g \<le> getn st \<and> PX g st=}"
+  proof
+    fix cx
+    fix gx g'x :: nat
+
+    assume Hgx : "g'x = gx - 1"
+
+    assume GuardIn : "|gs| {\<lambda>st g. g \<le> getn st \<and> PX g st} g'x cx"
+
+    show "|gs| {\<lambda>st g. g \<le> getn st \<and> PX g st} gx ([body] @ cx)"
+    proof
+      fix mx :: "('a, 'b) state"
+
+      assume Prec : "gx \<le> getn (payload mx) \<and> PX gx (payload mx)"
+      assume ContX : "s_cont mx = Inl ([body] @ cx)"
+
+      show "safe gs mx" 
+      proof(cases "gx")
+        case 0
+        then show ?thesis using Prec
+          unfolding PX_def getn_def
+          using guardedD[OF GuardIn]
+      next
+        case (Suc nat)
+        then show ?thesis sorry
+      qed
+        
+        (*using guardedD[OF GuardIn]
+
+*)
 (*
+  show "|gs| {\<lambda>st. C (P1 st)} g ([G SwhileC' [body]] @ c')"
   proof
     fix mz :: "('a, 'b) state"
     assume H1 : "P1 (payload mz)" 
@@ -1366,13 +1415,18 @@ proof
     have PX_fact : "PX (step_limit_state_f gs (payload mz) [G SwhileC' [body]]) (payload mz)" 
       unfolding PX_def
       sorry (* true but slightly annoying *)
-
+*)
+(*
     show "safe gs mz"
       using guardedD[OF Newguard, of "step_limit_state_f gs (payload mz) [G SwhileC' [body]]", OF _ H2] PX_fact
 
       by auto
   qed
 *)
+
+    show "safe gs mz"
+      using HWhileC_gen[OF H0 HF Hpres Hnemp Hdom Hsyn PX_cond, of "PX", OF _ _ PX_P1 _ ]
+
 qed
 
 
