@@ -1414,6 +1414,7 @@ proof
 
   assume Cnc : "|gs| {\<lambda>st. C (P1 st \<and> get_cond st = Some False)} g' c'"
 
+
 (*
   obtain PX where PX_def : "PX = (\<lambda> (n :: nat) st . (P1 st \<and> 
     (\<forall> c st' . n = 0 \<longrightarrow> payload st' = st \<longrightarrow> s_cont st' = Inl ([G SwhileC' [body]] @ c) \<longrightarrow> safe gs st')))"
@@ -1434,9 +1435,32 @@ proof
     by simp
 *)
 
+(*
   obtain PX where PX_def : "PX = (\<lambda> (n :: nat) st . (P1 st \<and> (\<exists> q . step_limit'_state gs st ([G SwhileC' [body]]) q \<and> q \<le> n)))"
     by simp
+*)
 
+  obtain PX where PX_def : "PX = (\<lambda> (n :: nat) st . (P1 st \<and> 
+      (\<exists> q1 . step_limit'_state gs st ([G SwhileC' [body]]) q1 \<and> q1 \<le> n) \<and>
+      (\<exists> q2 . step_limit'_state gs st ([body]) q2 \<and> q2 \<le> n) \<and>
+      (\<exists> q3 . step_limit'_state gs st ([body, G SwhileC' [body]]) q3 \<and> q3 \<le> n)))"
+    by simp
+
+
+  have Cnc' : "|gs| {\<lambda>st g. \<exists>n\<le>g. PX n st \<and> get_cond st = Some False} g' c' "
+  proof
+    fix mz :: "('a, 'b) state"
+
+    assume H1 : "\<exists>n\<le>g'. PX n (payload mz) \<and> get_cond (payload mz) = Some False"
+    assume H2 : "s_cont mz = Inl c'" 
+
+    have P1_z : "P1 (payload mz) \<and> get_cond (payload mz) = Some False"
+      using H1 unfolding PX_def by auto
+
+    show "safe gs mz"
+      (*using step_limit'_state_safe[OF Q4 refl H2] by simp*)
+      using guardedD[OF Cnc P1_z H2] by simp
+  qed
 (*
 obtain PX where PX_def : "PX = (\<lambda> (n :: nat) st . (P1 st \<and> 
     (\<forall> c st' . n = 0 \<longrightarrow> payload st' = st \<longrightarrow> s_cont st' = Inl ([G SwhileC' [body]] @ c) \<longrightarrow> safe gs st')) \<and>
@@ -1595,6 +1619,7 @@ diverges, then so must [G SwhileC' [body]] @ c *)
 (* one idea here: show P1 is equivalent to PX (because of the embedded assumption of safety.
 i dont think this works though because of the dependence on specific gx, g'x*)
 
+(*
   have Body : "|gs| {-\<lambda>g g'. g' = g - 1-} {=\<lambda>st g. PX g st=} [body] {=\<lambda>st g. PX g st=}"
   proof
     fix cx
@@ -1604,6 +1629,16 @@ i dont think this works though because of the dependence on specific gx, g'x*)
 
     assume GuardIn : "|gs| {\<lambda>st g. PX g st} g'x cx"
 
+(*
+    have "|gs| {\<lambda>st. C (P1 st)} g'x cx"
+    proof
+      fix mw :: "('a, 'b) state"
+      assume "P1 (payload mw)"
+      assume "s_cont mw = Inl cx"
+      show "safe gs mw"
+
+        using guardedD[OF GuardIn]
+*)
     show "|gs| {\<lambda>st g. PX g st} gx ([body] @ cx)"
     proof
       fix mx :: "('a, 'b) state"
@@ -1634,66 +1669,17 @@ i dont think this works though because of the dependence on specific gx, g'x*)
       show "safe gs mx" 
         using step_limit'_state_safe[OF Limit] guardedD[OF GuardIn]
 HTE[OF Htrue] 
-
-
-      proof(cases "gx")
-        case 0
-        then show ?thesis using ContX Prec
-          unfolding PX_def by auto
-      next
-        case (Suc gxn)
-        then show ?thesis
-        proof(cases g'x)
-          case 0
-
-          have "gx = 1" using 0 Hgx Suc by auto
-(* idea: this mean we can only take 1 step into body *)
-          obtain mx' where "sem_step gs mx = Inl mx'"
-            sorry
-(* from here, do a direct proof *)
-          show ?thesis sorry
-        next
-          case Suc' : (Suc g'xn)
-
-          have Ht_hyp : "|gs| {\<lambda>st. C (P1 st)} g'x cx"
-          proof
-            fix mz :: "('a, 'b) state"
-            assume Pmz : "P1 (payload mz)"
-            assume Cmz : "s_cont mz = Inl cx"
-
-            have "PX g'x (payload mz)" using Prec
-              unfolding PX_def Suc' Suc sorry
-
-            show "safe gs mz"
-
-              using guardedD[OF GuardIn _ ] 
-              unfolding PX_def Suc'
-(*
-            HTE[OF Htrue TrueI] guardedD[OF Cnc]
-*)
-        qed
-
-          using Prec
-          using guardedD[OF GuardIn] 
-            HTE[OF Htrue TrueI] guardedD[OF Cnc]
-          unfolding PX_def
-        qed
-      qed
+        sorry
     qed
-        (*using guardedD[OF GuardIn]
+  qed
 
 *)
-
   show "|gs| {\<lambda>st. C (P1 st)} g ([G SwhileC' [body]] @ c')"
   proof
     fix mz :: "('a, 'b) state"
     assume H1 : "P1 (payload mz)" 
     assume H2 :  "s_cont mz = Inl ([G SwhileC' [body]] @ c')"
 
-
-    have PX_fact : "PX (step_limit_state_f gs (payload mz) [G SwhileC' [body]]) (payload mz)" 
-      unfolding PX_def
-      sorry (* true but slightly annoying *)
 
 (*
     show "safe gs mz"
@@ -1703,8 +1689,19 @@ HTE[OF Htrue]
   qed
 *)
 
+    have GenResult : "|gs| {-\<lambda>g g'. g' = g-} {=\<lambda>st g. PX g st=} [G SwhileC' [body]] {=\<lambda>st g. \<exists>n\<le>g. PX n st \<and> get_cond st = Some False=}"
+      sorry
+(*
     show "safe gs mz"
       using HWhileC_gen[OF H0 HF Hpres Hnemp Hdom Hsyn PX_cond, of "PX", OF _ _ ]
+*)
+
+(*
+    have "PX g' (payload mz)"
+      unfolding PX_def
+*)
+    show "safe gs mz" using guardedD[OF HTE[OF GenResult refl Cnc'] _ H2] HTE[OF GenResult refl Cnc']
+HTE[OF Htrue]
 
 qed
 
