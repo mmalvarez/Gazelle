@@ -490,17 +490,178 @@ qed
 (* this direction is going to be frustrating, and is less important.
 i am ok leaving this as a TODO.
 *)
+
+(*
+lemma HTc_imp_HTc'_alt :
+  assumes H : "HTc gs P c Q"
+  shows "\<forall>npre. \<exists> npost . (HT gs P npre c Q npost) \<and> npre \<le> npost"
+proof
+  fix npre
+
+  show "\<exists> npost . |gs| {-P, npre-} c {-Q, npost-} \<and> npre \<le> npost"
+    unfolding HT_def
+    apply(auto)
+
+  show "\<exists> npost . (HT gs P npre c Q npost) \<and> npre \<le> npost" using H
+  proof(induction npre arbitrary: c)
+    case 0
+    then show ?case sorry
+  next
+    case (Suc npre)
+    then show ?case sorry
+  qed
+*)
 lemma HTc_imp_HTc' :
   assumes H : "HTc gs P c Q"
   shows "HTc' gs P c Q" unfolding HTc'_def
-  sorry
+proof(step; step)
+  fix npre
+
+  show "|gs| {-P, npre-} c {-Q, npre-}"
+  proof(induction npre)
+    case 0
+    then show ?case sorry
+  next
+    case (Suc npre)
+    show ?case
+    proof
+      fix c'
+      assume "|gs| {Q, Suc npre} c'"
+      show "|gs| {P, Suc npre} c @ c'"
+      
+      
+      using HTcE[OF H]
+  qed
+
+
+  show "Ex (HT gs P npre c Q)"
+    unfolding HT_def
+    using HTcE[OF H]
+(*  sorry *)
 (*
+proof-
+  have "\<And> npost npre . |gs| {-P, npre-} c {-Q, npost-}"
+  proof
+
+    fix npre c'
+
+    fix c'
+
+    have "(\<And> npost. |gs| {Q, npost} c') \<Longrightarrow> |gs| {P, npre} c @ c'"
+      using HTcE[OF H]
+
+    fix npre npost c'
+    assume X : "|gs| {Q, npost} c'"
+
+    have Conc' : "guardedc gs Q c'"
+    proof
+      fix m :: "('a, 'b) control"
+      assume Qm : "Q (payload m)"
+      assume Cm : "s_cont m = Inl c'"
+      show "safec gs m" using X Qm Cm
+
+
+    show "|gs| {P, npre} c @ c'" using HTcE[OF H]
+*)
+(*
+proof-
+  have "\<And> npre npost . |gs| {-P, npre-} c {-Q, npost-}"
+  proof
+    fix npre npost c'
+    assume X : "|gs| {Q, npost} c'"
+
+    show "|gs| {P, npre} c @ c'"
+    proof
+      fix m :: "('a, 'b) control"
+      assume Pm : "P (payload m)"
+      assume Cm : "s_cont m = Inl (c @ c')"
+
+      show "safe_for gs m npre"
+    proof(induction npre arbitrary: c)
+      case 0
+      show "safe_for gs m 0" sorry (* by cases on c@c' *)
+    next
+      case (Suc npre)
+
+      obtain npost' where NP' : "|gs| {-P, npre-} c {-Q, npost'-}"
+        using Suc 
+
+      show ?case unfolding HT_def
+      proof(cases "guardedc gs Q c")
+        case False
+
+        then obtain mbad where Mbad : "Q (payload mbad)" "s_cont mbad = Inl c" "\<not> safec gs mbad"
+          unfolding guardedc_def
+          by blast
+
+        then obtain mbad' where Mbad' : "sem_exec_p gs mbad mbad'" "\<not> imm_safe gs mbad'"
+          unfolding safec_def by blast
+
+        obtain nbad where Nbad : "sem_exec_c_p gs mbad nbad mbad'"
+          using exec_p_imp_exec_c_p[OF Mbad'(1)] by blast
+
+        show "\<exists>a. \<forall>c'. |gs| {Q, a} c' \<longrightarrow> |gs| {P, Suc npre} c @ c'"
+          apply(auto)
+      next
+        case False
+        then show ?thesis sorry
+      qed
+
+      then show ?case using HTcE[OF Suc.prems] HTE[OF NP']
+    qed
+
+
+    have Conc' : "guardedc gs Q c'"
+    proof
+      fix m :: "('a, 'b) control"
+      assume Qm : "Q (payload m)"
+      assume Cm : "s_cont m = Inl c'"
+      show "safec gs m" using X Qm Cm
+      proof(induction npre arbitrary: c' m npre)
+        case 0
+
+        have Safe0 : "safe_for gs m 0"
+          using guardedD[OF `|gs| {Q, 0} c'` `Q (payload m)` `s_cont m = Inl c'`] by simp
+
+        show ?case
+        proof(cases c')
+          case Nil
+          then show ?thesis 
+        next
+          case (Cons a list)
+          then show ?thesis sorry
+        qed
+
+        then show ?case 
+      next
+        case (Suc npost)
+
+        have "|gs| {Q, npost} c'"
+        proof
+          fix m' :: "('a, 'b) control"
+          assume Qm' : "Q (payload m')"
+          assume Cm' : "s_cont m' = Inl c'"
+
+          have Conc' : "safe_for gs m' (Suc npost)"
+            using guardedD[OF `|gs| {Q, Suc npost} c'` Qm' Cm']
+            by auto
+
+          show "safe_for gs m' npost" 
+            using safe_for_weaken[OF Conc', of npost] by auto
+        qed
+
+        then show ?case using Suc.IH[OF `|gs| {Q, npost} c'` Suc.prems(2) Suc.prems(3)] by auto
+      qed
+          using guardedD[OF `|gs| {Q, Suc npost} c'` `Q (payload m)` `s_cont m = Inl c'`]
+      qed
+
 proof-
   show "\<forall> npre . \<exists> npost . |gs| {-P, npre-} c {-Q, npost-}"
   proof(step)
     fix npre
 
-    show "\<exists>npost. |gs| {-P, npre-} c {-Q, npost-}" using H
+    show "\<exists>npost. |gs| {-P, npre-} c {-Q, npost-}" 
+
     proof(induction npre arbitrary: c)
       case 0
 
@@ -524,6 +685,27 @@ proof-
 
       obtain npost' where NP' : "|gs| {-P, npre-} c {-Q, npost'-}"
         using Suc by blast
+
+      show ?case unfolding HT_def
+      proof(cases "guardedc gs Q c")
+        case False
+
+        then obtain mbad where Mbad : "Q (payload mbad)" "s_cont mbad = Inl c" "\<not> safec gs mbad"
+          unfolding guardedc_def
+          by blast
+
+        then obtain mbad' where Mbad' : "sem_exec_p gs mbad mbad'" "\<not> imm_safe gs mbad'"
+          unfolding safec_def by blast
+
+        obtain nbad where Nbad : "sem_exec_c_p gs mbad nbad mbad'"
+          using exec_p_imp_exec_c_p[OF Mbad'(1)] by blast
+
+        show "\<exists>a. \<forall>c'. |gs| {Q, a} c' \<longrightarrow> |gs| {P, Suc npre} c @ c'"
+          apply(auto)
+      next
+        case False
+        then show ?thesis sorry
+      qed
 
       then show ?case using HTcE[OF Suc.prems] HTE[OF NP']
     qed
@@ -567,7 +749,7 @@ proof-
             sorry
         qed
       qed
-    qed
+   qed
 *)
 
 end

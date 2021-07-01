@@ -1,7 +1,7 @@
 theory CPS_Hoare imports 
  "../Gensyn" "../Gensyn_Descend" "../Mergeable/Mergeable"
  "../Lifting/LiftUtils" "../Lifting/LiftInstances" "../Lifting/LangCompFull"
- "../Relpath" "../Semantics/Gensyn_Sem_Small" "Hoare"
+ "../Relpath" "../Semantics/Gensyn_Sem_Small" "Hoare" "Hoare_Core"
 begin
 
 (* TODO: use general version of langcomp? *)
@@ -11,7 +11,7 @@ begin
    continuations from state *)
 
 (* TODO: we don't really need gensyn_sem_small i think? *)
-
+(*
 datatype s_error =
   Exec childpath
   | BadPath
@@ -56,10 +56,10 @@ record ('syn, 'full, 'mstate) sem = "('syn, 'mstate) sem'" +
 record ('syn, 'full, 'mstate) sem = "('syn, 'mstate) sem'" +
   s_l :: "('syn, 'full gensyn list, 'mstate) lifting"
 *)
-
+(*
 record ('syn, 'full, 'mstate) sem = 
   s_sem :: "'syn \<Rightarrow> ('full, 'mstate) control \<Rightarrow> ('full, 'mstate) control"
-
+*)
 
 type_synonym 'x orerror =
   "('x + String.literal)"
@@ -81,11 +81,12 @@ definition close :: "('syn, 'full, 'mstate) sem \<Rightarrow> ('full \<Rightarro
    we obtain this when our "full" syntax becomes the same as
    our "individual syntax"
 *)
+(*
 type_synonym ('syn, 'mstate) semc = "('syn, 'syn, 'mstate) sem"
 
 record ('syn, 'full, 'mstate) semt = "('syn, 'full, 'mstate) sem" +
   s_transl :: "'full \<Rightarrow> 'syn"
-
+*)
 (*
 definition s_semt :: "('syn, 'full, 'mstate) semt \<Rightarrow> 'full \<Rightarrow> 'mstate \<Rightarrow> 'mstate" where
 "s_semt s = s_sem s o s_transl s"
@@ -174,7 +175,7 @@ lemma sem_exec1_step :
 abbreviation spred :: "('c \<Rightarrow> bool) \<Rightarrow> ('a * 'b * 'c) \<Rightarrow> bool" ("\<star>_")
   where
 "\<star>P \<equiv> P o snd o snd"
-
+*)
 (* have the state contain a delta to the continuation list?
    that is, a new prefix to prepend *)
 definition imm_safe :: "('syn, 'mstate) semc \<Rightarrow> ('syn, 'mstate) control  \<Rightarrow> bool" where

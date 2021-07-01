@@ -3,7 +3,7 @@ theory ForExperiments
 (* Trying to explore/clarify the conditions under which
 we can obtain a while rule *)
 
-imports "./ImpCtl"
+imports "./ImpCtl" "../Hoare/Hoare_Core"
 
 begin
 
@@ -612,16 +612,6 @@ f ((ph#pt) @ (([G Swhile'C [body]] @ c')))
 (* we need to be able to use the fact that lack of suffix implies escape happens. but unlike appel's system,
 our continuations might be too free-form to make this work.
 
-i don't think this is quite it... it's that we cant' say much about the resulting continuation after escaping
-whereas in appel's system blocks seem to help.
-
-we cannot allow arbitrary modification of k.
-prepending seems ok. postpending seems probably ok.
-
-another view: dropping from beginning seems fine. adding on end seems fine.
-
-another view: something about dependence between data and control (? not making
-structural decisions about shape of control using data? vice versa?)
 *)
               then show ?thesis sorry
             qed
