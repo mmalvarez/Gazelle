@@ -1,6 +1,9 @@
 theory Gensyn_Facts imports Gensyn Gensyn_Descend
 begin
 
+(* Lemmas about gensyn syntax
+ * TODO there is probably some overlap between this and Gensyn_Descend_Facts *)
+
 lemma gensyn_get_list_child :
   assumes H : "gensyn_get_list l [n] = Some t"
   shows "l ! n = t" using H
@@ -92,19 +95,6 @@ next
   qed
 qed
 
-
-(*
-lemma gensyn_descend_correct1 :
-  assumes H : "gensyn_descend t t' cp"
-  shows "gensyn_get t cp = Some t'" using H
-proof(induction rule: gensyn_descend.induct)
-  case (1 c ls t x)
-  then show ?case apply(auto)
-next
-  case (2 t t' l t'' l')
-  then show ?case sorry
-qed
-*)
 
 lemma gensyn_get_list_comp :
   assumes H1 : "gensyn_get_list l1 cp1 = Some (G x1 l2)"

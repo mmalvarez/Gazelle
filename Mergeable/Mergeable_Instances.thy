@@ -1,35 +1,21 @@
-theory MergeableInstances imports Mergeable HOL.Lifting
+theory Mergeable_Instances imports Mergeable Wrappers
 begin
 
-(* goal: make these proofs more manageable by generalizing
-*)
-
-(* define some partial orders:
-   trivial: leq means a = b
-   option : None < Some
-   pairs: (a, b) < (c, d) means (a < c \<and>b < d)
-   lexicographical
-      (a, b) < (c, d) means (a < c) and (c < a \<longrightarrow> b < d)
+(* 
+ * Here we instantiate the Mergeable typeclass (and friends) for a of built-in
+ * Isabelle types, as well as for the types defined in Wrappers.
+ * The instances defined here are sufficient for many purposes.
+ * In order to work with Gazelle, data (state types used by merged semantics)
+ * need to (at least) satisfy the Mergeable typeclass.
+ * Any datatype can be used with Gazelle if wrapped in the "md_triv" wrapper, which induces
+ * a trivial ordering. If a more interesting ordering is desired, 
+ * Mergeable must be instantiated at a new datatype corresponding to data with that
+ * ordering (see, for instance Mergeable_AList.thy)
  *)
 
-(* define some Mergeables:
-  trivial (bsup takes first one)
-  option (see test0)
-  pairs (see test?)
-  lexicographical (do this one later) 
-*)
-
-datatype 'a md_triv =
-  mdt 'a
-
-definition mdt_get :: "'a md_triv \<Rightarrow> 'a" where
-"mdt_get x = (case x of (mdt x') \<Rightarrow> x')"
-
-definition mdt_put :: "'a \<Rightarrow> 'a md_triv" where
-"mdt_put x = mdt x"
-
-declare mdt_get_def mdt_put_def [simp]
-
+(* Trivial ordering: (x <[ x \<leftrightarrow> x = x)
+ * md_triv is complete, but lacks a least element.
+ *)
 instantiation md_triv :: (_) Pord_Weak
 begin
 definition triv_pleq : "(a :: 'a md_triv) <[ b = (a = b)"
@@ -79,6 +65,8 @@ instance proof
   qed
 end
 
+(* Option is used to express a pointed ordering with a least element (None).
+ * It can be seen as lifting an ordering on 'a to a pointed ordering on 'a option *)
 instantiation option :: (Pord_Weak) Pord_Weak
 begin
 definition option_pleq : "(x :: 'a option) <[ y =
@@ -88,7 +76,6 @@ definition option_pleq : "(x :: 'a option) <[ y =
         (case y of
           None \<Rightarrow> False
           | Some y' \<Rightarrow> (pleq x' y')))"
-(*definition option_bot : "bot = (None :: 'a option)"*)
 
 instance proof
   show "\<And> (a :: 'a option) . pleq a a"
@@ -118,7 +105,6 @@ instance proof
 qed
 end
 
-(* definition option_bot : "bot = (None :: 'a option)" *)
 instantiation option :: (Pordc) Pordc
 begin
 
@@ -163,12 +149,12 @@ instance proof
           by(auto simp add:option_pleq has_sup_def)
 
         have "is_sup  {a, b} (Some x)" 
-        proof(rule is_sup_intro)
+        proof(rule is_supI)
           fix xa
           assume Hxa : "xa \<in> {a, b}"
           obtain xa' where Hxa' : "xa = Some xa' \<and> (xa' = a' \<or> xa' = aa)" using Hi1 Hi2 Hxa
             by(auto simp add:
-                option_pleq is_ub_def is_least_def has_ub_def split:option.splits elim:is_sup_unfold1 is_sup_unfold2)
+                option_pleq is_ub_def is_least_def has_ub_def split:option.splits elim:is_supD1 is_supD2)
           have 0 : "pleq xa' x" using Hxa' OSup
             by(auto simp add:is_sup_def is_least_def is_ub_def)
           show "pleq xa (Some x)" using 0 Hxa'
@@ -227,7 +213,7 @@ instance proof
       assume Hi1 : "a = None"
       assume Hi2 : "b = Some b'"
       show "is_bsup a b (bsup a b)"
-      proof(rule is_bsup_intro)
+      proof(rule is_bsupI)
         show "pleq a (bsup a b)" using Hi1 Hi2
           by(simp add: option_pleq option_bsup is_bsup_def is_least_def is_bub_def is_sup_def is_ub_def split:option.splits)
       next
@@ -255,7 +241,7 @@ instance proof
       next
         fix x'
         assume H : "is_bub a b x'"
-        show "pleq (bsup a b) x'" using is_bub_unfold2[OF H]
+        show "pleq (bsup a b) x'" using is_bubD2[OF H]
         proof(-)
           assume Hleast : "(\<And>(bd::'a option) sd::'a option. pleq bd b \<Longrightarrow> is_sup {a, bd} sd \<Longrightarrow> pleq sd x')"
 
@@ -276,7 +262,7 @@ instance proof
       assume Hi1 : "a = Some a'"
       assume Hi2 : "b = None"
       show "is_bsup a b (bsup a b)"
-      proof(rule is_bsup_intro)
+      proof(rule is_bsupI)
         show "pleq a (bsup a b)" using Hi1 Hi2
           by(simp add: option_pleq option_bsup is_bsup_def is_least_def is_bub_def is_sup_def is_ub_def leq_refl split:option.splits)
       next
@@ -302,7 +288,7 @@ instance proof
       next
           fix x'
           assume H : "is_bub a b x'"
-          show "pleq (bsup a b) x'" using is_bub_unfold2[OF H]
+          show "pleq (bsup a b) x'" using is_bubD2[OF H]
           proof(-)
             assume Hleast : "(\<And>(bd::'a option) sd::'a option. pleq bd b \<Longrightarrow> is_sup {a, bd} sd \<Longrightarrow> pleq sd x')"
 
@@ -322,7 +308,7 @@ instance proof
         assume Hi1 : "a = Some a'"
         assume Hi2 : "b = Some b'"
         show "is_bsup a b (bsup a b)"
-        proof(rule is_bsup_intro)
+        proof(rule is_bsupI)
           show "pleq a (bsup a b)" using Hi1 Hi2 bsup_leq bsup_spec[of a' b']
             by(auto simp add: option_pleq option_bsup is_bsup_def is_least_def is_bub_def is_sup_def is_ub_def leq_refl split:option.splits)
         next
@@ -345,7 +331,7 @@ instance proof
               by(auto simp add:is_sup_def is_least_def is_ub_def option_pleq split:option.splits)
 
             have OSup :  "is_sup {a', bd'} sd'" 
-            proof(rule is_sup_intro)
+            proof(rule is_supI)
               fix x'
               assume H : "x' \<in> {a', bd'}"
               have 0 : "pleq a' sd'"  using Hii2 Hi1 Hsd'
@@ -368,7 +354,7 @@ instance proof
             have Hbbd' : "pleq bd' b'" using Hi2 Hii1 Hiii1
               by(auto simp add:option_pleq)
             
-            show "pleq sd (bsup a b)" using is_bsup_unfold2[OF OBsup Hbbd' OSup] Hsd' Hi1 Hi2 Hiii1
+            show "pleq sd (bsup a b)" using is_bsupD2[OF OBsup Hbbd' OSup] Hsd' Hi1 Hi2 Hiii1
               by(auto simp add:option_pleq option_bsup)
           qed
 
@@ -380,8 +366,8 @@ instance proof
             by(auto simp add:is_bub_def option_pleq split:option.splits)
 
           have Bub' : "is_bub a' b' x'" 
-          proof(rule is_bub_intro)
-            show "pleq a' x'" using Hi1 Hx' is_bub_unfold1[OF H]
+          proof(rule is_bubI)
+            show "pleq a' x'" using Hi1 Hx' is_bubD1[OF H]
               by(auto simp add:option_pleq)
 
           next
@@ -396,7 +382,7 @@ instance proof
               using Hi1 HOsup 
               by(auto simp add:option_pleq is_sup_def is_least_def is_ub_def split:option.splits)
 
-            show "pleq sd' x'" using Hi1 Hx' is_bub_unfold2[OF H Hpleq HSup]
+            show "pleq sd' x'" using Hi1 Hx' is_bubD2[OF H Hpleq HSup]
               by(auto simp add:option_pleq is_sup_def)
           qed
 
@@ -409,6 +395,16 @@ instance proof
   qed
 end
 
+(* For product types, we impose an ordering that requires that _all_ components of
+ * product a be less than or equal to their corresponding components of b,
+ * in order for a <[ b to hold.
+ *
+ * In other words, this is _not_ a lexicographic ordering. Lexicographic orderings
+ * where the first component is arbitrary create problems around completeness.
+ * This is why we work with a more restricted version of a lexicographic-like ordering, md_prio,
+ * a pair where the first component is guaranteed to be a natural number, and the ordering
+ * is lexicographic (see below)
+ *)
 instantiation prod :: (Pord_Weak, Pord_Weak) Pord_Weak
 begin
   definition prod_pleq : 
@@ -508,7 +504,7 @@ instance proof
   obtain b1 and b2 where Hb : "b = (b1, b2)" by(cases b; auto)
 
   show "is_bsup a b (bsup a b)"
-  proof(rule is_bsup_intro)
+  proof(rule is_bsupI)
 
     show "pleq a (bsup a b)" using Ha Hb bsup_leq[OF bsup_spec[of a1 b1]] bsup_leq[OF bsup_spec[of a2 b2]]
       by(auto simp add:prod_bsup prod_pleq split:prod.splits)
@@ -550,10 +546,10 @@ instance proof
     have Bsup2 : "is_bsup a2 b2 bsupv2" using Hbsup Ha Hb bsup_spec[of a2 b2]
       by(auto simp add:prod_bsup)
 
-    have Conc1 : "pleq sd1 (bsup a1 b1)" using is_bsup_unfold2[OF Bsup1 Leq1 Sup1] Hbsv1
+    have Conc1 : "pleq sd1 (bsup a1 b1)" using is_bsupD2[OF Bsup1 Leq1 Sup1] Hbsv1
       by(auto simp add:is_bsup_def is_least_def is_bub_def)
       
-    have Conc2 : "pleq sd2 (bsup a2 b2)" using is_bsup_unfold2[OF Bsup2 Leq2 Sup2] Hbsv2
+    have Conc2 : "pleq sd2 (bsup a2 b2)" using is_bsupD2[OF Bsup2 Leq2 Sup2] Hbsv2
       by(auto simp add:is_bsup_def is_least_def is_bub_def)
 
     show "pleq sd (bsup a b)" using Ha Hb Hbsup Hbsv1 Hbsv2 Hsd Conc1 Conc2
@@ -575,7 +571,7 @@ instance proof
       assume Hbub : "is_bub a b x"
 
       have Hbub1 : "is_bub a1 b1 x1"
-      proof(rule is_bub_intro)
+      proof(rule is_bubI)
         show "pleq a1 x1" using Hbub Ha Hx by(auto simp add:is_bub_def is_sup_def prod_pleq)
       next
         fix bd1 :: 'a
@@ -589,12 +585,12 @@ instance proof
         have Hsup' : "is_sup {a, (bd1, bot)} (sd1, a2)" using Ha bot_spec[of a2] H2
           by(auto simp add:is_sup_def is_least_def is_ub_def leq_refl prod_pleq)
 
-        show "pleq sd1 x1" using is_bub_unfold2[OF Hbub Hpleq' Hsup'] Hx
+        show "pleq sd1 x1" using is_bubD2[OF Hbub Hpleq' Hsup'] Hx
           by(simp add:prod_pleq)
       qed
   
       have Hbub2 : "is_bub a2 b2 x2" 
-      proof(rule is_bub_intro)
+      proof(rule is_bubI)
         show "pleq a2 x2" using Hbub Ha Hx by(auto simp add:is_bub_def is_sup_def prod_pleq)
       next
         fix bd2 :: 'b
@@ -608,7 +604,7 @@ instance proof
         have Hsup' : "is_sup {a, (bot, bd2)} (a1, sd2)" using Ha bot_spec[of a1] H2
           by(auto simp add:is_sup_def is_least_def is_ub_def leq_refl prod_pleq)
 
-        show "pleq sd2 x2" using is_bub_unfold2[OF Hbub Hpleq' Hsup'] Hx
+        show "pleq sd2 x2" using is_bubD2[OF Hbub Hpleq' Hsup'] Hx
           by(simp add:prod_pleq)
       qed
 
@@ -618,23 +614,12 @@ instance proof
   qed
 end
 
-datatype 'a md_prio =
-  mdp nat 'a
-
-definition mdp_get :: "'a md_prio \<Rightarrow> (nat * 'a)" where
-"mdp_get x = (case x of (mdp n y) \<Rightarrow> (n, y))"
-
-definition mdp_get_pri :: "'a md_prio \<Rightarrow> nat" where
-"mdp_get_pri x = (case x of (mdp n _) \<Rightarrow> n)"
-
-definition mdp_get_data :: "'a md_prio \<Rightarrow> 'a" where
-"mdp_get_data x = (case x of (mdp _ y) \<Rightarrow> y)"
-
-definition mdp_put :: "nat \<Rightarrow> 'a \<Rightarrow> 'a md_prio" where
-"mdp_put = mdp"
-
-declare mdp_get_def mdp_get_pri_def mdp_get_data_def mdp_put_def [simp]
-
+(* md_prio pairs objects with natural numbers, in which the comparison is
+ * "lexicographic-like" in that the comparison is made first between the natural numbers,
+ * then the data. This is an extremely useful wrapper type in contexts where we want to
+ * allow one language component's semantics to "override" the behavior of another,
+ * disregarding the ordering of the data being output by the two semantics.
+ *)
 instantiation md_prio :: (Pord_Weak) Pord_Weak
 begin
 definition prio_pleq :
@@ -686,6 +671,8 @@ instance proof
 qed
 end
 
+(* TODO: could we get away with md_prio :: (Pordb) Pordbc?
+ *)
 instantiation md_prio :: (Pordbc) Pordbc
 begin
 definition prio_bot :
@@ -718,7 +705,7 @@ instance proof
       next
         assume False'' : "\<not> has_ub {a', b'}" 
         have "is_sup {a, b} (mdp (1 + ai) bot)"
-        proof(rule is_sup_intro)
+        proof(rule is_supI)
           fix x
           assume Hi : "x \<in> {a, b}"
           show "pleq x (mdp (1 + ai) bot)" using Hi Ha Hb Haibi
@@ -791,7 +778,7 @@ instance proof
   obtain bsi and bs' where Hbs : "bsup a b = mdp bsi bs'" by (cases "bsup a b"; auto)
 
   show "is_bsup a b (bsup a b)"
-  proof(rule is_bsup_intro)
+  proof(rule is_bsupI)
 
     show "pleq a (bsup a b)" using Ha Hb leq_refl bsup_leq bsup_spec[of a' b']
       by(auto simp add: prio_pleq prio_bsup)
@@ -851,7 +838,7 @@ instance proof
             hence "is_ub {a, bd} (bsup a b)" using leq_trans[of bd b "bsup a b"] H1
               by(auto simp add:is_ub_def)
 
-            thus ?thesis using is_sup_unfold2[OF H2] by auto
+            thus ?thesis using is_supD2[OF H2] by auto
           next
 
             assume False''' : "\<not> pleq b' (bsup a' b')"
@@ -861,7 +848,7 @@ instance proof
             hence "is_ub {a, bd} (bsup a b)" using leq_trans[of bd b "bsup a b"] H1
               by(auto simp add:is_ub_def)
 
-            thus ?thesis using is_sup_unfold2[OF H2] by auto
+            thus ?thesis using is_supD2[OF H2] by auto
           qed
         qed
 
@@ -873,7 +860,7 @@ instance proof
       have Hub : "is_ub {a, bd} b" using Ha Hb False' leq_refl H1
         by(auto simp add: prio_pleq prio_bsup is_sup_def is_least_def is_ub_def split:if_split_asm)
 
-      show ?thesis using Hbsupb is_sup_unfold2[OF H2 Hub]
+      show ?thesis using Hbsupb is_supD2[OF H2 Hub]
         by auto
       qed
 
@@ -885,7 +872,7 @@ instance proof
       have Hub : "is_ub {a, bd} a" using Ha Hb False leq_refl H1
         by(auto simp add:prio_pleq prio_bsup is_sup_def is_least_def is_ub_def split:if_split_asm md_prio.splits)
 
-      show ?thesis using Hbsupa is_sup_unfold2[OF H2 Hub]
+      show ?thesis using Hbsupa is_supD2[OF H2 Hub]
         by auto
     qed
   next
@@ -894,7 +881,7 @@ instance proof
     obtain xi and x' where Hx : "x = mdp xi x'" by (cases x; auto)
 
     assume H : "is_bub a b x"
-    have Hax : "pleq a x" using is_bub_unfold1[OF H] by auto
+    have Hax : "pleq a x" using is_bubD1[OF H] by auto
 
     show "pleq (bsup a b) x"
     proof(cases "ai \<le> bi")
@@ -928,7 +915,7 @@ instance proof
               have "is_sup {a, b} (bsup a b)" using Ha Hb Hx Haibi Hax True''' True'''' 0 2
                 by(auto simp add: is_ub_def prio_pleq is_bub_def is_sup_def is_least_def split:md_prio.splits)
 
-              thus ?thesis using is_bub_unfold2[OF H leq_refl[of b]] by auto
+              thus ?thesis using is_bubD2[OF H leq_refl[of b]] by auto
             next
 
               assume False'''' : "\<not> xi \<le> bi"
@@ -964,7 +951,7 @@ instance proof
 
               have Hxibi : "xi = bi" using True''' True'''' by auto
 
-              thus ?thesis using is_bub_unfold2[OF H leq_refl[of b]] 1 by auto
+              thus ?thesis using is_bubD2[OF H leq_refl[of b]] 1 by auto
             next
 
               assume False'''' : "\<not> xi \<le> bi"
@@ -976,7 +963,7 @@ instance proof
 
             assume False''' : "\<not> bi \<le> xi"
 
-            thus ?thesis using is_bub_unfold2[OF H leq_refl[of b]] 1 by auto
+            thus ?thesis using is_bubD2[OF H leq_refl[of b]] 1 by auto
           qed
         qed
       next
@@ -984,80 +971,28 @@ instance proof
 
         have "is_sup {a, b} (bsup a b)"  using True False' Ha Hb Hx leq_refl
           by(auto simp add:prio_pleq prio_bsup is_sup_def is_least_def is_ub_def)
-        thus ?thesis using is_bub_unfold2[OF H leq_refl[of b]] by auto
+        thus ?thesis using is_bubD2[OF H leq_refl[of b]] by auto
       qed
     next
       assume False : "\<not> ai \<le> bi"
         have "is_sup {a, b} (bsup a b)"  using False Ha Hb Hx leq_refl
           by(auto simp add:prio_pleq prio_bsup is_sup_def is_least_def is_ub_def)
-        thus ?thesis using is_bub_unfold2[OF H leq_refl[of b]] by auto
+        thus ?thesis using is_bubD2[OF H leq_refl[of b]] by auto
     qed
   qed
 qed
 end
 
-datatype 'a md_wrap =
-  mdw 'a
 
-definition md_wrap_get :: "'a md_wrap \<Rightarrow> 'a" where
-"md_wrap_get x = (case x of (mdw x') \<Rightarrow> x')"
-
-declare md_wrap_get_def [simp]
-(*
-instantiation md_wrap :: (Pord_Weak) Pord_Weak begin
-definition wrap_pleq :
-  "pleq x y = pleq (md_wrap_get x) (md_wrap_get y)"
-
-
-instance proof
-  fix a :: "'a md_wrap"
-  show "a <[ a"
-    by(auto simp add: wrap_pleq leq_refl split:md_wrap.splits)
-next
-  fix a b c :: "'a md_wrap"
-  show "a <[ b \<Longrightarrow> b <[ c \<Longrightarrow> a <[ c"
-    by(auto simp add: wrap_pleq elim: leq_trans split:md_wrap.splits)
-qed
-end
-
-instantiation md_wrap :: (Pord) Pord begin
-instance proof
-  fix a b :: "'a md_wrap"
-  show "a <[ b \<Longrightarrow> b <[ a \<Longrightarrow> a = b"
-    by(auto simp add:wrap_pleq elim: leq_antisym split:md_wrap.splits)
-qed
-end
-
-instantiation md_wrap :: (Pordc) Pordc begin
-instance proof
-  fix a b :: "'a md_wrap"
-  assume H : "has_ub {a, b}" 
-
-  show "has_sup {a, b}" using H
-        apply(auto simp add:wrap_pleq has_ub_def has_sup_def is_ub_def is_sup_def is_least_def ) 
-
-
-  obtain a' where Ha : "a = mdw a'" by(cases a; auto)
-  obtain b' where Hb : "b = mdw b'" by(cases b; auto)
-  obtain ub where Hub : "is_ub {a, b} ub" using H
-    by(auto simp add:has_ub_def)
-  obtain ub' where Hub' : "ub = mdw ub'" by(cases ub; auto)
-
-  have "is_ub {a', b'} ub'" using Ha Hb Hub Hub'
-    by(auto simp add:has_ub_def is_ub_def wrap_pleq split:md_wrap.splits)
-
-  hence "has_sup {a', b'}" using complete2
-    by(auto simp add:has_ub_def)
-
-  then obtain sup' where Hsup' : "is_sup {a', b'} sup'" by(auto simp add:has_sup_def)
-
-  hence "is_sup {a, b} (mdw sup')" using is_sup_unfold1[OF Hsup']
-    apply(auto simp add:wrap_pleq has_ub_def has_sup_def is_ub_def is_sup_def is_least_def split:md_wrap.splits) 
-qed
-end
-*)
-
-(* formulation of sum that doesn't allow for a least element *)
+(* Sums are mergeable if their components are.
+ * Note that talking about least elements (that is, having a pordb instance) for sum is
+ * tricky, as we would need to arbitrarily decide that inl \<bottom> <[ inr \<bottom>,
+ * or vice versa (but not both, since inl \<bottom> \<noteq> inr \<bottom>, and there is nothing we can do about
+ * that)
+ * Rather than doing this, we do not derive a Pordb instance for sum; if the user wishes
+ * to induce a least element, they can wrap the sum in an option (a more "neutral" choice
+ * than picking one side or the other); or they can derive their own ordering
+ * for a copy of the sum type. *)
 instantiation sum :: (Pord_Weak, Pord_Weak) Pord_Weak
 begin
 definition sum_pleq : "(x :: 'a + 'b) <[ y =
@@ -1182,8 +1117,8 @@ instance proof
     hence Hbsup' : "is_bsup a' b' (bsup a' b')" by(auto intro: bsup_spec)
     have Hbsup : "bsup a b = Inl (bsup a' b')" using 1 by(auto simp add:sum_bsup)
     show ?thesis
-    proof(rule is_bsup_intro)
-      show "a <[ bsup a b" using 1 is_bsup_unfold1[OF Hbsup'] Hbsup 
+    proof(rule is_bsupI)
+      show "a <[ bsup a b" using 1 is_bsupD1[OF Hbsup'] Hbsup 
         by(auto simp add:sum_bsup sum_pleq is_bsup_def)
     next
 
@@ -1200,7 +1135,7 @@ instance proof
       have Hsup' : "is_sup {a', bd'} (sd')" using Hbd' Hsd' Hsup 1
         by(auto simp add:sum_pleq is_sup_def is_least_def is_ub_def split:sum.splits)
 
-      have "sd' <[ bsup a' b'" using is_bsup_unfold2[OF Hbsup' _ Hsup'] Hbd' Hbd 1
+      have "sd' <[ bsup a' b'" using is_bsupD2[OF Hbsup' _ Hsup'] Hbd' Hbd 1
         by(auto simp add:sum_pleq)
 
       thus "sd <[ bsup a b" using Hbsup Hsd'
@@ -1214,8 +1149,8 @@ instance proof
         by(auto simp add:sum_pleq is_bub_def is_least_def is_ub_def is_sup_def split:sum.splits)
 
       have "is_bub a' b' bub'" 
-      proof(rule is_bub_intro)
-        show "a' <[ bub'" using 1 is_bub_unfold1[OF Hbub] Hbub'
+      proof(rule is_bubI)
+        show "a' <[ bub'" using 1 is_bubD1[OF Hbub] Hbub'
           by(auto simp add:sum_pleq is_bub_def is_least_def is_ub_def is_sup_def split:sum.splits)
       next
         fix bd' sd' :: "'a"
@@ -1227,12 +1162,12 @@ instance proof
 
         have Hbd' : "Inl bd' <[ b" using Hbd 1 by(auto simp add:sum_pleq)
 
-        have "Inl sd' <[ Inl bub'" using is_bub_unfold2[OF Hbub Hbd' Hsup'] Hbub' 1  by(auto simp add:sum_pleq)
+        have "Inl sd' <[ Inl bub'" using is_bubD2[OF Hbub Hbd' Hsup'] Hbub' 1  by(auto simp add:sum_pleq)
 
         thus "sd' <[ bub'" using 1 Hbub' by (auto simp add:sum_pleq)
       qed
 
-      hence "bsup a' b' <[ bub'" using is_bsup_unfold3[OF Hbsup'] by auto
+      hence "bsup a' b' <[ bub'" using is_bsupD3[OF Hbsup'] by auto
 
       thus "bsup a b <[ bub" using 1 Hbub Hbub' Hbsup by(auto simp add:sum_pleq)
     qed
@@ -1242,7 +1177,7 @@ instance proof
     case 2
     have Hbsup : "bsup a b = Inl (a')" using 2 by(auto simp add:sum_bsup)
     show ?thesis
-    proof(rule is_bsup_intro)
+    proof(rule is_bsupI)
       show "a <[ bsup a b" using 2 Hbsup leq_refl[of a]
         by(auto simp add:sum_bsup sum_pleq )
     next
@@ -1273,8 +1208,8 @@ instance proof
     hence Hbsup' : "is_bsup a' b' (bsup a' b')" by(auto intro: bsup_spec)
     have Hbsup : "bsup a b = Inr (bsup a' b')" using 3 by(auto simp add:sum_bsup)
     show ?thesis
-    proof(rule is_bsup_intro)
-      show "a <[ bsup a b" using 3 is_bsup_unfold1[OF Hbsup'] Hbsup 
+    proof(rule is_bsupI)
+      show "a <[ bsup a b" using 3 is_bsupD1[OF Hbsup'] Hbsup 
         by(auto simp add:sum_bsup sum_pleq is_bsup_def)
     next
 
@@ -1291,7 +1226,7 @@ instance proof
       have Hsup' : "is_sup {a', bd'} (sd')" using Hbd' Hsd' Hsup 3
         by(auto simp add:sum_pleq is_sup_def is_least_def is_ub_def split:sum.splits)
 
-      have "sd' <[ bsup a' b'" using is_bsup_unfold2[OF Hbsup' _ Hsup'] Hbd' Hbd 3
+      have "sd' <[ bsup a' b'" using is_bsupD2[OF Hbsup' _ Hsup'] Hbd' Hbd 3
         by(auto simp add:sum_pleq)
 
       thus "sd <[ bsup a b" using Hbsup Hsd'
@@ -1305,8 +1240,8 @@ instance proof
         by(auto simp add:sum_pleq is_bub_def is_least_def is_ub_def is_sup_def split:sum.splits)
 
       have "is_bub a' b' bub'" 
-      proof(rule is_bub_intro)
-        show "a' <[ bub'" using 3 is_bub_unfold1[OF Hbub] Hbub'
+      proof(rule is_bubI)
+        show "a' <[ bub'" using 3 is_bubD1[OF Hbub] Hbub'
           by(auto simp add:sum_pleq is_bub_def is_least_def is_ub_def is_sup_def split:sum.splits)
       next
         fix bd' sd' :: "'b"
@@ -1318,12 +1253,12 @@ instance proof
 
         have Hbd' : "Inr bd' <[ b" using Hbd 3 by(auto simp add:sum_pleq)
 
-        have "Inr sd' <[ Inr bub'" using is_bub_unfold2[OF Hbub Hbd' Hsup'] Hbub' 3  by(auto simp add:sum_pleq)
+        have "Inr sd' <[ Inr bub'" using is_bubD2[OF Hbub Hbd' Hsup'] Hbub' 3  by(auto simp add:sum_pleq)
 
         thus "sd' <[ bub'" using 3 Hbub' by (auto simp add:sum_pleq)
       qed
 
-      hence "bsup a' b' <[ bub'" using is_bsup_unfold3[OF Hbsup'] by auto
+      hence "bsup a' b' <[ bub'" using is_bsupD3[OF Hbsup'] by auto
 
       thus "bsup a b <[ bub" using 3 Hbub Hbub' Hbsup by(auto simp add:sum_pleq)
     qed
@@ -1333,7 +1268,7 @@ instance proof
     case 4
     have Hbsup : "bsup a b = Inr (a')" using 4 by(auto simp add:sum_bsup)
     show ?thesis
-    proof(rule is_bsup_intro)
+    proof(rule is_bsupI)
       show "a <[ bsup a b" using 4 Hbsup leq_refl[of a]
         by(auto simp add:sum_bsup sum_pleq )
     next
@@ -1362,9 +1297,10 @@ qed
 end
 
 (*
-  unit instances 
-  useful for RAlist
-*)
+ * Finally we derive Mergeable for the unit type. This is useful in the
+ * implementation of Mergeable for RAList (see Mergeable_RAList.thy), as well as
+ * (presumably) some other applications.
+ *)
 
 instantiation unit :: Pord_Weak begin
 definition unit_pleq : 
@@ -1416,340 +1352,7 @@ instantiation unit :: Mergeableb begin
 instance proof qed
 end
 
-(* Formulation of sum allowing for a least element
-i think it would be better to just wrap it in option, though *)
-(*
-instantiation sum :: (Pordb, Pord_Weak) Pord_Weak
-begin
-definition sum_pleq : "(x :: 'a + 'b) <[ y =
-(case x of
-      Inl x' \<Rightarrow> (case y of
-                  Inl y' \<Rightarrow> x' <[ y'
-                  | _ \<Rightarrow> x' <[ \<bottom>)
-      | Inr x' \<Rightarrow> (case y of
-                  Inr y' \<Rightarrow> x' <[ y'
-                  | _ \<Rightarrow> False))"
-declare [[show_types]]
-instance proof
-  fix a :: "'a + 'b"
-  show "a <[ a" 
-  proof(cases a)
-    case (Inl a)
-      then show ?thesis by(simp add:sum_pleq leq_refl)
-    next
-    case (Inr b)
-    then show ?thesis by(simp add:sum_pleq leq_refl)
-  qed
-next
-  fix a b c :: "'a + 'b"
-  assume H1 : "a <[ b"
-  assume H2 : "b <[ c"
-    consider (1) a' b' c' where "(a = Inl a' \<and> b = Inl b' \<and> c = Inl c')" |
-             (2) a' b' c' where "(a = Inl a' \<and> b = Inl b' \<and> c = Inr c')" |
-             (3) a' b' c' where "(a = Inl a' \<and> b = Inr b' \<and> c = Inl c')" |
-             (4) a' b' c' where "(a = Inl a' \<and> b = Inr b' \<and> c = Inr c')" |
-             (5) a' b' c' where "(a = Inr a' \<and> b = Inl b' \<and> c = Inl c')" |
-             (6) a' b' c' where "(a = Inr a' \<and> b = Inl b' \<and> c = Inr c')" |
-             (7) a' b' c' where "(a = Inr a' \<and> b = Inr b' \<and> c = Inl c')" |
-             (8) a' b' c' where "(a = Inr a' \<and> b = Inr b' \<and> c = Inr c')"
-        by (cases a; cases b; cases c; auto)
-    then show "a <[ c"
-  proof cases
-    case 1 thus ?thesis using H1 H2 by(auto simp add:sum_pleq elim: leq_trans) next
-    case 2 thus ?thesis using H1 H2 by(auto simp add:sum_pleq elim: leq_trans) next
-    case 3 thus ?thesis using H1 H2 by(auto simp add:sum_pleq elim: leq_trans) next
-    case 4 thus ?thesis using H1 H2 by(auto simp add:sum_pleq elim: leq_trans) next
-    case 5 thus ?thesis using H1 H2 by(auto simp add:sum_pleq elim: leq_trans) next
-    case 6 thus ?thesis using H1 H2 by(auto simp add:sum_pleq elim: leq_trans) next
-    case 7 thus ?thesis using H1 H2 by(auto simp add:sum_pleq elim: leq_trans) next
-    case 8 thus ?thesis using H1 H2 by(auto simp add:sum_pleq elim: leq_trans)
-  qed
-qed
-end
+definition hmm :: "('a :: Pordbc \<Rightarrow> bool)" where
+"hmm x = True"
 
-instantiation sum :: (Pordb, Pord) Pord
-begin
-
-instance proof
-  fix a b :: "'a + 'b"
-  assume H1 : "a <[ b"
-  assume H2 : "b <[ a"
-  consider (1) a' b' where "(a = Inl a' \<and> b = Inl b')" |
-           (2) a' b' where "(a = Inl a' \<and> b = Inr b')" |
-           (3) a' b' where "(a = Inr a' \<and> b = Inl b')" |
-           (4) a' b' where "(a = Inr a' \<and> b = Inr b')" 
-    by(cases a; cases b; auto)
-  then  show "a = b"
-  proof cases
-    case 1 thus ?thesis using H1 H2 by(auto simp add:sum_pleq elim: leq_antisym) next
-    case 2 thus ?thesis using H1 H2 by(auto simp add:sum_pleq elim: leq_antisym) next
-    case 3 thus ?thesis using H1 H2 by(auto simp add:sum_pleq elim: leq_antisym) next
-    case 4 thus ?thesis using H1 H2 by(auto simp add:sum_pleq elim: leq_antisym) next
-  qed
-qed
-end
-
-instantiation sum :: (Pordb, Pordc) Pordc
-begin
-
-instance proof
-  fix a b :: "'a + 'b"
-  assume "has_ub {a, b}"
-  then obtain ub where H : "is_ub {a, b} ub" by (auto simp add:has_ub_def)
-  consider (1) a' b' ub' where "(a = Inl a' \<and> b = Inl b' \<and> ub = Inl ub')" |
-           (2) a' b' ub' where "(a = Inr a' \<and> b = Inr b' \<and> ub = Inr ub')" |
-           (3) a' b' ub' where "(a = Inl a' \<and> b = Inr b' \<and> ub = Inr ub')" |
-           (4) a' b' ub' where "(a = Inr a' \<and> b = Inl b' \<and> ub = Inr ub')" |
-           (5) a' b' ub' where "(a = Inl a' \<and> b = Inl b' \<and> ub = Inr ub')"using H
-    by(cases a; cases b; cases ub; auto simp add:is_ub_def sum_pleq)
-  then  show "has_sup {a, b}"
-  proof cases
-    case 1
-    hence Hub' : "has_ub {a', b'}" using H by(auto simp add:has_ub_def is_ub_def sum_pleq)
-    obtain s' where Hsup : "is_sup {a', b'} s'" using complete2[OF Hub'] by(auto simp add:has_sup_def)
-    hence "is_sup {a, b} (Inl s')" using 1
-      by (auto simp add:is_sup_def has_sup_def sum_pleq is_least_def is_ub_def split:sum.splits)
-    thus ?thesis by (auto simp add:has_sup_def)
-  next
-    case 2
-    hence Hub' : "has_ub {a', b'}" using H by(auto simp add:has_ub_def is_ub_def sum_pleq)
-    obtain s' where Hsup : "is_sup {a', b'} s'" using complete2[OF Hub'] by(auto simp add:has_sup_def)
-    hence "is_sup {a, b} (Inr s')" using 2
-      by (auto simp add:is_sup_def has_sup_def sum_pleq is_least_def is_ub_def split:sum.splits)
-    thus ?thesis by (auto simp add:has_sup_def)
-  next
-    case 3
-    hence Habot : "a' <[ \<bottom>" using H by(auto simp add:has_ub_def is_ub_def sum_pleq)
-    hence "a' = \<bottom>" using H leq_antisym[OF Habot bot_spec] by(auto simp add:has_ub_def is_ub_def sum_pleq)
-    hence "is_sup {a, b} (Inr b')" using 3
-      by(auto simp add:is_sup_def has_sup_def sum_pleq is_least_def is_ub_def leq_refl split:sum.splits)
-    thus ?thesis by (auto simp add:has_sup_def)
-  next
-    case 4
-    hence Hbbot : "b' <[ \<bottom>" using H by(auto simp add:has_ub_def is_ub_def sum_pleq)
-    hence "b' = \<bottom>" using H leq_antisym[OF Hbbot bot_spec] by(auto simp add:has_ub_def is_ub_def sum_pleq)
-    hence "is_sup {a, b} (Inr a')" using 4
-      by(auto simp add:is_sup_def has_sup_def sum_pleq is_least_def is_ub_def leq_refl split:sum.splits)
-    thus ?thesis by (auto simp add:has_sup_def)
-
-  next
-    case 5
-    have Habot : "a' <[ \<bottom>" using H 5 by(auto simp add:has_ub_def is_ub_def sum_pleq)
-    have Hbbot : "b' <[ \<bottom>" using H 5 by(auto simp add:has_ub_def is_ub_def sum_pleq)
-    have "is_sup {a, b} (Inl \<bottom>)" using 5  Habot Hbbot bot_spec
-      by(auto simp add:is_sup_def has_sup_def sum_pleq is_least_def is_ub_def leq_refl split:sum.splits)
-    thus ?thesis by (auto simp add:has_sup_def)
-  qed
-qed
-end
-
-instantiation sum :: (Mergeableb, Mergeable) Mergeable
-begin
-definition sum_bsup :
-"bsup (a :: 'a + 'b) (b :: 'a + 'b) =
-  (case a of
-    Inl a' \<Rightarrow> (case b of
-                Inl b' \<Rightarrow> Inl ([^ a', b' ^])
-                | Inr b' \<Rightarrow> (if a' <[ \<bottom> then Inr b' else Inl a'))
-    | Inr a' \<Rightarrow> (case b of
-                Inl b' \<Rightarrow> Inr a'
-                | Inr b' \<Rightarrow> Inr ([^ a', b' ^])))"
-
-instance proof 
-  fix a b :: "'a + 'b"
-  consider (1) a' b' bsup' where "a = Inl a'" "b = Inl b'" "bsup a b = Inl bsup'" |
-           (2) a' b' bsup' where "a = Inl a'" "b = Inr b'" "bsup a b = Inl bsup'" |
-           (3) a' b' bsup' where "a = Inr a'" "b = Inr b'" "bsup a b = Inr bsup'" |
-           (4) a' b' bsup' where "a = Inr a'" "b = Inl b'" "bsup a b = Inr bsup'" |
-           (5) a' b' bsup' where "a = Inl a'" "b = Inr b'" "bsup a b = Inr bsup'" 
-    by(cases a; cases b; cases "bsup a b"; auto simp add:sum_pleq sum_bsup)
-  then show "is_bsup a b (bsup a b)"
-  proof cases
-    case 1
-    hence Hbsup' : "is_bsup a' b' (bsup a' b')" by(auto intro: bsup_spec)
-    have Hbsup : "bsup a b = Inl (bsup a' b')" using 1 by(auto simp add:sum_bsup)
-    show ?thesis
-    proof(rule is_bsup_intro)
-      show "a <[ bsup a b" using 1 is_bsup_unfold1[OF Hbsup'] Hbsup 
-        by(auto simp add:sum_bsup sum_pleq is_bsup_def)
-    next
-
-      fix bd sd :: "'a + 'b"
-      assume Hbd : "bd <[ b"
-      assume Hsup : "is_sup {a, bd} sd"
-      
-      obtain sd' where Hsd' : "sd = Inl sd'" using 1 Hsup
-        apply(auto simp add:sum_pleq is_least_def is_ub_def is_sup_def split:sum.splits)
-
-      obtain bd' where Hbd' : "bd = Inl bd'" using 1 Hbd
-        by(auto simp add:sum_pleq split:sum.splits)
-
-      have Hsup' : "is_sup {a', bd'} (sd')" using Hbd' Hsd' Hsup 1
-        by(auto simp add:sum_pleq is_sup_def is_least_def is_ub_def split:sum.splits)
-
-      have "sd' <[ bsup a' b'" using is_bsup_unfold2[OF Hbsup' _ Hsup'] Hbd' Hbd 1
-        by(auto simp add:sum_pleq)
-
-      thus "sd <[ bsup a b" using Hbsup Hsd'
-        by(auto simp add:sum_pleq sum_bsup)
-    next
-
-      fix bub :: "'a + 'b"
-      assume Hbub : "is_bub a b (bub)"
-
-      obtain bub' where Hbub' : "bub = Inl bub'" using 1 Hbub
-        by(auto simp add:sum_pleq is_bub_def is_least_def is_ub_def is_sup_def split:sum.splits)
-
-      have "is_bub a' b' bub'" 
-      proof(rule is_bub_intro)
-        show "a' <[ bub'" using 1 is_bub_unfold1[OF Hbub] Hbub'
-          by(auto simp add:sum_pleq is_bub_def is_least_def is_ub_def is_sup_def split:sum.splits)
-      next
-        fix bd' sd' :: "'a"
-        assume Hbd : "bd' <[ b'"
-        assume Hsup : "is_sup {a', bd'} sd'"
-
-        have Hsup' : "is_sup {a, Inl bd'} (Inl sd')" using 1 Hsup
-          by(auto simp add:sum_pleq is_sup_def is_least_def is_ub_def split:sum.splits)
-
-        have Hbd' : "Inl bd' <[ b" using Hbd 1 by(auto simp add:sum_pleq)
-
-        have "Inl sd' <[ Inl bub'" using is_bub_unfold2[OF Hbub Hbd' Hsup'] Hbub' 1  by(auto simp add:sum_pleq)
-
-        thus "sd' <[ bub'" using 1 Hbub' by (auto simp add:sum_pleq)
-      qed
-
-      hence "bsup a' b' <[ bub'" using is_bsup_unfold3[OF Hbsup'] by auto
-
-      thus "bsup a b <[ bub" using 1 Hbub Hbub' Hbsup by(auto simp add:sum_pleq)
-    qed
-
-  next
-
-    case 2
-    have Hbsup : "bsup a b = Inl (a')" using 2 by(auto simp add:sum_bsup)
-    show ?thesis
-    proof(rule is_bsup_intro)
-      show "a <[ bsup a b" using 2 Hbsup leq_refl[of a]
-        by(auto simp add:sum_bsup sum_pleq )
-    next
-      fix bd sd :: "'a + 'b"
-      assume Hbd : "bd <[ b"
-      assume Hsup : "is_sup {a, bd} sd"
-
-      obtain bd' where Hbd' : "bd = Inr bd'" using 2 Hbd
-        by(auto simp add:sum_pleq split:sum.splits)
-
-      hence False using 2 Hbd Hsup Hbsup
-        by(auto simp add:sum_pleq sum_bsup is_sup_def is_least_def is_ub_def split:sum.splits)
-
-      thus "sd <[ [^ a, b ^]" by auto
-
-    next
-      
-      fix bub :: "'a + 'b"
-      assume Hbub : "is_bub a b (bub)"
-
-      show "bsup a b <[ bub" using 2 Hbub
-        by(auto simp add:sum_pleq sum_bsup is_bub_def is_sup_def is_least_def is_ub_def split:sum.splits)
-    qed
-
-  next
-
-    case 3
-    hence Hbsup' : "is_bsup a' b' (bsup a' b')" by(auto intro: bsup_spec)
-    have Hbsup : "bsup a b = Inr (bsup a' b')" using 3 by(auto simp add:sum_bsup)
-    show ?thesis
-    proof(rule is_bsup_intro)
-      show "a <[ bsup a b" using 3 is_bsup_unfold1[OF Hbsup'] Hbsup 
-        by(auto simp add:sum_bsup sum_pleq is_bsup_def)
-    next
-
-      fix bd sd :: "'a + 'b"
-      assume Hbd : "bd <[ b"
-      assume Hsup : "is_sup {a, bd} sd"
-      
-      obtain sd' where Hsd' : "sd = Inr sd'" using 3 Hsup
-        by(auto simp add:sum_pleq is_least_def is_ub_def is_sup_def split:sum.splits)
-
-      obtain bd' where Hbd' : "bd = Inr bd'" using 3 Hbd
-        by(auto simp add:sum_pleq split:sum.splits)
-
-      have Hsup' : "is_sup {a', bd'} (sd')" using Hbd' Hsd' Hsup 3
-        by(auto simp add:sum_pleq is_sup_def is_least_def is_ub_def split:sum.splits)
-
-      have "sd' <[ bsup a' b'" using is_bsup_unfold2[OF Hbsup' _ Hsup'] Hbd' Hbd 3
-        by(auto simp add:sum_pleq)
-
-      thus "sd <[ bsup a b" using Hbsup Hsd'
-        by(auto simp add:sum_pleq sum_bsup)
-    next
-
-      fix bub :: "'a + 'b"
-      assume Hbub : "is_bub a b (bub)"
-
-      obtain bub' where Hbub' : "bub = Inr bub'" using 3 Hbub
-        by(auto simp add:sum_pleq is_bub_def is_least_def is_ub_def is_sup_def split:sum.splits)
-
-      have "is_bub a' b' bub'" 
-      proof(rule is_bub_intro)
-        show "a' <[ bub'" using 3 is_bub_unfold1[OF Hbub] Hbub'
-          by(auto simp add:sum_pleq is_bub_def is_least_def is_ub_def is_sup_def split:sum.splits)
-      next
-        fix bd' sd' :: "'b"
-        assume Hbd : "bd' <[ b'"
-        assume Hsup : "is_sup {a', bd'} sd'"
-
-        have Hsup' : "is_sup {a, Inr bd'} (Inr sd')" using 3 Hsup
-          by(auto simp add:sum_pleq is_sup_def is_least_def is_ub_def split:sum.splits)
-
-        have Hbd' : "Inr bd' <[ b" using Hbd 3 by(auto simp add:sum_pleq)
-
-        have "Inr sd' <[ Inr bub'" using is_bub_unfold2[OF Hbub Hbd' Hsup'] Hbub' 3  by(auto simp add:sum_pleq)
-
-        thus "sd' <[ bub'" using 3 Hbub' by (auto simp add:sum_pleq)
-      qed
-
-      hence "bsup a' b' <[ bub'" using is_bsup_unfold3[OF Hbsup'] by auto
-
-      thus "bsup a b <[ bub" using 3 Hbub Hbub' Hbsup by(auto simp add:sum_pleq)
-    qed
-
-  next
-
-    case 4
-    have Hbsup : "bsup a b = Inr (a')" using 4 by(auto simp add:sum_bsup)
-    show ?thesis
-    proof(rule is_bsup_intro)
-      show "a <[ bsup a b" using 4 Hbsup leq_refl[of a]
-        by(auto simp add:sum_bsup sum_pleq )
-    next
-      fix bd sd :: "'a + 'b"
-      assume Hbd : "bd <[ b"
-      assume Hsup : "is_sup {a, bd} sd"
-
-      obtain bd' where Hbd' : "bd = Inl bd'" using 4 Hbd
-        by(auto simp add:sum_pleq split:sum.splits)
-
-      hence False using 4 Hbd Hsup Hbsup
-        by(auto simp add:sum_pleq sum_bsup is_sup_def is_least_def is_ub_def split:sum.splits)
-
-      thus "sd <[ [^ a, b ^]" by auto
-
-    next
-      
-      fix bub :: "'a + 'b"
-      assume Hbub : "is_bub a b (bub)"
-
-      show "bsup a b <[ bub" using 4 Hbub
-        by(auto simp add:sum_pleq sum_bsup is_bub_def is_sup_def is_least_def is_ub_def split:sum.splits)
-    qed
-  qed
-qed
-end
-*)
-
-
-
-(* TODO: need an instance for fun? *)
 end

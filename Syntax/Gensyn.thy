@@ -1,13 +1,17 @@
 theory Gensyn imports Main
 begin
 
+(*
+ * A general-purpose datatype for expressing recursive syntax
+ * Used as the syntax for language-components.
+ *)
+
 datatype ('x) gensyn =
   G "'x" "(('x) gensyn) list"
 
 type_synonym gensyn_skel = "(unit) gensyn"
 
 type_synonym param_gensyn = "(_) gensyn"
-
 
 declare gensyn.splits [split]
 
@@ -23,24 +27,14 @@ fun gs_map_opt :: "('x \<Rightarrow> 'y option) \<Rightarrow> 'x gensyn \<Righta
       None \<Rightarrow> None
       | Some fl \<Rightarrow> Some (G fx fl)))"
 
+(* obtain a "skeleton" of a gensyn, reflecting structure
+   but removing labels *)
 definition gs_sk :: "'a gensyn \<Rightarrow> gensyn_skel" where
 "gs_sk t = gs_map (\<lambda> _ . ()) t"
 
 type_synonym childpath = "nat list"
 
-(* idea: these dir's are really defunctionalized continuations *)
-datatype dir =
-  Down 
-  | Up childpath
-
-(* possibly no longer needed *)
-datatype ('x) gs_result =
-  GRPath childpath
-  | GRCrash
-  | GRDone
-  | GRUnhandled
-  | GRSync "'x gs_result"
-  | GROther 'x
+(* Alternate induction principles for gensyn (the default one isn't strong enough on its own) *)
 
 lemma gensyn_induct':
   assumes Lr : "(\<And> (x :: 'x) (l :: ('x) gensyn list) . P2 l \<Longrightarrow> P2 [(G x l)])"
@@ -67,7 +61,6 @@ proof-
      }
   thus ?thesis by auto
 qed
-
 
 
 lemma gensyn_induct:

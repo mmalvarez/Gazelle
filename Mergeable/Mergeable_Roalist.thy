@@ -1,5 +1,13 @@
-theory MergeableRAList imports "../AList/RAList" "MergeableAList" "Pord" "MergeableInstances"
+theory Mergeable_Roalist imports "../Lib/Oalist/RoaList" "Mergeable_Oalist" "Pord" "Mergeable_Instances"
 begin
+
+(*
+ * This file contains mergeable instances for RAlist - a variant of AList representing a
+ * recursive key-value store (i.e., values can themselves be key-value stores).
+ * Note that several key theorems are admitted ("sorry") here, rather than being proven.
+ * This is because the proofs became extremely tedious; however, we do believe they are
+ * provable.
+ *)
 
 lift_definition roalist_leq :: "('key :: linorder, 'value :: Pord, 'd :: Pord) roalist \<Rightarrow> ('key, 'value, 'd :: Pord) roalist \<Rightarrow> bool"
 is "list_leq :: ('key :: linorder, 'value :: Pord, 'd option) roalist' \<Rightarrow> 
@@ -759,30 +767,7 @@ definition bot_roalist :
 instance sorry
 end
 
-(*
-instance proof
-  fix a :: "('a :: linorder, 'b :: Pordc) roalist"
-  show "\<bottom> <[ a"
-    unfolding bot_roalist pleq_roalist
-  proof(transfer)
-    fix x :: "('a, 'b) roalist'"
-    assume "strict_order (map fst x) \<and> roalist_valid x"
-    hence Hx1 : "strict_order (map fst x)" and Hx2 : "roalist_valid x" by auto
-    show "list_leq [([], Inr ())] x"
-    proof(rule list_leqI[OF _ Hx1])
-      show "strict_order (map fst [([], Inr ())])" by(auto simp add:strict_order_def)
-    next
-      fix k v
-      assume Kv : "(k, v) \<in> set ([([], Inr ())] :: ('a, 'b) roalist')"
-      hence Conc' : "(k, v) \<in> set x" using map_of_SomeD[OF roalist_valid_elim1[OF Hx2]]
-        by(auto)
-      thus "\<exists>v'. (k, v') \<in> set x \<and> v <[ v'"
-        by(auto simp add:leq_refl)
-    qed
-  qed
-qed
-end
-*)
+
 lift_definition roalist_check_prefixes :: "('key :: linorder, 'value, 'd) roalist \<Rightarrow> 'key list \<Rightarrow> bool"
 is roalist_check_prefixes' .
 
@@ -832,117 +817,10 @@ definition bsup_roalist :
 
 instance sorry
 end
-(*
-(* this one is going to be tricky. Hopefully the structure ends up not so different from
-   the bsup proof for "vanilla" oalists, but there will likely have to be nontrivial changes
-   (perhaps substantial) *)
-instance proof
-  fix a b :: "('key :: linorder, 'value :: Mergeable) roalist"
-  show "is_bsup a b [^ a, b ^]"
-    sorry
-qed
-*)
 
 instantiation roalist :: (linorder, Mergeable, Mergeable) Mergeableb
 begin
 instance proof qed
 end
 
-(*
-definition test_rc1 :: "(String.literal, int md_triv option) recclos'" where
-"test_rc1 = 
-  to_oalist [([], Inr ())
-            ,([STR ''x''], Inr ())
-            ,([STR ''x'', STR ''y''], Inl (Some (mdt 0)))
-            ,([STR ''y''], Inl (Some (mdt 1)))
-            ,([STR ''z''], Inl None)]"
-
-definition test_rc2 :: "(String.literal, int md_triv option) recclos'" where
-"test_rc2 = 
-  to_oalist [([], Inr ())
-            ,([STR ''y''], Inr ())
-            ,([STR ''y'', STR ''y''], Inl (Some (mdt 0)))
-            ,([STR ''x''], Inl (Some (mdt 1)))
-            ,([STR ''z''], Inl (Some (mdt 2)))]"
-
-value "recclos_bsup test_rc1 test_rc2"
-value "recclos_bsup test_rc2 test_rc1"
-
-lift_definition cxt_bsup :: "('key :: linorder, 'value :: Mergeable) cxt \<Rightarrow>
-                             ('key, 'value) cxt \<Rightarrow> ('key, 'value) cxt"
-is "recclos_bsup :: ('key :: linorder, 'value :: Mergeable) recclos \<Rightarrow>
-                                 ('key, 'value) recclos \<Rightarrow> ('key, 'value) recclos"
-  
-  fix l1 l2 :: "('key list, 'value + unit) oalist"
-  assume H1 : "rc_valid l1"
-  assume H2 : "rc_valid l2"
-  show "rc_valid (recclos_bsup l1 l2)" using H1 H2
-  proof(induction l2 arbitrary: l1)
-    case (Oalist y)
-    then show ?case sorry
-  qed
-  .
-*)
-            
-
-(* we should make sure this works, then redo it for first arg and
-   output type being ctx. *)
-
-(* merging
-  - for each LHS variable
-    - if it is a value, and RHS is value, merge values
-    - if it is a value, and RHS is closure, keep LHS
-    - if it is closure, and RHS is closure merge closures (recursively?)
-    - if it is a closure and RHS is a value, keep LHS
-  - merge closures 
-  - 
-  -
- *)
-
-(* another idea:
-   - take list of keys from LHS
-   - 
-*)
-
-(*
-    mergeAt function for merging at a specific key (?)
-    mutual recursion with bsup? seems annoying
-    another approach is to "recurse" into gather results
-    (but: size issues)
-
-    
-*)
-(* bsup implementation *)
-(*
-fun rc_merge :: "('k :: linorder, 'v) recclos \<Rightarrow> ('k, 'v) recclos \<Rightarrow> ('k, 'v) recclos" where
-(* remaining to do:
-   - show our safe operations preserve recclos
-   - implement safe leq (should be same as leq - lift)
-   - implement safe merging
-   - typeclass instance
-*)
-
-(* when we merge rc_valid things, do we still get an rc_valid thing? *)
-
-(*
-        proof(cases list)
-          assume Nil'' : "list = []"
-          then show ?thesis using True Hd Cons' by(auto simp add:strict_order_def)
-        next
-          fix a' list'
-          assume Cons'' : "list = a' # list'"
-          obtain kh' vh' where Hd' : "a' = (kh', vh')" by(cases a'; auto)
-          show ?thesis
-          using Cons Hd Cons' True
-          
-          
-          apply(auto)
-        apply(case_tac "list") apply(auto)
-           apply(simp add:strict_order_def) 
-          apply(case_tac aa; auto)
-          defer (* contradictory hyp *)
-          defer (* this should be easy - from hyp can prove tails are leq *)
-  qed
-*)
-*)
 end

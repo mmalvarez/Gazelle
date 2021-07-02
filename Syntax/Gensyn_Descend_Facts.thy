@@ -1,6 +1,10 @@
 theory Gensyn_Descend_Facts imports Gensyn_Descend
 begin
 
+(* Some lemmas about the descendent relation.
+ * Some of them could use cleaner, ISAR-based proofs (TODO)
+ *)
+
 lemma gensyn_get_list_len  :
   fixes ts :: "('x) gensyn list" 
   shows "\<And> kh kt t' . gensyn_get_list ts (kh#kt) = Some t' \<Longrightarrow>
@@ -126,7 +130,6 @@ next
   qed
 qed
 
-(* need to constrain t'1. need exists *)
 lemma gensyn_get_child :
   assumes H: "gensyn_get t (kh#kt) = Some t'"
   shows  "\<exists> t'1 . gensyn_get t [kh] = Some t'1 \<and>
@@ -224,7 +227,7 @@ next
   show ?case using 2 3 gensyn_get_child2 by auto blast+
 qed
 
-(* now we need to show compatibility with the inductive one *)
+(* Compatibility between inductive and executable descend implementations *)
 lemma gensyn_descend_eq_l2r :
   assumes H: "gensyn_get t (kh#kt) = Some t'"
   shows "gensyn_descend t t'(kh#kt)" using H
@@ -357,74 +360,7 @@ next
 next
 qed
 
-(* TODO: finish this proof *)
-(* problem - these are not actually the same
-   the prime version returns None more often than
-   the original version. however, it will only do so
-for invalid paths, and we aren't using it for such
-paths anyhow.
-*)
-
-(*
-lemma gensyn_cp_next'_eq' :
-  assumes H: "gensyn_get s (h#c) = Some s'"
-  shows "gensyn_cp_next' s (h#c) = gensyn_cp_next s (h#c)" using H
-proof(induction c arbitrary: s h s')
-  case Nil
-  then show ?case
-  proof(cases s)
-    case (GBase x11 x12)
-    then show ?thesis by auto
-  next
-    case (GRec x21 x22 x23)
-    then show ?thesis 
-      apply(case_tac x23) apply(auto)
-      apply(drule_tac gensyn_cp_next_list_lesser) apply(auto)
-      apply(drule_tac gensyn_cp_next_list_greater) apply(auto)
-      done
-  qed
-next
-  case (Cons a c)
-  then show ?case 
-  proof(cases s)
-    case (GBase x11 x12)
-    then show ?thesis using Cons by auto
-  next
-    case (GRec x21 x22 x23)
-    then show ?thesis
-    proof(cases x23)
-      assume Nil' : "x23 = []"
-      then show ?thesis using Cons GRec by auto
-    next
-      fix h23 t23
-      assume Cons' : "x23 = h23#t23"
-      then show ?thesis
-      proof(cases "rev c @ [a, h]")
-        assume Nil'' : "rev c @ [a, h] = []"
-        thus ?thesis by auto
-      next
-        fix rch rct
-        assume Cons'' : "rev c @ [a, h] = rch # rct"
-        thus ?thesis using Cons GRec Cons'
-        proof(cases h)
-          case 0
-          print_cases
-          then show ?thesis using Cons.prems Cons.IH[of h23 a s'] GRec Cons' Cons''
-            apply(auto)
-            apply(case_tac "rev c @ [a]") apply(auto)
-        next
-          case (Suc nat)
-          then show ?thesis sorry
-        qed
-          apply(auto)
-      qed
-qed
-*)
-
-(* define and use an ordering on childpaths? *)
-(* TODO: inductive version of this? *)
-(* TODO: change definition of "less" for
-childpaths to make prefixes less than suffixes? *)
+(* Some ordering-like definitions for childpaths *)
 fun cp_less_nilmax :: "childpath \<Rightarrow> childpath \<Rightarrow> bool"
   where
 "cp_less_nilmax [] _ = False"
@@ -468,173 +404,6 @@ next
     thus ?thesis using Cons by auto
   qed
 qed
-
-(*
-lemma cp_less_get_genind :
-  fixes t :: "('a, 'b, 'c) gensyn"
-  and l :: "('a, 'b, 'c) gensyn list"
-  shows
-    "\<And> c d c' . gensyn_get t c = Some d \<Longrightarrow>
-     cp_less c' c \<Longrightarrow>
-     (\<exists> d' . gensyn_get t c' = Some d')"
-  and
-"\<And> c d c' . gensyn_get_list l c = Some d \<Longrightarrow>
-     cp_less c' c \<Longrightarrow>
-     (\<exists> d' . gensyn_get_list l c' = Some d')"
-proof(induction t and l rule: gensyn_induct)
-case (1 g b)
-  then show ?case by (cases c, auto)
-next
-  case (2 g r l)
-  then show ?case 
-  proof (cases c)
-    case Nil
-    then show ?thesis using 2 by auto
-  next
-    case (Cons a list)
-    then show ?thesis 
-    proof(cases c')
-      assume Nil' : "c' = []" thus ?thesis by auto
-    next
-      fix c'h c't
-      assume Cons' : "c' = c'h#c't"
-      thus ?thesis using Cons "2.prems" "2.IH"[of "a#list" d c'] by auto
-    qed
-  qed
-next
-  case 3
-  then show ?case by (cases c, auto)
-next
-  case (4 t l)
-  then show ?case 
-  proof(cases c)
-    case Nil
-    then show ?thesis using 4 by auto
-    next
-  case (Cons a list)
-  then show ?thesis 
-  proof(cases a)
-    case 0
-    then show ?thesis
-    proof(cases c')
-      assume Nil' : "c' = []"
-      then show ?thesis using 4 Cons 0 by auto
-    next
-      fix c'h c't
-      assume Cons' : "c' = c'h#c't"
-      then show ?thesis using "4.prems" "4.IH"(1)[of list d c't] Cons 0 
-        by(cases c'h, auto)
-    qed
-  next
-    case (Suc nat)
-    then show ?thesis
-    proof(cases c')
-      assume Nil' : "c' = []"
-      then show ?thesis using 4 Cons Suc by auto
-    next
-      fix c'h c't
-      assume Cons' : "c' = c'h#c't"
-      then show ?thesis
-      proof(cases c'h)
-        assume Zero' : "c'h = 0"
-        then show ?thesis using "4.prems" "4.IH" Cons Suc Cons'
-          apply(auto)
-  qed
-qed
-qed
-*)
-
-(*
-lemma gensyn_next_spec' :
-(*  assumes H: "gensyn_cp_next' s c = Some c'"
-  shows "cp_next_less c c' \<and>
-         (! c'' . cp_next_less c c'' \<longrightarrow>
-              ((? suf . c'' = c'@suf) \<or> cp_next_less c' c''))" using H *)
-"(! s c' .
-(gensyn_cp_next' (s :: ('a, 'b, 'c) gensyn) c = Some c' \<longrightarrow>
-cp_less c c' \<and>
-(! s' c'' . gensyn_get s c'' = Some (s' :: ('a, 'b, 'c) gensyn) \<longrightarrow>
-        cp_less c c'' \<longrightarrow>
-        (c'' = c' \<or> cp_less_nilmin c' c'')))
-\<and>
-(gensyn_cp_next' s c = None \<longrightarrow>
-  (! s' c'' . gensyn_get s c'' = Some (s' :: ('a, 'b, 'c) gensyn) \<longrightarrow>
-            \<not> cp_less c c''
-            ))
-)"
-
-proof(induction "c")
-  case Nil
-  then show ?case by auto
-next
-  case (Cons a c)
-  then show ?case
-    apply(auto)
-     apply(case_tac "rev c") apply(auto)
-      apply(case_tac s, auto) apply(case_tac "Suc a < length x23", auto)
-
-
-     apply(case_tac a, auto) apply(case_tac s, auto)
-       apply(case_tac x23, auto)
-
-    apply(case_tac "gensyn_get aaa (rev list)", auto)
-       apply(case_tac ab, auto)
-       apply(case_tac "Suc aa < length x23", auto)
-
-        defer
-
-        apply(drule_tac x = aaa in spec) apply(auto)
-         apply(case_tac list, auto)
-
-         apply(case_tac "gensyn_get aaa (rev listb)", auto)
-         apply(drule_tac x = "ac" in spec)
-         apply(drule_tac x = "rev listb" in spec)
-         apply(auto)
-           apply(case_tac ac, auto)
-    apply(case_tac "Suc ab < length x23a", auto)
-
-    apply(case_tac c', auto)
-
-      apply(case_tac "gensyn_get lol (rev list)", auto)
-      apply(rename_tac blah)
-      apply(case_tac blah, auto)
-      apply(case_tac "Suc aa < length x23") apply(auto)
-
-       defer (* easy *)
-
-    apply(case_tac list, auto)
-       apply(case_tac hoo, auto)
-
-      apply(frule_tac gensyn_get_comp2, auto)
-       apply(case_tac t', auto)
-
-       apply(case_tac " Suc aaa < length x23a", auto)
-
-        defer
-
-
-
-       apply(drule_tac spec) apply(drule_tac x = lol in spec)
-    apply(auto)
-
-       apply(drule_tac x = lol in spec, auto)
-
-
-    apply(case_tac list, auto) apply(case_tac hoo, auto)
-
-(* still stuck going in circles here *)
-       apply(drule_tac spec) apply(auto)
-       apply(drule_tac x = lol in spec, auto)
-       apply(case_tac "gensyn_get lol (rev lista)", auto)
-       apply(case_tac ab, auto)
-    apply(case_tac "Suc aaa < length x23a") apply(auto)
-
-
-    apply(drule_tac spec, auto)
-
-    apply(drule_tac
-qed
-*)
 
 lemma gensyn_cp_next_list_spec' [rule_format]:
   fixes s :: "('x) gensyn list"
@@ -801,90 +570,5 @@ next
     apply(case_tac "a < aa", auto)
     done
 qed
-
-(*
-lemma gensyn_next_spec :
-  fixes s :: "('a, 'b, 'c) gensyn"
-  and l :: "('a, 'b, 'c) gensyn list"
-shows "! c c' c'' s'. 
-         (gensyn_cp_next' s c = Some c' \<longrightarrow>
-          cp_less c c' \<and>
-         ( 
-               gensyn_get s c'' = Some s' \<longrightarrow>
-               cp_less c c'' \<longrightarrow>
-              (c'' = c' \<or> cp_less_nilmin c' c'')))
-          \<and>
-          (gensyn_cp_next' s c = None \<longrightarrow>
-          gensyn_get s c'' = Some s' \<longrightarrow>
-          \<not> cp_less c c'')"
-  and "! c c' c'' s' x1 x2. 
-        (gensyn_cp_next' (GRec x1 x2 l) c = Some c' \<longrightarrow>
-         cp_less c c' \<and>
-          (
-               gensyn_get_list l c'' = Some s' \<longrightarrow>
-               cp_less c c'' \<longrightarrow>
-              (c''= c' \<or> cp_less_nilmin c' c'')))
-        \<and>
-        (gensyn_cp_next (GRec x1 x2 l) c = None \<longrightarrow>
-          gensyn_get_list l c'' = Some s' \<longrightarrow>
-          \<not> cp_less c c'')"
-proof(induction s and l rule:gensyn_induct)
-case (1 g b)
-  then show ?case
-    apply(auto)
-      apply(case_tac "rev c", auto)
-      apply(case_tac "rev list", auto)
-
-      apply(case_tac "rev c", auto)
-     apply(case_tac "rev list", auto)
-
-      apply(case_tac "rev c", auto)
-    apply(case_tac "rev list", auto)
-
-     apply(case_tac c'', auto)
-    apply(case_tac c'', auto)
-    done
-next
-  case (2 g r l)
- show ?case using "2.prems" apply(auto)
-      apply(case_tac "rev c", auto)
-     apply(case_tac "rev list", auto)
-      apply(case_tac "Suc a < length l", auto)
-
-     apply(case_tac " gensyn_get_list l (aa # lista)", auto)
-     apply(case_tac ab, auto)
-     apply(case_tac "Suc a < length x23", auto simp del:gensyn_cp_next'.simps)
-
-   apply(rule_tac cp_less_last)
-
-      apply(insert "2.IH")
-      apply(drule_tac x = "aa#lista" in spec)
-      apply(drule_tac x = "c'" in spec)
-      apply(drule_tac x = "aa#lista" in spec)
-      apply(drule_tac x = "GRec x21 x22 x23" in spec)
-      apply(drule_tac x = g in spec) apply(drule_tac x = r in spec)
-      apply(auto simp del:gensyn_cp_next'.simps)
-
-         apply(drule_tac cp_less_suf, auto)
-        apply(drule_tac cp_less_suf, auto)
-
-       apply(drule_tac cp_less_irref2, auto)
-
-        apply(drule_tac cp_less_suf, auto)
-
-        apply(drule_tac cp_less_suf, auto)
-   sorry
-    
-
-next
-  case 3
-  then show ?case 
-    apply(auto)
-    apply(case_tac "rev c", auto)
-next
-  case (4 t l)
-  then show ?case sorry
-qed
-*)
 
 end

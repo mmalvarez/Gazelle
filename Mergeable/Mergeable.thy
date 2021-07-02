@@ -2,14 +2,19 @@ theory Mergeable imports Pord
 
 begin
 
-(* mergeable is a type with an ordering, as well as a way to
-  "naturally" (-ish) merge elements that may not have a LUB *)
+(* Mergeable is a complete partial order where for all pairs of elements a and b,
+ * bsup a b (written [^ a, b ^]) is guaranteed to exist (it really, really should also
+ * be computable, since we use this for code generation)
+ *)
 class Mergeable =
   Pordc + 
   fixes bsup :: "('a :: Pordc) \<Rightarrow> 'a \<Rightarrow> 'a" ("[^ _, _ ^]")
 assumes bsup_spec :
   "\<And> a b . is_bsup a b (bsup a b)"
 
+(* Utility lemmas for reasoning directly about [^ a, b ^] rather than the
+ * predicate version bsup a b
+ *)
 lemma bsup_comm :
   fixes a b :: "'a :: Mergeable"
   assumes H : "has_sup {a, b}"
@@ -33,7 +38,9 @@ proof -
   show ?thesis using 7 and 3 by auto
 qed
 
-
+(* Bsup admits a very limited notion of what we might call associativity (but only if we stretch
+ * the meaning of the term). This holds in general, regardless of completeness. 
+ *)
 lemma bsup_assoc_fact1 :
   fixes a b c :: "'a :: Mergeable"
   shows "bsup a (bsup b c) = (bsup (bsup a b) (bsup b c))"
@@ -91,6 +98,10 @@ proof(-)
   thus ?thesis using bsup_compare1[OF bsup_spec bsup_spec 0 1 3] by auto
 qed
 
+(* If a true supremum exists for a and b (but not necessarily c), we can say a bit
+ * more about [^ [^ a, b ^], c ^] etc.
+*) 
+
 lemma sup_assoc1 :
   fixes a b c :: "'a :: Mergeable"
   assumes Hsup : "has_sup {a, b}"
@@ -124,8 +135,6 @@ lemma sup_assoc_2 :
   assumes Hsup : "has_sup {a, b}"
   shows "pleq (bsup (bsup a b) c) (bsup b (bsup a c))"
 proof(-)
-
-(*  have "bsup (bsup a b) c = bsup (bsup b a) c" using sup_assoc_fact2[OF Hsup] by auto *)
 
   have 1 : "pleq (bsup (bsup a b) c) (bsup (bsup a b) (bsup a c))"
     using bsup_assoc_fact2 by auto

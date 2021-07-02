@@ -1,7 +1,9 @@
 theory Gensyn_Descend imports Gensyn
 begin
 
+(* Utilities related to descendent relation in Gensyn *)
 
+(* Inductive descendent relation *)
 inductive gensyn_descend ::
   "('x) gensyn \<Rightarrow> 
    ('x) gensyn \<Rightarrow>
@@ -49,6 +51,7 @@ fun gensyn_cp_next_list :: "('x) gensyn list \<Rightarrow> childpath \<Rightarro
       Some (n'#cp') \<Rightarrow> Some (Suc n' # cp')
      | _ \<Rightarrow> None)"
 
+(* Next node in an inorder traversal of a Gensyn tree *)
 fun gensyn_cp_next :: "('x) gensyn \<Rightarrow> childpath \<Rightarrow> childpath option"
   where
 "gensyn_cp_next (G x l) (cp) = gensyn_cp_next_list l cp"
@@ -65,39 +68,7 @@ fun gensyn_cp_next' :: "('x) gensyn \<Rightarrow> childpath \<Rightarrow> childp
                  else gensyn_cp_next' g (rev cp'))
             | None \<Rightarrow> None))"
 
-(* idea: this will attempt to go to the next immediate child of our node
-   if it is a list node *)
-(* TODO: should we define this recursively like cp_next *)
-fun gensyn_dig :: "('x) gensyn \<Rightarrow> childpath \<Rightarrow> childpath option" where
-"gensyn_dig g c =
-  (case gensyn_get g c of
-    Some (G _ (h#t)) \<Rightarrow> Some (c@[0])
-    | _ \<Rightarrow> None)"
-
-definition gs_ex :: "unit gensyn" where
-"gs_ex =
-  G () [G () [], G () [G () [], G () []], G () []]"
-
-value "gensyn_cp_next gs_ex [1, 1]"
-
-(*
-fun gensyn_cp_sibling_list :: "'x gensyn list \<Rightarrow> childpath \<Rightarrow> childpath option" where
-  "gensyn_cp_sibling_list [] _ = None"
-| "gensyn_cp_sibling_list (h#t) [] = Some []"
-| "gensyn_cp_sibling_list ([G x l]) (0#cpt) =
-    (case gensyn_cp_sibling_list l cpt of None \<Rightarrow> None 
-                         | Some res \<Rightarrow> Some (0#res))"
-| "gensyn_cp_sibling_list ([h]) ((Suc n)#cpt) = None"
-| "gensyn_cp_sibling_list ((G x l)#h2#t) (0#cpt) =
-    (case gensyn_cp_sibling_list l cpt of
-      Some cp' \<Rightarrow> Some (0#cp')
-     | None \<Rightarrow> None)"
-| "gensyn_cp_sibling_list (h#h2#t) (Suc n # cpt) =
-    (case gensyn_cp_sibling_list (h2#t) (n # cpt) of
-      Some (n'#cp') \<Rightarrow> Some (Suc n' # cp')
-     | _ \<Rightarrow> None)"
-*)
-
+(* Sibling-related utility functions *)
 fun gensyn_cp_sibling_list_ht :: "'x gensyn list \<Rightarrow> nat \<Rightarrow> childpath \<Rightarrow> (nat * childpath) option" where
   "gensyn_cp_sibling_list_ht [] _ _ = None"
 | "gensyn_cp_sibling_list_ht [h] _ [] = None"
@@ -109,12 +80,10 @@ fun gensyn_cp_sibling_list_ht :: "'x gensyn list \<Rightarrow> nat \<Rightarrow>
       Some (n', cp') \<Rightarrow> Some (0, n'#cp')
       | _ \<Rightarrow> None)"
 
-
 | "gensyn_cp_sibling_list_ht ((G x l)#h2#t) (Suc n) ct =
     (case gensyn_cp_sibling_list_ht (h2#t) n (ct) of
       Some (n', cp') \<Rightarrow> Some (Suc n', cp')
      | _ \<Rightarrow> None)"
-
 
 fun gensyn_cp_sibling :: "('x) gensyn \<Rightarrow> childpath \<Rightarrow> childpath option"
   where
@@ -124,11 +93,7 @@ fun gensyn_cp_sibling :: "('x) gensyn \<Rightarrow> childpath \<Rightarrow> chil
       None \<Rightarrow> None
       | Some (ch', ct') \<Rightarrow> Some (ch'#ct'))"
 
-value "gensyn_cp_sibling gs_ex [1]"
-value "gensyn_cp_sibling_list
-([G () [], G () [], G () []])
-[0]"
-
+(* Parent nodes *)
 fun gensyn_cp_parent :: "'x gensyn \<Rightarrow> childpath \<Rightarrow> childpath option" where
 "gensyn_cp_parent _ [] = None"
 | "gensyn_cp_parent g (h#t) = Some (butlast (h#t))"
@@ -137,7 +102,7 @@ fun cp_parent :: "childpath \<Rightarrow> childpath option" where
 "cp_parent [] = None"
 | "cp_parent (h#t) = Some (butlast (h#t))"
 
-(* is the second argument an extension of the first? *)
+(* Executable predicates related to descend *)
 fun gensyn_cp_is_desc :: "childpath \<Rightarrow> childpath \<Rightarrow> bool" where
 "gensyn_cp_is_desc [] cp = True"
 | "gensyn_cp_is_desc (h1#t1) [] = False"
@@ -156,23 +121,4 @@ fun get_suffix :: "childpath \<Rightarrow> childpath \<Rightarrow> childpath opt
 | "get_suffix (h1#t1) (h2#t2) =
   (if h1 = h2 then get_suffix t1 t2 else None)"
 
-
-
-(* another option for defining cp_next. this should work for our purposes as well *)
-(*
-fun gensyn_cp_next2' :: "('b, 'r, 'g) gensyn \<Rightarrow> childpath \<Rightarrow> childpath option" where
-"gensyn_cp_next2' g cp =
-  (case gensyn_get g cp of
-    
-  
-
-  (case (rev cp) of
-      [] \<Rightarrow> None
-    | (cl # cp') \<Rightarrow>
-        (case (gensyn_get g (rev cp')) of
-              Some (GRec _ _ l) \<Rightarrow>
-                (if cl + 1 < length l then Some (rev ((cl + 1)#cp'))
-                 else gensyn_cp_next' g (rev cp'))
-            | _ \<Rightarrow> None))"
-*)
 end 

@@ -2,7 +2,12 @@ theory Pord imports Main
 
 begin
 
-(* these may be useful primitives, but are not currently used *)
+(*
+ * Typeclass definitions for partial orders and various extensions thereof
+ * TODO: these proofs could be cleaned up and ISAR-ified
+ *)
+
+(* Comparison function for orderings, not currently used *)
 definition ord_leq :: "('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> bool"
   where
 "ord_leq o1 o2 = (\<forall> x1 x2 . o1 x1 x2 \<longrightarrow> o2 x1 x2)"
@@ -35,11 +40,13 @@ lemma ord_leq_d : "\<And> ox oy a b .
   apply(simp add:ord_leq_def)
   done
 
+(* Pord = "Partial ORDer"
+   This name avoids collision with Isabelle's builtin ordering notions
+   This version of pord is "weak" because it lacks antisymmetry; the full pord
+   typeclass adds antisymmetry.
+*)
+
 class Pord_Weak =
-  (* p stands for partial; used to distinguish from Isabelle's
-     built in (overloaded) leq to ensure there is no ambiguity.
-     TODO: figure out how to create typeclass instances when
-     we instantiate this locale *)
   fixes pleq :: "'a \<Rightarrow> 'a \<Rightarrow> bool" (infixl \<open><[\<close> 71)
   assumes
     leq_refl : "pleq a a"
@@ -47,7 +54,7 @@ class Pord_Weak =
     leq_trans : "pleq a b \<Longrightarrow> pleq b c \<Longrightarrow> pleq a c"
 
 
-(* helpful lemmas about Pord_Weak *)
+(* Notions common to partial orders - upper bounds, lower bounds, infs and sups *)
 definition is_lb :: "('a :: Pord_Weak) set \<Rightarrow> 'a \<Rightarrow> bool" where
 "is_lb A a =
   (\<forall> x \<in> A . a <[ x)"
@@ -79,6 +86,27 @@ definition has_sup :: "('a :: Pord_Weak) set \<Rightarrow> bool" where
 definition has_ub :: "('a :: Pord_Weak) set \<Rightarrow> bool" where
 "has_ub A = (\<exists> s . is_ub A s)"
 
+
+(* A key definition: bub = "Biased Upper Bound". The idea is that for any two objects of type
+   a and b of type 'a, bub a b is "the closest we can get" to a common (least) upper bound
+   even if one does not exist. bub a b is guaranteed to be greater than a; additionally,
+   if by "forgetting information" from b (thinking of this as an information ordering) we arrive
+   at bd <[ b such that bd _does_ have a least upper bound, bub a b is guaranteed to be
+   greater than said upper bound.
+
+   Bub is thus "biased" towards being forced to be an upper bound of a, while being
+   "as close as possible" to b.
+
+   Bsup is the least such bub.
+
+   This definition is key to specifying the mergeable typeclass, an crucial component
+   of the overall Gazelle system. It allows us to talk about "merging" in a very general
+   context with minimal assumptions (is_bub only requires weak partial orders), yet bsup is provably
+   being equivalent to the "true" least upper bound if it exists, assuming completeness;
+   that is, where the existence of _any_ upper bound between a and bd guarantees the existence
+   of a least upper bound sd.
+*)
+
 definition is_bub :: "('a :: Pord_Weak) \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
 "is_bub a b s =
   (pleq a s \<and>
@@ -90,8 +118,7 @@ definition is_bsup :: "('a :: Pord_Weak) \<Rightarrow> 'a \<Rightarrow> 'a \<Rig
 "is_bsup a b s =
   is_least (is_bub a b) s"
 
-(* monotonicity of predicates
-   useful for reasoning about semantics  *)
+(* Monotonicity for predicates *)
 definition is_monop1 :: "(('a :: Pord_Weak) \<Rightarrow> bool) \<Rightarrow> bool" where
 "is_monop1 P =
   (\<forall> a b . pleq a b \<longrightarrow> P a \<longrightarrow> P b)"
@@ -104,7 +131,7 @@ definition is_monop2 :: "(('a :: Pord_Weak) \<Rightarrow> 'a \<Rightarrow> bool)
     P a1 a2 \<longrightarrow>
     P b1 b2)"
 
-(* "contravariant" version *)
+(* "Contravariant" version of monotonicity *)
 definition is_monop2' :: "(('a :: Pord_Weak) \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> bool" where
 "is_monop2' P =
   (\<forall> a1 b1 a2 b2 .
@@ -113,40 +140,44 @@ definition is_monop2' :: "(('a :: Pord_Weak) \<Rightarrow> 'a \<Rightarrow> bool
     P a1 a2 \<longrightarrow>
     P b1 b2)"
 
-(* monotonicity for functions *)
+(* Monotonicity for functions *)
 definition is_mono :: "(('a :: Pord_Weak) \<Rightarrow> 'a) \<Rightarrow> bool" where
 "is_mono f =
   (\<forall> a b .
      pleq a b \<longrightarrow>
      pleq (f a) (f b))"
 
-(* convenience lemmas, true by definition *)
-lemma is_ub_intro :
+(* Convenience introduction and eliminations for ub/sup/bub/bsup
+   (we do not really use inf and lb, so those lemmas are omitted) *)
+lemma is_ubI [intro] :
   assumes H : "\<And> x . x \<in> A \<Longrightarrow> pleq x a"
   shows "is_ub A a" using H
   by(auto simp add:is_ub_def)
 
-lemma is_ub_unfold :
+(* TODO: some of these elim rules could be tagged with [elim]; however, I generally choose
+   not to do this as not all of them are complete in the appropriate sense.
+*)
+lemma is_ubE :
   assumes H1 : "is_ub S ub"
   assumes H2 : "x \<in> S"
   shows "pleq x ub"
   using H1 H2
   by (auto simp add: is_ub_def)
 
-lemma is_sup_intro :
+lemma is_supI :
   assumes Hpleq : "\<And> x . x \<in> A \<Longrightarrow> pleq x ub"
   assumes Hleast : "\<And> x' . is_ub A x' \<Longrightarrow> pleq ub x'"
   shows "is_sup A ub" using Hpleq Hleast
   by(auto simp add:is_least_def is_ub_def is_sup_def)
 
-lemma is_sup_unfold1 :
+lemma is_supD1 :
   assumes H1 : "is_sup S ub"
   assumes H2 : "x \<in> S"
   shows "pleq x ub"
   using H1 H2
   by (auto simp add: is_ub_def is_least_def is_sup_def)
 
-lemma is_sup_unfold2 :
+lemma is_supD2 :
   assumes H1 : "is_sup S ub"
   assumes H2 : "is_ub S ub'"
   shows "pleq ub ub'"
@@ -158,20 +189,26 @@ lemma bsup_leq :
   shows "pleq a x" using H
   by (auto simp add:is_bsup_def is_bub_def is_least_def)
 
+lemma is_bubI :
+  assumes Hpleq : "pleq a bub"
+  assumes Hbub :
+    "\<And> bd sd . pleq bd b \<Longrightarrow> is_sup {a, bd} sd \<Longrightarrow> pleq sd bub"
+  shows "is_bub a b bub" using Hpleq Hbub
+  by(auto simp add:is_bub_def)
 
-lemma is_bub_unfold1 :
+lemma is_bubD1 :
   assumes H1 : "is_bub a b ub"
   shows "pleq a ub" 
   using H1 by (auto simp add:is_bub_def)
 
-lemma is_bub_unfold2 :
+lemma is_bubD2 :
   assumes H1 : "is_bub a b ub"
   assumes H2 : "pleq bd (b)"
   assumes H3 : "is_sup {a, bd} sd"
   shows "pleq sd (ub)"
   using H1 H2 H3 by (auto simp add:is_bub_def)
 
-lemma is_bsup_intro :
+lemma is_bsupI :
   assumes Hpleq : "pleq a bub"
   assumes Hbub :
     "\<And> bd sd . pleq bd b \<Longrightarrow> is_sup {a, bd} sd \<Longrightarrow> pleq sd bub"
@@ -179,19 +216,19 @@ lemma is_bsup_intro :
   shows "is_bsup a b bub" using Hpleq Hbub Hleast
   by(auto simp add:is_bsup_def is_least_def is_bub_def)
 
-lemma is_bsup_unfold1 :
+lemma is_bsupD1 :
   assumes H1 : "is_bsup a b ub"
   shows "pleq a ub" 
   using H1 by (rule bsup_leq)
 
-lemma is_bsup_unfold2 :
+lemma is_bsupD2 :
   assumes H1 : "is_bsup a b ub"
   assumes H2 : "pleq bd (b)"
   assumes H3 : "is_sup {a, bd} sd"
   shows "pleq sd (ub)"
   using H1 H2 H3 by (auto simp add:is_bub_def is_bsup_def is_least_def)
 
-lemma is_bsup_unfold3 :
+lemma is_bsupD3 :
   assumes H1 : "is_bsup a b ub"
   assumes H2 : "is_bub a b ub'"
   shows "pleq ub ub'"
@@ -233,7 +270,7 @@ proof(-)
   thus "a = b" using 0 1 by (auto intro: leq_antisym)
 qed
 
-(* facts about sup *)
+(* Uniqueness for sup, bsup *)
 
 lemma is_sup_unique :
   fixes P :: "('a :: Pord) set"
@@ -262,8 +299,6 @@ proof(-)
     by (auto simp add:is_sup_def is_ub_def is_least_def)
 qed
 
-(* facts about bsup *)
-
 lemma bsup_unique : 
   fixes a b x :: "'a :: Pord"
   assumes H1 : "is_bsup a b x"
@@ -286,18 +321,19 @@ proof(-)
   show ?thesis using leq_antisym 1 3 by auto
 qed
 
-
+(* Pordc = "PORD + Completness" 
+ * Note that this is a rather weak notion of completeness; we only require that
+ * pairs with upper bounds have sups. Later we show that this implies completeness for
+ * _finite_ sets. In some domain theory contexts completeness is presented as
+ * applying to arbitrary sets, including infinite ones; we do not require that here
+ * (intuitively, we know we will always be merging a finite number of language components
+ * to get our final result)
+*)
 class Pordc =
   Pord +
   assumes complete2: "has_ub {a, b} \<Longrightarrow> has_sup {a, b}"
 
-lemma is_bub_intro :
-  assumes Hpleq : "pleq a bub"
-  assumes Hbub :
-    "\<And> bd sd . pleq bd b \<Longrightarrow> is_sup {a, bd} sd \<Longrightarrow> pleq sd bub"
-  shows "is_bub a b bub" using Hpleq Hbub
-  by(auto simp add:is_bub_def)
-
+(* helper lemmas for our proof that bsup equals sup, in the event sup exists *)
 
 lemma bsup_compare1:
   fixes a b bs_ab a' b' bs_a'b :: "'a :: Pordc"
@@ -364,18 +400,15 @@ proof(-)
     by(auto simp add:is_bsup_def is_least_def)
 qed
 
-(* do we really need to prove this again?
-or can we do something more general? *)
+(* TODO: can we merge this with bsup_compare1 somehow? *)
 lemma bsup_compare2:
   fixes a b bs_ab a' b' bs_a'b :: "'a :: Pordc"
   assumes Hbsup1 : "is_bsup a' b' bs_a'b'"
  assumes Hbsup2 : "is_bsup a b bs_ab"
  assumes Hleqa' : "pleq a' a"
  assumes Hleqa : "pleq a (bs_a'b')" 
-(*  assumes Hleqb : "l_pleq b b'" *)
   assumes Hdesc : "\<And> bd sd . pleq bd (b) \<Longrightarrow> is_sup {a, bd} sd \<Longrightarrow> 
                         (pleq bd (b'))" (* can we get away with has_ub here? *)
-(* also used to have:  \<and> pleq bd (aug (bsup a' b')) *)
   shows "pleq bs_ab bs_a'b'"
 proof(-)
   have Bub : "is_bub a b bs_a'b'"
@@ -459,6 +492,11 @@ proof(-)
   show ?thesis using bsup_compare1[OF Hbsup1 Hbsup2 leq_refl[of a] bsup_leq[OF Hbsup1] Hbound] by auto
 qed
 
+(* One of the key results from this file.
+ * A biased supremum is guaranteed to coincide with the "true" supremum, should one exist.
+ * This proves very helpful in characterizing and reasoning about bsup, avoiding some of the
+ * "lower-level" proofs about bsup performed up to this point.
+*)
 lemma bsup_sup :
   fixes a b bs_ab :: "'a :: Pordc"
   assumes Hsup : "is_sup {a, b} s_ab" 
@@ -506,9 +544,9 @@ proof(-)
     have Conc1 : "pleq a bs_ab" using Hbsup
       by(auto simp add:is_bsup_def is_bub_def is_least_def)
 
-    have 0 : "pleq b s_ab" using Hsup by (auto simp add:is_sup_unfold1)
+    have 0 : "pleq b s_ab" using Hsup by (auto simp add:is_supD1)
 
-    have 1 : "pleq s_ab bs_ab" using is_bsup_unfold2[OF Hbsup leq_refl Hsup] by auto
+    have 1 : "pleq s_ab bs_ab" using is_bsupD2[OF Hbsup leq_refl Hsup] by auto
 
     have Conc2 : "pleq b bs_ab" using leq_trans[OF 0 1] by auto
 
@@ -527,8 +565,7 @@ lemma leq_completion :
   fixes a a' b x :: "'a :: Pordc"
   assumes Hleq : "pleq a a'"
   assumes Hsup : "is_sup {a', b} x"
-
-shows "has_sup {a, b}"
+  shows "has_sup {a, b}"
 proof(-)
   have 0 :  "pleq a' x" using Hsup by (simp add:is_sup_def is_least_def is_ub_def)
   have 1 : "pleq a x" using leq_trans[OF Hleq 0] by auto
@@ -543,7 +580,7 @@ lemma bsup_imp_sup :
   assumes H : "pleq b bs"
   shows "is_sup {a, b} bs"
 
-proof(rule is_sup_intro)
+proof(rule is_supI)
   fix x
   assume Hx : "x \<in> {a, b}"
   show "pleq x bs" using H bsup_leq[OF Hbs] Hx
@@ -553,7 +590,7 @@ next
   assume Hi :  "is_ub {a, b} ub"
 
   have 0 : "is_bub a b ub"
-  proof(rule is_bub_intro)
+  proof(rule is_bubI)
     show "pleq a ub" using Hi by (auto simp add:is_ub_def)
   next
     fix bd sd
@@ -563,12 +600,15 @@ next
     have 0 : "is_ub {a, bd} ub" using Hi Hl leq_trans[of bd b ub]
       by(auto simp add:is_ub_def)
 
-    show "pleq sd ub" using is_sup_unfold2[OF Hs 0] by auto
+    show "pleq sd ub" using is_supD2[OF Hs 0] by auto
   qed
 
-  show "pleq bs ub" using is_bsup_unfold3[OF Hbs 0] by auto
+  show "pleq bs ub" using is_bsupD3[OF Hbs 0] by auto
 qed
 
+(* A consequence of bsup_sup : if we have completeness, a bsup, and an upper bound
+ * for a and b, then b must be less than the bsup (i.e. bsup finds a "true supremum")
+ *)
 lemma bsup_imp_sup_conv :
   fixes a b bs ub :: "'a :: Pordc"
   assumes Hbs : "is_bsup a b bs"
@@ -578,16 +618,24 @@ lemma bsup_imp_sup_conv :
 proof(-)
   obtain lub where Hlub : "is_sup {a, b} lub" using Hub complete2 by(auto simp add:has_ub_def has_sup_def)
   have Hbub : "is_bub a b bs" using Hbs by(auto simp add:is_bsup_def is_least_def)
-  have "pleq lub bs" using is_bub_unfold2[OF Hbub leq_refl[of b] Hlub] by auto
+  have "pleq lub bs" using is_bubD2[OF Hbub leq_refl[of b] Hlub] by auto
   hence "pleq b bs" using Hlub leq_trans[of b lub bs] by (auto simp add:is_sup_def is_least_def is_ub_def)
   thus ?thesis using H by auto
 qed
 
+(*
+ * Pordb = "Partial ORDer with Bottom. That is, a partial order with the additional requirement
+ * that there be a least ("bottom", \<bottom>) element. In the literature such orders are often
+ * called "pointed"; however, I wished to avoid confusion since "p" in this acronym already
+ * stands for "partial"
+ *)
 class Pordb =  Pord +
 fixes bot :: "'a :: Pord_Weak" ("\<bottom>")
 assumes bot_spec :
   "\<And> (a :: 'a ) .  pleq bot a"
 
+(* Pordc and Pordb are basically orthogonal extensions to Pord. Often we care about
+ * cases where we have both. *)
 class Pordbc =  Pordc + Pordb
 
 end
