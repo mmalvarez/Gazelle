@@ -1,6 +1,9 @@
 theory Linorder_Insts imports Main
 begin
 
+(* Instances of Linorder (built-in typeclass for linear orderings with a trichotomy law)
+ * for several types, intended for use with Oalist *)
+
 instantiation prod :: (linorder, linorder) linorder
 begin
 

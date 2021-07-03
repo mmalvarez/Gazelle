@@ -1,5 +1,5 @@
-theory RAList
-imports AList Linorder_Insts
+theory Roalist
+imports Oalist Linorder_Insts
 begin
 (* implementation of a recursive AList
    (i.e., ordered alist where values are ordered alists of the same type)

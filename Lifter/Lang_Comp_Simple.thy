@@ -1,4 +1,4 @@
-theory LangCompSimple imports LiftUtils LangComp
+theory Lang_Comp_Simple imports Lifter Lang_Comp
 begin
 
 (* Simplification of langcomp.

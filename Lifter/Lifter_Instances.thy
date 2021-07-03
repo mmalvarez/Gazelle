@@ -1,4 +1,4 @@
-theory LiftInstances imports LiftUtils
+theory Lifter_Instances imports Lifter
 begin
 
 (* TODOs :

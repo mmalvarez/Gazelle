@@ -1,7 +1,16 @@
-theory AList imports Main
+theory Oalist imports Main
 begin
+
 (* Implementation of association lists with ordered keys
-   (giving a canonical representation) *)
+ * This is based somewhat on the implementation of association lists from
+ * HOL/Library/AList.thy and HOL/Library/DAlist.thy, with the twist that
+ * keys are required to be in strictly increasing order.
+ * This gives us the property that all sets of (key, value) pairs have a canonical representation,
+ * which is necessary to satisfy the ordering laws used by Gazelle
+ * (see Mergeable/Pord.thy, Mergeable/Mergeable.thy)
+ *
+ * TODO: Implementations given here are not necessarily as efficient as they could be
+ *)
 
 definition strict_order ::
   "('a :: linorder) list \<Rightarrow> bool" where
@@ -163,8 +172,6 @@ proof(-)
 qed
 
 
-declare [[show_types = false]]
-
 lemma str_ord_update_correct :
   fixes l :: "(('key :: linorder) * 'value) list"
   fixes k :: 'key
@@ -258,9 +265,6 @@ proof(induction l arbitrary: k v)
   qed
      
 
-(*
-lift_definition lookup :: "('key :: linorder, 'value) oalist \<Rightarrow> 'key \<Rightarrow> 'value option" is map_of  .
-*)
 lift_definition empty :: "('key :: linorder, 'value) oalist" is "[]"
   by(simp add:strict_order_def)
 
@@ -274,7 +278,6 @@ proof(-)
   show "strict_order (map fst (str_ord_update k v l))" using str_ord_update_correct[OF H] by auto
 qed
 
-value "update (1 :: nat) (True) empty"
 
 fun str_ord_delete :: "('key :: linorder) \<Rightarrow> ('key * 'value) list \<Rightarrow> ('key * 'value) list" where
 "str_ord_delete k [] = []"
@@ -459,6 +462,5 @@ definition kmap_singleton :: "('key :: linorder) kmap \<Rightarrow> 'key" where
 definition add_key :: "('key) kmap \<Rightarrow> 'key :: linorder \<Rightarrow> 'key kmap" where
 "add_key l k = update k () l"
 
-value "impl_of (to_oalist ([(1 :: nat, True)]))"
 
 end

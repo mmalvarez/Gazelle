@@ -1,4 +1,4 @@
-theory Mergeable_Roalist imports "../Lib/Oalist/RoaList" "Mergeable_Oalist" "Pord" "Mergeable_Instances"
+theory Mergeable_Roalist imports "../Lib/Oalist/Roalist" "Mergeable_Oalist" "Pord" "Mergeable_Instances"
 begin
 
 (*

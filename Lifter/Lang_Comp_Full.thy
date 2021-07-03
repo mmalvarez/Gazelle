@@ -1,5 +1,5 @@
-theory LangCompFull
-imports LangCompSimple
+theory Lang_Comp_Full
+imports Lang_Comp_Simple
 begin
 
 (* need a convenient way to map a set of functions

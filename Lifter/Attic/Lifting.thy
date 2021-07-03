@@ -1,5 +1,5 @@
 theory Lifting
-  imports "../Mergeable/MergeableInstances"
+  imports "../Mergeable/Mergeable_Instances"
 begin
 
 (* (yet another) LiftUtils implementation
