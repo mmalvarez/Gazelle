@@ -1,16 +1,19 @@
 theory Lifter_Instances imports Lifter
 begin
 
-(* TODOs :
-  - proofs for commutativity lifting
-  - proofs for associativity lifting
-  - proofs for var map lifting
-  - proofs about LUBs
-*)
+(*
+ * In this file, we construct instances of the lifter record (see Lifter.v)
+ * that describe how to lift into (and out of) most of the common types we use in Gazelle.
+ * Note that some of the lifting instances at the end of this file have proofs admitted.
+ * Completing the proofs for oalist and roalist, and eventually purging this development
+ * of admits ("sorry") is an important TODO.
+ *)
 
-(* typeclass for data that we can supply "bogus" default values
-   for (instead of undefined)
-*)
+(* Bogus: a typeclass for data that we can supply "bogus" default values for (instead of undefined)
+ * as mentioned in Lifter.v, this avoids annoying problems that can crop up in the generated code.
+ * The value chosen has no significance; it is just there as a placeholder to avoid
+ * crashing or getting stuck at undefined values.
+ *)
 
 class Bogus =
   fixes bogus :: "'a"
@@ -46,7 +49,7 @@ instance proof qed
 end
 
 
-(* TODO: which option instance?
+(* An alternate option instance, in which the bogus value is None
    (list instance should probably be [] but also could use
    revisiting)
 *)
@@ -57,11 +60,17 @@ instance proof qed
 end
 *)
 
+(* Instead we use this instance, where
+ * we assume that the contained value also implements bogus.
+ * (TODO: why exactly is this better?)
+ *)
+
 instantiation option :: (Bogus) Bogus begin
 definition option_bogus : "bogus = Some bogus"
 instance proof qed
 end
 
+(* TODO: why not [bogus]? *)
 instantiation list :: (_) Bogus begin
 definition list_bogus : "bogus = []"
 instance proof qed
@@ -89,8 +98,14 @@ instance proof qed
 end
 
 
-(*
-identity lifting
+(* Here we implement the simplest lifting, an identity lifting from 'a to 'a.
+ * For this lifting (as well as all others below), we give:
+ * - a lifting implementation, id_l
+ * - a liftingv implementation, id_lv
+ * - a proof of validity (in this case weak; id_l_valid_weak)
+ * - a restatement of the proof that can sometimes help with automation by increasing the
+ *   contexts in which it can apply (id_l_valid_weak_vsg)
+ * - another restatement of the proof that uses extensionality (id_l_weak_vsg')
 *)
 
 
@@ -108,15 +123,11 @@ definition id_l ::
 definition id_lv :: "('x, 'a :: {Pord, Bogus}, 'a) liftingv" where
 "id_lv = lifting.extend id_l \<lparr> LOutS = (\<lambda> _ . UNIV) \<rparr>"
 
-(* lemma id_l_valid_weak / vsg / vsg'
-lemma id_l_valid / vsg / vsg'
-lemma id_l_validb_weak / vsg / vsg'
-lemma id_l_validb / vsg / vsg'
-*)
 
-(* could prove validb lemmas if we change the hierarchy so that we
+(* Note that we could prove validb lemmas if we change the hierarchy so that we
    force base = bogus (i.e. make Pordb depend on Bogus typeclass).
-   unclear if this is worth it. *)
+   However, this feels like ascribing "meaning" to the bogus element in a way that
+   doesn't seem to be in the spirit of what Bogus is "meant for". *)
 lemma id_l_valid_weak :
   shows "lifting_valid_weak' id_l"
 proof(rule lifting_valid_weakI)
@@ -141,9 +152,7 @@ lemma id_l_valid_weak_vsg' :
   shows "lifting_valid_weak id_l S"
   using id_l_valid_weak Hv fun_eq_iff[of S "\<lambda> _ . UNIV"] by auto
 
-(*
-trivial ordering
-*)
+(* Trivial lifting *)
 
 definition triv_l' ::
   "('a, 'b) syn_lifting \<Rightarrow> ('a, 'b md_triv) syn_lifting" where
@@ -184,8 +193,6 @@ next
   show "LUpd triv_l s a b \<in> UNIV" by auto
 qed
 
-(* restatement of theorem with valid-set unified with a variable
-   (vsg = valid-set-generalization) *)
 lemma triv_l_valid_weak_vsg :
   assumes "S = (\<lambda> x . UNIV)"
   shows "lifting_valid_weak (triv_l :: ('x, 'a :: Bogus, 'a md_triv) lifting) S"
@@ -197,11 +204,11 @@ lemma triv_l_valid_weak_vsg' :
   assumes "\<And> x . S x = UNIV"
   shows "lifting_valid_weak (triv_l :: ('x, 'a :: Bogus, 'a md_triv) lifting) S"
   using assms triv_l_valid_weak_vsg fun_eq_iff[of S "\<lambda> _ . UNIV"] by auto
-  
 
-(*
-option ordering
-*)
+
+
+(* option lifting - really a lifting-transformer; from a lifting on 'a \<Rightarrow> 'b,
+ * we get a lifting 'a \<Rightarrow> 'b option*)
 
 (* TODO: we could probably use bogus here. *)
 definition option_l' ::
@@ -253,7 +260,7 @@ lemma option_l_valid_weak_vsg :
   shows "lifting_valid_weak (option_l t) S'"
   using assms option_l_valid_weak by auto
 
-
+(* Option_l is valid (not just valid_weak) *)
 lemma option_l_valid :
   assumes H : "lifting_valid (t :: ('x, 'a, 'b :: {Pord}, 'z) lifting_scheme) S"
   shows "lifting_valid (option_l t) (option_l_S S)"
@@ -319,6 +326,8 @@ lemma option_l_validb_vsg :
   shows "lifting_validb (option_l t) S'"
   using assms option_l_validb by auto
 
+(* If liftings l2 and l2 are orthogonal, the results of applying the option
+ * lifting-transformer to each will be also. *)
 lemma option_ortho :
   assumes H1 : "lifting_valid_weak l1 S1"
   assumes H2 : "lifting_valid_weak l2 S2"
@@ -341,8 +350,10 @@ next
     by(auto simp add: option_l_def)
 
 qed
-(* sum types *)
 
+(* sum types. We define two liftings, inl and inr. For projection to always be well-defined,
+ * note that we require the "other" component (e.g. the "right" component for inl)
+ * to have a least element. *)
 definition inl_l ::
   "('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow> 
    ('x, 'a, ('b + 'c :: Pordb)) lifting" where
@@ -360,13 +371,7 @@ definition inl_l_S ::
 "inl_l_S S s =
   Inl ` S s"
 
-(* lemmata to define:
-  - valid_weak
-  - valid
-  - validb_weak
-  - validb *)
-
-(* Sum has no least element, we inl/inr liftings cannot have validb versions *)
+(* Sum has no least element, so inl/inr liftings cannot have validb versions *)
 lemma inl_l_valid_weak :
   assumes H : "lifting_valid_weak t S"
   shows "lifting_valid_weak (inl_l t :: ('x, 'a, ('b :: Pord + 'c :: Pordb)) lifting) (inl_l_S S)"
@@ -420,6 +425,7 @@ next
     by(auto simp add: inl_l_def inl_l_S_def LNew_def split:sum.splits)
 qed
 
+(* The other sum lifting: inr *)
 definition inr_l ::
   "('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow> 
    ('x, 'a, ('c :: Pordb + 'b)) lifting" where
@@ -436,12 +442,6 @@ definition inr_l_S ::
   "('x, 'b) valid_set \<Rightarrow> ('x, ('c :: Pordb + 'b)) valid_set" where
 "inr_l_S S s =
   Inr ` S s"
-
-(* lemmata to define:
-  - valid_weak
-  - valid
-  - validb_weak
-  - validb *)
 
 (* Sum has no least element, we inl/inr liftings cannot have validb versions *)
 lemma inr_l_valid_weak :
@@ -498,7 +498,7 @@ next
     by(auto simp add: inr_l_def inr_l_S_def LNew_def split:sum.splits)
 qed
 
-
+(* Priority lifting transformer *)
 definition prio_l' ::
   "('a, 'b) syn_lifting \<Rightarrow>
    ('a, 'b md_prio) syn_lifting" where
@@ -506,7 +506,12 @@ definition prio_l' ::
   (\<lambda> p . (case p of
               mdp m b \<Rightarrow> t b))"
 
-(* note: this only allows setting output priority based on syntax. *)
+(* Prio_l is rather customizable: it takes
+ * - a priority f0 to use on the base element
+ * - a priority transformation function f1 to use when updating
+ * - a lifting ('a \<Rightarrow> 'b)
+ * and returns a lifting ('a \<Rightarrow> 'b md_prio)
+ * note: this only allows setting output priority based on syntax. *)
 definition prio_l ::
  "('x \<Rightarrow> nat) \<Rightarrow>
   ('x \<Rightarrow> nat \<Rightarrow> nat) \<Rightarrow>
@@ -532,8 +537,8 @@ definition prio_l_S :: "('x, 'b) valid_set \<Rightarrow> ('x, 'b md_prio) valid_
   { p . (case p of
           mdp n x \<Rightarrow> x \<in> S s) }"
 
-(* prio preserves weak and strong liftings,
-   given a (non-strictly) increasing change *)
+(* given a (non-strictly) increasing change of
+ * the "priority index" (f1), prio preserves weak and strong liftings. *)
 lemma prio_l_valid_weak :
   assumes H : "lifting_valid_weak t S"
   assumes Hmono : "\<And> s p . p \<le> f1 s p"
@@ -592,9 +597,10 @@ lemma prio_l_valid_vsg :
   shows "lifting_valid (prio_l f0 f1 t) S'"
   using assms prio_l_valid by blast
 
-(* prio turns weak liftings into strong ones,
-   given a strictly increasing change
-   (i think prio also lets us ignore side conditions on valid sets?) *)
+(* On the other hand, if the increment function f1 is strictly increasing (for all syntax value),
+ * prio turns weak liftings into strong ones,
+ * and also allows us to ignore side conditions on valid sets (hence (\<lambda> _ . UNIV) in the
+ * conclusion below) *)
 lemma prio_l_valid_strong :
   fixes t :: "('x, 'a, 'b :: Pord) lifting"
   assumes H : "lifting_valid_weak t S"
@@ -638,7 +644,6 @@ lemma prio_l_valid_strong_vsg' :
   by(auto)
 
 
-(* lifting_valid_weakb? *)
 lemma prio_l_valid_weakb :
   assumes H : "lifting_valid_weakb t S"
   assumes Hzero : "\<And> s . f0 s = 0"
@@ -729,8 +734,10 @@ lemma prio_l_validb_strong_vsg' :
   using prio_l_validb_strong_vsg[OF _ H Hzero Hmono] fun_eq_iff[of S' "\<lambda> _ . UNIV"] Hv by auto
 
 (*
-prio_ortho may not be useful as it would only work in cases where increment function
-is the same. this tends to not be where we use prio.
+ * We could prove prio_ortho - orthogonality for prio -
+ * - but it is likely not useful as it would only work in cases where increment function
+ * is the same between the two prio liftings being merged.
+ * This tends to not be where we use prio.
 *)
 
 (*
@@ -739,6 +746,9 @@ lemma prio_ortho :
                        (l2 :: ('x, 'a2, 'b :: Mergeable) lifting)"
   shows "l_ortho (prio_l l1) (prio_l l2)"
 proof(rule l_orthoI)
+*)
+
+(* Several useful examples of instantiating prio_l.
 *)
 definition prio_l_keep :: "('x, 'a, 'b :: Pord) lifting \<Rightarrow> ('x, 'a, 'b md_prio) lifting" where
 "prio_l_keep =
@@ -762,10 +772,10 @@ definition prio_l_case_inc :: "('x \<Rightarrow> nat) \<Rightarrow> ('x, 'a, 'b 
 
 
 
-
-(*
-products
-*)
+(* Lifting implementations for product types.
+ * As one might expect, there are two main ones, fst and snd.
+ * As with sum types, above, we require the "other component" to have a least element.
+ *)
 
 definition fst_l' ::
   "('a, 'b1) syn_lifting \<Rightarrow>
@@ -891,19 +901,6 @@ lemma fst_l_validb_vsg :
   shows "lifting_validb ((fst_l t) :: ('x, 'a, ('b1 :: Pordb) * ('b2 :: Pordb)) lifting) S'"
   using assms fst_l_validb by auto  
 
-
-(* need these for snd *)
-
-(* then need orthogonality theorems *)
-
-(* then need valid_weakb/validb for merge *)
-
-(* then need orthogonality theorems for merge*)
-
-(* finally, we should at least state the theorems for
-AList and RAlist *)
-
-(* and also go back and do Inl/Inr *)
 
 definition snd_l' ::
   "('a, 'b2) syn_lifting \<Rightarrow>
@@ -1031,6 +1028,11 @@ lemma snd_l_validb_vsg :
                         S'"
   using assms snd_l_validb by auto
 
+(*
+ * One important fact about products. Fst and snd are orthogonal regardless of what
+ * liftings they wrap. This arguably obvious fact is quite useful in enabling
+ * separate reasoning about tuple elements.
+ *)
 
 lemma fst_snd_ortho :
   assumes H1 : "lifting_validb l1 S1"
@@ -1058,7 +1060,8 @@ lemma snd_fst_ortho :
   using l_ortho_comm[OF fst_snd_ortho[OF H1 H2]]
   by auto
 
-(* do we really need Mergeableb constraint on b2? *)
+(* TODO: do we really need Mergeableb constraint on b2? *)
+(* if l1 and l2 are ortho, so are "fst l1" and "fst l2" *)
 lemma fst_ortho :
   assumes H1 : "lifting_validb l1 S1"
   assumes H2 : "lifting_validb l2 S2"
@@ -1102,30 +1105,17 @@ next
 qed
 
 
-
 (*
-do we want a further correctness condition that says we preserve
-orthogonality?
-*)
-
-(* merging
-   note that the orthogonality condition required for validity
-   is rather strong here. *)
-(*
-definition merge_l ::
-  "('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme \<Rightarrow>
-   ('x, 'a2, 'b :: Mergeable, 'z2) lifting_scheme \<Rightarrow>
-   ('x, 'a1 * 'a2, 'b) lifting" where
-"merge_l t1 t2 =
-  \<lparr> LUpd =
-    (\<lambda> s a b . 
-      (case a of (a1, a2) \<Rightarrow>
-        [^ (LUpd t1 s a1 b), (LUpd t2 s a2 b) ^]))
-  , LOut =
-    (\<lambda> s b . (LOut t1 s b, LOut t2 s b))
-  , LBase =
-    (\<lambda> s . [^ LBase t1 s, LBase t2 s ^]) \<rparr>"
-*)
+ * One of the more interesting definitions in this file. Merge_l describes
+ * how we can "merge" two liftings ('a1 \<Rightarrow> 'b) and ('a2 \<Rightarrow> 'b) into one lifting
+ * ('a1 * 'a2 \<Rightarrow> 'b"). This can be done when the two liftings are orthogonal, and have
+ * equal valid-sets. It relies on the fact that orthogonality implies the existence of
+ * some suprema; since those exist, we can then use the fact that bsup will find
+ * that supremum.
+ *
+ * The desire to have this be a lawful lifting (when possible) motivates many of the
+ * seeming peculiarities in the definitions in Lifter.thy.
+ *)
 
 definition merge_l ::
   "('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme \<Rightarrow>
@@ -1141,12 +1131,7 @@ definition merge_l ::
   , LBase =
     (\<lambda> s . LBase t1 s) \<rparr>"
 
-(* need valid_weak? validb? *)
-
-(* valid set needs to be S1 \<inter> S2 I believe *)
-(* possibly we need to change the definition of merge
-   so that instead of doing bsup it just applies one then the other. *)
-(* do valid sets need to be equal? *)
+(* TODO: do valid sets need to be equal? or is some kind of sub/superset possible? *)
 lemma merge_l_valid :
   assumes H1 : "lifting_valid (l1 :: ('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme) S1"
   assumes H2 : "lifting_valid (l2 :: ('x, 'a2, 'b :: Mergeable, 'z2) lifting_scheme) S2"
@@ -1221,223 +1206,13 @@ lemma merge_l_valid_vsg :
   shows "lifting_valid (merge_l l1 l2) S3"
   using assms merge_l_valid by auto
 
-(*
-declare [[show_types]]
-
-lemma sup_l_prod_fst :
-  fixes f :: "'x \<Rightarrow> 'x1"
-  fixes f' :: "'x \<Rightarrow> 'x2"
-  fixes l1  :: "('x1, 'a1, 'b1 :: Mergeableb) lifting"
-  fixes l1' :: "('x2, 'a2, 'b1 :: Mergeableb) lifting"
-  fixes l2  :: "('x1, 'a3, 'b2 :: Mergeableb) lifting"
-  assumes H : "sup_l f f' l1 l1'"
-  shows "sup_l f f' (prod_l l1 l2) (fst_l l1')"
-proof(rule sup_l_intro)
-  fix s :: "'x"
-  fix a1 :: "('a1 \<times> 'a3)" 
-  fix a2 :: "'a2"
-  obtain x1 and x2 where Hx : "a1 = (x1, x2)" by (cases a1; auto)
-  obtain ub where Hub : "is_sup {LIn1 l1 (f s) x1, LIn1 l1' (f' s) a2} ub"
-      using sup_l_unfold1[OF H, of "s" x1] Hx
-      by(auto simp add:prod_l_def fst_l_def has_sup_def split:prod.splits)
-  
-  have "is_sup {LIn1 (prod_l l1 l2) (f s) a1, LIn1 (fst_l l1') (f' s) a2} (ub, LIn1 l2 (f s) x2)" using  Hub Hx
-    by(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def
-        prod_pleq prod_l_def fst_l_def bot_spec leq_refl split:prod.splits)
-  thus "has_sup {LIn1 (prod_l l1 l2) (f s) a1, LIn1 (fst_l l1') (f' s) a2}" by (auto simp add:has_sup_def)
-next
-  fix s :: "'x"
-  fix a1::"'a1 \<times> 'a3"
-  fix a2::"'a2"
-  fix b1 b2:: "'b1 \<times> 'b2"
-  assume Hb : "has_sup {b1, b2}"
-  obtain x1 and x2 where Hx : "a1 = (x1, x2)" by (cases a1; auto)
-  obtain y1 and y2 where Hy : "b1 = (y1, y2)" by (cases b1; auto)
-  obtain z1 and z2 where Hz : "b2 = (z1, z2)" by (cases b2; auto)
-
-  have Hub1 : "has_sup {y1, z1}" using Hy Hz Hb
-    by(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def prod_pleq)
-
-  obtain ub where Hub : "is_sup {LIn2 l1 (f s) x1 y1, LIn2 l1' (f' s) a2 z1} ub"
-      using sup_l_unfold2[OF H Hub1, of s x1] Hx Hy Hz
-      by(auto simp add:prod_l_def fst_l_def has_sup_def split:prod.splits)
-
-  have "is_sup {LIn2 (prod_l l1 l2) (f s) a1 b1, LIn2 (fst_l l1') (f' s) a2 b2} (ub, LIn2 l2 (f s) x2 y2)" using  Hub Hx Hy Hz
-    by(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def
-        prod_pleq prod_l_def fst_l_def bot_spec leq_refl split:prod.splits)
-  thus "has_sup {LIn2 (prod_l l1 l2) (f s) a1 b1, LIn2 (fst_l l1') (f' s) a2 b2}" by (auto simp add:has_sup_def)
-qed
-
-lemma sup_lg_prod_snd :
-  fixes f :: "'x \<Rightarrow> 'x1"
-  fixes f' :: "'x \<Rightarrow> 'x2"
-  fixes l1  :: "('x1, 'a1, 'b1 :: Mergeableb) lifting"
-  fixes l2  :: "('x1, 'a2, 'b2 :: Mergeableb) lifting"
-  fixes l2' :: "('x2, 'a3, 'b2 :: Mergeableb) lifting"
-  assumes H : "sup_l f f' l2 l2'"
-  shows "sup_l f f' (prod_l l1 l2) (snd_l l2')"
-proof(rule sup_l_intro)
-  fix s :: "'x"
-  fix a1 :: "('a1 \<times> 'a2)" 
-  fix a2 :: "'a3"
-  obtain x1 and x2 where Hx : "a1 = (x1, x2)" by (cases a1; auto)
-  obtain ub :: 'b2 where Hub : "is_sup {LIn1 l2 (f s) x2, LIn1 l2' (f' s) a2} ub"
-      using sup_l_unfold1[OF H, of s x2] Hx
-      by(auto simp add:prod_l_def fst_l_def has_sup_def split:prod.splits)
-  
-  have "is_sup {LIn1 (prod_l l1 l2) (f s) a1, LIn1 (snd_l l2') (f' s) a2} (LIn1 l1 (f s) x1, ub)" using  Hub Hx
-    by(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def
-        prod_pleq prod_l_def snd_l_def bot_spec leq_refl split:prod.splits)
-  thus "has_sup {LIn1 (prod_l l1 l2) (f s) a1, LIn1 (snd_l l2') (f' s) a2}" by (auto simp add:has_sup_def)
-next
-  fix s :: "'x"
-  fix a1::"'a1 \<times> 'a2"
-  fix a2::"'a3"
-  fix b1 b2:: "'b1 \<times> 'b2"
-  assume Hb : "has_sup {b1, b2}"
-  obtain x1 and x2 where Hx : "a1 = (x1, x2)" by (cases a1; auto)
-  obtain y1 and y2 where Hy : "b1 = (y1, y2)" by (cases b1; auto)
-  obtain z1 and z2 where Hz : "b2 = (z1, z2)" by (cases b2; auto)
-
-  have Hub2 : "has_sup {y2, z2}" using Hy Hz Hb
-    by(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def prod_pleq)
-
-  obtain ub where Hub : "is_sup {LIn2 l2 (f s) x2 y2, LIn2 l2' (f' s) a2 z2} ub"
-      using sup_l_unfold2[OF H Hub2, of s x2] Hx Hy Hz
-      by(auto simp add:prod_l_def fst_l_def has_sup_def split:prod.splits)
-
-  have "is_sup {LIn2 (prod_l l1 l2) (f s) a1 b1, LIn2 (snd_l l2') (f' s) a2 b2} (LIn2 l1 (f s) x1 y1, ub)" using  Hub Hx Hy Hz
-    by(auto simp add:has_sup_def is_sup_def is_least_def is_ub_def
-        prod_pleq prod_l_def snd_l_def bot_spec leq_refl split:prod.splits)
-  thus "has_sup {LIn2 (prod_l l1 l2) (f s) a1 b1, LIn2 (snd_l l2') (f' s) a2 b2}" by (auto simp add:has_sup_def)
-qed
-
-lemma prio_sup :
-  fixes b1 b2 :: "('b :: Pordb) md_prio"
-  shows "has_sup {b1, b2}"
-proof-
-  obtain b1p and b1' where Hb1 : "b1 = mdp b1p b1'" by(cases b1; auto)
-  obtain b2p and b2' where Hb2 : "b2 = mdp b2p b2'" by (cases b2; auto)
-
-  have "is_ub {b1, b2} (mdp ((max b1p b2p) + 1) \<bottom>)"
-    using Hb1 Hb2
-    by(auto simp  add: is_ub_def prio_pleq prio_bot)
-
-  hence "has_ub {b1, b2}" by (auto simp add:has_ub_def)
-
-  thus "has_sup {b1, b2}" by(rule complete2; auto)
-qed
-
-lemma sup_l_prio :
-  fixes f :: "'x \<Rightarrow> 'y1"
-  fixes f' :: "'x \<Rightarrow> 'y2"
-  fixes l1 :: "('y1, 'a1, 'b :: Pordb) lifting"
-  fixes l2 :: "('y2, 'a2, 'b :: Pordb) lifting"
-  shows "sup_l f f' (prio_l f0_1 f1_1 l1) (prio_l f0_2 f1_2 l2)"
-proof(rule sup_l_intro)
-  fix s :: "'x"
-  fix a1 :: "'a1"
-  fix a2 :: "'a2"
-  show "has_sup {LIn1 (prio_l f0_1 f1_1 l1) (f s) a1, LIn1 (prio_l f0_2 f1_2 l2) (f' s) a2}"
-    by(rule prio_sup)
-next
-  fix s :: "'x"
-  fix a1 :: "'a1"
-  fix a2 :: "'a2"
-  fix b1 b2 :: "'b md_prio"
-  assume H : "has_sup {b1, b2}"
-  show "has_sup {LIn2 (prio_l f0_1 f1_1 l1) (f s) a1 b1, LIn2 (prio_l f0_2 f1_2 l2) (f' s) a2 b2}"
-    by(rule prio_sup)
-qed
-
-lemma sup_l_inc_zero :
-  fixes l1 :: "('y1, 'a1, 'b :: Mergeableb) lifting"
-  fixes l2:: "('y2, 'a2, 'b :: Mergeableb) lifting"
-  shows "sup_l f f' (prio_l_zero l1) (prio_l_inc l2)"
-  unfolding prio_l_zero_def prio_l_inc_def prio_l_const_def
-  by(rule sup_l_prio)
-(* prios = sort of different
-   we probably need to relate the details of the functions?
-   (or do we not? md_prio always has an upper bound *)
-(*
-lemma sup_l_inc_zero :
-  fixes l1 :: "('a1, 'b :: Mergeableb) lifting"
-  fixes l2:: "('a2, 'b :: Mergeableb) lifting"
-  shows "sup_l (prio_l_zero l1) (prio_l_inc l2)"
-proof(rule sup_l_intro)
-  fix a1 :: "'a1"
-  fix a2 :: "'a2"
-
-  (* this is kind of a bogus case *)
-  have "is_ub {LIn1 (prio_l_zero l1) a1, LIn1 (prio_l_inc l2) a2} (mdp 1 \<bottom>)"
-    by(auto simp add:prio_l_zero_def prio_l_const_def prio_l_def prio_l_inc_def
-            has_sup_def is_sup_def is_least_def is_ub_def prio_pleq bot_spec split:md_prio.splits)
-
-  hence 0 : "has_ub {LIn1 (prio_l_zero l1) a1, LIn1 (prio_l_inc l2) a2}"
-    by(auto simp add:has_ub_def)
-
-  obtain lub where
-    "is_sup {LIn1 (prio_l_zero l1) a1, LIn1 (prio_l_inc l2) a2} lub" 
-    using complete2[OF 0] by(auto simp add:has_sup_def)
-  
-
-  thus "has_sup {LIn1 (prio_l_zero l1) a1, LIn1 (prio_l_inc l2) a2}"
-    by(auto simp add:has_sup_def)
-next
-  fix a1 :: "'a1"
-  fix a2 :: "'a2"
-  fix b1 :: "'b md_prio"
-  fix b2 :: "'b md_prio"
-  assume Hsup : "has_sup {b1, b2}"
-
-
-  have "is_ub {LIn2 (prio_l_zero l1) a1 b1, LIn2 (prio_l_inc l2) a2 b2} (LIn2 (prio_l_inc l2) a2 b2)"
-    by(auto simp add:prio_l_zero_def prio_l_const_def prio_l_def prio_l_inc_def
-            leq_refl
-            has_sup_def is_sup_def is_least_def is_ub_def prio_pleq bot_spec split:md_prio.splits)
-
-  hence 0 : "has_ub  {LIn2 (prio_l_zero l1) a1 b1, LIn2 (prio_l_inc l2) a2 b2}"
-    by(auto simp add:has_ub_def)
-
-  obtain lub where
-    "is_sup {LIn2 (prio_l_zero l1) a1 b1, LIn2 (prio_l_inc l2) a2 b2} lub"
-    using complete2[OF 0] by(auto simp add:has_sup_def)
-
-  thus "has_sup {LIn2 (prio_l_zero l1) a1 b1, LIn2 (prio_l_inc l2) a2 b2}"
-    by(auto simp add:has_sup_def)
-qed
-*)
-*)
-
-(*
-variable maps
-*)
-
-(* simplest case for lifting into variable map. only allows 
-   dispatch based on syntax. *)
-(* TODO: is this definition of out going to cause problems? *)
-(*
-definition oalist_pl ::
-   "('x \<Rightarrow> ('k :: linorder) option) \<Rightarrow>
-    ('x, 'a, 'b, 'z) plifting_scheme \<Rightarrow>
-    ('x, 'a, ('k, 'b) oalist) plifting" where
-"oalist_pl f t =
-  \<lparr> LUpd = (\<lambda> s a l .
-            (case (f s) of
-              Some k \<Rightarrow>
-                (case get l k of
-                  None \<Rightarrow> (update k (LNew t s a) l)
-                  | Some v \<Rightarrow> (update k (LUpd t s a v) l))
-              | None \<Rightarrow> l))
-  , LOut = (\<lambda> s l . (case (f s) of
-                      Some k \<Rightarrow> (case get l k of 
-                                  Some a \<Rightarrow> LOut t s a
-                                  | None \<Rightarrow> LOut t s (LBase t s))
-                      | None \<Rightarrow> LOut t s (LBase t s)))
-  , LBase = (\<lambda> s . (case (f s) of
-                      Some k \<Rightarrow> update k (LBase t s) empty
-                      | None \<Rightarrow> empty)) \<rparr>"
-*)
+(* Liftings for variable maps. These require a mapping from syntax to key (used for lookup
+ * and update in the variable map).
+ * As with the above instances, there is a restriction here in that we must be able
+ * to get the key out of _just_ the syntax, without examining the state.
+ * In practice this means that we cannot support notions like "dereferencing a pointer"
+ * in a single step.
+ *)
 
 definition oalist_l ::
    "('x \<Rightarrow> ('k :: linorder) option) \<Rightarrow>
@@ -1467,7 +1242,8 @@ definition oalist_l_S ::
    where
 "oalist_l_S f S s =
   { l . \<exists> k a . f s = Some k \<and> get l k = Some a \<and> a \<in> S s }"
-  
+
+(* TODO: get these theorems working again *)
 (*
 lemma oalist_l_valid :
   fixes f :: "('x \<Rightarrow> 'k :: linorder)"
@@ -1535,7 +1311,9 @@ next
 qed
 *)
 
-(* utilities for interfacing with Gensyn *)
+(* Utilities for interfacing with Gensyn.
+ * prod_fan lets us retain the old "large" of type 'b, while also returning the new "large" value.
+ *)
 definition prod_fan_l ::
   "('x \<Rightarrow> 'a \<Rightarrow> 'c :: Pord) \<Rightarrow>
    ('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow>
@@ -1556,7 +1334,8 @@ definition prod_fan_S ::
   where
 "prod_fan_S f t S s =
   { cb . \<exists> c b . cb = (c, b) \<and> b \<in> S s \<and> c = f s (LOut t s b)}"
-  
+
+(* TODO: show validity here *)
 (*
 lemma prod_fan_l_valid :
   fixes f :: "('x \<Rightarrow> 'a \<Rightarrow> 'c)"
@@ -1565,13 +1344,19 @@ lemma prod_fan_l_valid :
   shows "lifting_valid (prod_fan_l f l)"
   using H by (auto simp add: lifting_valid_def prod_fan_l_def)
 *)
+
+(* "reversing" a lifting is just a synonym for "LOut".
+ * This is mnemonically helpful in some cases when constructing complex liftings,
+ * but is a bit of a misnomer since its input and output types don't match. *)
 definition l_reverse ::
   "('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow>
    'x \<Rightarrow> 'b \<Rightarrow> 'a" where
 "l_reverse l =
   LOut l"
 
-
+(* Lifting instance for a recursive Oalist. Used in Lambda.thy to express variable maps
+ * that might contain closures (which in turn contain variable maps, etc.) *)
+(* TODO: finish these correctness proofs. *)
 definition roalist_l ::
    "('x \<Rightarrow> ('k :: linorder) option) \<Rightarrow>
     ('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow>
@@ -1600,15 +1385,9 @@ definition roalist_l_S ::
 "roalist_l_S f S s =
   { l . \<exists> k a . f s = Some k \<and> roalist_get_v l k = Some a \<and> a \<in> S s }"
 
-(*
-  \<lparr> LOutS = (\<lambda> s . { l . \<exists> k a . f s = Some k \<and> roalist_get_v l k = Some a \<and> a \<in> LOutS v s }) \<rparr>"
-*)
-(* idea: we want a list head lifting that never modifies head. just pushes result. 
-   does this meet our validity criteria? no; update not idempotent.
-   however, we could perhaps have a "pre-pass" that pushes a bogus element onto
-   the stack first, if we need write-only access
-*)
-
+(* TODO: correctness proof for list_hd_l.
+ * This is used in Lambda.
+ *)
 definition list_hd_l ::
   "('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow> ('x, 'a, 'b list md_triv) lifting" where
 "list_hd_l t =
@@ -1652,52 +1431,11 @@ definition list_hd_sc_pv ::
   \<lparr> LOutS =
     (\<lambda> s . { b . (\<exists> bh bl . bh \<in> LOutS v s \<and> (b = (bh, bl)))}) \<rparr>"
 *)
-(* Convenience definitions for accessing members of structures. *)
-(*
-fun t1_l :: "('x, 'a, 'e1, 'z) lifting_scheme \<Rightarrow>
-             ('x, 'a, 'e1 * 'rest :: Pordb) lifting" where
-"t1_l l = fst_l l"
-
-fun t2_l :: "('x, 'a, 'e2, 'z) lifting_scheme \<Rightarrow>
-             ('x, 'a, 'e1 :: Pordb * 'e2 * 'rest :: Pordb) lifting" where
-"t2_l l = (snd_l (t1_l l))" 
-
-fun t3_l :: "('x, 'a, 'e3, 'z) lifting_scheme \<Rightarrow>
-             ('x, 'a, 'e1 :: Pordb * 'e2 :: Pordb * 'e3 * 'rest :: Pordb) lifting" where
-"t3_l l = snd_l (t2_l l)" 
-
-fun t4_l :: "('x, 'a, 'e4, 'z) lifting_scheme \<Rightarrow>
-             ('x, 'a, 'e1 :: Pordb * 'e2 :: Pordb * 'e3 :: Pordb * 
-                      'e4 * 'rest :: Pordb) lifting" where
-"t4_l l = (snd_l (t3_l l))" 
-
-fun t5_l :: "('x, 'a, 'e5, 'z) lifting_scheme \<Rightarrow>
-             ('x, 'a, 'e1 :: Pordb * 'e2 :: Pordb * 'e3 :: Pordb *
-                      'e4 :: Pordb * 'e5 * 'rest :: Pordb) lifting" where
-"t5_l l = (snd_l (t4_l l))" 
 
 
-(* convenience lifting for standard wrapping (swr) *)
-fun ot_l :: "('x, 'a, 'b, 'z) lifting_scheme \<Rightarrow>
-             ('x, 'a, 'b md_triv option) lifting" where
-"ot_l l =
-  (option_l o triv_l) l"
-*)
-(* Liftings for mapping over data structures *)
-
-(* a lifting for mapping over an entire list, needed e.g. when relating a
-   list of wrapped values to an unwrapped one *)
-
-(* i'm not sure there is a reasonable way to implement this, however...
-maybe we can have one specific to swr/products/sums?
-i don't know that this can be done for all liftings necessarily.
-e.g. when updating, what happens if we are given a list of a different length?
-
-one idea: check the length of the input list. if it is equal, do an actual update
-otherwise construct a list of LNew values
-we could probably have a more precise/robust one, but that should at least meet
-the laws.
-*)
+(* Liftings for mapping over data structures
+ * These are useful, e.g., when relating a
+ * list of wrapped values to a list of unwrapped values*)
 
 definition list_map_l ::
   "('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow> ('x, 'a list, 'b list md_triv) lifting" where
@@ -1798,27 +1536,11 @@ definition roalist_map_l ::
     
 
 (* fill this in later; need an analogue of list_all for roalist. *)
-(*
-definition roalist_map_pv ::
-"('x, 'v1, 'v2, 'z1) lifting_scheme \<Rightarrow>
- ('x, 'd1, 'd2, 'z2) lifting_scheme \<Rightarrow>
- ('x, ('k :: linorder, 'v1, 'd1) roalist, ('k :: linorder, 'v2, 'd2) roalist) lifting" where
-*)
 
-(* possibly needed later: option, triv, prio *)
+(* possibly needed later: "map" lifting analogue for option, triv, prio *)
 
-(* finally, here we allow keymaps, which might enable more interesting merges
-   however we will need to reset the kmap in between commands. *)
-(* should double check this *)
-(*
-
-*)
-
-(* another approach would be to return sets. this might we worth exploring later. *)
-
-(* new lifting needed: merging an OAlist with an ROAlist
-   idea: enable separating control and data for Lambda/SECD
-  
+(* TODO: may need a lifting for merging an OAlist with an ROAlist
+   this might be helpful for better separating control and data for Lambda/SECD
 *)
 
 end

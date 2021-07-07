@@ -1,7 +1,7 @@
-theory AutoLiftProof
-imports LiftUtils LiftInstances AutoLift
+theory Auto_Lifter_Proofs
+imports Lifter Lifter_Instances Auto_Lifter
 begin
-
+(* TODO: do we prove orthogonality? sups_pres? what are limitations of what we have? *)
 (* idea: we want to have automation for
    - validity of liftings
    - orthogonality of merges

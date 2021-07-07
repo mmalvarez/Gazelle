@@ -1,40 +1,27 @@
-theory SupsPres imports Mono LangComp
+theory Sups_Pres imports Lang_Comp
 begin
 
-(* 2 dimensions for defining sup_pres
-1 - do we preserve the existence of supremum, or
-guarantee that f(sup) = sup?
-2 - do  we talk about cases where inputs to f's are
-equal, or cases where inputs have a sup?
-*)
-
-(* "weak" sups_pres
-   existence of supremum is preserved, but not
-   guaranteed to be equal to output
-*)
-
-(* we will start with the strongest one,
-and then see if we can "bridge the gap"
-from our semantics to it,
-using notions like orthogonality, monotonicity, etc.
-*)
-
-(* other ideas:
-   - mergeable instance for functions?
-*)
+(* In sups_pres, we describe a notion of a set of functions "preserving suprema"
+ * from their inputs to their outputs.
+ * More concretely, "sups_pres Fs" states that for any nonempty, finite set of inputs Xs,
+ * having a supremum s, then the following two suprema exist and are equal:
+ * 1) the least upper bound of the set of outputs obtained by taking the "cross product":
+      that is, the set containing f x for each f \<in> Fs, x \<in> Xs.
+ * 2) the least upper bound of the set of outputs obtained by applying each f to the
+      supremum of the inputs, s
+ *
+ * While this definition is a bit clunky, it has the key advantage that it enables us to work
+ * over _sets_ of functions, avoiding tedious reasoning about repetition and permutation in
+ * lists of functions. As can be seen in Lang_Comp, this definition implies a number of
+ * rather nice and intuitive properties about the set Fs. Generally we will use sups_pres
+ * as the specification of what it means for a set of functions to be able to be merged in
+ * a well-defined way.
+ *
+ * I believe this may be related to the concept of continuity in traditional domain theory.
+ *)
 
 
-
-(*
-
-  ok, how do we characterize the least upper bound
-
-  (scross ((\<lambda> f . f syn) ` Fs) Xs))
-
-  (scross ((\<lambda> f . f syn s) ` Fs) {sup xs})
-
-*)
-
+(* "Cross-product" between a set of functions (applied to) a set of inputs *)
 definition scross :: "('a \<Rightarrow> 'b) set \<Rightarrow> 'a set \<Rightarrow> 'b set" where
 "scross Fs Xs =
   { x . \<exists> f y . f \<in> Fs \<and> y \<in> Xs \<and> x = f y }"
@@ -53,6 +40,7 @@ lemma scross_inD  :
   unfolding scross_def
   by blast
 
+(* The definition. See above for a gloss of what this means. *)
 definition sups_pres :: 
   "('a \<Rightarrow> ('b :: Mergeable) \<Rightarrow> 'b) set \<Rightarrow> bool" where
 "sups_pres Fs =
@@ -62,10 +50,6 @@ definition sups_pres ::
     is_sup Xs s \<longrightarrow>
     (\<exists> s' . is_sup ((\<lambda> f . f syn s) ` Fs) s' \<and>
        is_sup (scross ((\<lambda> f . f syn) ` Fs) Xs) s'))"
-
-(* for this version, syntaxes are assumed to match.
-   i think this will always be the case...
-*)
 
 
 lemma sups_presI [intro] :
@@ -86,6 +70,8 @@ lemma sups_presD :
   unfolding sups_pres_def 
   by blast
 
+(* Some convenient properties about scross, in the spirit of relating it to
+ * Isabelle's built-in notion of cross product of sets *)
 lemma scross_subset :
   assumes HF : "Fs1 \<subseteq> Fs2"
   assumes HX : "Xs1 \<subseteq> Xs2"
@@ -109,6 +95,8 @@ proof
   qed
 qed
 
+(* This alternate definition of scross makes it much easier to apply some of Isabelle's
+ * built-in theorems about set finiteness and cardinality. *)
 definition scross_alt :: "('a \<Rightarrow> 'b) set \<Rightarrow> 'a set \<Rightarrow> 'b set" where
 "scross_alt Fs Xs =
   (\<lambda> fx . (case fx of (f, x) \<Rightarrow> f x)) ` (Fs \<times> Xs)"

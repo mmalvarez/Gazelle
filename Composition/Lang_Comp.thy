@@ -1,4 +1,4 @@
-theory LangComp imports LiftUtils
+theory Lang_Comp imports Lifter
 begin
 
 
@@ -257,7 +257,7 @@ lemma ub_union1 :
   assumes Hsup2 : "is_ub S2 x2"
   assumes HsupU : "is_ub {x1, x2} x'"
   shows "is_ub (S1 \<union> S2) x'"
-proof(rule is_ub_intro)
+proof(rule is_ubI)
   fix x
   assume Hx : "x \<in> S1 \<union> S2"
   then consider (1) "x \<in> S1" | (2) "x \<in> S2" by auto
@@ -280,7 +280,7 @@ lemma sup_union1 :
   assumes Hsup2 : "is_sup S2 x2"
   assumes HsupU : "is_sup {x1, x2} x'"
   shows "is_sup (S1 \<union> S2) x'"
-proof(rule is_sup_intro)
+proof(rule is_supI)
   fix x
   assume Hx : "x \<in> S1 \<union> S2"
   consider (1) "x \<in> S1" |
@@ -288,11 +288,11 @@ proof(rule is_sup_intro)
   then show "x <[ x'"
   proof cases
     case 1
-    then show ?thesis using is_sup_unfold1[OF Hsup1 1] is_sup_unfold1[OF HsupU, of x1]
+    then show ?thesis using is_supD1[OF Hsup1 1] is_supD1[OF HsupU, of x1]
       by(auto simp add: leq_trans[of x x1])
   next
     case 2
-    then show ?thesis using is_sup_unfold1[OF Hsup2 2] is_sup_unfold1[OF HsupU, of x2]
+    then show ?thesis using is_supD1[OF Hsup2 2] is_supD1[OF HsupU, of x2]
       by(auto simp add: leq_trans[of x x2])
   qed
 next
@@ -303,19 +303,19 @@ next
     by(auto simp add: is_ub_def)
 
   hence Ub1: "x1 <[ x'a"
-    using is_sup_unfold2[OF Hsup1] by auto
+    using is_supD2[OF Hsup1] by auto
 
   have "is_ub S2 x'a" using Hx'a
     by(auto simp add: is_ub_def)
 
   hence Ub2: "x2 <[ x'a"
-    using is_sup_unfold2[OF Hsup2] by auto
+    using is_supD2[OF Hsup2] by auto
 
   have "is_ub {x1, x2} x'a" using Ub1 Ub2
     by(auto simp add: is_ub_def)
 
   thus "x' <[ x'a"
-    using is_sup_unfold2[OF HsupU] by auto
+    using is_supD2[OF HsupU] by auto
 qed
 
 
@@ -324,7 +324,7 @@ lemma ub_union2 :
   assumes Hsup2 : "is_sup S2 x2" 
   assumes HsupU : "is_ub (S1 \<union> S2) x'"
   shows HsupU : "is_ub {x1, x2} x'"
-proof(rule is_ub_intro)
+proof(rule is_ubI)
   fix x
 
   assume Hx : "x \<in> {x1, x2}"
@@ -337,12 +337,12 @@ proof(rule is_ub_intro)
     case 1
     have "is_ub S1 x'"
       using HsupU by(auto simp add: is_ub_def)
-    thus ?thesis using is_sup_unfold2[OF Hsup1] 1 by auto
+    thus ?thesis using is_supD2[OF Hsup1] 1 by auto
   next
     case 2
     have "is_ub S2 x'"
       using HsupU by(auto simp add: is_ub_def)
-    thus ?thesis using is_sup_unfold2[OF Hsup2] 2 by auto
+    thus ?thesis using is_supD2[OF Hsup2] 2 by auto
   qed
 qed
 
@@ -351,7 +351,7 @@ lemma sup_union2 :
   assumes Hsup2 : "is_sup S2 x2"
   assumes HsupU : "is_sup (S1 \<union> S2) x'"
   shows "is_sup {x1, x2} x'" 
-proof(rule is_sup_intro)
+proof(rule is_supI)
   fix x
   assume Hx : "x \<in> {x1, x2}"
 
@@ -362,33 +362,33 @@ proof(rule is_sup_intro)
   proof cases
     case 1
     have "is_ub S1 x'"
-      using is_sup_unfold1[OF HsupU] by(auto simp add: is_ub_def)
-    thus ?thesis using is_sup_unfold2[OF Hsup1] 1 by auto
+      using is_supD1[OF HsupU] by(auto simp add: is_ub_def)
+    thus ?thesis using is_supD2[OF Hsup1] 1 by auto
   next
     case 2
     have "is_ub S2 x'"
-      using is_sup_unfold1[OF HsupU] by(auto simp add: is_ub_def)
-    thus ?thesis using is_sup_unfold2[OF Hsup2] 2 by auto
+      using is_supD1[OF HsupU] by(auto simp add: is_ub_def)
+    thus ?thesis using is_supD2[OF Hsup2] 2 by auto
   qed
 next
   fix x'a
   assume Hx'a : "is_ub {x1, x2} x'a"
 
   have "is_ub (S1 \<union> S2) x'a"
-  proof(rule is_ub_intro)
+  proof(rule is_ubI)
     fix x
     assume Hx : "x \<in> S1 \<union> S2"
     then consider (1) "x \<in> S1" | (2) "x \<in> S2" by auto
     then show "x <[ x'a"
     proof cases
       case 1
-      hence Leq1 : "x <[ x1" using is_sup_unfold1[OF Hsup1] by auto
+      hence Leq1 : "x <[ x1" using is_supD1[OF Hsup1] by auto
       have Leq2 : "x1 <[ x'a" using Hx'a by(auto simp add: is_ub_def)
       show ?thesis
         using leq_trans[OF Leq1 Leq2] by auto
     next
       case 2
-      hence Leq1 : "x <[ x2" using is_sup_unfold1[OF Hsup2] by auto
+      hence Leq1 : "x <[ x2" using is_supD1[OF Hsup2] by auto
       have Leq2 : "x2 <[ x'a" using Hx'a by(auto simp add: is_ub_def)
       show ?thesis
         using leq_trans[OF Leq1 Leq2] by auto
@@ -396,7 +396,7 @@ next
   qed
 
   thus "x' <[ x'a"
-    using is_sup_unfold2[OF HsupU] by auto
+    using is_supD2[OF HsupU] by auto
 qed
     
 lemma finite_complete :
@@ -453,12 +453,12 @@ proof(-)
     by(auto)
 
   have Ub' : "is_ub S' s"
-  proof(rule is_ub_intro)
+  proof(rule is_ubI)
     fix x
     assume "x \<in> S'"
     hence "x \<in> S" using Hsub by auto
     thus "x <[ s"
-      using is_sup_unfold1[OF H] by auto
+      using is_supD1[OF H] by auto
   qed
 
   obtain s' where "is_sup S' s'"

@@ -1,7 +1,12 @@
 theory Mono
-imports LiftUtils "../Mergeable/Mergeable"
+  imports "../Mergeable/Mergeable"
 
 begin
+
+(* Implementation of a notion of monotonicity on top of the Pord typeclass.
+ * This has particular relevance to lifting, where monotonicity of certain
+ * functions and predicates may make reasoning about lifted definitions easier.
+ *)
 
 (* Parameterize over a set *)
 (* monotonicity for functions over Pord *)
@@ -42,21 +47,7 @@ definition antitw :: "'a set \<Rightarrow> (('a :: Pord) \<Rightarrow> 'a) \<Rig
 "antitw S f \<equiv>
   (\<forall> x . x \<in> S \<longrightarrow> (\<not> f x <[ x))"
 
-(* lemma: lifted functions are monotone (if lifted using a valid lifting) *)
-lemma lift_monot :
-  assumes Hv : "lifting_valid l S"
-  shows "monot (S (l' syn)) (lift_map_s l' l f syn)"
-proof(rule monotI)
-  fix x
-  assume Hx : "x \<in> S (l' syn)"
-
-  show "x <[ lift_map_s l' l f syn x"
-  unfolding monot_def lift_map_s_def
-  using lifting_validDI[OF Hv Hx]
-  by auto
-qed
-
-(* A more general variant *)
+(* A more general variant of monotonicity - potentially useful, but not currently used *)
 definition gmono :: "'a set \<Rightarrow> (('a :: Pord_Weak) \<Rightarrow> ('b :: Pord_Weak)) \<Rightarrow> bool"
   where
 "gmono S f \<equiv>
@@ -89,6 +80,10 @@ lemma gmono'D :
   shows "f x <[ f x'" using assms unfolding gmono_def
   by auto
 
+(* experiment in defining a typedef of monotonic functions.
+ * unclear if it is worth taking the usability hit of having to wrap and unwrap when
+ * applying.
+ *)
 typedef (overloaded) ('a, 'b) mfun =
   "{(f :: ('a :: Pord_Weak \<Rightarrow> 'b :: Pord_Weak)) . 
     gmono' f}"
