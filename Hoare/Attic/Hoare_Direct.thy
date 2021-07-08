@@ -1,22 +1,10 @@
-theory Hoare imports "../Lifting/LiftUtils" "../Lifting/LiftInstances" "../Lifting/LangCompSimple"
+theory Hoare_Direct imports "../Lifting/LiftUtils" "../Lifting/LiftInstances" "../Lifting/LangCompSimple"
 begin
 
-(*
-datatype 'a triple =
-  T "('a \<Rightarrow> bool)" "('a \<Rightarrow> 'a \<Rightarrow> bool)" "('a \<Rightarrow> bool)"
-    ("{[_]} _ {[_]}" [0,0,0] 61)
-
-(*
-type_synonym 'a triple =
-  "('a \<Rightarrow> bool) * ('a \<Rightarrow> 'a \<Rightarrow> bool) * ('a \<Rightarrow> bool)"
-*)
-definition VT :: "'a triple \<Rightarrow> bool" ("![ _ ]!" 58)
- where
-"VT t =
-  (case t of
-    T pre x post \<Rightarrow>
-      (\<forall> a b . pre a \<longrightarrow> x a b \<longrightarrow> post b))"
-*)
+(* A direct-style implementation of Hoare logic (distinct from the CPS-flavored version
+ * found in Hoare.thy.
+ * The CPS version proved more flexible and convenient, so this was abandoned.
+ *)
 
 abbreviation C where
 "C x \<equiv> (\<lambda> _ . x)"
