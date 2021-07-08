@@ -1,6 +1,9 @@
 theory Sups_Pres imports Lang_Comp
 begin
 
+(* TODO: relocate these definitions, to the extent that is even necessary. I don't think we
+ * need this file anymore. *)
+
 (* In sups_pres, we describe a notion of a set of functions "preserving suprema"
  * from their inputs to their outputs.
  * More concretely, "sups_pres Fs" states that for any nonempty, finite set of inputs Xs,

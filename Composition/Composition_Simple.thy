@@ -1,32 +1,17 @@
-theory Lang_Comp_Simple imports Lifter Lang_Comp
+theory Composition_Simple imports "../Lifter/Lifter" Composition
 begin
 
-(* Simplification of langcomp.
-   Instead of showing semantics preserve LUBs,
-   we show that the already-lifted semantics have LUB, if the
-   starting states are equal (stronger than just having LUB) *)
-
-(* TODO: how does sup_l fit into this?
-   the reason i thought we needed the (stronger) statement
-   that LUBs are preserved (rather than
-   just "inputs are equal \<Rightarrow> outputs have LUBs) was that
-   it seemed like you needed this to be able to relate
-   the Base elements of liftings
-*)
-
-type_synonym ('a, 'b) langcomps =
-  "('a \<Rightarrow> 'b \<Rightarrow> 'b) list"
-
-(* idea: commutativity should mean that the ordering of composition doesn't matter *)
-(*
-fun pcomps :: "('a, 'b :: Mergeable) langcomps \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> 'b)" where
-"pcomps [] a b = b"
-| "pcomps [lh] a b = [^ lh a b, b ^]"
-| "pcomps [l1, l2] a b =
-  [^ [^ l1 a b, l2 a b ^], b^]"
-| "pcomps (lh#lt) a b =
-   [^ [^ lh a b, pcomps lt a b ^], b ^]"
-*)
+(* This file completes a simpler version of the conditions under which composition
+ * (using pcomps; see Composition_Core.thy) should be considered well-defined. Compared to the
+ * more general definition in Composition.thy, it is less powerful (i.e., a stronger assumption,
+ * useful in fewer contexts); however, it is somewhat cleaner and easier to work with.
+ * Accordingly it has been retained here mostly for demonstration purposes.
+ *
+ * The distinction between this development and Composition.thy is the following.
+ * Consider a merge of two semantics, f1 and f2. Here, our correctness condition
+ * requires that (x1 = x2 \<longrightarrow> has_sup {f1 x1, f2 x2})". In Composition.thy, we replace "x1 = x2"
+ * with the weaker assumption that x1 and x2 themselves have a supremum.
+ *)
 
 definition sups_pres :: "('a \<Rightarrow> ('b :: Mergeable) \<Rightarrow> 'b) set \<Rightarrow> bool" where
 "sups_pres Fs =
@@ -54,13 +39,6 @@ proof(rule sups_presI)
 
   have Rfin : "finite Rest" using Rest Hfin by auto
 
-(*
-  have Fin' : "finite (Fsx' \<union> (\<lambda>x. (x, a)) ` Rest)" using Hfin' Rfin
-    unfolding image_Un
-    by(auto)
-
-  hence Fin'' : "finite ((\<lambda>(f, y). f syn y) ` (Fsx' \<union> (\<lambda>x. (x, a)) ` Rest))" by auto
-*)
   have Conc' : "has_sup ((\<lambda>f . f syn st) ` (Fs' \<union> Rest))" unfolding Rest
     using sups_presD[OF H] by auto
 
@@ -87,7 +65,7 @@ lemma sups_pres_pair :
 lemma sups_pres_pcomps_sup :
   assumes Hp : "sups_pres (set l)"
   assumes Hnemp : "l \<noteq> []"
-  shows "is_sup ((\<lambda> f . f syn sem) ` (set l)) (pcomps' l syn sem)" using assms
+  shows "is_sup ((\<lambda> f . f syn sem) ` (set l)) (pcomps l syn sem)" using assms
 proof (induction l arbitrary: syn sem)
   case Nil
   then show ?case by auto
@@ -103,12 +81,12 @@ next
     have SP : "sups_pres (set t1)"
       using sups_pres_subset[OF Cons.prems(1), of "set t1"] Cons' by auto
 
-    have Sup : "is_sup ((\<lambda>f. f syn sem) ` set t1) (pcomps' t1 syn sem)"
+    have Sup : "is_sup ((\<lambda>f. f syn sem) ` set t1) (pcomps t1 syn sem)"
       using Cons.IH[OF SP, of syn sem] Cons' by( auto)
 
     have HSup : "is_sup {h1 syn sem} (h1 syn sem)" using sup_singleton by auto
 
-    have Conc' : "has_sup {h1 syn sem, pcomps' t1 syn sem}"
+    have Conc' : "has_sup {h1 syn sem, pcomps t1 syn sem}"
     proof-
       have Eq3 : "(\<lambda>(f, y). f syn y) ` set (map (\<lambda>f. (f, sem)) (h1 # t1)) =
                   {h1 syn sem} \<union> (\<lambda>f. f syn sem) ` set t1" 
@@ -131,10 +109,10 @@ next
         by(auto simp add: has_sup_def)
     qed
 
-    then obtain s' where S' : "is_sup {h1 syn sem, pcomps' t1 syn sem} s'"
+    then obtain s' where S' : "is_sup {h1 syn sem, pcomps t1 syn sem} s'"
       by(auto simp add: has_sup_def)
 
-    have Conc'' : "is_sup {h1 syn sem, pcomps' t1 syn sem} [^ h1 syn sem, pcomps' (h2 # t2) syn sem ^]"
+    have Conc'' : "is_sup {h1 syn sem, pcomps t1 syn sem} [^ h1 syn sem, pcomps (h2 # t2) syn sem ^]"
       using bsup_sup[OF S' bsup_spec] unfolding Cons'  by auto
 
     have Eqn :
@@ -152,7 +130,7 @@ lemma pcomps_assoc :
   assumes H : "sups_pres (set l1 \<union> set l2)"
   assumes Nemp1 : "l1 \<noteq> []"
   assumes Nemp2 : "l2 \<noteq> []"
-  shows "pcomps' (l1 @ l2) = pcomps' [pcomps' l1, pcomps' l2]" 
+  shows "pcomps (l1 @ l2) = pcomps [pcomps l1, pcomps l2]" 
 proof(rule ext; rule ext)
   fix syn sem
 
@@ -161,7 +139,7 @@ proof(rule ext; rule ext)
   have H1 : "sups_pres (set l1)"
     using sups_pres_subset[OF H _ _ F1]  by auto
 
-  have Sup1: "is_sup ((\<lambda> f . f syn sem) ` (set l1)) (pcomps' l1 syn sem)"
+  have Sup1: "is_sup ((\<lambda> f . f syn sem) ` (set l1)) (pcomps l1 syn sem)"
     using sups_pres_pcomps_sup[OF H1 Nemp1] by auto
 
   obtain f2 where F2 : "f2 \<in> set l2" using Nemp2 by(cases l2; auto)
@@ -169,43 +147,28 @@ proof(rule ext; rule ext)
   have H2 : "sups_pres (set l2)"
     using sups_pres_subset[OF H _ _ F2]  by auto
 
-  have Sup2: "is_sup ((\<lambda> f . f syn sem) ` (set l2)) (pcomps' l2 syn sem)"
+  have Sup2: "is_sup ((\<lambda> f . f syn sem) ` (set l2)) (pcomps l2 syn sem)"
     using sups_pres_pcomps_sup[OF H2 Nemp2] by auto
 
   have Unions : "set (l1 @ l2) = set l1 \<union> set l2" by auto
 
-  have SupAll1 : "is_sup ((\<lambda> f . f syn sem) ` (set (l1 @ l2))) (pcomps' (l1 @ l2) syn sem)"
+  have SupAll1 : "is_sup ((\<lambda> f . f syn sem) ` (set (l1 @ l2))) (pcomps (l1 @ l2) syn sem)"
     using sups_pres_pcomps_sup[of "l1 @ l2"] H Nemp1
     unfolding Unions by(auto)
 
-  have SupAll2 : "is_sup ((\<lambda> f . f syn sem) ` ({pcomps' l1, pcomps' l2})) (pcomps' (l1 @ l2) syn sem)"
-    unfolding pcomps'.simps
-    using sup_union2[OF Sup1 Sup2, of "(pcomps' (l1 @ l2) syn sem)"] SupAll1 
+  have SupAll2 : "is_sup ((\<lambda> f . f syn sem) ` ({pcomps l1, pcomps l2})) (pcomps (l1 @ l2) syn sem)"
+    unfolding pcomps.simps
+    using sup_union2[OF Sup1 Sup2, of "(pcomps (l1 @ l2) syn sem)"] SupAll1 
     unfolding Unions Set.image_Un
     by(auto)
 
-  hence SupAll2' : "is_sup {pcomps' l1 syn sem, pcomps' l2 syn sem} (pcomps' (l1 @ l2) syn sem)" by auto
+  hence SupAll2' : "is_sup {pcomps l1 syn sem, pcomps l2 syn sem} (pcomps (l1 @ l2) syn sem)" by auto
 
-  have Conc' : "[^ pcomps' l1 syn sem, pcomps' l2 syn sem ^] = (pcomps' (l1 @ l2) syn sem)"
+  have Conc' : "[^ pcomps l1 syn sem, pcomps l2 syn sem ^] = (pcomps (l1 @ l2) syn sem)"
     using is_sup_unique[OF SupAll2' bsup_sup[OF SupAll2' bsup_spec]] by auto
 
-  thus "pcomps' (l1 @ l2) syn sem = pcomps' [pcomps' l1, pcomps' l2] syn sem"
-    unfolding pcomps'.simps Conc' by auto
+  thus "pcomps (l1 @ l2) syn sem = pcomps [pcomps l1, pcomps l2] syn sem"
+    unfolding pcomps.simps Conc' by auto
 qed
-
-
-(* sup_l captures the idea that liftings "preserve" suprema*)
-
-(* problem: suppose we have standard wrapping
-   (md_prio wrapping option wrapping md_triv) (lifting A)
-   inside of a pair (fst = standard wrapping, snd = say int option) (lifting B)
-
-   then LBase of the fst lifting (lifting A) will be
-   (mdp 0 \<bottom>, \<bottom>)
-
-   LBase of the second will be (\<bottom>, \<bottom>)
-
-   so we actually do need to be general over inputs
-*)
 
 end
