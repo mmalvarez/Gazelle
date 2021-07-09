@@ -206,5 +206,19 @@ next
   thus ?case by auto
 qed
 
+(* divergence *)
+definition diverges :: "('syn, 'mstate) semc \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> bool" where
+"diverges gs st =
+  (\<forall> st' . sem_exec_p gs st st' \<longrightarrow> (\<exists> st'' . sem_step_p gs st' st''))"
+
+lemma divergesI :
+  assumes H : "\<And> st' . sem_exec_p gs st st' \<Longrightarrow> (\<exists> st'' . sem_step_p gs st' st'')"
+  shows "diverges gs st" using H unfolding diverges_def by auto
+
+lemma divergesD :
+  assumes H : "diverges gs st"
+  assumes Hst : "sem_exec_p gs st st'"
+  shows "\<exists> st'' . sem_step_p gs st' st''"
+    using assms unfolding diverges_def by blast
 
 end
