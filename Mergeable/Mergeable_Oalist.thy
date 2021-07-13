@@ -888,8 +888,6 @@ next
     by(auto split:if_splits)
 qed
 
-declare [[show_types ]]
-
 lemma get_update :
   fixes k :: "'a :: linorder"
   fixes v :: "'b"

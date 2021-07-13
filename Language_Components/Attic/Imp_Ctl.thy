@@ -1,12 +1,23 @@
-theory ImpCtl
-  imports "../Gensyn" "../Gensyn_Descend" "../Mergeable/Mergeable" "../Mergeable/MergeableInstances"
-          "../Lifting/LiftUtils" "../Lifting/LiftInstances"
-          "../Lifting/AutoLift" "../Hoare/CPS_Hoare" "../Hoare/CPS_Hoare_Step" "../Lifting/LangCompFull"
-          "Utils"
-          "./Seq"
+theory Imp_Ctl
+imports "../../Syntax/Gensyn" "../../Syntax/Gensyn_Descend" "../../Mergeable/Mergeable"
+        "../../Mergeable/Mergeable_Instances"
+        "../../Lifter/Lifter" "../../Lifter/Lifter_Instances"
+        "../../Lifter/Auto_Lifter" "../../Lifter/Auto_Lifter_Proofs" 
+        "../../Semantics/Semantics" 
+        "../Utils"
 begin
 
+(*
+ * Implementation of standard imperative-language control structures (If and While).
+ * These are based off the idealized language IMP (see e.g. _Software Foundations_ vol. 1,, "Imp")
+ * and lack constructs such as break and continue. However, the framework is flexible enough
+ * to permit description of such constructs and even write Hoare rules for them
+ * (for an example of how this might work, see Appel and Blazy,
+ * "Separation Logic for Small-Step Cminor")
+ *)
+
 (* conditional/boolean expressions *)
+(* these could be separated out into yet another file (TODO) *)
 datatype cond_syn' =
   Seqz
   | Sltz
@@ -24,12 +35,6 @@ definition cond_sem :: "cond_syn' \<Rightarrow> cond_state' \<Rightarrow> cond_s
       | Sgtz \<Rightarrow> ((i > 0), i)
       | Sskip_cond \<Rightarrow> s))"
 
-(* Imp control
-- IF
-- WHILE
-- SKIP
-*)
-
 datatype syn' =
   Sif
   | Sskip
@@ -39,17 +44,6 @@ datatype syn' =
 type_synonym 'x imp_state' = "'x gensyn list * bool"
 
 type_synonym 'x state' = "'x gensyn list * bool * int"
-
-(* TODO: finish while case *)
-(* TODO: error? *)
-(*
-while ==
-- push condition
-- push while [body]
-- push while [cond, body]
-*)
-
-(* while [body] \<Longrightarrow> check condition *)
 
 definition imp_ctl_sem :: "syn' \<Rightarrow> 'x imp_state' \<Rightarrow> 'x imp_state'" where
 "imp_ctl_sem x st =
@@ -114,33 +108,6 @@ definition imp_prio :: "(syn' \<Rightarrow> nat)" where
 (case x of
     Sskip \<Rightarrow> 0
     | _ \<Rightarrow> 2)"
-
-(* failed experiments in trying to coax the auto-lifter *)
-
-(*
-definition imp_sem_l :: "syn \<Rightarrow> 'x state \<Rightarrow> 'x state" where
-"imp_sem_l =
-  lift_map_s imp_trans
-    (schem_lift (SP NA (SP NB NC))
-                (SP (SPRC imp_prio (SO NA)) (SP (SPRK (SO NB)) (SPRK (SO NC)))))
-  imp_ctl_sem"
-*)
-(*
-definition imp_sem_lifting_gen_huh ::  "(ImpCtl.syn', 'x gensyn list * int, 
-                                      ('a :: Pordb ) *
-                                      ('x gensyn list md_triv option md_prio * int md_triv option md_prio)) lifting" where
-"imp_sem_lifting_gen_huh = 
- (schem_lift (SP NA NB) (SP NX (SP (SPRI (SO NA)) (SPRI (SO NB)))))"
-*)
-
-(*
-definition imp_sem_lifting_gen_huh ::  "(ImpCtl.syn', 'x gensyn list, 
-                                      ('x gensyn list md_triv option md_prio * 
-                                           ('a :: Pordb ))) lifting" where
-"imp_sem_lifting_gen_huh = 
- (schem_lift NA (SP (SPRI (SO NA)) NX))"
-*)
-
 
 
 definition imp_sem_lifting_gen :: "(ImpCtl.syn', 'x imp_state', 

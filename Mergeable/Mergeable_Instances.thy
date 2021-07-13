@@ -1003,7 +1003,7 @@ definition sum_pleq : "(x :: 'a + 'b) <[ y =
       | Inr x' \<Rightarrow> (case y of
                   Inr y' \<Rightarrow> x' <[ y'
                   | _ \<Rightarrow> False))"
-declare [[show_types]]
+
 instance proof
   fix a :: "'a + 'b"
   show "a <[ a" 

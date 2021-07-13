@@ -22,7 +22,7 @@ begin
  *)
 definition dominant ::
   "('a \<Rightarrow> ('b :: Mergeable) \<Rightarrow> 'b) \<Rightarrow> ('a \<Rightarrow> ('b :: Mergeable) \<Rightarrow> 'b) set \<Rightarrow> 'a \<Rightarrow> bool"
-("_ \<downharpoonleft> _ _")
+("_ \<downharpoonleft> _ _" [250, 252, 254])
 where
 "(f \<downharpoonleft> S x) =
  (\<forall> b . is_sup ((\<lambda> g . g x b) ` S) (f x b))"
@@ -45,24 +45,24 @@ lemma dominantE [elim] :
  * on that syntax.
  *)
 
-lemma dominant_pcomps' :
+lemma dominant_pcomps :
   assumes Hpres : "sups_pres (set l)"
   assumes Hne : "z \<in> set l"
   assumes H : "(f \<downharpoonleft> (set l) x)"
-  shows "pcomps' l x b = f x b"
+  shows "pcomps l x b = f x b"
 proof-
 
   have B : "is_sup {b} b"
     using sup_singleton by auto
 
-  have Sup1 : "is_sup (scross ((\<lambda>f. f x) ` set l) {b}) (pcomps' l x b)"
-    using sups_pres_pcomps'_gen[OF Hpres Hne, of "{b}" b b x] B
+  have Sup1 : "is_sup (scross ((\<lambda>f. f x) ` set l) {b}) (pcomps l x b)"
+    using sups_pres_pcomps_gen[OF Hpres Hne, of "{b}" b b x] B
     by auto
 
   have Rewrite1 : "(\<lambda>f. f b) ` (\<lambda>f. f x) ` set l = (\<lambda> f . f x b) ` set l"
     by blast
 
-  have Sup2 : "is_sup ((\<lambda>f. f x b) ` set l) (pcomps' l x b)"
+  have Sup2 : "is_sup ((\<lambda>f. f x b) ` set l) (pcomps l x b)"
     using Sup1
     unfolding scross_singleton2 Rewrite1
     by auto

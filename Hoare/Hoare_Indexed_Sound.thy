@@ -276,5 +276,61 @@ proof
   qed
 qed
 
+(* Work in progress - concept for a limited completeness theorem, sufficient for HWhile *)
+
+lemma HT_imp_HT' :
+  assumes H : "|gs| {-P-} c {-Q-}"
+  shows "HT' gs P c Q"
+  unfolding HT'_def
+proof
+  fix npre
+
+  show "\<exists> npost . |#gs#| {#-P, npre-#} c {#-Q, npost-#}"  using HTE[OF H]
+  
+
+  show "\<exists> npost . |#gs#| {#-P, npre-#} c {#-Q, npost-#}"  using H
+  proof(induction npre arbitrary: c)
+    case 0
+    then show ?case  sorry (* a = 0 should work here. *)
+  next
+    case (Suc npre)
+
+    obtain ahyp where Ahyp : "|#gs#| {#-P, npre-#} c {#-Q, ahyp-#}"
+      using Suc.IH[OF Suc.prems]
+      by blast
+
+    show ?case using HTiE[OF Ahyp]
+  qed
+
+  have Conc' : "\<And> npost . |#gs#| {#-P, npre-#} c {#-Q, npost-#}"
+  proof
+    fix npost c'
+    assume Gdi : "|#gs#| {#Q, npost#} c'"
+
+(* idea: what does it mean that we fail starting at Q?
+ *)
+
+    have Meh : "|gs| {Q} c'"
+    proof
+      fix m :: "('a, 'b) control"
+      assume Q : "Q (payload m)"
+      assume Cntn : "cont m = Inl c'"
+      show "safe gs m" using Gdi Q Cntn
+      proof(induction 
+
+
+
+    show "|#gs#| {#P, npre#} (c @ c')"
+      using guardediD[OF Gdi] HTE[OF H]
+
+
+(* idea: if no valid npost exists, then it must be the case that for this npre,
+ * there is no way to get the whole program to be safe for that many steps.
+ *)
+
+  show "\<exists> npost . |#gs#| {#-P, npre-#} c {#-Q, npost-#}" 
+  proof
+qed
+
 
 end

@@ -162,6 +162,27 @@ next
     by auto
 qed
 
+lemma rtranclp_induct_alt :
+  assumes H : "rtranclp r a b" 
+  assumes Ha : "P a" 
+  assumes Hsteps : "(\<And> y z . rtranclp r a y \<Longrightarrow> rtranclp r y z \<Longrightarrow> P y \<Longrightarrow> P z)" 
+  shows "P b" using assms
+proof(induction rule: rtranclp_induct)
+  case base
+  then show ?case by auto
+next
+  case (step y z)
+
+  have Py : "P y" using step.IH[OF step.prems(1) step.prems(2)]
+    by auto
+
+  have Rz : "rtranclp r y z" using step.hyps
+    by(auto)
+
+  show ?case using step.prems(2)[OF step.hyps(1) Rz Py] by auto
+qed
+
+
 lemma rtranclp_paths_step :
   assumes H0 : "determ R"
   assumes H1 : "R\<^sup>*\<^sup>* x1 y"
