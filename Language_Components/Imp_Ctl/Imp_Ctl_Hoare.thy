@@ -12,6 +12,8 @@ begin
 (* This if rule looks a bit different from the traditional one;
  * this is mostly because evaluation of the condition (cond) may have
  * side effects. *)
+
+(* We can prove this in our traditional Hoare logic, so we do. *)
 lemma HIf :
   assumes H0 : "gs = pcomps fs"
   assumes HF : "f = imp_sem_l_gen lfts"
@@ -290,8 +292,27 @@ proof
   qed
 qed
 
-(* Some auxiliary definitions for proving the while rule *)
-lemma HWhileC_idx :
+(* TODO *)
+(*
+lemma HxIf :
+  assumes H0 : "gs = pcomps fs"
+  assumes HF : "f = imp_sem_l_gen lfts"
+  assumes Hpres : "sups_pres (set fs)"
+  assumes Hnemp : "g \<in> set fs"
+  assumes Hdom : "(f \<downharpoonleft> (set fs) Sif')"
+  assumes Hsyn : "lfts Sif' = Sif"
+  assumes P1_valid : "\<And> st.  P1 st \<Longrightarrow> get_cond st \<noteq> None"
+  assumes P2_valid : "\<And> st . P2 st \<Longrightarrow> get_cond st \<noteq> None"
+
+  assumes Hcond : "|gs| {~ P1 ~} [cond] {~ P2 ~}"
+  assumes Htrue : "|gs| {~ (\<lambda> st . P2 st \<and> get_cond st = Some True) ~} [body]
+                        {~ P3 ~}"
+  assumes Hfalse : "|gs| {- (\<lambda> st . P2 st \<and> get_cond st = Some False) -} [] {-P3-}"
+  shows "|gs| {~ P1 ~} [G Sif' [cond, body]] {~ P3 ~}"
+proof
+*)
+
+lemma HWhileC :
   assumes H0 : "gs = pcomps fs"
   assumes HF : "f = imp_sem_l_gen lfts"
   assumes Hpres : "sups_pres (set fs)"

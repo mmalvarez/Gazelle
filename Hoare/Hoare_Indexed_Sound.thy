@@ -9,24 +9,6 @@ begin
  * certain Hoare rules which are to be used in a non-indexed setting.
  *)
 
-(* Wrapping the indexed Hoare triples to make them work like non-indexed ones.
- * The idea here is that we only care about how long the "output" (program combined with
- * the arbitrary tail quantified within the Hoare triple definition) is safe for. So, in order
- * for this to work like a normal Hoare triple, for any desired safe execution length npre,
- * we must be able to find a suffix execution
- * (safe for some npost number of steps) such that the concatenation is safe for npre. *)
-definition HT' :: "('syn, 'mstate) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'syn gensyn list \<Rightarrow> ('mstate \<Rightarrow> bool)\<Rightarrow> bool" where
-"HT' gs P c Q =
-  ((\<forall> npre . \<exists> npost . |#gs#| {#- P, (npre) -#} c {#- Q, npost -#}))"
-
-lemma HT'I :
-  assumes H : "(\<And> npre . \<exists> npost . |#gs#| {#- P, (npre) -#} c {#- Q, npost -#})"
-  shows "HT' gs P c Q" using assms unfolding HT'_def by blast
-
-lemma HT'D :
-  assumes H : "HT' gs P c Q"
-  shows "(\<And> npre . \<exists> npost . |#gs#| {#- P, (npre) -#} c {#- Q, npost -#})"
-  using H unfolding HT'_def by simp
 
 lemma safe_imp_safe_for :
   assumes H: "safe gs m"
@@ -228,6 +210,24 @@ proof-
   qed
 qed
 
+lemma safe_for_imp_safe :
+  assumes H : "\<And> n . safe_for gs m n"
+  shows "safe gs m"
+proof
+  fix m'
+  assume Exec : "sem_exec_p gs m m'"
+
+  obtain n where N: "sem_exec_c_p gs m n m'"
+    using exec_p_imp_exec_c_p[OF Exec] by blast
+
+  show "imm_safe gs m'" using safe_for_imm_safe[OF H N] by simp
+qed
+
+lemma unsafe_imp_unsafe_for :
+  assumes H : "\<not> safe gs m"
+  shows "\<exists> n . \<not> safe_for gs m n"
+  using H safe_for_imp_safe
+  by blast
 
 lemma HT'_imp_HT :
   assumes H : "HT' gs P c Q"
@@ -276,61 +276,110 @@ proof
   qed
 qed
 
-(* Work in progress - concept for a limited completeness theorem, sufficient for HWhile *)
 
-lemma HT_imp_HT' :
+(* The following is of less practical use, but still interesting: we can actually prove
+ * soundness and completeness for a slightly different version of the rule - however,
+ * it seems like the changes we make in doing so are precisely those that make it
+ * harder to reason about loops and termination without extra assumptions on control flow... *)
+(* The issue is that the existentials are nested in such a way that this doesn't work...
+ * this is why we have a new construct, HT''. But, what are the implications of this...? *)
+definition HT'' :: "('syn, 'mstate) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'syn gensyn list \<Rightarrow> ('mstate \<Rightarrow> bool)\<Rightarrow> bool" where
+"HT'' gs P c Q \<equiv> (\<forall> npre c' . \<exists> npost . ( |#gs#| {#Q, npost#} c' \<longrightarrow> |#gs#| {#P, npre#} (c @ c')))"
+
+lemma HT''I :
+  assumes H : "\<And> npre c' .(\<And> npost . |#gs#| {#Q, npost#} c') \<Longrightarrow> |#gs#| {#P, npre#} (c @ c')"
+  shows "HT'' gs P c Q" using assms unfolding HT''_def by blast
+
+lemma HT''D :
+  assumes H : "HT'' gs P c Q"
+  assumes H1 : "(\<And> npost . |#gs#| {#Q, npost#} c')"
+  shows "|#gs#| {#P, npre#} (c @ c')"
+  using assms unfolding HT''_def by simp
+
+lemma HT_imp_HT'' :
   assumes H : "|gs| {-P-} c {-Q-}"
-  shows "HT' gs P c Q"
-  unfolding HT'_def
-proof
-  fix npre
+  shows "HT'' gs P c Q"
+proof(rule HT''I)
+  fix npre c'
 
-  show "\<exists> npost . |#gs#| {#-P, npre-#} c {#-Q, npost-#}"  using HTE[OF H]
-  
+  assume X : "(\<And>npost. |#gs#| {#Q, npost#} c')"
 
-  show "\<exists> npost . |#gs#| {#-P, npre-#} c {#-Q, npost-#}"  using H
-  proof(induction npre arbitrary: c)
-    case 0
-    then show ?case  sorry (* a = 0 should work here. *)
-  next
-    case (Suc npre)
+  show "|#gs#| {#P, npre#} (c @ c')"
+  proof(cases "guarded gs Q c'")
+    case True
 
-    obtain ahyp where Ahyp : "|#gs#| {#-P, npre-#} c {#-Q, ahyp-#}"
-      using Suc.IH[OF Suc.prems]
-      by blast
+    have Guard : "|gs| {P} (c @ c')" using HTE[OF H True]
+      by auto
 
-    show ?case using HTiE[OF Ahyp]
-  qed
-
-  have Conc' : "\<And> npost . |#gs#| {#-P, npre-#} c {#-Q, npost-#}"
-  proof
-    fix npost c'
-    assume Gdi : "|#gs#| {#Q, npost#} c'"
-
-(* idea: what does it mean that we fail starting at Q?
- *)
-
-    have Meh : "|gs| {Q} c'"
+    show ?thesis
     proof
       fix m :: "('a, 'b) control"
-      assume Q : "Q (payload m)"
-      assume Cntn : "cont m = Inl c'"
-      show "safe gs m" using Gdi Q Cntn
-      proof(induction 
+      assume HP : "P (payload m)"
+      assume CP : "cont m = Inl (c @ c')"
 
+      show "safe_for gs m npre" using safe_imp_safe_for[OF guardedD[OF Guard HP CP]]
+        by blast
+    qed
 
+  next
+    case False
 
-    show "|#gs#| {#P, npre#} (c @ c')"
-      using guardediD[OF Gdi] HTE[OF H]
+    then obtain bad where Bad : "Q (payload bad)" "cont bad = Inl c'" "\<not> safe gs bad"
+      unfolding guarded_def
+      by blast
 
+    obtain nbad where Nbad: "\<not> safe_for gs bad nbad" using unsafe_imp_unsafe_for[OF Bad(3)]
+      by blast
 
-(* idea: if no valid npost exists, then it must be the case that for this npre,
- * there is no way to get the whole program to be safe for that many steps.
- *)
+    then have False using guardediD[OF X[of nbad] Bad(1) Bad(2)] by blast
 
-  show "\<exists> npost . |#gs#| {#-P, npre-#} c {#-Q, npost-#}" 
-  proof
+    thus "|#gs#| {#P, npre#} (c @ c')" by blast
+  qed
 qed
 
+lemma HT''_imp_HT :
+  assumes H : "HT'' gs P c Q"
+  shows "|gs| {-P-} c {-Q-}"
+proof
+  fix c'
+  assume Guard : "|gs| {Q} c'"
+  show "|gs| {P} (c @ c')"
+  proof
+    fix m :: "('a, 'b) control"
+    assume Pm : "P (payload m)" 
+    assume Cm : "cont m = Inl (c @ c')" 
+    show "safe gs m"
+    proof
+      fix m'
+      assume Exec : "sem_exec_p gs m m'" 
+
+      obtain n where Execc : "sem_exec_c_p gs m n m'"
+        using exec_p_imp_exec_c_p[OF Exec] by auto
+
+      have Guard'_out : "(\<And>npost. |#gs#| {#Q, npost#} c')"
+      proof
+        fix npost 
+        fix mx :: "('a, 'b) control"
+        assume Q: "Q (payload mx)"
+        assume C: "cont mx = Inl c'" 
+
+        have Safe : "safe gs mx"
+          using guardedD[OF Guard Q C] by simp
+
+        show "safe_for gs mx npost"
+          using safe_imp_safe_for[OF Safe] by simp
+      qed
+
+      have Guard'_in : "|#gs#| {#P, n#} (c @ c')"
+        using HT''D[OF H Guard'_out] by blast
+
+      have Safe' : "safe_for gs m n"
+        using guardediD[OF Guard'_in Pm Cm] by simp
+
+      show "imm_safe gs m'"
+        using safe_for_imm_safe[OF Safe' Execc] by simp
+    qed
+  qed
+qed
 
 end

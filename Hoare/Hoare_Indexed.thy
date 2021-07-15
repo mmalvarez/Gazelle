@@ -313,163 +313,68 @@ proof(rule HTiI)
     by auto
 qed
 
-
-(* Comparing our Hoare definitions to classic Appel-style ones. *)
-(* Here are the classic definitions ("c" for classic) *)
-(*
-definition imm_safe :: "('syn, 'mstate) semc \<Rightarrow> ('syn, 'mstate) control  \<Rightarrow> bool" where
-"imm_safe gs m \<equiv>
- ((s_cont m = Inl []) \<or>
-  (\<exists> m' . sem_step_p gs m m'))"
-
-
-definition safec :: "('syn, 'mstate) semc \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> bool" where
-"safec gs m \<equiv>
-  (\<forall> m' . sem_exec_p gs m m' \<longrightarrow> imm_safe gs m')"
-
-lemma safecI [intro]:
-  assumes H : "\<And> m' . sem_exec_p gs m m' \<Longrightarrow> imm_safe gs m'"
-  shows "safec gs m" using H unfolding safec_def
-  by auto
-
-lemma safecD :
-  assumes H : "safec gs m"
-  assumes Hx : "sem_exec_p gs m m'"
-  shows "imm_safe gs m'" using H Hx
-  unfolding safec_def by blast
-
-definition guardedc :: "('syn, 'mstate) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'syn gensyn list \<Rightarrow> bool"
- where
-"guardedc gs P c =
-  (\<forall> m . P (payload m) \<longrightarrow> s_cont m = Inl c \<longrightarrow> safec gs m)"
-
-lemma guardedcI [intro] :
-  assumes H : "\<And> m . P (payload m) \<Longrightarrow> s_cont m = Inl c \<Longrightarrow> safec gs m"
-  shows "guardedc gs P c" using H
-  unfolding guardedc_def
-  by auto
-
-lemma guardedcD :
-  assumes H : "guardedc gs P c"
-  assumes HP : "P (payload m)"
-  assumes Hcont : "s_cont m = Inl c"
-  shows "safec gs m" using assms
-  unfolding guardedc_def by blast
-
-definition HTc :: "('syn, 'mstate) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'syn gensyn list \<Rightarrow> ('mstate \<Rightarrow> bool)\<Rightarrow> bool" 
+(* Wrapping the indexed Hoare triples to make them work like non-indexed ones.
+ * The idea here is that we only care about how long the "output" (program combined with
+ * the arbitrary tail quantified within the Hoare triple definition) is safe for. So, in order
+ * for this to work like a normal Hoare triple, for any desired safe execution length npre,
+ * we must be able to find a suffix execution
+ * (safe for some npost number of steps) such that the concatenation is safe for npre. *)
+definition HT' :: "('syn, 'mstate) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'syn gensyn list \<Rightarrow> ('mstate \<Rightarrow> bool)\<Rightarrow> bool" 
+  ("|_| {~_~} _ {~_~}" [250, 252, 254, 256])  
   where
-"HTc gs P c Q =
-  (\<forall> c' .  guardedc gs Q c' \<longrightarrow> guardedc gs P (c @ c'))"
+"HT' gs P c Q =
+  ((\<forall> npre . \<exists> npost . |#gs#| {#- P, (npre) -#} c {#- Q, npost -#}))"
 
-lemma HTcI [intro] :
-  assumes H : "\<And> c' . guardedc gs Q c' \<Longrightarrow> guardedc gs P (c @ c')"
-  shows "HTc gs P c Q" using H unfolding HTc_def
-  by auto
+lemma HT'I :
+  assumes H : "(\<And> npre . \<exists> npost . |#gs#| {#- P, (npre) -#} c {#- Q, npost -#})"
+  shows "HT' gs P c Q" using assms unfolding HT'_def by blast
 
-lemma HTcE [elim]:
-  assumes H : "HTc gs P c Q"
-  assumes H' : "guardedc gs Q c'"
-  shows "guardedc gs P (c @ c')" using assms
-  unfolding HTc_def
-  by auto
-*)
-(* Now, we implement "classic" HT using our primitives, and show that it behaves the same *)
-(* NB: we may need to add the dual of this to our definition. *)
+lemma HT'D :
+  assumes H : "HT' gs P c Q"
+  shows "(\<And> npre . \<exists> npost . |#gs#| {#- P, (npre) -#} c {#- Q, npost -#})"
+  using H unfolding HT'_def by simp
 
-(* TODO - unless unnecessary *)
-(*
-lemma safe_for_imp_safec :
-  assumes H: "\<And> n . safe_for gs m n"
-  shows "safec gs m"
-  sorry
+(* Consequence and Cat for our wrapped Hoare triple. 
+ * Rules using the "wrapped" indexed Hoare logic HT' will have names starting with Hx.
+ *)
 
-(* TODO - unless unnecessary*)
-lemma safec_imp_safe_for :
-  assumes H: "safec gs m"
-  shows "safe_for gs m n"
-  sorry
+lemma HxConseq :
+  assumes H : "|gs| {~ P'~} c {~Q'~}"
+  assumes HP1 : "\<And> st . P st \<Longrightarrow> P' st"
+  assumes HQ1 : "\<And> st . Q' st \<Longrightarrow> Q st"
+  shows "|gs| {~P~} c {~Q~}"
+proof(rule HT'I)
+  fix npre
 
-lemma safe_for_imm_safe :
-  assumes H : "safe_for gs m n"
-  assumes H' : "sem_exec_c_p gs m n m'"
-  shows "imm_safe gs m'"
-proof-
-
-  consider 
-    (1) n0 m'_alt where "n0 \<le> n" "sem_exec_c_p gs m n0 m'_alt" "cont m'_alt = Inl []" |
-    (2) "\<And> n0 . n0 \<le>n  \<Longrightarrow> \<exists>m'_alt h t. sem_exec_c_p gs m n0 m'_alt \<and> cont m'_alt = Inl (h # t)"
-    using H unfolding safe_for_def
+  obtain npost
+    where Npost : "|#gs#| {#-P', npre-#} c {#-Q', npost-#}"
+    using HT'D[OF H]
     by blast
 
-  then show "imm_safe gs m'"
-  proof cases
-    case 1
-
-    (* idea: n0 = n, because otherwise we would execute past a Inl [] (contradiction) *)
-
-    show ?thesis sorry
-  next
-    case 2
-
-    obtain m'_alt h t where Exec_alt : "sem_exec_c_p gs m n m'_alt" and Cont_alt : "cont m'_alt = Inl (h # t)"
-      using 2[of n] by blast
-
-    have Eq : "m'_alt = m'" using exec_c_p_determ[OF H' Exec_alt] by simp
-
-    obtain m'a where "sem_step_p gs m' m'a"
-      using Cont_alt Exec_alt
-      unfolding imm_safe_def Eq sem_step_p_eq sem_step_def
-      by(cases h; auto)
-
-    then show ?thesis unfolding imm_safe_def by blast
-  qed
+  show "\<exists>npost. |#gs#| {#-P, npre-#} c {#-Q, npost-#}"
+    using HConseq[OF Npost, of P npre Q npost] HP1 HQ1
+    by(auto)
 qed
-lemma HTc'_imp_HTc :
-  assumes H : "HTc' gs P c Q"
-  shows "HTc gs P c Q"
-proof
-  fix c'
-  assume Guard : "guardedc gs Q c'"
-  show "guardedc gs P (c @ c')"
-  proof
-    fix m :: "('a, 'b) control"
-    assume Pm : "P (payload m)" 
-    assume Cm : "s_cont m = Inl (c @ c')" 
-    show "safec gs m"
-    proof
-      fix m'
-      assume Exec : "sem_exec_p gs m m'" 
 
-      obtain n where Execc : "sem_exec_c_p gs m n m'"
-        using exec_p_imp_exec_c_p[OF Exec] by auto
+lemma HxCat :
+  assumes H : "|gs| {~ P1 ~} c1 {~ P2 ~}"
+  assumes H' : "|gs| {~ P2 ~} c2 {~ P3 ~}"
+  shows "|gs| {~ P1 ~} (c1 @ c2) {~ P3 ~}"
+proof(rule HT'I)
+  fix npre
 
-      obtain npost where Npost : "|gs| {-P, n-} c {-Q, npost-}" using HTc'D[OF H, of n]
-        by blast
+  obtain nmid
+    where Nmid : "|#gs#| {#-P1, npre-#} c1 {#-P2, nmid-#}"
+    using HT'D[OF H]
+    by blast
 
-      have Guard'_out : "|gs| {Q, npost} c'"
-      proof
-        fix mx :: "('a, 'b) control"
-        assume Q: "Q (payload mx)"
-        assume C: "s_cont mx = Inl c'" 
+  obtain npost
+    where Npost : "|#gs#| {#-P2, nmid-#} c2 {#-P3, npost-#}"
+    using HT'D[OF H']
+    by blast
 
-        have Safe : "safec gs mx"
-          using guardedcD[OF Guard Q C] by simp
 
-        show "safe_for gs mx npost"
-          using safec_imp_safe_for[OF Safe] by simp
-      qed
-
-      have Guard'_in : "|gs| {P, n} c @ c'"
-        using HTE[OF Npost Guard'_out] by simp
-
-      have Safe' : "safe_for gs m n"
-        using guardedD[OF Guard'_in Pm Cm] by simp
-
-      show "imm_safe gs m'"
-        using safe_for_imm_safe[OF Safe' Execc] by simp
-    qed
-  qed
+  show "\<exists>npost. |#gs#| {#-P1, npre-#} (c1 @ c2) {#-P3, npost-#}"
+    using HCat[OF Nmid Npost] by blast
 qed
-*)
-
 end
