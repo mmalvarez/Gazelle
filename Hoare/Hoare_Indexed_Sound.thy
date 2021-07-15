@@ -276,6 +276,72 @@ proof
   qed
 qed
 
+(* new definition, inspired by issues with while *)
+definition HT'_alt :: "('syn, 'mstate) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'syn gensyn list \<Rightarrow> ('mstate \<Rightarrow> bool)\<Rightarrow> bool" 
+  where
+"HT'_alt gs P c Q =
+  ((\<forall> npost . \<exists> npre . |#gs#| {#- P, (npre + npost) -#} c {#- Q, npost -#}))"
+
+
+lemma HT'_altI :
+  assumes H : "\<And> npost . \<exists> npre . |#gs#| {#- P, (npre + npost) -#} c {#- Q, npost -#}"
+  shows "HT'_alt gs P c Q" using assms unfolding HT'_alt_def by blast
+
+lemma HT'_altD :
+  assumes H : "HT'_alt gs P c Q"
+  shows "\<exists> npre . |#gs#| {#- P, (npre + npost) -#} c {#- Q, npost -#}"
+  using assms unfolding HT'_alt_def by simp
+
+lemma HT''_imp_HT :
+  assumes H : "HT'_alt gs P c Q"
+  shows "|gs| {-P-} c {-Q-}"
+proof
+  fix c'
+  assume Guard : "|gs| {Q} c'"
+  show "|gs| {P} (c @ c')"
+  proof
+    fix m :: "('a, 'b) control"
+    assume Pm : "P (payload m)" 
+    assume Cm : "cont m = Inl (c @ c')" 
+    show "safe gs m"
+    proof
+      fix m'
+      assume Exec : "sem_exec_p gs m m'" 
+
+      obtain n where Execc : "sem_exec_c_p gs m n m'"
+        using exec_p_imp_exec_c_p[OF Exec] by auto
+
+      obtain n_offset where N_offset : "|#gs#| {#-P, (n_offset + n)-#} c {#-Q, n-#}" using HT'_altD[OF H, of n]
+        by blast
+
+      have Guard'_out : "|#gs#| {#Q, n#} c'"
+      proof
+        fix mx :: "('a, 'b) control"
+        assume Q: "Q (payload mx)"
+        assume C: "cont mx = Inl c'" 
+
+        have Safe : "safe gs mx"
+          using guardedD[OF Guard Q C] by simp
+
+        show "safe_for gs mx n"
+          using safe_imp_safe_for[OF Safe] by simp
+      qed
+
+      have Guard'_in : "|#gs#| {#P, (n_offset + n)#} (c @ c')"
+        using HTiE[OF N_offset Guard'_out] by simp
+
+      have Safe' : "safe_for gs m (n_offset + n)"
+        using guardediD[OF Guard'_in Pm Cm] by simp
+
+      have Safe'' : "safe_for gs m n"
+        using safe_for_weaken[OF Safe', of n] by auto
+
+      show "imm_safe gs m'"
+        using safe_for_imm_safe[OF Safe'' Execc] by simp
+    qed
+  qed
+qed
+
 
 (* The following is of less practical use, but still interesting: we can actually prove
  * soundness and completeness for a slightly different version of the rule - however,

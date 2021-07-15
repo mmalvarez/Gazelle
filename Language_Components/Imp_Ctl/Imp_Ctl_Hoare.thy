@@ -11,9 +11,12 @@ begin
 
 (* This if rule looks a bit different from the traditional one;
  * this is mostly because evaluation of the condition (cond) may have
- * side effects. *)
+ * side effects. 
+ *
+ * Note that we mostly use HxIf in practice (since it works better with our other rules
+ * that use the indexed abstraction
+ *)
 
-(* We can prove this in our traditional Hoare logic, so we do. *)
 lemma HIf :
   assumes H0 : "gs = pcomps fs"
   assumes HF : "f = imp_sem_l_gen lfts"
@@ -292,8 +295,6 @@ proof
   qed
 qed
 
-(* TODO *)
-(*
 lemma HxIf :
   assumes H0 : "gs = pcomps fs"
   assumes HF : "f = imp_sem_l_gen lfts"
@@ -307,12 +308,247 @@ lemma HxIf :
   assumes Hcond : "|gs| {~ P1 ~} [cond] {~ P2 ~}"
   assumes Htrue : "|gs| {~ (\<lambda> st . P2 st \<and> get_cond st = Some True) ~} [body]
                         {~ P3 ~}"
-  assumes Hfalse : "|gs| {- (\<lambda> st . P2 st \<and> get_cond st = Some False) -} [] {-P3-}"
+  assumes Hfalse : "|gs| {~ (\<lambda> st . P2 st \<and> get_cond st = Some False) ~} [] {~P3~}"
   shows "|gs| {~ P1 ~} [G Sif' [cond, body]] {~ P3 ~}"
-proof
-*)
+proof(rule HT'I)
+  fix npre
 
-lemma HWhileC :
+  obtain ncond where Ncond : "|#gs#| {#-P1, npre-#} [cond] {#-P2, ncond-#}"
+    using HT'D[OF Hcond] by blast
+
+  obtain ntrue_post where Ntrue : 
+    "|#gs#| {#- (\<lambda> st . P2 st \<and> get_cond st = Some True), ncond -#} [body] {#- P3, ntrue_post -#}"
+    using HT'D[OF Htrue] by blast
+
+  obtain nfalse_post where Nfalse : 
+    "|#gs#| {#- (\<lambda> st . P2 st \<and> get_cond st = Some False ), ncond -#} [] {#- P3, nfalse_post -#}"
+    using HT'D[OF Hfalse] by blast
+
+
+  obtain npost where Npost : "npost = (max ntrue_post nfalse_post)" by simp
+
+  have Ntrue' : 
+    "|#gs#| {#- (\<lambda> st . P2 st \<and> get_cond st = Some True), ncond -#} [body] {#- P3, npost -#}"
+    using Hoare_Indexed.HConseq
+      [OF Ntrue
+      ,of "\<lambda> st . P2 st \<and> get_cond st = Some True" ncond P3 npost]
+    using Npost by auto
+
+  have Nfalse' : 
+    "|#gs#| {#- (\<lambda> st . P2 st \<and> get_cond st = Some False), ncond -#} [] {#- P3, npost -#}"
+    using Hoare_Indexed.HConseq
+      [OF Nfalse
+      ,of "\<lambda> st . P2 st \<and> get_cond st = Some False" ncond P3 npost]
+    using Npost by auto
+
+  have Ncond' : "|#gs#| {#-P1, npre-#} [cond] {#-P2, ncond-#}"
+    using Hoare_Indexed.HConseq
+      [OF Ncond
+      , of P1 npre P2 ncond]
+    using Npost by auto
+
+  have Conc' : "|#gs#| {#-P1, npre-#} [G Sif' [cond, body]] {#-P3, npost-#}"
+  proof
+    fix c'
+    assume Guard : "|#gs#| {#P3, npost#} c'"
+(*
+    have Gtrue : "|#gs#| {# (\<lambda>st. P2 st \<and> get_cond st = Some True), npre #} ([body] @ c')"
+      using HTiE[OF Ntrue' Guard]
+      by auto
+
+    have Gfalse : "|#gs#| {#(\<lambda>st. P2 st \<and> get_cond st = Some False), npre#} ([] @ c')"
+      using HTiE[OF Nfalse' Guard] by auto
+*)
+    show "|#gs#| {#P1, npre#} ([G Sif' [cond, body]] @ c')"
+    proof
+      fix m :: "('a, 'b) state"
+  
+      assume M : "P1 (payload m)"
+      assume CM : "cont m = Inl ([G Sif' [cond, body]] @ c')"
+  
+      show "safe_for gs m npre"
+      proof(cases "(sem_step gs m)")
+        case (Inr bad)
+  
+        then have False using CM H0
+          by(auto simp add: sem_step_def)
+  
+        then show ?thesis by auto
+      next
+        case (Inl m')
+  
+        have F_eq : "sem_step f m = Inl m'"
+          using sym[OF dominant_pcomps[OF Hpres Hnemp Hdom]] CM Inl H0
+          by(simp add: sem_step_def)
+  
+        have CM' : "cont m' = Inl ([cond] @ ([ G Sif' [body]] @ c'))" 
+          using CM Hsyn F_eq unfolding HF
+          by(cases m; auto simp add: cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
+             schem_lift_defs 
+            merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def
+            split: md_prio.splits md_triv.splits option.splits)
+  
+        have M'_valid : "\<And> p . fst (payload m) \<noteq> mdp p None" using P1_valid[OF M]
+          by(auto simp add: get_cond_def split:prod.splits)
+  
+        have Sm' : "payload m = payload m'"
+          using CM Hsyn F_eq M'_valid  unfolding HF
+          by(cases m; auto simp add: cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
+             schem_lift_defs 
+            merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
+            split: md_prio.splits md_triv.splits option.splits)
+  
+        hence P1sm' : "P1 (payload m')" using M unfolding Sm' by auto
+  
+        (* step to the end of cond. *)
+  
+        have Sub : "|#gs#| {#P2, ncond#} ([G Sif' [body]] @ c')"
+        proof
+          fix mp2 :: "('a, 'b) state"
+  
+          assume MP2 : "P2 (payload mp2)"
+  
+          assume Cont2 : "cont mp2 = Inl ([G Sif' [body]] @ c')"
+  
+          show "safe_for gs mp2 ncond"
+          proof(cases "get_cond (payload mp2)")
+            case None
+  
+            then have False using P2_valid[OF MP2]
+              by(auto simp add: get_cond_def split: prod.splits md_prio.splits md_triv.splits option.splits)
+            then show ?thesis by auto
+  
+          next
+            case Some' : (Some cnd)
+            then show ?thesis 
+            proof(cases "sem_step gs mp2")
+              case (Inr bad)
+  
+              then have False using Cont2 H0
+                by(auto simp add: sem_step_def)
+  
+              then show ?thesis by auto
+  
+            next
+              case (Inl mp2')
+  
+              have F_eq' : "sem_step f mp2 = Inl mp2'"
+                using sym[OF dominant_pcomps[OF Hpres Hnemp Hdom]] Cont2 Inl H0
+                by(simp add: sem_step_def)
+  
+              have Mp2'_p2 : "P2 (payload mp2')"
+                using Cont2 Hsyn H0 MP2 F_eq' P2_valid[OF MP2] Some' unfolding HF
+                by(cases mp2; 
+                    auto simp add: cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
+                    schem_lift_defs 
+                    merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
+                    get_cond_def
+                    split: md_prio.splits md_triv.splits option.splits)
+  
+              show ?thesis
+              proof(cases cnd)
+                case True
+          
+                have Mp2'_cond : "get_cond (payload mp2') = Some True" 
+                  using Cont2 Hsyn H0 MP2 F_eq' P2_valid[OF MP2] True Some' unfolding HF
+                  by(cases mp2; 
+                      auto simp add: cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
+                      schem_lift_defs 
+                      merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
+                      get_cond_def
+                      split: md_prio.splits md_triv.splits option.splits)
+  
+                have Mp2'_p2_true :  "P2 (payload mp2') \<and> get_cond (payload mp2') = Some True"
+                  using Mp2'_p2 Mp2'_cond
+                  by auto
+  
+                have Mp2'_cont : "cont mp2' = Inl ([body] @ c')"
+                  using Cont2 Hsyn H0 MP2 F_eq' P2_valid[OF MP2] True Some' unfolding HF
+                  by(cases mp2; cases mp2'; 
+                      auto simp add: cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
+                      schem_lift_defs 
+                      merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
+                      get_cond_def
+                      split: md_prio.splits md_triv.splits option.splits)
+
+                have Gtrue : "|#gs#| {# (\<lambda>st. P2 st \<and> get_cond st = Some True), ncond #} ([body] @ c')"
+                  using HTiE[OF Ntrue' Guard]
+                  by auto
+
+                have Mp2'_safe : "safe_for gs mp2' ncond"
+                  using guardediD[OF Gtrue Mp2'_p2_true Mp2'_cont] by auto
+
+                have Exec1 : "sem_exec_c_p gs mp2 1 mp2'"
+                  using Excp_1[of gs mp2 mp2'] Inl unfolding sem_step_p_eq
+                  by auto
+
+                show ?thesis
+                  using safe_for_weaken[OF safe_for_extend[OF Mp2'_safe Exec1], of ncond] by auto
+  
+              next
+                case False
+  
+                have Mp2'_cond : "get_cond (payload mp2') = Some False" 
+                  using Cont2 Hsyn H0 MP2 F_eq' P2_valid[OF MP2] False Some' unfolding HF
+                  by(cases mp2; 
+                      auto simp add: cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
+                      schem_lift_defs 
+                      merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
+                      get_cond_def
+                      split: md_prio.splits md_triv.splits option.splits)
+  
+                have Mp2'_p2_false :  "P2 (payload mp2') \<and> get_cond (payload mp2') = Some False"
+                  using Mp2'_p2 Mp2'_cond
+                  by auto
+  
+                have Mp2'_cont : "cont mp2' = Inl ([] @ c')"
+                  using Cont2 Hsyn H0 MP2 F_eq' P2_valid[OF MP2] False Some' unfolding HF
+                  by(cases mp2; 
+                      auto simp add: cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
+                      schem_lift_defs 
+                      merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
+                      get_cond_def
+                      split: md_prio.splits md_triv.splits option.splits)
+
+                have Gfalse : "|#gs#| {#(\<lambda>st. P2 st \<and> get_cond st = Some False), ncond#} ([] @ c')"
+                  using HTiE[OF Nfalse' Guard] by auto
+
+                have Mp2'_safe : "safe_for gs mp2' ncond"
+                  using guardediD[OF Gfalse Mp2'_p2_false Mp2'_cont] by auto
+
+                have Exec1 : "sem_exec_c_p gs mp2 1 mp2'"
+                  using Excp_1[of gs mp2 mp2'] Inl unfolding sem_step_p_eq
+                  by auto
+
+                show ?thesis
+                  using safe_for_weaken[OF safe_for_extend[OF Mp2'_safe Exec1], of ncond] by auto
+              qed
+            qed
+          qed
+        qed
+
+        have Guard' : "|#gs#| {#P1, npre#} ([cond] @ [G Sif' [body]] @ c')"
+          using HTiE[OF Ncond' Sub]
+          by auto
+
+        have Safe' : "safe_for gs m' npre" using guardediD[OF Guard' P1sm' CM'] by auto
+
+        have Exec1 : "sem_exec_c_p gs m 1 m'"
+          using Excp_1[of gs m m'] Inl unfolding sem_step_p_eq
+          by auto
+  
+        show "safe_for gs m npre"
+          using safe_for_weaken[OF safe_for_extend[OF Safe' Exec1], of npre] by auto
+      qed
+    qed
+  qed
+  then show "\<exists>npost.
+          |#gs#| {#-P1, npre-#} [G Sif'
+        [cond, body]] {#-P3, npost-#}"
+    by blast
+qed
+
+lemma HWhileC' :
   assumes H0 : "gs = pcomps fs"
   assumes HF : "f = imp_sem_l_gen lfts"
   assumes Hpres : "sups_pres (set fs)"
@@ -495,12 +731,7 @@ proof
   qed
 qed
 
-(* Using the soundness of our indexed Hoare triples, we can prove this rule in the normal
- * Hoare abstraction.
- * Note that because we could not prove completeness for the indexed triples,
- * we still require an assumption on the body that talks about indices.
- *)
-lemma HWhileC_idx :
+lemma HWhileC :
   assumes H0 : "gs = pcomps fs"
   assumes HF : "f = imp_sem_l_gen lfts"
   assumes Hpres : "sups_pres (set fs)"
@@ -508,13 +739,32 @@ lemma HWhileC_idx :
   assumes Hdom : "(f \<downharpoonleft> (set fs) SwhileC')"
   assumes Hsyn : "lfts SwhileC' = SwhileC"
   assumes PX_valid : "\<And> st.  PX st \<Longrightarrow> get_cond st \<noteq> None"
-  assumes Htrue : "|gs| {- PX-} [body] {- PX-}"
+  assumes Htrue : "|gs| {~ PX~} [body] {~ PX~}"
   assumes NLs : "nl1 \<le> nl2"
-  shows "|gs| {-PX-} [G SwhileC' [body]] {- (\<lambda> st . PX st \<and> get_cond st = Some False)-}"
-proof(rule HT'_imp_HT; rule HT'I)
+  shows "|gs| {~PX~} [G SwhileC' [body]] {~ (\<lambda> st . PX st \<and> get_cond st = Some False)~}"
+proof(rule HT'I)
   fix npre
 
+
+
   have Htrue' : "\<And> nb2 . \<exists> nb1' . |#gs#| {#- PX, (nb1' + nb2) -#} [body] {#- PX, nb2 -#}"
+  proof-
+    fix nb2
+
+    obtain nb2_post where Nb2_post : "|#gs#| {#-PX, nb2-#} [body] {#-PX, nb2_post-#}"
+      using HT'D[OF Htrue, of nb2]
+      by blast
+
+    show "\<exists>nb1'. |#gs#| {#-PX, (nb1' + nb2)-#} [body] {#-PX, nb2-#}"
+    proof(cases "nb2_post \<le> nb2")
+      case True
+      then show ?thesis sorry
+    next
+      case False
+      then show ?thesis sorry
+    qed
+
+    using 
 
   show "\<exists>npost. |#gs#| {#-PX, npre-#} [G SwhileC' [body]] {#-(\<lambda>st. PX st \<and> get_cond st = Some False), npost-#}"
 
