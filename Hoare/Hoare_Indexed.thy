@@ -323,15 +323,15 @@ definition HT' :: "('syn, 'mstate) semc \<Rightarrow> ('mstate \<Rightarrow> boo
   ("|_| {~_~} _ {~_~}" [250, 252, 254, 256])  
   where
 "HT' gs P c Q =
-  ((\<forall> npre . \<exists> npost . |#gs#| {#- P, (npre) -#} c {#- Q, npost -#}))"
+  ((\<forall> npost . \<exists> npre . |#gs#| {#- P, (npre + npost) -#} c {#- Q, npost -#}))"
 
 lemma HT'I :
-  assumes H : "(\<And> npre . \<exists> npost . |#gs#| {#- P, (npre) -#} c {#- Q, npost -#})"
+  assumes H : "(\<And> npost. \<exists> npre . |#gs#| {#- P, (npre + npost) -#} c {#- Q, npost -#})"
   shows "HT' gs P c Q" using assms unfolding HT'_def by blast
 
 lemma HT'D :
   assumes H : "HT' gs P c Q"
-  shows "(\<And> npre . \<exists> npost . |#gs#| {#- P, (npre) -#} c {#- Q, npost -#})"
+  shows "(\<And> npost . \<exists> npre . |#gs#| {#- P, (npre + npost) -#} c {#- Q, npost -#})"
   using H unfolding HT'_def by simp
 
 (* Consequence and Cat for our wrapped Hoare triple. 
@@ -346,14 +346,17 @@ lemma HxConseq :
 proof(rule HT'I)
   fix npre
 
-  obtain npost
-    where Npost : "|#gs#| {#-P', npre-#} c {#-Q', npost-#}"
-    using HT'D[OF H]
+  obtain npre'
+    where Npre' : "|#gs#| {#-P', (npre' + npre) -#} c {#-Q', npre-#}"
+    using HT'D[OF H, of npre]
     by blast
 
-  show "\<exists>npost. |#gs#| {#-P, npre-#} c {#-Q, npost-#}"
-    using HConseq[OF Npost, of P npre Q npost] HP1 HQ1
+  have "|#gs#| {#-P, (0 + npre) -#} c {#-Q, npre-#}"
+    using HConseq[OF Npre', of P npre Q npre] HP1 HQ1
     by(auto)
+
+  then show "\<exists>npre''. |#gs#| {#-P, (npre'' + npre)-#} c {#-Q, npre-#}"
+    by blast
 qed
 
 lemma HxCat :
@@ -363,18 +366,35 @@ lemma HxCat :
 proof(rule HT'I)
   fix npre
 
-  obtain nmid
-    where Nmid : "|#gs#| {#-P1, npre-#} c1 {#-P2, nmid-#}"
+  obtain n1
+    where N1 : "|#gs#| {#-P1, (n1 + npre)-#} c1 {#-P2, npre-#}"
     using HT'D[OF H]
     by blast
 
-  obtain npost
-    where Npost : "|#gs#| {#-P2, nmid-#} c2 {#-P3, npost-#}"
+  obtain n2
+    where N2 : "|#gs#| {#-P2, (n2 + npre)-#} c2 {#-P3, npre-#}"
     using HT'D[OF H']
     by blast
 
+  have N2' : "|#gs#| {#-P2, (npre)-#} c2 {#-P3, npre-#}"
+    using HConseq[OF N2, of P2 npre P3 npre] by auto
 
-  show "\<exists>npost. |#gs#| {#-P1, npre-#} (c1 @ c2) {#-P3, npost-#}"
-    using HCat[OF Nmid Npost] by blast
+
+  show "\<exists>n3. |#gs#| {#-P1, (n3 + npre)-#} (c1 @ c2) {#-P3, npre-#}"
+    using HCat[OF N1 N2'] by blast
 qed
+
+lemma HT'D0 :
+  assumes H : "HT' gs P c Q"
+  shows "(\<And> npost . |#gs#| {#- P, (npost) -#} c {#- Q, npost -#})"
+proof-
+  fix npost
+
+  obtain npre where Npre : "|#gs#| {#- P, (npre + npost) -#} c {#- Q, npost -#}"
+    using HT'D[OF H] by blast
+
+  show "|#gs#| {#-P, npost-#} c {#-Q, npost-#}"
+    using HConseq[OF Npre, of P npost Q npost] by auto
+qed
+
 end

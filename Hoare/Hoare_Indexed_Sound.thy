@@ -223,6 +223,25 @@ proof
   show "imm_safe gs m'" using safe_for_imm_safe[OF H N] by simp
 qed
 
+lemma guarded_weaken :
+  assumes H : "|#gs#| {#P, n1#} c"
+  assumes H' : "n2 \<le> n1"
+  shows "|#gs#| {#P, n2#} c"
+proof
+  fix m :: "('a, 'b) control"
+  assume P : "P (payload m)"
+  assume C : "cont m = Inl c"
+
+  have Conc' : "safe_for gs m n1"
+    using guardediD[OF H P C]
+    by auto
+
+  show "safe_for gs m n2"
+    using safe_for_weaken[OF Conc' H']
+    by auto
+qed
+    
+
 lemma unsafe_imp_unsafe_for :
   assumes H : "\<not> safe gs m"
   shows "\<exists> n . \<not> safe_for gs m n"
@@ -248,70 +267,7 @@ proof
       obtain n where Execc : "sem_exec_c_p gs m n m'"
         using exec_p_imp_exec_c_p[OF Exec] by auto
 
-      obtain npost where Npost : "|#gs#| {#-P, n-#} c {#-Q, npost-#}" using HT'D[OF H, of n]
-        by blast
-
-      have Guard'_out : "|#gs#| {#Q, npost#} c'"
-      proof
-        fix mx :: "('a, 'b) control"
-        assume Q: "Q (payload mx)"
-        assume C: "cont mx = Inl c'" 
-
-        have Safe : "safe gs mx"
-          using guardedD[OF Guard Q C] by simp
-
-        show "safe_for gs mx npost"
-          using safe_imp_safe_for[OF Safe] by simp
-      qed
-
-      have Guard'_in : "|#gs#| {#P, n#} (c @ c')"
-        using HTiE[OF Npost Guard'_out] by simp
-
-      have Safe' : "safe_for gs m n"
-        using guardediD[OF Guard'_in Pm Cm] by simp
-
-      show "imm_safe gs m'"
-        using safe_for_imm_safe[OF Safe' Execc] by simp
-    qed
-  qed
-qed
-
-(* new definition, inspired by issues with while *)
-definition HT'_alt :: "('syn, 'mstate) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'syn gensyn list \<Rightarrow> ('mstate \<Rightarrow> bool)\<Rightarrow> bool" 
-  where
-"HT'_alt gs P c Q =
-  ((\<forall> npost . \<exists> npre . |#gs#| {#- P, (npre + npost) -#} c {#- Q, npost -#}))"
-
-
-lemma HT'_altI :
-  assumes H : "\<And> npost . \<exists> npre . |#gs#| {#- P, (npre + npost) -#} c {#- Q, npost -#}"
-  shows "HT'_alt gs P c Q" using assms unfolding HT'_alt_def by blast
-
-lemma HT'_altD :
-  assumes H : "HT'_alt gs P c Q"
-  shows "\<exists> npre . |#gs#| {#- P, (npre + npost) -#} c {#- Q, npost -#}"
-  using assms unfolding HT'_alt_def by simp
-
-lemma HT''_imp_HT :
-  assumes H : "HT'_alt gs P c Q"
-  shows "|gs| {-P-} c {-Q-}"
-proof
-  fix c'
-  assume Guard : "|gs| {Q} c'"
-  show "|gs| {P} (c @ c')"
-  proof
-    fix m :: "('a, 'b) control"
-    assume Pm : "P (payload m)" 
-    assume Cm : "cont m = Inl (c @ c')" 
-    show "safe gs m"
-    proof
-      fix m'
-      assume Exec : "sem_exec_p gs m m'" 
-
-      obtain n where Execc : "sem_exec_c_p gs m n m'"
-        using exec_p_imp_exec_c_p[OF Exec] by auto
-
-      obtain n_offset where N_offset : "|#gs#| {#-P, (n_offset + n)-#} c {#-Q, n-#}" using HT'_altD[OF H, of n]
+      obtain npre where Npost : "|#gs#| {#-P, (npre + n)-#} c {#-Q, n-#}" using HT'D[OF H, of n]
         by blast
 
       have Guard'_out : "|#gs#| {#Q, n#} c'"
@@ -327,21 +283,57 @@ proof
           using safe_imp_safe_for[OF Safe] by simp
       qed
 
-      have Guard'_in : "|#gs#| {#P, (n_offset + n)#} (c @ c')"
-        using HTiE[OF N_offset Guard'_out] by simp
+      have Guard'_in : "|#gs#| {#P, (npre + n)#} (c @ c')"
+        using HTiE[OF Npost Guard'_out] by simp
 
-      have Safe' : "safe_for gs m (n_offset + n)"
-        using guardediD[OF Guard'_in Pm Cm] by simp
+      have Guard'_in' : "|#gs#| {#P, n#} (c @ c')"
+        using guarded_weaken[OF Guard'_in] by simp
 
-      have Safe'' : "safe_for gs m n"
-        using safe_for_weaken[OF Safe', of n] by auto
+      have Safe' : "safe_for gs m n"
+        using guardediD[OF Guard'_in' Pm Cm] by simp
 
       show "imm_safe gs m'"
-        using safe_for_imm_safe[OF Safe'' Execc] by simp
+        using safe_for_imm_safe[OF Safe' Execc] by simp
     qed
   qed
 qed
 
+(* I don't think the converse (completeness) holds in general. *)
+(*
+lemma HT_imp_HT' :
+  assumes H : "|gs| {-P-} c {-Q-}"
+  shows "HT' gs P c Q"
+proof(rule HT'I)
+  fix npost
+
+(*  have Hmm : "\<And> c' . ( |gs| {Q} c' \<or> (\<exists> mbad .  *)
+
+  have Conc' : "|#gs#| {#-P, (npost)-#} c {#-Q, npost-#}"
+  proof
+    fix c'
+    assume G: "|#gs#| {#Q, npost#} c'"
+
+    show "|#gs#| {#P, npost#} (c @ c')"
+    proof(cases "|gs| {Q} c'")
+      case True
+      then show ?thesis sorry
+    next
+      case False
+
+      then obtain mbad where Bad:
+        "Q (payload mbad)" "cont mbad = Inl c'" "\<not> safe gs mbad"
+        unfolding guarded_def
+        by blast
+
+      have Safe_post : "safe_for gs mbad npost"
+        using guardediD[OF G Bad(1) Bad(2)]
+        by simp
+
+      then show ?thesis 
+    qed
+
+  show "\<exists>npre. |#gs#| {#-P, (npre + npost)-#} c {#-Q, npost-#}"
+*)
 
 (* The following is of less practical use, but still interesting: we can actually prove
  * soundness and completeness for a slightly different version of the rule - however,
