@@ -1,5 +1,5 @@
 theory Seq_Hoare imports 
-  Seq "../../Hoare/Hoare" "../../Composition/Composition" "../../Composition/Dominant"
+  Seq "../../Hoare/Hoare" "../../Hoare/Hoare_Indexed" "../../Composition/Composition" "../../Composition/Dominant"
 begin
 
 (* Hoare rule for Seq language *)
@@ -95,6 +95,12 @@ qed
  *)
 (* TODO: do we need the assumption that
 fs is nonempty? *)
+
+
+(*
+ * This version is deprecated in favor of HxSeq; see below.
+ * It is retained to give an idea of what a more conventional proof of this Hoare rule looks like.
+ *)
 lemma HSeq_gen :
   assumes H0 : "gs = pcomps fs "
   (*assumes H1 : "seq_sem_l_gen lfts \<in> set fs" *)
@@ -106,6 +112,8 @@ lemma HSeq_gen :
   assumes H : "|gs| {- P1 -} cs {- P2 -}"
   shows "|gs| {- P1 -} [G Sseq' cs] {- P2 -}"
 proof
+
+
   fix c'
   assume Guard : "|gs| {P2} c'"
 
@@ -186,5 +194,87 @@ proof
   qed
 qed
 
+lemma HxSeq :
+  assumes H0 : "gs = pcomps fs "
+  (*assumes H1 : "seq_sem_l_gen lfts \<in> set fs" *)
+  assumes HF : "f = seq_sem_l_gen lfts"
+  assumes Hpres : "sups_pres (set fs)"
+  assumes Hnemp : "g \<in> set fs"
+  assumes Hdom : "(f \<downharpoonleft> (set fs) Sseq')"
+  assumes H2 : "lfts Sseq' = Sseq"
+  assumes H : "|gs| {~ P1 ~} cs {~ P2 ~}"
+  shows "|gs| {~ P1 ~} [G Sseq' cs] {~ P2 ~}"
+proof(rule HT'I)
+  fix npost 
+
+  obtain nbody where Nbody : "|#gs#| {#-P1, (nbody + npost)-#} cs {#-P2, npost-#}"
+    using HT'D[OF H]
+    by blast
+
+  have Conc' : "|#gs#| {#-P1, (nbody + npost)-#} [G Sseq' cs] {#-P2, npost-#}"
+  proof
+    fix c'
+
+    assume Guard : "|#gs#| {#P2, npost#} c'"
+
+    have Guard' : "|#gs#| {#P1, (nbody + npost)#} (cs @ c')"
+      using HTiE[OF Nbody Guard]
+      by auto
+
+    show "|#gs#| {#P1, (nbody + npost)#} ([G Sseq' cs] @ c')"
+    proof
+      fix m :: "('a, 'b) control"
+      assume M : "P1 (payload m)"
+      assume CM : "cont m = Inl ([G Sseq' cs] @ c')"
+  
+      show "safe_for gs m (nbody + npost)"
+      proof(cases "(sem_step gs m)")
+        case (Inr bad)
+  
+        then have False using CM H0
+          by(auto simp add: sem_step_def)
+  
+        then show ?thesis by auto
+      next
+        case (Inl m')
+  
+        have F_eq : "sem_step f m = Inl m'"
+          using sym[OF dominant_pcomps[OF Hpres Hnemp Hdom]] CM Inl H0
+          by(simp add: sem_step_def)
+
+        have Fcont : "cont m' = Inl (cs @ c')"
+          using HF F_eq CM H2
+            (* TODO: better automation here *)
+          by(cases m; auto simp add: schem_lift_defs sem_step_def seq_sem_l_gen_def seq_semx_def seq_sem_def cont_def seq_sem_lifting_gen_def fst_l_def seq_sem_lifting'_def
+              prio_l_def option_l_def triv_l_def split: md_prio.splits option.splits md_triv.splits list.split_asm)
+  
+        have Fstate : "payload m' = payload m"
+          using HF F_eq CM H2
+          by(cases m; auto simp add: schem_lift_defs sem_step_def seq_sem_l_gen_def seq_semx_def seq_sem_def cont_def seq_sem_lifting_gen_def fst_l_def seq_sem_lifting'_def
+              prio_l_def option_l_def triv_l_def split: md_prio.splits option.splits md_triv.splits list.split_asm)
+  
+        hence M' :  "P1 (payload m')" using M unfolding Fstate by auto
+
+        have Safe' : "safe_for gs m' (nbody + npost)" using guardediD[OF Guard' M' Fcont] by auto
+
+        have Step : "sem_step_p gs m m'" using Inl
+          unfolding sem_step_p_eq
+          by auto
+
+        have Step1 : "sem_exec_c_p gs m 1 m'"
+          using Excp_1[OF Step] by simp
+
+        have Safe'' : "safe_for gs m (1 + nbody + npost)"
+          using safe_for_extend[OF Safe' Step1] by simp
+
+        show "safe_for gs m (nbody + npost)"
+          using safe_for_weaken[OF Safe'', of "nbody + npost"] by auto
+      qed
+    qed
+  qed
+
+  then show "\<exists>npre. |#gs#| {#-P1, (npre + npost)-#} [G Sseq' cs] {#-P2, npost-#}"
+    by blast
+qed
 
 end

@@ -1,5 +1,5 @@
 theory Composition
-imports Composition_Core
+imports Composition_Core "../Lifter/Lifter"
 begin
 
 (* This file extends the definitions in Composition_Core.thy to a fully general implementation
@@ -553,4 +553,10 @@ next
   qed
 qed
 
+(* TODO: this may become necessary *)
+(*
+lemma l_ortho_sups_pres :
+  assumes "l_ortho l1 l2"
+  shows "sups_pres (lift_map_s st1 l1 lf) (lift_map_s st2 l2 f2)"
+*)
 end

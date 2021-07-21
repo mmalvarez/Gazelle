@@ -245,6 +245,22 @@ proof-
     using is_sup_unique[OF 0 2] by auto
 qed
 
+lemma bsup_base_leq2 :
+  assumes H : "y <[ x"
+  shows "[^ x, y ^] = x"
+proof-
+  have 0 : "is_sup {x, y} x" using H
+    by(auto simp add: has_sup_def is_sup_def is_least_def is_ub_def leq_refl)
+
+  have 1: "is_bsup x y [^ x, y ^]" using bsup_spec by auto
+
+  have 2 : "is_sup {x, y} [^ x, y ^]" using bsup_sup[OF 0 1] by auto
+
+  show "[^ x, y ^] = x"
+    using is_sup_unique[OF 0 2] by auto
+qed
+
+
 lemma bsup_base_eq :
   "[^ x, [^ x, y ^]^] = [^ x, y ^]"
 proof-

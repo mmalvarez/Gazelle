@@ -74,5 +74,34 @@ proof-
   show ?thesis using is_sup_unique[OF Sup2 Sup2'] by auto
 qed
 
+(* 
+ * A more fine-grained version of dominant - capturing the idea of "quotiented" dominance.
+ * Whereas "true" dominance says that f's result is equal to the sep, this one says that
+ * some relation holds (?)
+ *)
+
+(* dominant: for the given syntax x, f "dominates" set S if for all state inputs b,
+ * f x b is the least upper bound of
+ * applying each f' in S to x and b.
+ * how can we special-case this?
+ *)
+(*
+definition dominantP ::
+  "('a \<Rightarrow> ('b :: Mergeable) \<Rightarrow> 'b) \<Rightarrow> ('a \<Rightarrow> 'b set) \<Rightarrow> ('a \<Rightarrow> ('b :: Mergeable) \<Rightarrow> 'b) set \<Rightarrow> 'a \<Rightarrow> bool"
+("_; _ \<downharpoonleft> _ _" [280, 282, 284, 286])
+where
+"(f; P \<downharpoonleft> S x) =
+ (\<forall> b . is_sup ((\<lambda> g . g x b) ` S) (f x b))"
+
+lemma dominantI [intro] :
+  assumes "\<And> b . is_sup ((\<lambda> g . g x b) ` S) (f x b)"
+  shows "(f \<downharpoonleft> S x)" using assms
+  unfolding dominant_def by auto
+
+lemma dominantE [elim] :
+  assumes "(f \<downharpoonleft> S x)"
+  shows "is_sup ((\<lambda> g . g x b) ` S) (f x b)" using assms
+  unfolding dominant_def by auto
+*)
 
 end

@@ -548,7 +548,7 @@ proof(rule HT'I)
     by blast
 qed
 
-lemma HWhileC' :
+lemma HxWhileC' :
   assumes H0 : "gs = pcomps fs"
   assumes HF : "f = imp_sem_l_gen lfts"
   assumes Hpres : "sups_pres (set fs)"
@@ -731,7 +731,7 @@ proof
   qed
 qed
 
-lemma HWhileC :
+lemma HxWhileC :
   assumes H0 : "gs = pcomps fs"
   assumes HF : "f = imp_sem_l_gen lfts"
   assumes Hpres : "sups_pres (set fs)"

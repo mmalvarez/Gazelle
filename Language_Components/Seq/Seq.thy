@@ -33,6 +33,10 @@ type_synonym ('s, 'x) state =
 (* concrete state *)
 type_synonym 's cstate = "('s, unit option) state"
 
+(* We define a lifting here to show how Seq overlaps with the standard control-flow
+ * constructs
+ *)
+
 (* TODO: the auto-lifter seems to sometimes struggle a bit when one of the types involved
  * is a type variable (e.g. 'x state'), but it works in this case. Should figure out
  * to what extent this is an issue or just a usability bug (or even just a matter
