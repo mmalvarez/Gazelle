@@ -72,14 +72,18 @@ term "(schem_lift (SP NA NB)
                 (SM (SL mem_key_src (SPRI (SO NA)))
                     (SL mem_key_dest (SPRIN 2 (SO NB)))))"  
 
+(* idea: now we need to say the dummy variable must already exist. *)
+(* we need to reevaluate how we are approaching ordering in the context of
+ * these lists...
+ *)
 lemma Mem_lift_valid :
   shows "lifting_valid (schem_lift (SP NA NB)
                 (SM (SL mem_key_src (SPRI (SO NA)))
                     (SL mem_key_dest (SPRIN 2 (SO NB)))) :: (Mem.syn, Mem.state0, Mem.state) lifting) 
 (\<lambda> syn . 
   (case syn of
-    Slit s i \<Rightarrow> UNIV
-    | Scopy s1 s2 \<Rightarrow> {st . (\<exists> s1v s1p . get st s1  = Some (mdp s1p (Some (mdt s1v))))}
+    Slit s i \<Rightarrow> {st . (\<exists> s1v s1p . get st s1  = Some (mdp s1p (Some (mdt s1v)))) \<and> (\<exists> s0v s0p . get st (STR '''') = Some (mdp s0p (Some (mdt s0v))))}
+    | Scopy s1 s2 \<Rightarrow> {st . (\<exists> s1v s1p . get st s1  = Some (mdp s1p (Some (mdt s1v)))) \<and> (\<exists> s0v s0p . get st (STR '''') = Some (mdp s0p (Some (mdt s0v))))}
     | _ \<Rightarrow> UNIV))"
 proof(rule lifting_validI)
   fix s :: "Mem.syn" 
@@ -88,9 +92,13 @@ proof(rule lifting_validI)
   show "LOut (schem_lift (SP NA NB) (SM (SL mem_key_src (SPRI (SO NA))) (SL mem_key_dest (SPRC (\<lambda>_. 2) (SO NB))))) s
         (LUpd (schem_lift (SP NA NB) (SM (SL mem_key_src (SPRI (SO NA))) (SL mem_key_dest (SPRC (\<lambda>_. 2) (SO NB))))) s a b) =
        a"
-    apply(cases a; auto simp add: schem_lift_defs merge_l_def oalist_l_def prio_l_def option_l_def triv_l_def)
-    apply(cases "mem_key_src s"; auto)
-    apply(cases s; auto simp add: schem_lift_defs merge_l_def oalist_l_def prio_l_def option_l_def triv_l_def)
+    apply(cases a; auto simp add: schem_lift_defs merge_l_def oalist_l_def prio_l_def option_l_def triv_l_def Let_def)
+     
+apply(cases "get b (mem_key_src s)"; auto simp add: get_update LNew_def prio_l_def)
+      apply(cases s; auto simp add: schem_lift_defs merge_l_def oalist_l_def prio_l_def option_l_def triv_l_def LNew_def split: option.split_asm)
+    term "SPR"
+    apply(auto split: sprio.splits simp add: prio_l_def schem_lift_defs)
+    apply(simp add: get_update)
 
 
 

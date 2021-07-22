@@ -39,22 +39,22 @@ fun mem_trans :: "syn \<Rightarrow> mem0" where
 | "mem_trans (Scopy _ _) = Mzcopy"
 | "mem_trans (Sskip) = Mzskip"
 
-(* do we lift from somethting more trivial? *)
-(* what if variable can't be found? no-op? *)
 fun mem0_sem :: "syn \<Rightarrow> state0 \<Rightarrow> state0" where
 "mem0_sem Sskip s = s"
 | "mem0_sem (Scopy _ _) (src, dest) = (src, src)"
 | "mem0_sem (Slit _ i) (src, dest) = (src, i)"
 
-fun mem_key_src :: "syn \<Rightarrow> str option" where
-"mem_key_src (Slit s _) = None"
-| "mem_key_src (Scopy s1 s2) = Some s1"
-| "mem_key_src Sskip = None"
+(* we are using STR '''' as a "dummy" variable
+ * when we would need to look up a nonexistent variable name *)
+fun mem_key_src :: "syn \<Rightarrow> str" where
+"mem_key_src (Slit s _) = (STR '''')"
+| "mem_key_src (Scopy s1 s2) = s1"
+| "mem_key_src Sskip = (STR '''')"
 
-fun mem_key_dest :: "syn \<Rightarrow> str option" where
-"mem_key_dest (Slit s _) = (Some s)"
-| "mem_key_dest (Scopy s1 s2) = (Some s2)"
-| "mem_key_dest Sskip = None"
+fun mem_key_dest :: "syn \<Rightarrow> str" where
+"mem_key_dest (Slit s _) = s"
+| "mem_key_dest (Scopy s1 s2) = s2"
+| "mem_key_dest Sskip = (STR '''')"
 
 definition mem_sem :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "mem_sem = 
@@ -68,7 +68,7 @@ definition mem_sem_l_gen :: "('s \<Rightarrow> syn) \<Rightarrow> (syn, state, '
   lift_map_s lfts
     (schem_lift NA (SINJ lft NA)) mem_sem"
 
-(*
+
 definition test_store where
 "test_store = to_oalist
   [ (STR ''a'', Swr (0 :: int))
@@ -76,6 +76,7 @@ definition test_store where
   , (STR ''z'', Swr (-1))]"
 
 value "mem_sem (Scopy (STR ''b'') (STR ''y'')) test_store"
+value "mem_sem (Slit (STR ''f'') (4 :: int)) test_store"
 
 (*
 definition t1 where
@@ -102,7 +103,7 @@ value "mem_sem (Slit (STR ''b'') (4 :: int)) test_store"
 value "mem_sem (Scopy (STR ''a'') (STR ''f'')) test_store"
 value "mem_sem (Scopy (STR ''a'') (STR ''b'')) test_store"
 *)
-*)
+
 
 
 
