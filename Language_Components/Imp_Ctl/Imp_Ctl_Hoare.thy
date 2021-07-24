@@ -212,7 +212,7 @@ proof
                     schem_lift_defs 
                     merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
                     get_cond_def
-                    split: md_prio.splits md_triv.splits option.splits)
+                    split: md_prio.splits md_triv.splits option.splits if_splits)
 
               have Mp2'_safe : "safe gs mp2'"
                 using guardedD[OF Gfalse Mp2'_p2_false Mp2'_cont] by auto
@@ -506,7 +506,7 @@ proof(rule HT'I)
                       schem_lift_defs 
                       merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
                       get_cond_def
-                      split: md_prio.splits md_triv.splits option.splits)
+                      split: md_prio.splits md_triv.splits option.splits if_splits)
 
                 have Gfalse : "|#gs#| {#(\<lambda>st. P2 st \<and> get_cond st = Some False), npre#} ([] @ c')"
                   using HTiE[OF Nfalse Guard] by auto
@@ -701,7 +701,7 @@ proof
                   schem_lift_defs 
                   merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
                   get_cond_def
-                  split: md_prio.splits md_triv.splits option.splits)
+                  split: md_prio.splits md_triv.splits option.splits if_splits)
 
             have M'_full' : "PX (payload m') \<and> get_cond (payload m') = Some False"
               using M' False Some' unfolding Suc.prems(1) Sm'
@@ -749,7 +749,7 @@ proof(rule HT'I)
 
   have Conc' : "|#gs#| {#-PX, (0 + npost)-#} [G SwhileC' [body]] {#-(\<lambda>st. PX st \<and> get_cond st = Some False), npost-#}"
     unfolding add_0
-    using HWhileC'[OF H0 HF Hpres Hnemp Hdom Hsyn _ Htrue', of npost npost] PX_valid
+    using HxWhileC'[OF H0 HF Hpres Hnemp Hdom Hsyn _ Htrue', of npost npost] PX_valid
     by blast
 
   then show "\<exists>npre. |#gs#| {#-PX, (npre + npost)-#} [G SwhileC' [body]] {#-(\<lambda>st. PX st \<and> get_cond st = Some False), npost-#}"

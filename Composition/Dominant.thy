@@ -74,6 +74,14 @@ proof-
   show ?thesis using is_sup_unique[OF Sup2 Sup2'] by auto
 qed
 
+lemma dominant_pcomps_set :
+  assumes Hpres : "sups_pres S"
+  assumes Hne : "z \<in> S"
+  assumes H : "(f \<downharpoonleft> S x)"
+  assumes L : "set l = S"
+  shows "pcomps l x b = f x b"
+  using dominant_pcomps assms unfolding sym[OF L] by auto
+
 (* 
  * A more fine-grained version of dominant - capturing the idea of "quotiented" dominance.
  * Whereas "true" dominance says that f's result is equal to the sep, this one says that

@@ -1,6 +1,7 @@
 theory Mem_Hoare imports Mem "../../Hoare/Hoare"  "../../Hoare/Hoare_Indexed"
   "../../Hoare/Hoare_Indexed_Sound" "../../Composition/Dominant"
 begin
+
 (* need to figure out appropriate way to state these lifting theorems
  * when they are not purely control.
  * 

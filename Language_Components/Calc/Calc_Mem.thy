@@ -1,11 +1,12 @@
-theory Calc_Mem imports Calc "../Mem/Mem" "../../Composition/Composition"
+theory Calc_Mem imports Calc "../Mem/Mem_Simple" "../../Composition/Composition"
 begin
 
 datatype syn =
-  Sc "calc" "str" "str" "str"
-  | Sm "Mem.syn"
+  Sc "calc"
+  | Sm "Mem_Simple.syn"
   | Ssk (* skip *)
 
+(*
 fun calc2_key1 :: "syn \<Rightarrow> str option" where
 "calc2_key1 (Sc _ s1 _ _) = Some s1"
 | "calc2_key1 _ = None"
@@ -25,30 +26,49 @@ definition calc_key_lift :: "(syn, calc_state, (str, int swr) oalist) lifting" w
         (SM (SL calc2_key1 (SPRK (SO NA)))
         (SM (SL calc2_key2 (SPRK (SO NB)))
             (SL calc2_key3 (SPRI (SO NC)))))"
-
+*)
 fun calc_trans :: "syn \<Rightarrow> calc" where
-"calc_trans (Sc x _ _ _) = x"
+"calc_trans (Sc x ) = x"
 | "calc_trans _ = Cskip"
 
-(* We should be targeting a different state type. *)
-definition calc_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
-"calc_sem_l =
-  lift_map_s id
-  (schem_lift
-    NA (SINJ calc_key_lift NA))
-  (calc_sem o calc_trans)"
 
-fun mem_trans :: "syn \<Rightarrow> Mem.syn" where
+type_synonym ('s, 'x) state = 
+  "('s, 'x) Mem_Simple.state"
+(*
+type_synonym state = "(int swr * int swr * int swr * int swr * (str, int swr) oalist)"
+*)
+
+term "(schem_lift
+    (SP NA (SP NB NC)) 
+    (SP NX
+      (SP NX
+        (SP (SPRI (SO NA)) (SP (SPRI (SO NB)) (SP (SPRI (SO NC)) NX))))))"
+
+term "undefined :: ('s, 'x) state"
+
+(* NB: we are inferring mergeability on the last component - I think. *)
+definition calc_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
+"calc_sem_l =
+  lift_map_s calc_trans
+  (schem_lift
+    (SP NA (SP NB NC)) 
+    (SP NX
+      (SP NX
+        (SP (SPRI (SO NA)) (SP (SPRI (SO NB)) (SP (SPRI (SO NC)) NX))))))
+  calc_sem"
+
+fun mem_trans :: "syn \<Rightarrow> Mem_Simple.syn" where
 "mem_trans (Sm m) = m"
 | "mem_trans _ = Sskip"
 
-definition mem_sem_l :: "syn \<Rightarrow> state \<Rightarrow> state" where
+definition mem_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
 "mem_sem_l = 
-  lift_map_s mem_trans
-    (schem_lift NA (SID NA))
+  lift_map_s mem_trans id_l
   mem_sem"
 
-definition sem_final :: "(syn \<Rightarrow> state \<Rightarrow> state)" where
+term "mem_sem_l"
+
+definition sem_final :: "(syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state)" where
 "sem_final = 
   pcomps [calc_sem_l, mem_sem_l]"
 

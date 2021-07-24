@@ -5,7 +5,6 @@ imports "../../Syntax/Gensyn" "../../Syntax/Gensyn_Descend" "../../Mergeable/Mer
         "../../Lifter/Auto_Lifter" "../../Lifter/Auto_Lifter_Proofs" 
         "../../Semantics/Semantics" "../../Composition/Dominant"
         "../Utils"
-        "Cond"
 begin
 
 (*
@@ -26,9 +25,9 @@ datatype syn' =
   | Sskip
   | SwhileC
 
-type_synonym 'x imp_state' = "'x gensyn list * bool"
+type_synonym 'x imp_state' = "'x gensyn list * int"
 
-type_synonym 'x state' = "'x gensyn list * bool * int"
+type_synonym 'x state' = "'x gensyn list * int * int"
 
 definition imp_ctl_sem :: "syn' \<Rightarrow> 'x imp_state' \<Rightarrow> 'x imp_state'" where
 "imp_ctl_sem x st =
@@ -39,17 +38,17 @@ definition imp_ctl_sem :: "syn' \<Rightarrow> 'x imp_state' \<Rightarrow> 'x imp
         Sskip \<Rightarrow> t
         | Sif \<Rightarrow>
         (case l of
-          [body] \<Rightarrow> (if b then body#t else t)
+          [body] \<Rightarrow> (if (b \<noteq> 0) then body#t else t)
           | [cond, body] \<Rightarrow> cond# ((G z [body])#t)
           | _ \<Rightarrow> [] \<comment>\<open> error \<close>)
         | SwhileC \<Rightarrow>
-        (case l of [body] \<Rightarrow> (if b then body # (G z [body]) # t else t)
+        (case l of [body] \<Rightarrow> (if (b \<noteq> 0) then body # (G z [body]) # t else t)
          | _ \<Rightarrow> [] \<comment>\<open> error \<close>))
       , b))"
 
 
 type_synonym ('s, 'x) state = 
-  "('s, (bool md_triv option md_prio * int md_triv option md_prio * 'x)) control"
+  "('s, (int md_triv option md_prio * int md_triv option md_prio * 'x)) control"
 
 type_synonym ('s) cstate = 
   "('s, unit option) state"
@@ -78,14 +77,14 @@ definition imp_sem_l_gen :: "('s \<Rightarrow> syn') \<Rightarrow> 's \<Rightarr
 
 
 definition get_cond :: 
-"bool md_triv option md_prio * 
+"int md_triv option md_prio * 
   int md_triv option md_prio * 
   (_ :: Pordb) \<Rightarrow> bool option" where
 "get_cond st = 
   (case st of
     (b, _, _) \<Rightarrow> 
     (case b of
-      (mdp _ (Some (mdt b'))) \<Rightarrow> Some b'
+      (mdp _ (Some (mdt b'))) \<Rightarrow> Some (if b' = 0 then False else True)
       | _ \<Rightarrow> None))"
 
 end

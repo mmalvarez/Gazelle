@@ -52,17 +52,18 @@ begin
 
 (* Each name N gets a class n_N *)
 class n_A
-
 class n_B
-
 class n_C
-
 class n_D
-
 class n_E
+class n_F
+class n_G
+class n_H
+class n_I
+class n_J
+class n_K
 
 class n_X
-
 
 (* Class collecting all "base" names. We could perhaps use this more aggressively
  * to clean up some of the inference code *)
@@ -71,14 +72,16 @@ class basename
 
 (* each name N gets a dummy datatype NN *)
 datatype nA = NA
-
 datatype nB = NB
-
 datatype nC = NC
-
 datatype nD = ND
-
 datatype nE = NE
+datatype nF = NF
+datatype nG = NG
+datatype nH = NH
+datatype nI = NI
+datatype nJ = NJ
+datatype nK = NK
 
 datatype nX = NX
 
@@ -122,6 +125,55 @@ instantiation nE :: basename begin
 instance proof qed
 end
 
+instantiation nF :: n_F begin
+instance proof qed
+end
+
+instantiation nF :: basename begin
+instance proof qed
+end
+
+instantiation nG :: n_G begin
+instance proof qed
+end
+
+instantiation nG :: basename begin
+instance proof qed
+end
+
+instantiation nH :: n_H begin
+instance proof qed
+end
+
+instantiation nH :: basename begin
+instance proof qed
+end
+
+instantiation nI :: n_I begin
+instance proof qed
+end
+
+instantiation nI :: basename begin
+instance proof qed
+end
+
+instantiation nJ :: n_J begin
+instance proof qed
+end
+
+instantiation nJ :: basename begin
+instance proof qed
+end
+
+instantiation nK :: n_K begin
+instance proof qed
+end
+
+instantiation nK :: basename begin
+instance proof qed
+end
+
+
 instantiation nX :: n_X begin
 instance proof qed
 end
@@ -139,7 +191,7 @@ datatype 'a soption =
   SO "'a"
 
 datatype ('x, 'k, 'a) soalist =
-  SL "'x \<Rightarrow> ('k :: linorder) option" "'a"
+  SL "'x \<Rightarrow> ('k :: linorder)" "'a"
 
 datatype ('x, 'k, 'a) sroalist =
   SRL "'x \<Rightarrow> ('k :: linorder) option" "'a"
@@ -189,6 +241,30 @@ instantiation nE :: schem begin
 instance proof qed
 end
 
+instantiation nF :: schem begin
+instance proof qed
+end
+
+instantiation nG :: schem begin
+instance proof qed
+end
+
+instantiation nH :: schem begin
+instance proof qed
+end
+
+instantiation nI :: schem begin
+instance proof qed
+end
+
+instantiation nJ :: schem begin
+instance proof qed
+end
+
+instantiation nK :: schem begin
+instance proof qed
+end
+
 instantiation nX :: schem begin
 instance proof qed
 end
@@ -233,40 +309,212 @@ end
 
 (* declare which names are _not_ in which classes  *)
 class hasntA
-
 class hasntB
-
 class hasntC
-
 class hasntD
-
 class hasntE
+class hasntF
+class hasntG
+class hasntH
+class hasntI
+class hasntJ
+class hasntK
 
-instantiation nA :: "{hasntB, hasntC, hasntD, hasntE}" begin
+instantiation nA :: "{
+hasntB,
+hasntC,
+hasntD,
+hasntE,
+hasntF,
+hasntG,
+hasntH,
+hasntI,
+hasntJ,
+hasntK,
+type}"
+begin
 instance proof qed
 end
 
-instantiation nB :: "{hasntA, hasntC, hasntD, hasntE}" begin
+instantiation nB :: "{
+hasntA,
+hasntC,
+hasntD,
+hasntE,
+hasntF,
+hasntG,
+hasntH,
+hasntI,
+hasntJ,
+hasntK,
+type}"
+begin
 instance proof qed
 end
 
-instantiation nC :: "{hasntA, hasntB, hasntD, hasntE}" begin
+instantiation nC :: "{
+hasntA,
+hasntB,
+hasntD,
+hasntE,
+hasntF,
+hasntG,
+hasntH,
+hasntI,
+hasntJ,
+hasntK,
+type}"
+begin
 instance proof qed
 end
 
-instantiation nD :: "{hasntA, hasntB, hasntC, hasntE}" begin
+instantiation nD :: "{
+hasntA,
+hasntB,
+hasntC,
+hasntE,
+hasntF,
+hasntG,
+hasntH,
+hasntI,
+hasntJ,
+hasntK,
+type}"
+begin
 instance proof qed
 end
 
-instantiation nE :: "{hasntA, hasntB, hasntC, hasntD}" begin
+instantiation nE :: "{
+hasntA,
+hasntB,
+hasntC,
+hasntD,
+hasntF,
+hasntG,
+hasntH,
+hasntI,
+hasntJ,
+hasntK,
+type}"
+begin
+instance proof qed
+end
+
+instantiation nF :: "{
+hasntA,
+hasntB,
+hasntC,
+hasntD,
+hasntE,
+hasntG,
+hasntH,
+hasntI,
+hasntJ,
+hasntK,
+type}"
+begin
+instance proof qed
+end
+
+instantiation nG :: "{
+hasntA,
+hasntB,
+hasntC,
+hasntD,
+hasntE,
+hasntF,
+hasntH,
+hasntI,
+hasntJ,
+hasntK,
+type}"
+begin
+instance proof qed
+end
+
+instantiation nH :: "{
+hasntA,
+hasntB,
+hasntC,
+hasntD,
+hasntE,
+hasntF,
+hasntG,
+hasntI,
+hasntJ,
+hasntK,
+type}"
+begin
+instance proof qed
+end
+
+instantiation nI :: "{
+hasntA,
+hasntB,
+hasntC,
+hasntD,
+hasntE,
+hasntF,
+hasntG,
+hasntH,
+hasntJ,
+hasntK,
+type}"
+begin
+instance proof qed
+end
+
+instantiation nJ :: "{
+hasntA,
+hasntB,
+hasntC,
+hasntD,
+hasntE,
+hasntF,
+hasntG,
+hasntH,
+hasntI,
+hasntK,
+type}"
+begin
+instance proof qed
+end
+
+instantiation nK :: "{
+hasntA,
+hasntB,
+hasntC,
+hasntD,
+hasntE,
+hasntF,
+hasntG,
+hasntH,
+hasntI,
+hasntJ,
+type}"
+begin
 instance proof qed
 end
 
 (* By convention, we use X to denote names we don't care about (think "_" in pattern-match).
  * For this reason we do not need a "hasntX" typeclass - we will never be searching _for_ X. *)
-instantiation nX :: "{hasntA, hasntB, hasntC, hasntD, hasntE}" begin
+instantiation nX :: "{
+hasntA,
+hasntB,
+hasntC,
+hasntD,
+hasntE,
+hasntF,
+hasntG,
+hasntH,
+hasntI,
+hasntJ,
+hasntK,
+type}"
+begin
 instance proof qed
 end
+
 
 (*
  * The negation of an "or" is an "and". We can't get Isabelle's typeclass inference algorithm
@@ -296,6 +544,31 @@ instantiation sprod :: (hasntE, hasntE) hasntE begin
 instance proof qed
 end
 
+instantiation sprod :: (hasntF, hasntF) hasntF begin
+instance proof qed
+end
+
+instantiation sprod :: (hasntG, hasntG) hasntG begin
+instance proof qed
+end
+
+instantiation sprod :: (hasntH, hasntH) hasntH begin
+instance proof qed
+end
+
+instantiation sprod :: (hasntI, hasntI) hasntI begin
+instance proof qed
+end
+
+instantiation sprod :: (hasntJ, hasntJ) hasntJ begin
+instance proof qed
+end
+
+instantiation sprod :: (hasntK, hasntK) hasntK begin
+instance proof qed
+end
+
+
 instantiation sprio :: (_, hasntA) hasntA begin
 instance proof qed
 end
@@ -313,6 +586,30 @@ instance proof qed
 end
 
 instantiation sprio :: (_, hasntE) hasntE begin
+instance proof qed
+end
+
+instantiation sprio :: (_, hasntF) hasntF begin
+instance proof qed
+end
+
+instantiation sprio :: (_, hasntG) hasntG begin
+instance proof qed
+end
+
+instantiation sprio :: (_, hasntH) hasntH begin
+instance proof qed
+end
+
+instantiation sprio :: (_, hasntI) hasntI begin
+instance proof qed
+end
+
+instantiation sprio :: (_, hasntJ) hasntJ begin
+instance proof qed
+end
+
+instantiation sprio :: (_, hasntK) hasntK begin
 instance proof qed
 end
 
@@ -337,6 +634,30 @@ instantiation soption :: (hasntE) hasntE begin
 instance proof qed
 end
 
+instantiation soption :: (hasntF) hasntF begin
+instance proof qed
+end
+
+instantiation soption :: (hasntG) hasntG begin
+instance proof qed
+end
+
+instantiation soption :: (hasntH) hasntH begin
+instance proof qed
+end
+
+instantiation soption :: (hasntI) hasntI begin
+instance proof qed
+end
+
+instantiation soption :: (hasntJ) hasntJ begin
+instance proof qed
+end
+
+instantiation soption :: (hasntK) hasntK begin
+instance proof qed
+end
+
 
 instantiation soalist :: (_, linorder, hasntA) hasntA begin
 instance proof qed
@@ -355,6 +676,30 @@ instance proof qed
 end
 
 instantiation soalist :: (_, linorder, hasntE) hasntE begin
+instance proof qed
+end
+
+instantiation soalist :: (_, linorder, hasntF) hasntF begin
+instance proof qed
+end
+
+instantiation soalist :: (_, linorder, hasntG) hasntG begin
+instance proof qed
+end
+
+instantiation soalist :: (_, linorder, hasntH) hasntH begin
+instance proof qed
+end
+
+instantiation soalist :: (_, linorder, hasntI) hasntI begin
+instance proof qed
+end
+
+instantiation soalist :: (_, linorder, hasntJ) hasntJ begin
+instance proof qed
+end
+
+instantiation soalist :: (_, linorder, hasntK) hasntK begin
 instance proof qed
 end
 
@@ -379,6 +724,29 @@ instantiation sroalist :: (_, linorder, hasntE) hasntE begin
 instance proof qed
 end
 
+instantiation sroalist :: (_, linorder, hasntF) hasntF begin
+instance proof qed
+end
+
+instantiation sroalist :: (_, linorder, hasntG) hasntG begin
+instance proof qed
+end
+
+instantiation sroalist :: (_, linorder, hasntH) hasntH begin
+instance proof qed
+end
+
+instantiation sroalist :: (_, linorder, hasntI) hasntI begin
+instance proof qed
+end
+
+instantiation sroalist :: (_, linorder, hasntJ) hasntJ begin
+instance proof qed
+end
+
+instantiation sroalist :: (_, linorder, hasntK) hasntK begin
+instance proof qed
+end
 
 instantiation smerge :: (hasntA, hasntA) hasntA begin
 instance proof qed
@@ -400,6 +768,29 @@ instantiation smerge :: (hasntE, hasntE) hasntE begin
 instance proof qed
 end
 
+instantiation smerge :: (hasntF, hasntF) hasntF begin
+instance proof qed
+end
+
+instantiation smerge :: (hasntG, hasntG) hasntG begin
+instance proof qed
+end
+
+instantiation smerge :: (hasntH, hasntH) hasntH begin
+instance proof qed
+end
+
+instantiation smerge :: (hasntI, hasntI) hasntI begin
+instance proof qed
+end
+
+instantiation smerge :: (hasntJ, hasntJ) hasntJ begin
+instance proof qed
+end
+
+instantiation smerge :: (hasntK, hasntK) hasntK begin
+instance proof qed
+end
 
 instantiation sfan :: (_, _, _, hasntA) hasntA begin
 instance proof qed
@@ -418,6 +809,30 @@ instance proof qed
 end
 
 instantiation sfan :: (_, _, _, hasntE) hasntE begin
+instance proof qed
+end
+
+instantiation sfan :: (_, _, _, hasntF) hasntF begin
+instance proof qed
+end
+
+instantiation sfan :: (_, _, _, hasntG) hasntG begin
+instance proof qed
+end
+
+instantiation sfan :: (_, _, _, hasntH) hasntH begin
+instance proof qed
+end
+
+instantiation sfan :: (_, _, _, hasntI) hasntI begin
+instance proof qed
+end
+
+instantiation sfan :: (_, _, _, hasntJ) hasntJ begin
+instance proof qed
+end
+
+instantiation sfan :: (_, _, _, hasntK) hasntK begin
 instance proof qed
 end
 
@@ -442,6 +857,31 @@ instantiation sinject :: (_, _, _, hasntE) hasntE begin
 instance proof qed
 end
 
+instantiation sinject :: (_, _, _, hasntF) hasntF begin
+instance proof qed
+end
+
+instantiation sinject :: (_, _, _, hasntG) hasntG begin
+instance proof qed
+end
+
+instantiation sinject :: (_, _, _, hasntH) hasntH begin
+instance proof qed
+end
+
+instantiation sinject :: (_, _, _, hasntI) hasntI begin
+instance proof qed
+end
+
+instantiation sinject :: (_, _, _, hasntJ) hasntJ begin
+instance proof qed
+end
+
+instantiation sinject :: (_, _, _, hasntK) hasntK begin
+instance proof qed
+end
+
+
 instantiation sid :: (hasntA) hasntA begin
 instance proof qed
 end
@@ -461,6 +901,31 @@ end
 instantiation sid :: (hasntE) hasntE begin
 instance proof qed
 end
+
+instantiation sid :: (hasntF) hasntF begin
+instance proof qed
+end
+
+instantiation sid :: (hasntG) hasntG begin
+instance proof qed
+end
+
+instantiation sid :: (hasntH) hasntH begin
+instance proof qed
+end
+
+instantiation sid :: (hasntI) hasntI begin
+instance proof qed
+end
+
+instantiation sid :: (hasntJ) hasntJ begin
+instance proof qed
+end
+
+instantiation sid :: (hasntK) hasntK begin
+instance proof qed
+end
+
 
 
 (* 
@@ -527,6 +992,26 @@ definition schem_lift_base_trivE ::  "('n :: n_E, 'n, 'x, 'a :: Bogus, 'a md_tri
 "schem_lift_base_trivE _ _ =
   triv_l"
 
+definition schem_lift_base_trivF ::  "('n :: n_F, 'n, 'x, 'a :: Bogus, 'a md_triv) schem_lift" where
+"schem_lift_base_trivF _ _ =
+  triv_l"
+definition schem_lift_base_trivG ::  "('n :: n_G, 'n, 'x, 'a :: Bogus, 'a md_triv) schem_lift" where
+"schem_lift_base_trivG _ _ =
+  triv_l"
+definition schem_lift_base_trivH ::  "('n :: n_H, 'n, 'x, 'a :: Bogus, 'a md_triv) schem_lift" where
+"schem_lift_base_trivH _ _ =
+  triv_l"
+definition schem_lift_base_trivI ::  "('n :: n_I, 'n, 'x, 'a :: Bogus, 'a md_triv) schem_lift" where
+"schem_lift_base_trivI _ _ =
+  triv_l"
+definition schem_lift_base_trivJ ::  "('n :: n_J, 'n, 'x, 'a :: Bogus, 'a md_triv) schem_lift" where
+"schem_lift_base_trivJ _ _ =
+  triv_l"
+definition schem_lift_base_trivK ::  "('n :: n_K, 'n, 'x, 'a :: Bogus, 'a md_triv) schem_lift" where
+"schem_lift_base_trivK _ _ =
+  triv_l"
+
+
 definition schem_lift_base_idA ::
   "('n :: n_A, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a) schem_lift" where
 "schem_lift_base_idA _ _ =
@@ -551,6 +1036,26 @@ definition schem_lift_base_idE ::
   "('n :: n_E, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a) schem_lift" where
 "schem_lift_base_idE _ _ =
   id_l"
+
+definition schem_lift_base_idF ::  "('n :: n_F, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a) schem_lift" where
+"schem_lift_base_idF _ _ =
+  id_l"
+definition schem_lift_base_idG ::  "('n :: n_G, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a) schem_lift" where
+"schem_lift_base_idG _ _ =
+  id_l"
+definition schem_lift_base_idH ::  "('n :: n_H, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a) schem_lift" where
+"schem_lift_base_idH _ _ =
+  id_l"
+definition schem_lift_base_idI ::  "('n :: n_I, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a) schem_lift" where
+"schem_lift_base_idI _ _ =
+  id_l"
+definition schem_lift_base_idJ ::  "('n :: n_J, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a) schem_lift" where
+"schem_lift_base_idJ _ _ =
+  id_l"
+definition schem_lift_base_idK ::  "('n :: n_K, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a) schem_lift" where
+"schem_lift_base_idK _ _ =
+  id_l"
+
 
 (* Now we implement some instances for recursion "on the right side"
  * (that is, in the "big" type of the lifting,
@@ -693,6 +1198,103 @@ definition schem_lift_prod_recR_E_right ::
     SP ls rs \<Rightarrow>
       snd_l (rec n rs))"
 
+definition schem_lift_prod_recR_F_left ::
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_F, ('ls, 'rs :: hasntF) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
+"schem_lift_prod_recR_F_left rec n s =
+  (case s of
+    SP ls rs =>
+      fst_l (rec n ls))"
+
+definition schem_lift_prod_recR_F_right ::
+  "('n, 'rs, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_F, ('ls :: hasntF, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
+"schem_lift_prod_recR_F_right rec n s =
+  (case s of
+    SP ls rs =>
+      snd_l (rec n rs))"
+
+definition schem_lift_prod_recR_G_left ::
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_G, ('ls, 'rs :: hasntG) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
+"schem_lift_prod_recR_G_left rec n s =
+  (case s of
+    SP ls rs =>
+      fst_l (rec n ls))"
+
+definition schem_lift_prod_recR_G_right ::
+  "('n, 'rs, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_G, ('ls :: hasntG, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
+"schem_lift_prod_recR_G_right rec n s =
+  (case s of
+    SP ls rs =>
+      snd_l (rec n rs))"
+
+definition schem_lift_prod_recR_H_left ::
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_H, ('ls, 'rs :: hasntH) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
+"schem_lift_prod_recR_H_left rec n s =
+  (case s of
+    SP ls rs =>
+      fst_l (rec n ls))"
+
+definition schem_lift_prod_recR_H_right ::
+  "('n, 'rs, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_H, ('ls :: hasntH, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
+"schem_lift_prod_recR_H_right rec n s =
+  (case s of
+    SP ls rs =>
+      snd_l (rec n rs))"
+
+definition schem_lift_prod_recR_I_left ::
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_I, ('ls, 'rs :: hasntI) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
+"schem_lift_prod_recR_I_left rec n s =
+  (case s of
+    SP ls rs =>
+      fst_l (rec n ls))"
+
+definition schem_lift_prod_recR_I_right ::
+  "('n, 'rs, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_I, ('ls :: hasntI, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
+"schem_lift_prod_recR_I_right rec n s =
+  (case s of
+    SP ls rs =>
+      snd_l (rec n rs))"
+
+definition schem_lift_prod_recR_J_left ::
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_J, ('ls, 'rs :: hasntJ) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
+"schem_lift_prod_recR_J_left rec n s =
+  (case s of
+    SP ls rs =>
+      fst_l (rec n ls))"
+
+definition schem_lift_prod_recR_J_right ::
+  "('n, 'rs, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_J, ('ls :: hasntJ, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
+"schem_lift_prod_recR_J_right rec n s =
+  (case s of
+    SP ls rs =>
+      snd_l (rec n rs))"
+
+definition schem_lift_prod_recR_K_left ::
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_K, ('ls, 'rs :: hasntK) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
+"schem_lift_prod_recR_K_left rec n s =
+  (case s of
+    SP ls rs =>
+      fst_l (rec n ls))"
+
+definition schem_lift_prod_recR_K_right ::
+  "('n, 'rs, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_K, ('ls :: hasntK, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
+"schem_lift_prod_recR_K_right rec n s =
+  (case s of
+    SP ls rs =>
+      snd_l (rec n rs))"
+
+
 (*
  * Next, we have an implementation of part of the merge lifting. The real work is done below,
  * in the RecL functions. Here we basically just pass through the lifting for the component,
@@ -779,6 +1381,102 @@ definition schem_lift_merge_recR_E_right ::
     SM ls rs \<Rightarrow>
       (rec n rs))"
 
+definition schem_lift_merge_recR_F_left ::
+  "('n, 'ls, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_F, ('ls, 'rs :: hasntF) smerge, 'x, 'a, 'b2) schem_lift" where
+"schem_lift_merge_recR_F_left rec n s =
+  (case s of
+    SM ls rs =>
+      (rec n ls))"
+
+definition schem_lift_merge_recR_F_right ::
+  "('n, 'rs, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_F, ('ls :: hasntF, 'rs) smerge, 'x, 'a, 'b2) schem_lift" where
+"schem_lift_merge_recR_F_right rec n s =
+  (case s of
+    SM ls rs =>
+      (rec n rs))"
+
+definition schem_lift_merge_recR_G_left ::
+  "('n, 'ls, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_G, ('ls, 'rs :: hasntG) smerge, 'x, 'a, 'b2) schem_lift" where
+"schem_lift_merge_recR_G_left rec n s =
+  (case s of
+    SM ls rs =>
+      (rec n ls))"
+
+definition schem_lift_merge_recR_G_right ::
+  "('n, 'rs, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_G, ('ls :: hasntG, 'rs) smerge, 'x, 'a, 'b2) schem_lift" where
+"schem_lift_merge_recR_G_right rec n s =
+  (case s of
+    SM ls rs =>
+      (rec n rs))"
+
+definition schem_lift_merge_recR_H_left ::
+  "('n, 'ls, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_H, ('ls, 'rs :: hasntH) smerge, 'x, 'a, 'b2) schem_lift" where
+"schem_lift_merge_recR_H_left rec n s =
+  (case s of
+    SM ls rs =>
+      (rec n ls))"
+
+definition schem_lift_merge_recR_H_right ::
+  "('n, 'rs, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_H, ('ls :: hasntH, 'rs) smerge, 'x, 'a, 'b2) schem_lift" where
+"schem_lift_merge_recR_H_right rec n s =
+  (case s of
+    SM ls rs =>
+      (rec n rs))"
+
+definition schem_lift_merge_recR_I_left ::
+  "('n, 'ls, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_I, ('ls, 'rs :: hasntI) smerge, 'x, 'a, 'b2) schem_lift" where
+"schem_lift_merge_recR_I_left rec n s =
+  (case s of
+    SM ls rs =>
+      (rec n ls))"
+
+definition schem_lift_merge_recR_I_right ::
+  "('n, 'rs, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_I, ('ls :: hasntI, 'rs) smerge, 'x, 'a, 'b2) schem_lift" where
+"schem_lift_merge_recR_I_right rec n s =
+  (case s of
+    SM ls rs =>
+      (rec n rs))"
+
+definition schem_lift_merge_recR_J_left ::
+  "('n, 'ls, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_J, ('ls, 'rs :: hasntJ) smerge, 'x, 'a, 'b2) schem_lift" where
+"schem_lift_merge_recR_J_left rec n s =
+  (case s of
+    SM ls rs =>
+      (rec n ls))"
+
+definition schem_lift_merge_recR_J_right ::
+  "('n, 'rs, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_J, ('ls :: hasntJ, 'rs) smerge, 'x, 'a, 'b2) schem_lift" where
+"schem_lift_merge_recR_J_right rec n s =
+  (case s of
+    SM ls rs =>
+      (rec n rs))"
+
+definition schem_lift_merge_recR_K_left ::
+  "('n, 'ls, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_K, ('ls, 'rs :: hasntK) smerge, 'x, 'a, 'b2) schem_lift" where
+"schem_lift_merge_recR_K_left rec n s =
+  (case s of
+    SM ls rs =>
+      (rec n ls))"
+
+definition schem_lift_merge_recR_K_right ::
+  "('n, 'rs, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_K, ('ls :: hasntK, 'rs) smerge, 'x, 'a, 'b2) schem_lift" where
+"schem_lift_merge_recR_K_right rec n s =
+  (case s of
+    SM ls rs =>
+      (rec n rs))"
+
 
 definition schem_lift_fan_recR ::
   "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift \<Rightarrow>
@@ -818,17 +1516,29 @@ definition schem_lift_recL ::
  *)
 adhoc_overloading schem_lift 
 
-  "schem_lift_base_trivA"
-  "schem_lift_base_trivB"
-  "schem_lift_base_trivC"
-  "schem_lift_base_trivD"
-  "schem_lift_base_trivE"
+"schem_lift_base_trivA"
+"schem_lift_base_trivB"
+"schem_lift_base_trivC"
+"schem_lift_base_trivD"
+"schem_lift_base_trivE"
+"schem_lift_base_trivF"
+"schem_lift_base_trivG"
+"schem_lift_base_trivH"
+"schem_lift_base_trivI"
+"schem_lift_base_trivJ"
+"schem_lift_base_trivK"
 
-  "schem_lift_base_idA"
-  "schem_lift_base_idB"
-  "schem_lift_base_idC"
-  "schem_lift_base_idD"
-  "schem_lift_base_idE"
+"schem_lift_base_idA"
+"schem_lift_base_idB"
+"schem_lift_base_idC"
+"schem_lift_base_idD"
+"schem_lift_base_idE"
+"schem_lift_base_idF"
+"schem_lift_base_idG"
+"schem_lift_base_idH"
+"schem_lift_base_idI"
+"schem_lift_base_idJ"
+"schem_lift_base_idK"
 
   "schem_lift_option_recR schem_lift"
 
@@ -840,27 +1550,51 @@ adhoc_overloading schem_lift
 
   "schem_lift_fan_recR schem_lift"
 
-  "schem_lift_prod_recR_A_left schem_lift"
-  "schem_lift_prod_recR_A_right schem_lift"
-  "schem_lift_prod_recR_B_left schem_lift"
-  "schem_lift_prod_recR_B_right schem_lift"
-  "schem_lift_prod_recR_C_left schem_lift"
-  "schem_lift_prod_recR_C_right schem_lift"
-  "schem_lift_prod_recR_D_left schem_lift"
-  "schem_lift_prod_recR_D_right schem_lift"
-  "schem_lift_prod_recR_E_left schem_lift"
-  "schem_lift_prod_recR_E_right schem_lift"
+"schem_lift_prod_recR_A_left schem_lift"
+"schem_lift_prod_recR_A_right schem_lift"
+"schem_lift_prod_recR_B_left schem_lift"
+"schem_lift_prod_recR_B_right schem_lift"
+"schem_lift_prod_recR_C_left schem_lift"
+"schem_lift_prod_recR_C_right schem_lift"
+"schem_lift_prod_recR_D_left schem_lift"
+"schem_lift_prod_recR_D_right schem_lift"
+"schem_lift_prod_recR_E_left schem_lift"
+"schem_lift_prod_recR_E_right schem_lift"
+"schem_lift_prod_recR_F_left schem_lift"
+"schem_lift_prod_recR_F_right schem_lift"
+"schem_lift_prod_recR_G_left schem_lift"
+"schem_lift_prod_recR_G_right schem_lift"
+"schem_lift_prod_recR_H_left schem_lift"
+"schem_lift_prod_recR_H_right schem_lift"
+"schem_lift_prod_recR_I_left schem_lift"
+"schem_lift_prod_recR_I_right schem_lift"
+"schem_lift_prod_recR_J_left schem_lift"
+"schem_lift_prod_recR_J_right schem_lift"
+"schem_lift_prod_recR_K_left schem_lift"
+"schem_lift_prod_recR_K_right schem_lift"
 
-  "schem_lift_merge_recR_A_left schem_lift"
-  "schem_lift_merge_recR_A_right schem_lift"
-  "schem_lift_merge_recR_B_left schem_lift"
-  "schem_lift_merge_recR_B_right schem_lift"
-  "schem_lift_merge_recR_C_left schem_lift"
-  "schem_lift_merge_recR_C_right schem_lift"
-  "schem_lift_merge_recR_D_left schem_lift"
-  "schem_lift_merge_recR_D_right schem_lift"
-  "schem_lift_merge_recR_E_left schem_lift"
-  "schem_lift_merge_recR_E_right schem_lift"
+"schem_lift_merge_recR_A_left schem_lift"
+"schem_lift_merge_recR_A_right schem_lift"
+"schem_lift_merge_recR_B_left schem_lift"
+"schem_lift_merge_recR_B_right schem_lift"
+"schem_lift_merge_recR_C_left schem_lift"
+"schem_lift_merge_recR_C_right schem_lift"
+"schem_lift_merge_recR_D_left schem_lift"
+"schem_lift_merge_recR_D_right schem_lift"
+"schem_lift_merge_recR_E_left schem_lift"
+"schem_lift_merge_recR_E_right schem_lift"
+"schem_lift_merge_recR_F_left schem_lift"
+"schem_lift_merge_recR_F_right schem_lift"
+"schem_lift_merge_recR_G_left schem_lift"
+"schem_lift_merge_recR_G_right schem_lift"
+"schem_lift_merge_recR_H_left schem_lift"
+"schem_lift_merge_recR_H_right schem_lift"
+"schem_lift_merge_recR_I_left schem_lift"
+"schem_lift_merge_recR_I_right schem_lift"
+"schem_lift_merge_recR_J_left schem_lift"
+"schem_lift_merge_recR_J_right schem_lift"
+"schem_lift_merge_recR_K_left schem_lift"
+"schem_lift_merge_recR_K_right schem_lift"
 
   "schem_lift_recL schem_lift schem_lift"
 

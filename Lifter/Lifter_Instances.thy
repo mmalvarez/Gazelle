@@ -1214,6 +1214,7 @@ lemma merge_l_valid_vsg :
  * in a single step.
  *)
 
+(*
 definition oalist_l ::
    "('x \<Rightarrow> ('k :: linorder) option) \<Rightarrow>
     ('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow>
@@ -1234,37 +1235,113 @@ definition oalist_l ::
   , LBase = (\<lambda> s . (case (f s) of
                       Some k \<Rightarrow> update k (LBase t s) empty
                       | None \<Rightarrow> empty)) \<rparr>"
+*)
+
+(* this one sort of works, but we need to change the base implementation *)
+(*
+definition oalist_l ::
+   "('x \<Rightarrow> ('k :: linorder)) \<Rightarrow>
+    ('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow>
+    ('x, 'a, ('k, 'b) oalist) lifting" where
+"oalist_l f t =
+  \<lparr> LUpd = (\<lambda> s a l .
+            (let k = f s in
+              (case get l k of
+                  None \<Rightarrow> (update k (LNew t s a) l)
+                  | Some v \<Rightarrow> (update k (LUpd t s a v) l))))
+  , LOut = (\<lambda> s l . (let k = f s in
+                      (case get l k of 
+                        Some a \<Rightarrow> LOut t s a
+                        | None \<Rightarrow> LOut t s (LBase t s))))
+  , LBase = (\<lambda> s . (let k = f s in update k (LBase t s) empty)) \<rparr>"
+*)
+
+definition oalist_l ::
+   "('x \<Rightarrow> ('k :: linorder)) \<Rightarrow>
+    ('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow>
+    ('x, 'a, ('k, 'b) oalist) lifting" where
+"oalist_l f t =
+  \<lparr> LUpd = (\<lambda> s a l .
+            (let k = f s in
+              (case get l k of
+                  None \<Rightarrow> (update k (LNew t s a) l)
+                  | Some v \<Rightarrow> (update k (LUpd t s a v) l))))
+  , LOut = (\<lambda> s l . (let k = f s in
+                      (case get l k of 
+                        Some a \<Rightarrow> LOut t s a
+                        | None \<Rightarrow> LOut t s (LBase t s))))
+  , LBase = (\<lambda> s . (empty)) \<rparr>"
+
 
 definition oalist_l_S :: 
-   "('x \<Rightarrow> ('k :: linorder) option) \<Rightarrow>
+   "('x \<Rightarrow> ('k :: linorder)) \<Rightarrow>
     ('x, 'b :: Pord) valid_set \<Rightarrow>
     ('x, ('k, 'b) oalist) valid_set"
    where
 "oalist_l_S f S s =
-  { l . \<exists> k a . f s = Some k \<and> get l k = Some a \<and> a \<in> S s }"
+  { l . \<exists> a . get l (f s) = Some a \<and> a \<in> S s }"
 
-(* TODO: get these theorems working again *)
-(*
+
 lemma oalist_l_valid :
-  fixes f :: "('x \<Rightarrow> 'k :: linorder)"
-  fixes lv :: "('x, 'a, 'b) lifting"
-  assumes Hv : "lifting_valid lv"
-  shows "lifting_valid (oalist_l f lv)"
-proof(rule lifting_valid_intro)
-  fix s :: 'x
-  fix a :: 'a
-  show "LOut1 (oalist_l f lv) s (LIn1 (oalist_l f lv) s a) = a" using lifting_valid_unfold1[OF Hv]
+  fixes f :: "('x \<Rightarrow> ('k :: linorder))"
+  fixes lv :: "('x, 'a, 'b :: Pord) lifting"
+  assumes Hv : "lifting_valid lv S"
+  shows "lifting_valid (oalist_l f lv) (oalist_l_S f S)"
+proof(rule lifting_validI)
+  fix s
+  fix a
+  fix b
+  show " LOut (oalist_l f lv) s (LUpd (oalist_l f lv) s a b) = a"
+    using lifting_validDO[OF Hv] lifting_validDO'[OF Hv]
     by(auto simp add:oalist_l_def Let_def get_update split:prod.splits option.splits)
 next
   fix s :: 'x
   fix a :: 'a
   fix b :: "('k, 'b) oalist"
-  show "LOut1 (oalist_l f lv) s (LIn2 (oalist_l f lv) s a b) = a" using 
-        lifting_valid_unfold1[OF Hv]
-        lifting_valid_unfold2[OF Hv]
-    by(auto simp add:oalist_l_def Let_def get_update split:prod.splits option.splits)
+
+  assume Hb : "b \<in> oalist_l_S f S s"
+
+  then obtain datum where Get_Datum : "get b (f s) = Some datum" and Datum_In : "datum \<in> S s"
+    unfolding oalist_l_S_def by blast
+
+  have Conc' : "b <[ update (f s) (LUpd lv s a datum) b" using Get_Datum Hb Hv
+    unfolding pleq_oalist oalist_l_S_def
+  proof(transfer)
+    fix b :: "('k * 'b) list"
+    fix f s datum S lv a
+    assume Hb_t : "strict_order (map fst b)"
+    assume Hmap : "map_of b (f s) = Some datum"
+    assume Hb_in : "b \<in> {x. (\<exists>a. map_of x (f s) = Some a \<and> a \<in> S s) \<and>
+                strict_order (map fst x)}"
+    assume Hv_t : "lifting_valid lv S"
+
+    have Datum_s : "datum \<in> S s"
+      using Hb_in Hmap
+      by(auto)
+
+    have Hmap' : "(f s, datum) \<in> set b "
+      using map_of_SomeD[OF Hmap] by simp
+
+    have Datum_leq : "datum <[ (LUpd lv s a datum)"
+        using lifting_validDI[OF Hv_t Datum_s] by auto
+
+    show "list_leq b (str_ord_update (f s) (LUpd lv s a datum) b)"
+      using update_leq2[OF Hb_t Hmap' Datum_leq] by simp
+  qed
+
+  show " b <[ LUpd (oalist_l f lv) s a b" using 
+        lifting_validDI[OF Hv Datum_In, of a]
+        Get_Datum
+        get_update
+        Conc'
+    by(auto simp add:oalist_l_def Let_def split:prod.splits option.splits)
+next
+  fix s a b
+  show "LUpd (oalist_l f lv) s a b \<in> oalist_l_S f S s"
+    using lifting_validDP[OF Hv]
+    by(auto simp add: oalist_l_def oalist_l_S_def Let_def LNew_def get_update split: option.splits)
 qed
-*)
+
 
 (* allows more interesting dispatch (based on state), but
    at the cost of storing the key, which means we cannot
