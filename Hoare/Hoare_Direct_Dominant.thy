@@ -3,6 +3,7 @@ theory Hoare_Direct_Dominant imports Hoare Hoare_Indexed Hoare_Direct
  "../Mergeable/Mergeable_Instances"
  "../Composition/Composition" "../Composition/Dominant"
  "../Language_Components/Seq/Seq_Hoare"
+ "Hoare_Lift"
 begin
 
 (* 
@@ -24,11 +25,11 @@ definition no_control_lifting :: "('a, 'b :: {Bogus, Pord}, ('x, 'b) control) li
   schem_lift NC (SP NX (SP NX (SID NC)))"
 *)
 definition no_control_lifting :: "('a, 'b1, 'b2 :: {Bogus, Pord}) lifting \<Rightarrow>
-  ('a, 'b1 :: {Bogus, Pord}, ('x, 'b2) control) lifting" where
+  ('a, 'b1 , ('x, 'b2) control) lifting" where
 "no_control_lifting l =
   schem_lift NC (SP NX (SP NX (SINJ l NC)))"
 
-
+(* something is weird with the pord constraint here. *)
 definition no_control_l :: "
 ('a, 'b1, 'b2 :: {Bogus, Pord}) lifting \<Rightarrow>
 ('a \<Rightarrow> 'b1 \<Rightarrow> 'b1 :: {Bogus, Pord}) \<Rightarrow>
@@ -49,32 +50,46 @@ definition no_control_l :: "
    * all we need to do is say that seq is dominant for that syntax
    * for all _other_ semantics. no_control_lifting should do the rest. i think.
  *)
+(* TODO: for this to be true, we need to lift P1 and P2 using l *)
 lemma HTS_imp_HT' :
   assumes H: "f % {{P1}} c {{P2}}"
+  assumes Valid : "lifting_valid l S"
   assumes Hf' : "f' = no_control_l l f"
   assumes H0 : "gs = pcomps fs"
   assumes Hpres : "sups_pres (set fs)"
   assumes Hseq : "seq_sem_l_gen lfts \<in> set fs"
   assumes Hnemp : "g \<in> (set fs - {seq_sem_l_gen lfts})"
   assumes Hdom : "(f' \<downharpoonleft> (set fs - {seq_sem_l_gen lfts}) c)"
-  shows "|gs| {~ P1 ~} [G c z] {~ P2 ~}"
+  shows "|gs| {~ (lift_pred_valid_s id l S c P1) ~} [G c z] {~ (lift_pred_valid_s id l S c P2) ~}"
 proof(rule HT'I)
   fix npost
 
-  have "|#gs#| {#-P1, (0 + npost)-#} [G c z] {#-P2, npost-#}"
+  have "|#gs#| {#-lift_pred_valid_s id l S c
+                     P1, (0 +
+                          npost)-#} [G c z] {#-lift_pred_valid_s id l S c
+       P2, npost-#}"
     unfolding add_0
   proof
     fix c'
 
-    assume Guard : "|#gs#| {#P2, npost#} c'"
-    show "|#gs#| {#P1, npost#} ([G c z] @ c')"
+    assume Guard : "|#gs#| {#lift_pred_valid_s id l S c P2, npost#} c'"
+    show "|#gs#| {#lift_pred_valid_s id l S c P1, npost#} ([G c z] @ c')"
     proof
-      fix m :: "('a, 'b) control"
-      assume Hpay : "P1 (payload m)"
-      assume Hcont : "cont m = Inl ([G c z] @ c')"
+      fix m :: "('a, 'c) control"
+      assume Hpay : "lift_pred_valid_s id l S c P1 (payload m)"
+      assume Hcont : "cont m = Inl ([G c z] @ c') "
 
+      have Hpay1 : "P1 (LOut l c (payload m))" and Hpay2 : "payload m \<in> S c"
+        using Hpay
+        unfolding lift_pred_valid_s_def lift_pred_s_def
+        by auto
+(*
       have Hpay' : "(P2 (f c (payload m)))"
         using HTSE[OF H Hpay] by auto
+*)
+      have Hpay' : "P2 (f c (LOut l c (payload m)))"
+        using HTSE[OF H Hpay1]
+        by simp
 
       show "safe_for gs m npost"
       proof(cases "(sem_step gs m)")
@@ -105,11 +120,14 @@ proof(rule HT'I)
           sorry
 
 (* key sub-result. *)
-        have Pay_final : "payload m' = f c (payload m)"
+        have Pay_final : "payload m' = LUpd l c (f c (LOut l c (payload m))) (payload m)"
           sorry
 
 (* key sub-result *)
-        have Cont_final : "cont m' = cont (seq_sem_l_gen lfts c m)" sorry
+        have Cont_final : "cont m' = cont (seq_sem_l_gen lfts c m)"
+          apply(cases m; cases m'; auto simp add: seq_sem_l_gen_def seq_sem_lifting_gen_def schem_lift_defs seq_sem_def
+fst_l_def prio_l_def option_l_def triv_l_def cont_def LNew_def
+split: md_prio.splits option.splits md_triv.splits)
 
         hence Cont_final' : "cont m' = Inl c'" sorry
 

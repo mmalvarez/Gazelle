@@ -42,6 +42,7 @@ type_synonym 's cstate = "('s, unit option) state"
  * to what extent this is an issue or just a usability bug (or even just a matter
  * of terrible error messages making it hard to see what's going on) *)
 
+(* TODO: is this the correct priority calculation? *)
 definition seq_sem_lifting_gen :: "(syn, 'x state', ('x, 'a :: Pordb) control) lifting"
   where
 "seq_sem_lifting_gen = schem_lift

@@ -27,8 +27,6 @@ datatype syn' =
 
 type_synonym 'x imp_state' = "'x gensyn list * int"
 
-type_synonym 'x state' = "'x gensyn list * int * int"
-
 definition imp_ctl_sem :: "syn' \<Rightarrow> 'x imp_state' \<Rightarrow> 'x imp_state'" where
 "imp_ctl_sem x st =
   (case st of
@@ -48,7 +46,7 @@ definition imp_ctl_sem :: "syn' \<Rightarrow> 'x imp_state' \<Rightarrow> 'x imp
 
 
 type_synonym ('s, 'x) state = 
-  "('s, (int md_triv option md_prio * int md_triv option md_prio * 'x)) control"
+  "('s, (int md_triv option md_prio * 'x)) control"
 
 type_synonym ('s) cstate = 
   "('s, unit option) state"
@@ -78,11 +76,10 @@ definition imp_sem_l_gen :: "('s \<Rightarrow> syn') \<Rightarrow> 's \<Rightarr
 
 definition get_cond :: 
 "int md_triv option md_prio * 
-  int md_triv option md_prio * 
   (_ :: Pordb) \<Rightarrow> bool option" where
 "get_cond st = 
   (case st of
-    (b, _, _) \<Rightarrow> 
+    (b, _) \<Rightarrow> 
     (case b of
       (mdp _ (Some (mdt b'))) \<Rightarrow> Some (if b' = 0 then False else True)
       | _ \<Rightarrow> None))"

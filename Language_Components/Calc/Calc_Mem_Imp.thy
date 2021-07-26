@@ -1,4 +1,5 @@
-theory Calc_Mem_Imp imports Calc_Mem "../Cond/Cond" "../Imp_Ctl/Imp_Ctl" "../Seq/Seq"
+theory Calc_Mem_Imp imports Calc_Mem "../Cond/Cond" "../Imp_Ctl/Imp_Ctl" "../Seq/Seq" 
+"../../Hoare/Hoare_Direct_Dominant"
 begin
 
 datatype syn =
@@ -13,13 +14,23 @@ fun calc_trans :: "syn \<Rightarrow> calc" where
 "calc_trans (Sc x ) = x"
 | "calc_trans _ = Cskip"
 
+fun calc_prio :: "(Calc.calc \<Rightarrow> nat)" where
+"calc_prio (Cskip) = 0"
+| "calc_prio _ = 1"
+
 fun mem_trans :: "syn \<Rightarrow> Mem_Simple.syn" where
 "mem_trans (Sm m) = m"
 | "mem_trans _ = Mem_Simple.Sskip"
 
+(* mem_prio not needed, handled by custom implementation *)
+
 fun cond_trans :: "syn \<Rightarrow> Cond.cond" where
 "cond_trans (Sb x) = x"
 | "cond_trans _ = Sskip_cond"
+
+fun cond_prio :: "Cond.cond \<Rightarrow> nat" where
+"cond_prio (Sskip_cond) = 0"
+| "cond_prio _ = 1"
 
 fun seq_trans :: "syn \<Rightarrow> Seq.syn" where
 "seq_trans (Ss x) = x"
@@ -37,10 +48,12 @@ fun imp_trans :: "syn \<Rightarrow> Imp_Ctl.syn'" where
  * control stuff (at end and probably don't need to care)
  *)
 
-type_synonym ('s, 'x) state = 
+
+type_synonym ('s, 'x) state =
   "('s, 'x) Mem_Simple.state"
 
 (* now we need to restate this using no_control_l *)
+(*
 definition calc_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
 "calc_sem_l =
   lift_map_s calc_trans
@@ -48,6 +61,34 @@ definition calc_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) 
     (SP NA (SP NB NC))
     (SP NX (SP NX (SP (SPRI (SO NC)) (SP (SPRI (SO NB)) (SP (SPRI (SO NA)) NX))))))
   calc_sem"
+*)
+declare [[show_sorts]]
+
+(*
+('a::type, 'b::{Bogus,Pord},
+       int md_triv option md_prio \<times>
+       int md_triv option md_prio \<times>
+       int md_triv option md_prio \<times>
+       int md_triv option md_prio \<times>
+       (String.literal,
+        int md_triv option md_prio) oalist \<times>
+       'c::{Bogus,Pord}) lifting
+*)
+
+term "no_control_lifting (schem_lift (SP NA (SP NB NC)) (SP (SPRI (SO NC)) (SP (SPRI (SO NB)) (SP (SPRI (SO NA)) NX ))))"
+
+definition calc_lift :: "(Calc.calc, Calc.calc_state, ('s, 'x :: {Bogus, Pord, Mergeableb}) Mem_Simple.state) lifting" where
+"calc_lift = 
+  no_control_lifting (schem_lift (SP NA (SP NB NC)) (SP NX (SP (SPRC calc_prio (SO NC)) (SP (SPRK (SO NA)) (SP (SPRK (SO NB)) NX )))))"
+
+
+(* TODO: priority stuff is all wrong here. *)
+(* concretize our schem_lift at an appropriate type. *)
+term "lift_map_s"
+definition calc_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
+"calc_sem_l =
+ lift_map_s calc_trans calc_lift
+calc_sem"
 
 definition mem_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
 "mem_sem_l = 
@@ -55,10 +96,14 @@ definition mem_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) s
     id_l
   mem_sem"
 
+definition cond_lift where
+"cond_lift = 
+  no_control_lifting (schem_lift (SP NA NB) (SP (SPRC cond_prio (SO NA)) (SP (SPRK (SO NB)) NX)))"
+
 definition cond_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
 "cond_sem_l =
   lift_map_s cond_trans
-    (schem_lift (SP NA NB) (SP NX (SP NX (SP (SPRI (SO NA)) (SP (SPRI (SO NB)) NX)))))
+    cond_lift
   cond_sem
 "
 
