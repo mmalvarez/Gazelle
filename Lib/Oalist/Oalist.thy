@@ -458,9 +458,461 @@ definition kmap_singleton :: "('key :: linorder) kmap \<Rightarrow> 'key" where
   (case impl_of l of
     [k] \<Rightarrow> fst k)"
 
-
 definition add_key :: "('key) kmap \<Rightarrow> 'key :: linorder \<Rightarrow> 'key kmap" where
 "add_key l k = update k () l"
+
+(* some useful functions for combining oalists *)
+fun oalist_merge' :: "(('key :: linorder) * 'value) list \<Rightarrow> ('key, 'value) oalist \<Rightarrow> ('key, 'value) oalist"
+  where
+"oalist_merge' [] l2 = l2"
+| "oalist_merge' ((k,v)#t) l2 =
+   update k v (oalist_merge' t l2)"
+
+lift_definition oalist_merge ::
+"('key :: linorder, 'value) oalist \<Rightarrow> ('key, 'value) oalist \<Rightarrow> ('key, 'value) oalist"
+is oalist_merge' .
+
+(* zip two oalists together using the given functions -
+ * one for both keys present, one for left key present, one for right key present *)
+fun str_ord_zip ::
+  "('key \<Rightarrow> 'value1 \<Rightarrow> 'value2 \<Rightarrow> 'value3 ) \<Rightarrow>
+   ('key \<Rightarrow> 'value1 \<Rightarrow> 'value3) \<Rightarrow>
+   ('key \<Rightarrow> 'value2 \<Rightarrow> 'value3) \<Rightarrow>
+   (('key :: linorder) * 'value1) list \<Rightarrow> ('key * 'value2) list \<Rightarrow>
+   ('key * 'value3) list" where
+"str_ord_zip flr fl fr [] [] = []"
+| "str_ord_zip flr fl fr ((lk, lh)#lt) [] =
+    (lk, fl lk lh)#str_ord_zip flr fl fr lt []"
+| "str_ord_zip flr fl fr [] ((rk, rh)#rt) =
+    (rk, fr rk rh)#str_ord_zip flr fl fr [] rt"
+| "str_ord_zip flr fl fr ((lk, lh)#lt) ((rk, rh)#rt) =
+  (if (lk < rk)
+   then (lk, fl lk lh) # str_ord_zip flr fl fr lt ((rk, rh)#rt)
+   else (if lk = rk
+         then (lk, flr lk lh rh) # str_ord_zip flr fl fr lt rt
+         else (rk, fr rk rh) # str_ord_zip flr fl fr ((lk, lh) # lt) (rt)))"
+(*
+lemma str_ord_zip_induct_help :
+  fixes P :: "(('key :: linorder) * 'value) list \<Rightarrow> ('key * 'value) list \<Rightarrow> bool"
+  assumes Hl : "\<And> l . P l []"
+  assumes Hr : "\<And> r . P [] r"
+  assumes Hlt : "\<And> lk rk lv rv lt rt .
+                  lk < rk \<Longrightarrow> P lt ((rk, rv)#rt) \<Longrightarrow> P ((lk, lv)#lt) ((rk, rv)#rt)"
+  assumes Heq : "\<And> lk rk lv rv lt rt .
+                  lk = rk \<Longrightarrow> P lt rt \<Longrightarrow> P ((lk, lv)#lt) ((rk, rv)#rt)"
+  assumes Hgt : "\<And> lk rk lv rv lt rt .
+                  lk > rk \<Longrightarrow> P ((lk, lv)#lt) rt \<Longrightarrow> P ((lk, lv)#lt) ((rk, rv)#rt)"
+  shows "P l r" using Hl Hr Hlt Heq Hgt
+proof(induction l arbitrary: r)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons lh1 lt1 r)
+  then show ?case 
+*)
+(*
+  proof(cases r)
+    case Nil' : Nil
+    then show ?thesis using Cons  by auto
+  next
+    case Cons' : (Cons rh1 rt1)
+
+    obtain lk1 lv1 where Lh : "lh1 = (lk1, lv1)"
+      by(cases lh1; auto)
+
+    obtain rk1 rv1 where Rh : "rh1 = (rk1, rv1)"
+      by(cases rh1; auto)
+
+    consider (LT) "lk1 < rk1" |
+             (EQ) "lk1 = rk1" |
+             (GT) "lk1 > rk1"
+      using less_linear[of lk1 rk1] by blast
+  
+    then show ?thesis
+    proof cases
+      case LT
+      then show ?thesis sorry
+    next
+      case EQ
+      then show ?thesis using Cons unfolding Cons' sorry
+    next
+      case GT
+
+      have Conc' : "P ((lk1, lv1) # lt1) (rt1)"
+        using Cons.IH[OF Cons.prems(1) Cons.prems(2) Cons.prems(3) Cons.prems(4)] 
+
+      show ?thesis
+        using Cons.prems(5)[OF GT Conc'] unfolding Lh Rh Cons' by auto
+    qed
+*)
+
+
+(* NB this is just List.list_induct2' *)
+(*
+lemma either_list_induct :
+  assumes H0 : "P [] []"
+  assumes Hl : "\<And> lh lt r . P lt r \<Longrightarrow> P (lh#lt) r"
+  assumes Hr : "\<And> rh rt l . P l rt \<Longrightarrow> P l (rh#rt)"
+  
+  shows "P l r" using H0 Hl Hr 
+proof(induction l arbitrary: r)
+  case Nil
+  then show ?case 
+  proof(induction x)
+    case Nil' : Nil
+    then show ?case by auto
+  next
+    case Cons' : (Cons rh rt)
+    then show ?case 
+      by auto
+  qed
+next
+  case (Cons lh lt)
+  then show ?case
+  proof(induction x arbitrary: lh lt)
+    case Nil' : Nil
+    then show ?case by auto
+  next
+    case Cons' : (Cons rh rt)
+    then show ?case 
+      by(auto)
+  qed
+qed
+*)
+(*
+lemma either_list_induct2 :
+  assumes H0 : "P [] []"
+  assumes Hl : "\<And> lh lt r . P lt r \<Longrightarrow> P (lh#lt) r"
+  assumes Hr : "\<And> rh rt l . P l rt \<Longrightarrow> P l (rh#rt)"
+  
+  shows "P l r" using H0 Hl Hr 
+proof(induction l arbitrary: r)
+  case Nil
+  then show ?case 
+  proof(induction x)
+    case Nil' : Nil
+    then show ?case by auto
+  next
+    case Cons' : (Cons rh rt)
+    then show ?case 
+      by auto
+  qed
+next
+  case (Cons lh lt)
+  then show ?case
+  proof(induction x arbitrary: lh lt)
+    case Nil' : Nil
+    then show ?case by auto
+  next
+    case Cons' : (Cons rh rt)
+    then show ?case 
+      by(auto)
+  qed
+qed
+*)
+
+(*
+lemma str_ord_zip_correct' :
+  fixes k :: "'key :: linorder"
+  fixes ll :: "('key * 'value1) list"
+  fixes lr :: "('key * 'value2) list"
+  assumes Hl : "strict_order (map fst (ll))"
+  assumes Hr : "strict_order (map fst (rl))"
+  shows "strict_order (map fst (str_ord_zip flr fl fr ll rl))"
+  using Hl Hr
+proof(induction ll arbitrary: rl)
+  case Nil
+  then show ?case sorry
+next
+  case (Cons lh1 ll)
+
+  obtain lk1 lv1 where Lh : "lh1 = (lk1, lv1)"
+    by(cases lh1; auto)
+
+  show ?case
+  proof(cases rl)
+    case Nil
+
+    then show ?thesis using Cons Lh
+      sorry
+  next
+    case Cons' : (Cons rh1 rl1)
+
+    obtain rk1 rv1 where Rh : "rh1 = (rk1, rv1)"
+      by(cases rh1; auto)
+
+    show ?thesis using Cons Cons' Lh Rh
+      apply(auto)
+  qed
+
+  show ?case using Cons Lh
+    apply(auto)
+qed
+
+
+lemma str_ord_zip_correct' :
+  fixes k :: "'key :: linorder"
+  fixes ll :: "('key * 'value1) list"
+  fixes lr :: "('key * 'value2) list"
+  assumes Hl : "strict_order (map fst ((lk, lv)# ll))"
+  assumes Hr : "strict_order (map fst ((rk, rv)# rl))"
+  shows "strict_order (map fst (str_ord_zip flr fl fr ll rl))"
+  using Hl Hr
+proof(induction ll arbitrary: lk lv rk rv rl)
+  case Nil
+  then show ?case sorry
+next
+  case (Cons lh1 ll)
+
+  obtain lk1 lv1 where Lh : "lh1 = (lk1, lv1)"
+    by(cases lh1; auto)
+
+  show ?case
+  proof(cases rl)
+    case Nil
+
+    then show ?thesis using Cons Lh
+      apply(auto)
+  next
+    case (Cons a list)
+    then show ?thesis sorry
+  qed
+
+  show ?case using Cons Lh
+    apply(auto)
+qed
+*)
+
+lemma strict_order_singleton :
+  "strict_order [x]"
+proof(rule strict_order_intro)
+  fix i j
+  assume H1 : "j < length [x]"
+  assume H2 : "i < j" 
+  show "[x] ! i < [x] ! j" using H1 H2
+    by(auto)
+qed
+
+lemma str_ord_zip_correct' :
+  fixes k :: "'key :: linorder"
+  fixes ll :: "('key * 'value1) list"
+  fixes lr :: "('key * 'value2) list"
+  assumes Hl : "strict_order (map fst (lh#ll))"
+  assumes Hr : "strict_order (map fst (rh#rl))"
+  shows "strict_order (map fst (str_ord_zip flr fl fr (lh#ll) (rh#rl)))"
+  using Hl Hr
+proof(induction ll arbitrary: lh rh rl)
+  case Nil
+  obtain lk lv where Lh : "lh = (lk, lv)"
+    by(cases lh; auto)
+
+  obtain rk rv where Rh : "rh = (rk, rv)"
+    by(cases rh; auto)
+
+  show ?case using Lh Rh Nil
+    sorry
+next
+  case (Cons lh1 ll)
+
+  obtain lk lv where Lh : "lh = (lk, lv)"
+    by(cases lh; auto)
+
+  obtain rk rv where Rh : "rh = (rk, rv)"
+    by(cases rh; auto)
+
+  obtain lk1 lv1 where Lh1 : "lh1 = (lk1, lv1)"
+    by(cases lh1; auto)
+
+  show ?case using Cons Lh Rh Lh1
+    apply(auto)
+
+qed
+  case 1
+
+  obtain lk lv where Lh : "lh = (lk, lv)"
+    by(cases lh; auto)
+
+  obtain rk rv where Rh : "rh = (rk, rv)"
+    by(cases rh; auto)
+
+  then show ?case using Lh Rh strict_order_singleton strict_order_cons
+    by(auto)
+next
+  case (2 lh1 lt)
+
+  obtain lk lv where Lh : "lh = (lk, lv)"
+    by(cases lh; auto)
+
+  obtain lk1 lv1 where Lh1 : "lh1 = (lk1, lv1)"
+    by(cases lh1; auto)
+
+  obtain rk rv where Rh : "rh = (rk, rv)"
+    by(cases rh; auto)
+
+  show ?case using 2 Lh Lh1 Rh
+      sorry
+next
+  case (3 rh1 rt)
+
+  obtain lk lv where Lh : "lh = (lk, lv)"
+    by(cases lh; auto)
+
+  obtain rk rv where Rh : "rh = (rk, rv)"
+    by(cases rh; auto)
+
+  obtain rk1 rv1 where Rh1 : "rh1 = (rk1, rv1)"
+    by(cases rh1; auto)
+
+  show ?case using 3 Lh Rh Rh1
+    sorry
+next
+  case (4 lh1 lt rh1 rt)
+
+  obtain lk0 lv0 where Lh : "lh = (lk0, lv0)"
+    by(cases lh; auto)
+
+  obtain lk1 lv1 where Lh1 : "lh1 = (lk1, lv1)"
+    by(cases lh1; auto)
+
+  obtain rk0 rv0 where Rh : "rh = (rk0, rv0)"
+    by(cases rh; auto)
+
+  obtain rk1 rv1 where Rh1 : "rh1 = (rk1, rv1)"
+    by(cases rh1; auto)
+
+  consider (LT) "lk0 < rk0" |
+           (EQ) "lk0 = rk0" |
+           (GT) "lk0 > rk0"
+    using less_linear[of lk0 rk0] by blast
+
+  then show ?case
+  proof cases
+    case LT
+    then show ?thesis using "4.prems" "4.IH" Lh Rh 
+      apply(auto)
+  next
+    case EQ
+    then show ?thesis sorry
+  next
+    case GT
+    then show ?thesis sorry
+  qed
+
+  then show ?case sorry
+qed
+  case Nil
+  then show ?case 
+  proof(cases lr)
+    case Nil' : Nil
+    then show ?thesis using Nil by auto
+  next
+    case (Cons rh rt)
+    then show ?thesis
+      apply(auto)
+  qed
+next
+  case (Cons a ll)
+  then show ?case sorry
+qed
+
+
+lemma str_ord_zip_correct' :
+  fixes k :: "'key :: linorder"
+  fixes ll :: "('key * 'value1) list"
+  fixes lr :: "('key * 'value2) list"
+  assumes Hl : "strict_order (map fst (lh#ll))"
+  assumes Hr : "strict_order (map fst (rh#rl))"
+  shows "strict_order (map fst (str_ord_zip flr fl fr (lh#ll) (rh#rl)))"
+  using Hl Hr
+proof(induction ll rl arbitrary: lh rh rule:list_induct2')
+  case 1
+
+  obtain lk lv where Lh : "lh = (lk, lv)"
+    by(cases lh; auto)
+
+  obtain rk rv where Rh : "rh = (rk, rv)"
+    by(cases rh; auto)
+
+  then show ?case using Lh Rh strict_order_singleton strict_order_cons
+    by(auto)
+next
+  case (2 lh1 lt)
+
+  obtain lk lv where Lh : "lh = (lk, lv)"
+    by(cases lh; auto)
+
+  obtain lk1 lv1 where Lh1 : "lh1 = (lk1, lv1)"
+    by(cases lh1; auto)
+
+  obtain rk rv where Rh : "rh = (rk, rv)"
+    by(cases rh; auto)
+
+  show ?case using 2 Lh Lh1 Rh
+      sorry
+next
+  case (3 rh1 rt)
+
+  obtain lk lv where Lh : "lh = (lk, lv)"
+    by(cases lh; auto)
+
+  obtain rk rv where Rh : "rh = (rk, rv)"
+    by(cases rh; auto)
+
+  obtain rk1 rv1 where Rh1 : "rh1 = (rk1, rv1)"
+    by(cases rh1; auto)
+
+  show ?case using 3 Lh Rh Rh1
+    sorry
+next
+  case (4 lh1 lt rh1 rt)
+
+  obtain lk0 lv0 where Lh : "lh = (lk0, lv0)"
+    by(cases lh; auto)
+
+  obtain lk1 lv1 where Lh1 : "lh1 = (lk1, lv1)"
+    by(cases lh1; auto)
+
+  obtain rk0 rv0 where Rh : "rh = (rk0, rv0)"
+    by(cases rh; auto)
+
+  obtain rk1 rv1 where Rh1 : "rh1 = (rk1, rv1)"
+    by(cases rh1; auto)
+
+  consider (LT) "lk0 < rk0" |
+           (EQ) "lk0 = rk0" |
+           (GT) "lk0 > rk0"
+    using less_linear[of lk0 rk0] by blast
+
+  then show ?case
+  proof cases
+    case LT
+    then show ?thesis using "4.prems" "4.IH" Lh Rh 
+      apply(auto)
+  next
+    case EQ
+    then show ?thesis sorry
+  next
+    case GT
+    then show ?thesis sorry
+  qed
+
+  then show ?case sorry
+qed
+  case Nil
+  then show ?case 
+  proof(cases lr)
+    case Nil' : Nil
+    then show ?thesis using Nil by auto
+  next
+    case (Cons rh rt)
+    then show ?thesis
+      apply(auto)
+  qed
+next
+  case (Cons a ll)
+  then show ?case sorry
+qed
+
 
 
 end
