@@ -931,4 +931,276 @@ is str_ord_zip
   using str_ord_zip_correct
   by blast
 
+lemma str_ord_zip_get' :
+  shows "strict_order (map fst ll) \<longrightarrow> 
+   strict_order (map fst lr) \<longrightarrow>
+    map_of (str_ord_zip flr fl fr ll lr) k =
+    (case (map_of ll k, map_of lr k) of
+     (None, None) \<Rightarrow> None
+     | (Some vl, None) \<Rightarrow> Some (fl k vl)
+     | (None, Some vr) \<Rightarrow> Some (fr k vr)
+     | (Some vl, Some vr) \<Rightarrow> Some (flr k vl vr))"
+proof(induction ll lr rule:str_ord_zip.induct
+    [of "(\<lambda> flr fl fr ll lr . 
+              strict_order (map fst ll) \<longrightarrow>
+              strict_order (map fst lr) \<longrightarrow>
+              map_of (str_ord_zip flr fl fr ll lr) k =
+                (case (map_of ll k, map_of lr k) of
+                 (None, None) \<Rightarrow> None
+                 | (Some vl, None) \<Rightarrow> Some (fl k vl)
+                 | (None, Some vr) \<Rightarrow> Some (fr k vr)
+                 | (Some vl, Some vr) \<Rightarrow> Some (flr k vl vr)))"])
+case (1 flr fl fr)
+  then show ?case 
+    by(auto)
+next
+  case (2 flr fl fr lk lv lt)
+
+  have Conc' :
+    "strict_order (map fst ((lk, lv) # lt)) \<Longrightarrow>
+    strict_order (map fst []) \<Longrightarrow>
+    map_of (str_ord_zip flr fl fr ((lk, lv) # lt) []) k =
+    (case (map_of ((lk, lv) # lt) k, map_of [] k) of (None, None) \<Rightarrow> None
+     | (None, Some vr) \<Rightarrow> Some (fr k vr) | (Some vl, None) \<Rightarrow> Some (fl k vl)
+     | (Some vl, Some vr) \<Rightarrow> Some (flr k vl vr))"
+  proof-
+    assume Ord1 : "strict_order (map fst ((lk, lv) # lt))"
+    assume Ord2 : "strict_order (map fst [])"
+
+    have Ord1' : "strict_order (map fst lt)"
+      using strict_order_tl[of lk "map fst lt"] Ord1
+      by auto
+
+    show "map_of (str_ord_zip flr fl fr ((lk, lv) # lt) []) k =
+    (case (map_of ((lk, lv) # lt) k, map_of [] k) of (None, None) \<Rightarrow> None
+     | (None, Some vr) \<Rightarrow> Some (fr k vr) | (Some vl, None) \<Rightarrow> Some (fl k vl)
+     | (Some vl, Some vr) \<Rightarrow> Some (flr k vl vr))"
+      using 2 Ord1' strict_order_nil
+      by auto
+  qed
+
+  then show ?case by blast
+next
+  case (3 flr fl fr rk rv rt)
+
+  have Conc' :
+    "strict_order (map fst []) \<Longrightarrow>
+    strict_order (map fst ((rk, rv) # rt)) \<Longrightarrow>
+     map_of (str_ord_zip flr fl fr [] ((rk, rv) # rt)) k =
+       (case (map_of [] k, map_of ((rk, rv) # rt) k) of (None, None) \<Rightarrow> None
+        | (None, Some vr) \<Rightarrow> Some (fr k vr) | (Some vl, None) \<Rightarrow> Some (fl k vl)
+        | (Some vl, Some vr) \<Rightarrow> Some (flr k vl vr))"
+  proof-
+    assume Ord1 : "strict_order (map fst [])"
+
+    assume Ord2 : "strict_order (map fst ((rk, rv) # rt))"
+
+    have Ord2' : "strict_order (map fst rt)"
+      using strict_order_tl[of rk "map fst rt"] Ord2
+      by auto
+
+    show "map_of (str_ord_zip flr fl fr [] ((rk, rv) # rt)) k =
+       (case (map_of [] k, map_of ((rk, rv) # rt) k) of (None, None) \<Rightarrow> None
+        | (None, Some vr) \<Rightarrow> Some (fr k vr) | (Some vl, None) \<Rightarrow> Some (fl k vl)
+        | (Some vl, Some vr) \<Rightarrow> Some (flr k vl vr))"
+      using 3 Ord2' strict_order_nil
+      by auto
+  qed
+
+  then show ?case by blast
+next
+  case (4 flr fl fr lk lv lt rk rv rt)
+
+  consider (A) "lk < rk" |
+           (B) "rk < lk" |
+           (C) "lk = rk"
+    using less_linear[of lk rk] by auto
+
+  then show ?case
+  proof cases
+    case A
+
+    have Conc' : "strict_order (map fst ((lk, lv) # lt)) \<Longrightarrow>
+      strict_order (map fst ((rk, rv) # rt)) \<Longrightarrow>
+      map_of (str_ord_zip flr fl fr ((lk, lv) # lt) ((rk, rv) # rt)) k =
+      (case (map_of ((lk, lv) # lt) k, map_of ((rk, rv) # rt) k) of (None, None) \<Rightarrow> None
+       | (None, Some vr) \<Rightarrow> Some (fr k vr) | (Some vl, None) \<Rightarrow> Some (fl k vl)
+       | (Some vl, Some vr) \<Rightarrow> Some (flr k vl vr))"
+    proof-
+
+      assume Ord1 : "strict_order (map fst ((lk, lv) # lt))"
+      assume Ord2 : "strict_order (map fst ((rk, rv) # rt))"
+
+      have Ord1' : "strict_order (map fst lt)"
+        using strict_order_tl[of lk "map fst lt"] Ord1 by auto
+
+      have Ord2' : "strict_order (map fst rt)"
+        using strict_order_tl[of rk "map fst rt"] Ord2 by auto
+
+      consider
+        (NN) "map_of ((lk, lv) # lt) k = None"  "map_of ((rk, rv) # rt) k = None" |
+        (SN) vl where "map_of ((lk, lv) # lt) k = Some vl" "map_of ((rk, rv) # rt) k = None" |
+        (NS) vr where "map_of ((lk, lv) # lt) k = None" "map_of ((rk, rv) # rt) k = Some vr" |
+        (SS) vl vr where "map_of ((lk, lv) # lt) k = Some vl" "map_of ((rk, rv) # rt) k = Some vr"
+        by(cases "map_of ((lk, lv) # lt) k"; cases "map_of ((rk, rv) # rt) k"; auto)
+
+      then show ?thesis
+      proof cases
+        case NN
+        then show ?thesis using A 4(1)[OF A] Ord1 Ord2 Ord1'
+          by(auto split:if_split_asm)
+      next
+        case SN
+        then show ?thesis using A 4(1)[OF A] Ord1 Ord2 Ord1'
+          by(auto split:if_split_asm)
+      next
+        case NS
+        then show ?thesis using A 4(1)[OF A] Ord1 Ord2 Ord1'
+          by(auto split:if_split_asm)
+      next
+        case SS
+
+        have Contr : "map_of rt lk = None"
+        proof(cases "map_of rt lk")
+          case None
+          then show ?thesis by auto
+        next
+          case (Some bad)
+
+          have Bad_in : "(lk, bad) \<in> set rt" using map_of_SomeD[OF Some] by simp
+
+          obtain idx where Idx : "idx < length rt" "rt ! idx = (lk, bad)" 
+            using Bad_in
+            unfolding in_set_conv_nth 
+            by blast
+
+          then show ?thesis using strict_order_unfold[OF Ord2, of "1 + idx" 0] A
+            by(simp)
+        qed
+
+        then show ?thesis using A 4(1)[OF A] Ord1 Ord2 Ord1' Ord2'
+          by(auto split: if_split_asm option.split_asm)
+      qed
+    qed
+
+    then show ?thesis by blast
+  next
+    case B 
+
+    have Conc' : "strict_order (map fst ((lk, lv) # lt)) \<Longrightarrow>
+      strict_order (map fst ((rk, rv) # rt)) \<Longrightarrow>
+      map_of (str_ord_zip flr fl fr ((lk, lv) # lt) ((rk, rv) # rt)) k =
+      (case (map_of ((lk, lv) # lt) k, map_of ((rk, rv) # rt) k) of (None, None) \<Rightarrow> None
+       | (None, Some vr) \<Rightarrow> Some (fr k vr) | (Some vl, None) \<Rightarrow> Some (fl k vl)
+       | (Some vl, Some vr) \<Rightarrow> Some (flr k vl vr))"
+    proof-
+      assume Ord1 : "strict_order (map fst ((lk, lv) # lt))"
+      assume Ord2 : "strict_order (map fst ((rk, rv) # rt))"
+
+      have Ord1' : "strict_order (map fst lt)"
+        using strict_order_tl[of lk "map fst lt"] Ord1 by auto
+
+      have Ord2' : "strict_order (map fst rt)"
+        using strict_order_tl[of rk "map fst rt"] Ord2 by auto
+
+      consider
+        (NN) "map_of ((lk, lv) # lt) k = None"  "map_of ((rk, rv) # rt) k = None" |
+        (SN) vl where "map_of ((lk, lv) # lt) k = Some vl" "map_of ((rk, rv) # rt) k = None" |
+        (NS) vr where "map_of ((lk, lv) # lt) k = None" "map_of ((rk, rv) # rt) k = Some vr" |
+        (SS) vl vr where "map_of ((lk, lv) # lt) k = Some vl" "map_of ((rk, rv) # rt) k = Some vr"
+        by(cases "map_of ((lk, lv) # lt) k"; cases "map_of ((rk, rv) # rt) k"; auto)
+
+      then show ?thesis
+      proof cases
+        case NN
+        then show ?thesis using B 4(3) Ord1 Ord2 Ord2'
+          by(auto split:if_split_asm)
+      next
+        case SN
+        then show ?thesis using B 4(3) Ord1 Ord2 Ord2'
+          by(auto split:if_split_asm)
+      next
+        case NS
+        then show ?thesis using B 4(3) Ord1 Ord2 Ord2'
+          by(auto split:if_split_asm)
+      next
+        case SS
+
+        have Contr : "map_of lt rk = None"
+        proof(cases "map_of lt rk")
+          case None
+          then show ?thesis by auto
+        next
+          case (Some bad)
+
+          have Bad_in : "(rk, bad) \<in> set lt" using map_of_SomeD[OF Some] by simp
+
+          obtain idx where Idx : "idx < length lt" "lt ! idx = (rk, bad)" 
+            using Bad_in
+            unfolding in_set_conv_nth 
+            by blast
+
+          then show ?thesis using strict_order_unfold[OF Ord1, of "1 + idx" 0] B
+            by(simp)
+        qed
+
+        then show ?thesis using B 4(3) Ord1 Ord2 Ord1' Ord2'
+          by(auto split: if_split_asm option.split_asm)
+      qed
+    qed
+
+    then show ?thesis by blast
+  next
+    case C 
+
+    have Conc' : "strict_order (map fst ((lk, lv) # lt)) \<Longrightarrow>
+                  strict_order (map fst ((rk, rv) # rt)) \<Longrightarrow>
+                    map_of (str_ord_zip flr fl fr ((lk, lv) # lt) ((rk, rv) # rt)) k =
+                  (case (map_of ((lk, lv) # lt) k, map_of ((rk, rv) # rt) k) of (None, None) \<Rightarrow> None
+                   | (None, Some vr) \<Rightarrow> Some (fr k vr) | (Some vl, None) \<Rightarrow> Some (fl k vl)
+                   | (Some vl, Some vr) \<Rightarrow> Some (flr k vl vr))"
+    proof-
+      assume Ord1 : "strict_order (map fst ((lk, lv) # lt))"
+      assume Ord2 : "strict_order (map fst ((rk, rv) # rt))"
+
+      have Ord1' : "strict_order (map fst lt)"
+        using strict_order_tl[of lk "map fst lt"] Ord1 by auto
+
+      have Ord2' : "strict_order (map fst rt)"
+        using strict_order_tl[of rk "map fst rt"] Ord2 by auto
+
+      consider
+        (NN) "map_of ((lk, lv) # lt) k = None"  "map_of ((rk, rv) # rt) k = None" |
+        (SN) vl where "map_of ((lk, lv) # lt) k = Some vl" "map_of ((rk, rv) # rt) k = None" |
+        (NS) vr where "map_of ((lk, lv) # lt) k = None" "map_of ((rk, rv) # rt) k = Some vr" |
+        (SS) vl vr where "map_of ((lk, lv) # lt) k = Some vl" "map_of ((rk, rv) # rt) k = Some vr"
+        by(cases "map_of ((lk, lv) # lt) k"; cases "map_of ((rk, rv) # rt) k"; auto)
+
+      then show ?thesis
+      proof cases
+        case NN
+        then show ?thesis using C 4(2) Ord1 Ord2 Ord1' Ord2'
+          by(auto split:if_split_asm)
+      next
+        case SN
+        then show ?thesis using C 4(2) Ord1 Ord2 Ord1' Ord2'
+          by(auto split:if_split_asm)
+      next
+        case NS
+        then show ?thesis using C 4(2) Ord1 Ord2 Ord1' Ord2'
+          by(auto split:if_split_asm)
+      next
+        case SS
+
+        then show ?thesis using C 4(2) Ord1 Ord2 Ord1' Ord2'
+          by(auto split:if_split_asm)
+      qed
+    qed
+
+    then show ?thesis using C 4(2)
+      by(auto split: if_split_asm option.split_asm)
+  qed
+qed
+
+
 end
