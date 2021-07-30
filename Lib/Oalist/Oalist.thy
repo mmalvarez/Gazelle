@@ -496,6 +496,16 @@ lift_definition
  is alist_map_val
   by (auto intro: strict_order_nil)
 
+definition alist_all_val ::
+  "('v1 \<Rightarrow> bool) \<Rightarrow> ('key * 'v1) list \<Rightarrow> bool" where
+"alist_all_val P l =
+  list_all P (map snd l)"
+
+lift_definition oalist_all_val :: "('v \<Rightarrow> bool) \<Rightarrow> ('key :: linorder, 'v) oalist \<Rightarrow> bool"
+is alist_all_val .
+
+lift_definition oaset :: "('key :: linorder, 'v) oalist \<Rightarrow> ('key * 'v) set"
+is set .
 
 (* zip two oalists together using the given functions -
  * one for both keys present, one for left key present, one for right key present *)
@@ -1201,6 +1211,29 @@ next
       by(auto split: if_split_asm option.split_asm)
   qed
 qed
+
+
+lemma str_ord_update_str_ord_update :
+  assumes H: "strict_order (map fst l)"
+  shows "str_ord_update k v' (str_ord_update k v l) = str_ord_update k v' l"
+proof(induction l)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons lh lt)
+
+  obtain lk lv where Lh : "lh = (lk, lv)"
+    by(cases lh; auto)
+
+  show ?case using Cons Lh
+    by(auto)
+qed
+
+lemma update_update :
+  "update k v' (update k v l) = update k v' l"
+  by(transfer; auto simp add: str_ord_update_str_ord_update)
+
+  
 
 
 end

@@ -25,6 +25,9 @@ lemma No_Control_LOut :
   by(auto simp add:
       no_control_lifting_def schem_lift_defs snd_l_def snd_def)
 
+
+value [nbe] no_control_lifting
+
 (*
  * assumes Horth : "l_ortho (no_control_l sem) (seq_sem_l_gen lfts)"
  * assumes Hsup : "sups_pres {(no_control_l sem), (seq_sem_l_gen lfts)}"

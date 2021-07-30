@@ -1531,6 +1531,26 @@ definition list_map_S ::
   "('x, 'b :: Pord) valid_set \<Rightarrow> ('x, 'b list md_triv) valid_set" where
 "list_map_S S s =
   { l . \<exists> l' . l = mdt l' \<and> list_all (\<lambda> x . x \<in> S s) l'}"
+(* TODO: correctness *)
+
+(* mappings for oalists are helpful e.g. for memory *)
+definition oalist_map_l ::
+  "('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow> ('x, ('k::linorder, 'a) oalist, ('k, 'b) oalist) lifting" where
+"oalist_map_l t =
+  \<lparr> LUpd = (\<lambda> s al bl . oalist_zip (\<lambda> _ a b . LUpd t s a b) (\<lambda> _ a . LNew t s a) (\<lambda> _ b . b) al bl)
+  , LOut = (\<lambda> s bl . oalist_map_val (LOut t s) bl)
+  , LBase = (\<lambda> s . empty)\<rparr>"
+
+definition oalist_map_S ::
+  "('x, 'b :: Pord) valid_set \<Rightarrow>
+   ('x, ('k :: linorder, 'b) oalist) valid_set" where
+"oalist_map_S S s =
+  {l . oalist_all_val (\<lambda> v . v \<in> S s) l }"
+
+(* valid_weak valid_weakb valid validb *)
+(* TODO: correctness for these will be annoying, will require a lemma about interaction
+ between map and zip. not a huge deal but i don't want to do it now.
+*)
 
 
 (* sum map-lifting *)

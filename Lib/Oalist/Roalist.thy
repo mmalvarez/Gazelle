@@ -5,38 +5,6 @@ begin
    (i.e., ordered alist where values are ordered alists of the same type)
    this is needed for e.g. closures. *)
 
-fun alist_map_val ::
-  "('v1 \<Rightarrow> 'v2) \<Rightarrow> ('key * 'v1) list \<Rightarrow> ('key * 'v2) list" where
-"alist_map_val f l =
-  map (map_prod id f) l"
-(*
-"alist_map_val f [] = []"
-| "alist_map_val f ((k, v)#t) =
-   ((k, f v)# alist_map_val f t)"
-*)
-
-lemma strict_order_nil : "strict_order []"
-  by(rule strict_order_intro; auto)
-
-lift_definition
-  oalist_map_val ::
-  "('v1 \<Rightarrow> 'v2) \<Rightarrow> ('key :: linorder, 'v1) oalist \<Rightarrow> ('key, 'v2) oalist"
- is alist_map_val
-  by (auto intro: strict_order_nil)
-
-(* another option: maybe we can somehow represent the alist in a way that isn't explicitly
-   recursive.
-e.g. suppose we want an alist clos = (str \<Rightarrow> (int + clos))
-maybe we can capture the nesting in the index?
-
-(str * closid \<Rightarrow> (int + closid))?
-problem: risk of infinite recursion
-maybe this is OK though. all we really need to do is reconstruct the closure stored at each thing.
-if the closures are infinite our implementation will spin. but maybe this is a price worth paying.
-
-so, at closid = 0
-*)
-
 type_synonym closid = nat
 
 type_synonym ('k, 'v) alist = "('k * 'v) list"

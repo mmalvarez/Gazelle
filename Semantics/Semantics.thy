@@ -59,6 +59,7 @@ definition sem_step ::
     | Inl ((G x l)#tt) \<Rightarrow> Inl (gs x m))"
 
 (* Executable version of interpreter as a series of small-steps *)
+(* TODO: show correspondence between this and sem_exec_p *)
 fun sem_exec ::
   "('syn, 'mstate) semc \<Rightarrow>
    nat \<Rightarrow>
@@ -74,6 +75,22 @@ fun sem_exec ::
     Inr msg \<Rightarrow> Inr msg
     | Inl [] \<Rightarrow> Inr (STR ''Excess fuel'')
     | Inl ((G x l)#tt) \<Rightarrow> sem_exec gs n (gs x m))"
+
+(* Easier-to-use interpreter, does not require exact fuel.
+ * TODO: show correspondence between this and sem_exec *)
+fun sem_run :: "('syn, 'mstate) semc \<Rightarrow> nat \<Rightarrow>
+('syn, 'mstate) control \<Rightarrow>
+   (('syn, 'mstate) control orerror)" where
+"sem_run gs 0 m =
+  (case cont m of
+    Inr msg \<Rightarrow> Inr msg
+    | Inl [] \<Rightarrow> Inl m
+    | _ \<Rightarrow> Inl m)"
+| "sem_run gs (Suc n) m =
+   (case cont m of
+    Inr msg \<Rightarrow> Inr msg
+    | Inl [] \<Rightarrow> Inl m
+    | Inl ((G x l)#tt) \<Rightarrow> sem_run gs n (gs x m))"
 
 inductive sem_step_p ::
   "('syn, 'mstate) semc  \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> bool"

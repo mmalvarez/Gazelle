@@ -70,37 +70,67 @@ type_synonym ('s, 'x) state' = "('s, (bool md_triv option md_prio * int md_triv 
  *  bool condition flag, result register (c), register a, register b, mem, other stuff) *)
 type_synonym ('s, 'x) state = "('s, int swr * int swr * int swr * int swr * (String.literal, int swr) oalist * 'x) control"
 
-term "(schem_lift (SP NA NB)
-                (SP (SPRI (SO NA))
-                    (SL id (SPRI (SO NB)))))"
+(* TODO: we are updating the priority of the entire memory
+ * this is inefficient *)
+fun mem_prio_mem ::
+  "syn \<Rightarrow> nat" where
+"mem_prio_mem (Swrite _ _) = 1"
+| "mem_prio_mem _ = 0"
 
-term "(schem_lift (SP NA NB)
-                (SP (SPRI (SO NA))
-                    (SL mem_key (SPRI (SO NB)))))"
+fun mem_prio_reg ::
+  "reg_id \<Rightarrow> syn \<Rightarrow> nat" where
+"mem_prio_reg r (Sread _ r') =
+  (if r = r' then 1 else 0)"
+| "mem_prio_reg _ _ = 0"
+  
+definition mem_sem_lifting_inner ::
+  "(syn, int, int md_triv option md_prio) lifting"
+where
+"mem_sem_lifting_inner = (schem_lift NA (SPRC mem_prio_mem (SO NA)))"
 
-(*
-definition mem_sem :: "syn \<Rightarrow> state \<Rightarrow> state" where
+
+(* -, -, int, int, int, int, oalist, whatever*)
+definition mem_sem_lifting_gen ::
+  "(syn, state0, ('s, ('x :: Mergeableb)) state) lifting" where
+"mem_sem_lifting_gen =
+  schem_lift (SP NA (SP NB (SP NC (SP ND NE))))
+    (SP NX (SP NX (SP (SPRC (mem_prio_reg Reg_flag) (SO NA)) 
+                  (SP (SPRC (mem_prio_reg Reg_c) (SO NB))
+                  (SP (SPRC (mem_prio_reg Reg_a) (SO NC))
+                  (SP (SPRC (mem_prio_reg Reg_b) (SO ND))
+                  (SP (SINJ (oalist_map_l mem_sem_lifting_inner) (NE)) NX)))))))"
+
+fun mem0_sem :: "syn \<Rightarrow> state0 \<Rightarrow> state0" where
+"mem0_sem (Sread s r) (reg_flag, reg_c, reg_a, reg_b, mem) = 
+  (case get mem s of
+    Some v \<Rightarrow>
+      (case r of
+        Reg_a \<Rightarrow> (reg_flag, reg_c, v, reg_b, mem)
+        | Reg_b \<Rightarrow> (reg_flag, reg_c, reg_a, v, mem)
+        | Reg_c \<Rightarrow> (reg_flag, v, reg_a, reg_b, mem)
+        | Reg_flag \<Rightarrow> (v, reg_c, reg_a, reg_b, mem))
+    | None \<Rightarrow> (reg_flag, reg_c, reg_a, reg_b, mem))"
+| "mem0_sem (Swrite s r) (reg_flag, reg_c, reg_a, reg_b, mem) =
+  (case r of
+    Reg_a \<Rightarrow> (reg_flag, reg_c, reg_a, reg_b, update s reg_a mem)
+    | Reg_b \<Rightarrow> (reg_flag, reg_c, reg_a, reg_b, update s reg_b mem)
+    | Reg_c \<Rightarrow> (reg_flag, reg_c, reg_a, reg_b, update s reg_c mem)
+    | Reg_flag \<Rightarrow> (reg_flag, reg_c, reg_a, reg_b, update s reg_flag mem))"
+| "mem0_sem _ st = st"
+
+
+definition mem_sem :: "syn \<Rightarrow> ('s, 'x :: Mergeableb) state \<Rightarrow> ('s, 'x) state" where
 "mem_sem = 
-  lift_map_s id
-    (schem_lift (SP NA NB)
-                (SP (SPRI (SO NA))
-                    (SL mem_key (SPRI (SO NB))))) mem0_sem"
+  lift_map_s id mem_sem_lifting_gen mem0_sem"
 
-definition mem_sem_l_gen :: "('s \<Rightarrow> syn) \<Rightarrow> (syn, state, 'a) lifting \<Rightarrow> 's \<Rightarrow> ('a :: Mergeable) \<Rightarrow> 'a" where
+definition mem_sem_l_gen :: "('s \<Rightarrow> syn) \<Rightarrow> (syn, ('s, 'x :: Mergeableb) state, 'a) lifting \<Rightarrow> 's \<Rightarrow> ('a :: Mergeable) \<Rightarrow> 'a" where
 "mem_sem_l_gen lfts lft =
   lift_map_s lfts
     (schem_lift NA (SINJ lft NA)) mem_sem"
-*)
 
-(* "bootleg" version of mem_sem.
- * we are not making full use of the lifting infrastructure here.
- * getting this to work is a TODO
- *)
 
-term "undefined :: ('s, 'x) state"
-
-(* TODO: priority calculations here are all wrong.
- * need to increment priority of the destination of the data. not the source. *)
+(* another attempt to build mem_sem, without liftings *)
+(*
 fun mem_sem :: "syn \<Rightarrow> ('s, 'x) state \<Rightarrow> ('s, 'x) state" where
 "mem_sem (Sread s r) (x0, x1, reg_flag, reg_c, reg_a, reg_b, mem, xz) =
   (case (get mem s) of
@@ -109,7 +139,7 @@ fun mem_sem :: "syn \<Rightarrow> ('s, 'x) state \<Rightarrow> ('s, 'x) state" w
       Reg_a \<Rightarrow> 
         (case reg_a of
           (mdp p1 (Some (mdt _))) \<Rightarrow> (x0, x1, reg_flag, reg_c, (mdp (1 + p1) (Some (mdt v)), reg_b, mem, xz))
-          | _ \<Rightarrow> (x0, x1, reg_flag, reg_c, (mdp 0(Some (mdt v)), reg_b, mem, xz)))
+          | _ \<Rightarrow> (x0, x1, reg_flag, reg_c, (mdp 0 (Some (mdt v)), reg_b, mem, xz)))
       | Reg_b \<Rightarrow> 
         (case reg_b of
           (mdp p1 (Some (mdt _))) \<Rightarrow> (x0, x1, reg_flag, reg_c, reg_a, (mdp (1 + p1) (Some (mdt v)), mem, xz))
@@ -153,7 +183,7 @@ fun mem_sem :: "syn \<Rightarrow> ('s, 'x) state \<Rightarrow> ('s, 'x) state" w
                                     update s (mdp (1 + p1) (Some (mdt x))) mem, xz)
         | _ \<Rightarrow> (x0, x1, reg_flag, reg_c, reg_a, reg_b, mem, xz))))"
 | "mem_sem _ st = st"
-
+*)
 (*
 definition test_store where
 "test_store = to_oalist

@@ -1,4 +1,4 @@
-theory Hoare_Direct_Dominant imports Hoare Hoare_Indexed Hoare_Direct
+theory Hoare_Step imports Hoare Hoare_Indexed Hoare_Direct
  "../Lifter/Auto_Lifter_Proofs"
  "../Mergeable/Mergeable_Instances"
  "../Composition/Composition" "../Composition/Dominant"
@@ -124,11 +124,12 @@ proof(rule HT'I)
           sorry
 
 (* key sub-result *)
-        have Cont_final : "cont m' = cont (seq_sem_l_gen lfts c m)"
+        have Cont_final : "cont m' = cont (seq_sem_l_gen lfts c m)" sorry
+          (*using  Hcont Inl
           apply(cases m; cases m'; auto simp add: seq_sem_l_gen_def seq_sem_lifting_gen_def schem_lift_defs seq_sem_def
-fst_l_def prio_l_def option_l_def triv_l_def cont_def LNew_def
+fst_l_def prio_l_def option_l_def triv_l_def cont_def LNew_def sem_step_def
 split: md_prio.splits option.splits md_triv.splits)
-
+*)
         hence Cont_final' : "cont m' = Inl c'" sorry
 
 
@@ -138,10 +139,12 @@ split: md_prio.splits option.splits md_triv.splits)
           by(simp add: sem_step_def)
   *)
 
+
         have Conc' : "safe_for gs m' npost"
           using guardediD[OF Guard, of "m'"] Hpay' Cont_final'
-          unfolding Pay_final Cont_final'
-          by auto
+          unfolding Pay_final Cont_final' lift_pred_valid_s_def lift_pred_s_def
+          using lifting_validDO[OF Valid] lifting_validDP[OF Valid]
+          by(cases m; auto)
 
         have Inl_alt : "sem_step_p gs m m'"
           using Inl unfolding sem_step_p_eq by simp
@@ -153,7 +156,9 @@ split: md_prio.splits option.splits md_triv.splits)
     qed
   qed
 
-  thus "\<exists>npre. |#gs#| {#-P1, (npre + npost)-#} [G c z] {#-P2, npost-#}"
+  thus "\<exists>npre.
+          |#gs#| {#-lift_pred_valid_s id l S c
+                     P1, (npre + npost)-#} [G c z] {#-lift_pred_valid_s id l S c P2, npost-#}"
     by blast
 qed
 end

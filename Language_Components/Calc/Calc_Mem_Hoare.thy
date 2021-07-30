@@ -5,6 +5,7 @@ begin
 
 (* Hoare rule for Calc_Mem (integrated, for now - should be possible to explore
  * separate Calc and Mem rules and composing them - TODO)
+ * TODO - separate things out. we could pull some stuff out of Calc_Mem_Imp_Hoare
  *)
 
 lemma HCalc_calc :

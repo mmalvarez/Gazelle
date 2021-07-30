@@ -384,6 +384,13 @@ proof(rule HT'I)
     using HCat[OF N1 N2'] by blast
 qed
 
+lemma HxCons :
+  assumes H : "|gs| {~P1~} [c] {~P2~}"
+  assumes H' : "|gs| {~P2~} cs {~P3~}"
+  shows "|gs| {~P1~} (c#cs) {~P3~}"
+  using HxCat[OF H H']
+  by auto
+
 lemma HT'D0 :
   assumes H : "HT' gs P c Q"
   shows "(\<And> npost . |#gs#| {#- P, (npost) -#} c {#- Q, npost -#})"
