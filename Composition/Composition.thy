@@ -1257,7 +1257,7 @@ next
     by(auto)
 qed
 
-lemma pcomps_removeAll :
+lemma pcomps_removeAll' :
   assumes H : "sups_pres S"
   assumes Hf : "f \<in> S"
   assumes Hl1 : "set l1 = S"
@@ -1389,7 +1389,14 @@ next
   qed
 qed
 
-
+lemma pcomps_removeAll :
+  assumes H : "sups_pres S"
+  assumes Hf : "f \<in> S"
+  assumes Hl1 : "set l1 = S"
+  shows "pcomps (l1) = pcomps (f # (removeAll f l1))"
+  using pcomps_set_eq1[OF H Hf Hl1]
+    pcomps_removeAll'[OF H Hf Hl1]
+  by auto
 
 lemma pcomps_set_eq :
   assumes H : "sups_pres S"
@@ -1446,7 +1453,6 @@ next
     next
       case Cons2_1 : (Cons l2h1 l2t)
 
-
       have Pres' : "sups_pres (set (l1h2 # l1t2))"
         using sups_pres_subset[OF Cons1_1.prems(1), of "set (l1h2 # l1t2)" l1h2]
           Cons1_1.prems(3)
@@ -1470,64 +1476,72 @@ next
           by simp
       next
         case False
-(* Pres' *)
-(* using IH, we can show that pcomps l1t1 = pcomps (removeAll l1h1 l2)*)
-        then show ?thesis using Cons1_1.IH[OF ]
-            removeAll_id[OF False]
+
+        have Removed : "pcomps l2 = pcomps (l1h1 # removeAll l1h1 l2)" 
+          using pcomps_removeAll[of "set l2" "l1h1" "l2"]
+            Cons1_1.prems Cons2_1
+          by auto
+
+        have Set_eq : "set (removeAll l1h1 l2) = set l1t1"
+          using False Cons1_1.prems
+          by auto
+
+        have Ind_hyp : "pcomps l1t1 = pcomps (removeAll l1h1 l2)"
+          using Cons1_1.IH[OF _ _ _ Set_eq, of "l1h2"] Pres' Cons1_2
+          by auto
+
+        have Eq1 : "set (l1h1 # l1t1) = set [l1h1] \<union> set l1t1"
+          by auto
+
+        have Pres1 : "sups_pres (set [l1h1] \<union> set l1t1)"
+          using Cons1_1.prems Eq1
+          by auto
+
+        have Assoc1 : "pcomps (l1h1 # l1t1) = pcomps [ pcomps [l1h1], pcomps l1t1]"
+          using pcomps_assoc[OF Pres1] Cons1_2
+          by auto
+
+        have Eq2 : "set (l1h1 # removeAll l1h1 l2) = set [l1h1] \<union> set (removeAll l1h1 l2)"
+          by auto
+
+        have Pres2 : "sups_pres (set [l1h1] \<union> set (removeAll l1h1 l2))"
+          using Cons1_1.prems Eq1
+          by auto
+
+(* alternate approach: see if there exists an element in the tail that is distinct. *)
+        show ?thesis
+        proof(cases "set l1t1 = {l1h1}")
+          case True' : True
+
+          then have False using False by auto
+
+          then show ?thesis by auto
+        next
+          case False' : False
+
+          then obtain new where New_set : "new \<in> set l1t1" and New_noteq : "new \<noteq> l1h1"
+            using Cons1_2
+            by auto
+
+          have New_set' : "new \<in> set l2" using Cons1_1.prems New_set
+            by auto
+
+          have New_in_2 : "new \<in> set (removeAll l1h1 l2)"
+            using Cons1_1.prems New_set' New_noteq set_removeAll[of l1h1 l2]
+            by auto
+
+          then have Not_empty2 : "removeAll l1h1 l2 \<noteq> []"
+            by(cases "removeAll l1h1 l2"; auto)
+
+          have Assoc2 : "pcomps (l1h1 # removeAll l1h1 l2) = pcomps [ pcomps [l1h1], pcomps (removeAll l1h1 l2)]"
+            using pcomps_assoc[OF Pres2 _ Not_empty2] 
+            by auto
+  
+          show ?thesis using Ind_hyp Removed Assoc1 Assoc2
+            by(auto)
+        qed
       qed
-
-      show ?thesis using Cons1_1.prems 
-        unfolding Cons1_2 Cons2_1 
-        
-
-(*
-      show ?thesis
-        using Cons1_1.prems Cons1_1.IH
-        unfolding Cons1_2 Cons2_1 
-        by simp
-*)
-
-      then have L2 : "set l2 = {l1h1}"
-        using Cons1_1.prems Nil1_2
-        by(auto)
-
-      have L1h1_pres : "sups_pres {l1h1}"
-        using sups_pres_subset[OF Cons1_1.prems(1), of "{l1h1}" l1h1] Cons1_1.prems
-        by auto
-
-      have L2_eq : "pcomps l2 = l1h1"
-        using pcomps_singleton[OF L1h1_pres L2]
-        by simp
-
-      then show ?thesis
-        unfolding L2_eq Nil1_2
-        by simp
     qed
-        
-        
-
-    qed
-
-    then show ?thesis 
-      using Cons
-  next
-    case (Cons  list)
-    then show ?thesis sorry
   qed
-
-  have S' : "sups_pres (set l1t)" 
-    using sups_pres_subset[OF Cons.prems(1) ] Cons.prems
-
-  then show ?case 
 qed
-
-  term "sups_pres"
-
-
-(* TODO: this may become necessary *)
-(*
-lemma l_ortho_sups_pres :
-  assumes "l_ortho l1 l2"
-  shows "sups_pres (lift_map_s st1 l1 lf) (lift_map_s st2 l2 f2)"
-*)
 end
