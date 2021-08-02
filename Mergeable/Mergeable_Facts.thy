@@ -333,5 +333,34 @@ proof-
   show "[^ [^ a, b ^], c ^] = [^ a, [^ b, c ^] ^]" using LHS RHS by auto
 qed
 
+lemma ub_subset :
+  assumes H : "is_ub S x"
+  assumes H' : "S' \<subseteq> S"
+  shows "is_ub S' x"
+proof
+  fix z
+  assume Zin : "z \<in> S'"
+
+  hence Zin' : "z \<in> S"
+    using Zin H' by blast
+
+  then show "z <[ x"
+    using is_ubE[OF H Zin'] by simp
+qed
+
+lemma sup_subset_ub :
+  assumes H : "is_sup S x"
+  assumes H' : "S' \<subseteq> S"
+  shows "is_ub S' x"
+proof
+  fix z
+  assume Zin : "z \<in> S'"
+
+  hence Zin' : "z \<in> S"
+    using Zin H' by blast
+
+  then show "z <[ x"
+    using is_supD1[OF H Zin'] by simp
+qed
 
 end

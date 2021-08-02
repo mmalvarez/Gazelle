@@ -50,6 +50,8 @@ definition no_control_l :: "
    * all we need to do is say that seq is dominant for that syntax
    * for all _other_ semantics. no_control_lifting should do the rest. i think.
  *)
+
+
 (* TODO: for this to be true, we need to lift P1 and P2 using l *)
 lemma HTS_imp_HT' :
   assumes H: "f % {{P1}} c {{P2}}"
@@ -116,7 +118,33 @@ proof(rule HT'I)
 - we can then unfold these things in order and everything should be ok.
 *)
 
+        have Assoc : 
+             "pcomps (fs_sub @ [seq_sem_l_gen lfts]) =
+              pcomps [pcomps fs_sub, pcomps [seq_sem_l_gen lfts]]"
+        proof(rule pcomps_assoc)
+
+          have "set fs - {seq_sem_l_gen lfts} \<union> set [seq_sem_l_gen lfts] = set fs"
+            using Hseq 
+            by(simp; blast)
+
+          then show "sups_pres (set fs_sub \<union> set [seq_sem_l_gen lfts])"
+            unfolding Fs_sub
+            using Hpres
+            by auto
+        next
+
+          have "set fs_sub \<noteq> {}" using Hnemp unfolding Fs_sub by auto
+
+          then show "fs_sub \<noteq> []" by auto
+        next
+
+          show "[seq_sem_l_gen lfts] \<noteq> []" by simp
+        qed
+             
+
         have "gs = pcomps [pcomps fs_sub, seq_sem_l_gen lfts]"
+          using Assoc
+          unfolding append.simps H0
           sorry
 
 (* key sub-result. *)

@@ -338,7 +338,7 @@ lemma HT'D :
  * Rules using the "wrapped" indexed Hoare logic HT' will have names starting with Hx.
  *)
 
-lemma HxConseq :
+lemma HT'Conseq :
   assumes H : "|gs| {~ P'~} c {~Q'~}"
   assumes HP1 : "\<And> st . P st \<Longrightarrow> P' st"
   assumes HQ1 : "\<And> st . Q' st \<Longrightarrow> Q st"
@@ -359,7 +359,7 @@ proof(rule HT'I)
     by blast
 qed
 
-lemma HxCat :
+lemma HT'Cat :
   assumes H : "|gs| {~ P1 ~} c1 {~ P2 ~}"
   assumes H' : "|gs| {~ P2 ~} c2 {~ P3 ~}"
   shows "|gs| {~ P1 ~} (c1 @ c2) {~ P3 ~}"
@@ -384,11 +384,11 @@ proof(rule HT'I)
     using HCat[OF N1 N2'] by blast
 qed
 
-lemma HxCons :
+lemma HT'Cons :
   assumes H : "|gs| {~P1~} [c] {~P2~}"
   assumes H' : "|gs| {~P2~} cs {~P3~}"
   shows "|gs| {~P1~} (c#cs) {~P3~}"
-  using HxCat[OF H H']
+  using HT'Cat[OF H H']
   by auto
 
 lemma HT'D0 :

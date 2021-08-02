@@ -1,5 +1,5 @@
 theory Calc_Mem_Imp imports Calc_Mem "../Cond/Cond" "../Imp_Ctl/Imp_Ctl" "../Seq/Seq" 
-"../../Hoare/Hoare_Direct_Dominant"
+"../../Hoare/Hoare_Step"
 begin
 
 datatype syn =
@@ -62,7 +62,6 @@ definition calc_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) 
     (SP NX (SP NX (SP (SPRI (SO NC)) (SP (SPRI (SO NB)) (SP (SPRI (SO NA)) NX))))))
   calc_sem"
 *)
-declare [[show_sorts]]
 
 (*
 ('a::type, 'b::{Bogus,Pord},

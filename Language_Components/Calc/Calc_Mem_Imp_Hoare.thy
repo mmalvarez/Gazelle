@@ -1,5 +1,5 @@
 theory Calc_Mem_Imp_Hoare
-  imports Calc_Mem_Imp "../../Hoare/Hoare_Direct_Dominant" "../../Hoare/Hoare_Lift" "../Mem/Mem_Simple"
+  imports Calc_Mem_Imp "../../Hoare/Hoare_Step" "../../Hoare/Hoare_Lift" "../Mem/Mem_Simple"
 begin
 
 (* Deriving a set of Hoare logic rules useful for reasoning about imperative code in Imp.
@@ -41,6 +41,8 @@ lemma imp_dom :
   "\<And> i . imp_sem_l \<downharpoonleft> sems (Si i)"
   sorry
 
+(* concrete state *)
+type_synonym cstate = "(syn, unit) Mem_Simple.state"
 
 definition start_state :: "syn gensyn \<Rightarrow> (syn, unit) Mem_Simple.state" where
 "start_state prog =
@@ -122,13 +124,25 @@ value "sem_run sem_final 100 (start_state (prog1 2 3))"
 
 (* quick n dirty approach: we should be able to get this information from the liftings,
    but this requires more machinery *)
+(* TODO: change this to use liftings
+*)
+(*
 definition st_valid where
 "st_valid st = 
   (case st of
    (mdp _ (Some _), mdp _ (Some _)
    ,mdp _ (Some _), _, _) \<Rightarrow> True
    | _ \<Rightarrow> False)"
-  
+  *)
+
+(* this will eventually be the valid-set for our lifting. *)
+consts state_S :: "syn \<Rightarrow> cstate set"
+
+term "lifting_validb"
+
+lemma calc_lift_v :
+  "lifting_validb (l_synt calc_trans calc_lift) state_S" sorry
+
 
 (* ok great - so this finally works. now let's see if we can prove anything. *)
 
@@ -153,6 +167,7 @@ proof(rule HTSI)
     using Hc H
     by(cases c; cases a; auto simp add: split: prod.splits)
 qed
+
 
 lemma HCalc_skip :
   shows "Calc.calc_sem % {{P1}} Cskip
@@ -621,10 +636,15 @@ proof(rule HTSI)
   qed
 qed
 
+(* TODO: need to figure out how the lifting works. *)
 
 lemma prog1_spec :
   assumes Hi1 : "0 \<le> i1"
   assumes Hi2 : "0 \<le> i2"
+
+(* TODO: st_valid need to be replaced *)
+
+(* ok, st_valid should be somethng like (is in a valid_s of some kind) *)
 
 shows "|sem_final| {~ st_valid ~}
                    [prog1 i1 i2]
@@ -650,7 +670,9 @@ proof-
             get (state_mem st) (STR ''arg2'') = Some (mdp pi2 (Some (mdt i2))) \<and>
             get (state_mem st) (STR ''one'') = Some (mdp p1 (Some (mdt 1))) \<and>
             get (state_mem st) (STR ''acc'') = Some (mdp p0 (Some (mdt 0))))) ~}"
-    using HxCons
+    using Vlift_valid'[OF _ HCalc_Cnum, where l' = calc_trans and l = calc_lift]
+    unfolding st_valid_def
+(* unfolding? *)
 
   proof(rule HT'I; rule_tac x = npost in exI)
     fix npost
