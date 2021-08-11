@@ -626,6 +626,45 @@ next
     by auto
 qed
 
+lemma prio_l_valid_stronger :
+  fixes t :: "('x, 'a, 'b :: Pord) lifting"
+  assumes H : "lifting_valid_weak t S"
+  assumes Hs' : "\<And> x . prio_l_S S x \<subseteq> S' x"
+  assumes Hmono : "\<And> s p . p < f1 s p"
+  shows "lifting_valid (prio_l f0 f1 t) S'"
+proof(rule lifting_validI)
+  fix s a b
+  show "LOut (prio_l f0 f1 t) s (LUpd (prio_l f0 f1 t) s a b) = a"
+    using lifting_valid_weakDO[OF H]
+    by(auto simp add:prio_l_def prio_lv_def LNew_def split:md_prio.splits)
+next
+  fix s a
+  fix b :: "'b md_prio"
+
+  obtain x1 p where B : "b = mdp p x1" by(cases b; auto)
+
+  show "b <[ LUpd (prio_l f0 f1 t) s a b"
+    using lifting_valid_weakDI[OF H] Hmono[of p s] B
+    by(auto simp add:prio_l_def prio_lv_def LNew_def prio_pleq split:md_prio.splits)
+next
+  fix s a 
+  fix b :: "('b md_prio)"
+
+  obtain x1 x2 where B : "b = mdp x1 x2"
+    by(cases b; auto)
+
+  have Prio_in : "mdp (f1 s x1) (LUpd t s a x2) \<in> prio_l_S S s"
+    using lifting_valid_weakDP[OF H, of s a x2]
+    by(auto simp add: prio_l_S_def)
+
+  then have Prod_in' : "mdp (f1 s x1) (LUpd t s a x2) \<in> S' s"
+    using Hs'[of s] by auto
+
+  then show "LUpd (prio_l f0 f1 t) s a b \<in> S' s" using B
+    by(auto simp add: prio_l_def prio_l_S_def split: md_prio.splits)
+qed
+
+
 lemma prio_l_valid_strong_vsg :
   fixes t :: "('x, 'a, 'b :: Pord) lifting"
   assumes Hv : "S' = (\<lambda> _ . UNIV)"
@@ -714,6 +753,31 @@ next
     using Hzero lifting_valid_weakbDB[OF H]
     by(simp add: prio_l_def prio_bot)  
 qed
+
+lemma prio_l_validb_stronger :
+  fixes t :: "('x, 'a, 'b :: Pordbc) lifting"
+  assumes H : "lifting_valid_weakb t S"
+  assumes Hs' : "\<And> x . prio_l_S S x \<subseteq> S' x"
+  assumes Hzero : "\<And> s . f0 s = 0"
+  assumes Hmono : "\<And> s p . p < f1 s p"
+  shows "lifting_validb (prio_l f0 f1 t) S'"
+proof(rule lifting_validbI')
+  fix s a b
+
+  have H' : "lifting_valid_weak t S"
+    using lifting_valid_weakbDV[OF H] by auto
+
+  show "lifting_valid (prio_l f0 f1 t) S'"
+    using prio_l_valid_stronger[OF H' Hs' Hmono]
+    by auto
+next
+  fix s
+
+  show "LBase (prio_l f0 f1 t) s = \<bottom>"
+    using lifting_valid_weakbDB[OF H] Hzero
+    by(auto simp add: prio_l_def prio_bot)
+qed
+
 
 lemma prio_l_validb_strong_vsg :
   fixes t :: "('x, 'a, 'b :: Pordbc) lifting"
@@ -1197,6 +1261,248 @@ next
     by(auto simp add: merge_l_def)
 qed
 
+(* TODO: do valid sets need to be equal? or is some kind of sub/superset possible? *)
+(*
+lemma merge_l_valid_nope :
+  assumes H1 : "lifting_valid (l1 :: ('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme) S1"
+  assumes H2 : "lifting_valid (l2 :: ('x, 'a2, 'b :: Mergeable, 'z2) lifting_scheme) S2"
+  assumes Hort : "l_ortho l1 l2"
+  shows "lifting_valid (merge_l l1 l2) (\<lambda> s . S1 s \<inter> S2 s)"
+proof(rule lifting_validI)
+  fix s :: 'x
+  fix a :: "'a1 * 'a2"
+  fix b :: "'b"
+
+  obtain a1 a2 where A : "a = (a1, a2)" by (cases a; auto)
+
+  have C' : "LOut l1 s (LUpd l2 s a2 (LUpd l1 s a1 b)) = a1"
+    using lifting_validDO[OF H1] sym[OF l_orthoDI[OF Hort]]
+    by(auto)
+
+  then show "LOut (merge_l l1 l2) s (LUpd (merge_l l1 l2) s a b) = a"
+    using A lifting_validDO[OF H1] lifting_validDO[OF H2]
+    by(auto simp add: merge_l_def )
+next
+  fix s :: 'x
+  fix a :: "'a1 * 'a2"
+  fix b :: 'b
+
+  obtain a1 a2 where A : "a = (a1, a2)" by (cases a; auto)
+
+  assume Hb : "b \<in> S1 s \<inter> S2 s"
+  hence Hb1 : "b \<in> S1 s" and Hb2 : "b \<in> S2 s"  by auto
+
+  have "(LUpd l1 s a1 b) \<in> S1 s"
+    using lifting_validDP[OF H1] by auto
+
+  hence In2: "(LUpd l2 s a2 b) \<in> S2 s"
+    using lifting_validDP[OF H2] Hb2 by auto
+
+  have Leq2 : "LUpd l1 s a1 b <[ LUpd l2 s a2 (LUpd l1 s a1 b)"
+    using l_orthoDI
+    using lifting_validDI[OF H2 In2] by auto
+
+  have Leq1 : "b <[ LUpd l1 s a1 b"
+    using lifting_validDI[OF H1 Hb1] by auto
+
+  show "b <[ LUpd (merge_l l1 l2) s a b" 
+    using A leq_trans[OF Leq1 Leq2] by (auto simp add: merge_l_def)
+next
+  fix s :: 'x
+  fix a :: "'a1 * 'a2"
+  fix b :: 'b
+
+  obtain a1 a2 where A : "a = (a1, a2)" by (cases a; auto)
+
+  have "(LUpd l1 s a1 b) \<in> S1 s"
+    using lifting_validDP[OF H1] by auto
+
+  hence "(LUpd l1 s a1 b) \<in> S2 s" unfolding Heq by auto
+
+  hence "LUpd l2 s a2 (LUpd l1 s a1 b) \<in> S2 s"
+    using lifting_validDP[OF H2] by auto
+
+  hence "LUpd l2 s a2 (LUpd l1 s a1 b) \<in> S1 s"
+    unfolding Heq by auto
+
+  thus "LUpd (merge_l l1 l2) s a b \<in> S1 s" using A
+    by(auto simp add: merge_l_def)
+qed
+*)
+
+definition merge_l_bsup ::
+  "('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme \<Rightarrow>
+   ('x, 'a2, 'b :: Mergeable, 'z2) lifting_scheme \<Rightarrow>
+   ('x, 'a1 * 'a2, 'b) lifting" where
+"merge_l_bsup t1 t2 =
+  \<lparr> LUpd =
+    (\<lambda> s a b . 
+      (case a of (a1, a2) \<Rightarrow>
+        [^ LUpd t2 s a2 b, LUpd t1 s a1 b ^]))
+  , LOut =
+    (\<lambda> s b . (LOut t1 s b, LOut t2 s b))
+  , LBase =
+    (\<lambda> s . LBase t1 s) \<rparr>"
+
+
+(* one idea:
+ * enrich orthogonality to include
+ *
+ * another idea: use a more bsup-oriented notion of orthogonality.
+ * the problem is that this may not work well with the lifting definition
+*)
+lemma merge_l_valid_gen :
+  assumes H1 : "lifting_valid (l1 :: ('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme) S1"
+  assumes H2 : "lifting_valid (l2 :: ('x, 'a2, 'b :: Mergeable, 'z2) lifting_scheme) S2"
+  assumes Hort : "l_ortho l1 l2"
+  shows "lifting_valid (merge_l l1 l2) (\<lambda> s . S1 s \<inter> S2 s)"
+proof(rule lifting_validI)
+  fix s :: 'x
+  fix a :: "'a1 * 'a2"
+  fix b :: "'b"
+
+  obtain a1 a2 where A : "a = (a1, a2)" by (cases a; auto)
+
+  have C' : "LOut l1 s (LUpd l2 s a2 (LUpd l1 s a1 b)) = a1"
+    using lifting_validDO[OF H1] sym[OF l_orthoDI[OF Hort]]
+    by(auto)
+
+  then show "LOut (merge_l l1 l2) s (LUpd (merge_l l1 l2) s a b) = a"
+    using A lifting_validDO[OF H1] lifting_validDO[OF H2]
+    by(auto simp add: merge_l_def )
+next
+  fix s :: 'x
+  fix a :: "'a1 * 'a2"
+  fix b :: 'b
+
+  obtain a1 a2 where A : "a = (a1, a2)" by (cases a; auto)
+
+  assume Hb : "b \<in> S1 s \<inter> S2 s"
+  hence Hb1 : "b \<in> S1 s" and Hb2 : "b \<in> S2 s"  by auto
+
+  have "(LUpd l1 s a1 b) \<in> S1 s"
+    using lifting_validDP[OF H1] by auto
+
+  hence In2: "(LUpd l2 s a2 b) \<in> S2 s"
+    using lifting_validDP[OF H2] Hb2 by auto
+
+  have In1' : "LUpd l1 s a1 (LUpd l2 s a2 b) \<in> S1 s"
+    using lifting_validDP[OF H1] by auto
+
+  have In2' : "LUpd l2 s a2 (LUpd l1 s a1 b) \<in> S2 s"
+    using lifting_validDP[OF H2] by auto
+
+  have Eq : "LUpd l2 s a2 (LUpd l1 s a1 b) = LUpd l1 s a1 (LUpd l2 s a2 b)"
+    using l_orthoDI[OF Hort] by auto
+
+  have In1'' : "LUpd l1 s a1 (LUpd l2 s a2 b) \<in> S2 s"
+    using In2' unfolding Eq by simp
+
+  have In2'' : "LUpd l2 s a2 (LUpd l1 s a1 b) \<in> S1 s"
+    using In1' unfolding Eq by simp
+
+(*
+  show "b <[ LUpd (merge_l l1 l2) s a b"
+    apply(auto simp add: merge_l_def split: prod.splits)
+*)
+  have Leq2 : "LUpd l1 s a1 b <[ LUpd l2 s a2 (LUpd l1 s a1 b)"
+    using lifting_validDI[OF H2 ] by auto
+
+  have Leq1 : "b <[ LUpd l1 s a1 b"
+    using lifting_validDI[OF H1 Hb1] by auto
+
+  show "b <[ LUpd (merge_l l1 l2) s a b" 
+    using A leq_trans[OF Leq1 Leq2] by (auto simp add: merge_l_def)
+next
+  fix s :: 'x
+  fix a :: "'a1 * 'a2"
+  fix b :: 'b
+
+  obtain a1 a2 where A : "a = (a1, a2)" by (cases a; auto)
+
+  have "(LUpd l1 s a1 b) \<in> S1 s"
+    using lifting_validDP[OF H1] by auto
+
+  hence "(LUpd l1 s a1 b) \<in> S2 s" unfolding Heq by auto
+
+  hence "LUpd l2 s a2 (LUpd l1 s a1 b) \<in> S2 s"
+    using lifting_validDP[OF H2] by auto
+
+  hence "LUpd l2 s a2 (LUpd l1 s a1 b) \<in> S1 s"
+    unfolding Heq by auto
+
+  thus "LUpd (merge_l l1 l2) s a b \<in> S1 s" using A
+    by(auto simp add: merge_l_def)
+qed
+
+
+lemma merge_l_bsup_valid :
+  assumes H1 : "lifting_valid (l1 :: ('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme) S1"
+  assumes H2 : "lifting_valid (l2 :: ('x, 'a2, 'b :: Mergeable, 'z2) lifting_scheme) S2"
+  assumes Hort : "l_ortho l1 l2"
+  shows "lifting_valid (merge_l_bsup l1 l2) (\<lambda> s . S1 s \<inter> S2 s)"
+proof(rule lifting_validI)
+  fix s :: 'x
+  fix a :: "'a1 * 'a2"
+  fix b :: "'b"
+
+  obtain a1 a2 where A : "a = (a1, a2)" by (cases a; auto)
+
+  have C' : "LOut l1 s (LUpd l2 s a2 (LUpd l1 s a1 b)) = a1"
+    using lifting_validDO[OF H1] sym[OF l_orthoDI[OF Hort]]
+    by(auto)
+
+  then show "LOut (merge_l_bsup l1 l2) s (LUpd (merge_l_bsup l1 l2) s a b) = a"
+    using A lifting_validDO[OF H1] lifting_validDO[OF H2]
+    apply(auto simp add: merge_l_bsup_def )
+next
+  fix s :: 'x
+  fix a :: "'a1 * 'a2"
+  fix b :: 'b
+
+  obtain a1 a2 where A : "a = (a1, a2)" by (cases a; auto)
+
+  assume Hb : "b \<in> S1 s \<inter> S2 s"
+  hence Hb1 : "b \<in> S1 s" and Hb2 : "b \<in> S2 s"  by auto
+
+  have "(LUpd l1 s a1 b) \<in> S1 s"
+    using lifting_validDP[OF H1] by auto
+
+  hence In2: "(LUpd l2 s a2 b) \<in> S2 s"
+    using lifting_validDP[OF H2] Hb2 by auto
+
+  have Leq2 : "LUpd l1 s a1 b <[ LUpd l2 s a2 (LUpd l1 s a1 b)"
+    using l_orthoDI
+    using lifting_validDI[OF H2 In2] by auto
+
+  have Leq1 : "b <[ LUpd l1 s a1 b"
+    using lifting_validDI[OF H1 Hb1] by auto
+
+  show "b <[ LUpd (merge_l l1 l2) s a b" 
+    using A leq_trans[OF Leq1 Leq2] by (auto simp add: merge_l_def)
+next
+  fix s :: 'x
+  fix a :: "'a1 * 'a2"
+  fix b :: 'b
+
+  obtain a1 a2 where A : "a = (a1, a2)" by (cases a; auto)
+
+  have "(LUpd l1 s a1 b) \<in> S1 s"
+    using lifting_validDP[OF H1] by auto
+
+  hence "(LUpd l1 s a1 b) \<in> S2 s" unfolding Heq by auto
+
+  hence "LUpd l2 s a2 (LUpd l1 s a1 b) \<in> S2 s"
+    using lifting_validDP[OF H2] by auto
+
+  hence "LUpd l2 s a2 (LUpd l1 s a1 b) \<in> S1 s"
+    unfolding Heq by auto
+
+  thus "LUpd (merge_l l1 l2) s a b \<in> S1 s" using A
+    by(auto simp add: merge_l_def)
+qed
+
+
 lemma merge_l_valid_vsg :
   assumes H1 : "lifting_valid (l1 :: ('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme) S1"
   assumes H2 : "lifting_valid (l2 :: ('x, 'a2, 'b :: Mergeable, 'z2) lifting_scheme) S2"
@@ -1205,6 +1511,25 @@ lemma merge_l_valid_vsg :
   assumes Heq2 : "S2 = S3"
   shows "lifting_valid (merge_l l1 l2) S3"
   using assms merge_l_valid by auto
+
+lemma merge_l_validb :
+  assumes H1 : "lifting_validb (l1 :: ('x, 'a1, 'b :: Mergeableb, 'z1) lifting_scheme) S1"
+  assumes H2 : "lifting_validb (l2 :: ('x, 'a2, 'b :: Mergeableb, 'z2) lifting_scheme) S2"
+  assumes Hort : "l_ortho l1 l2"
+  assumes Heq  : "S1 = S2"
+  shows "lifting_validb (merge_l l1 l2) S1"
+proof(rule lifting_validbI')
+  show "lifting_valid (merge_l l1 l2) S1"
+    using merge_l_valid[OF lifting_validbDV[OF H1]
+                           lifting_validbDV[OF H2] Hort Heq]
+    by auto
+next
+  fix s
+  show "LBase (merge_l l1 l2) s = \<bottom>"
+    using lifting_validbDB[OF H1]
+    by(simp add: merge_l_def)
+qed
+
 
 (* Liftings for variable maps. These require a mapping from syntax to key (used for lookup
  * and update in the variable map).

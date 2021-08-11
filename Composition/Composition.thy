@@ -1508,7 +1508,6 @@ next
           using Cons1_1.prems Eq1
           by auto
 
-(* alternate approach: see if there exists an element in the tail that is distinct. *)
         show ?thesis
         proof(cases "set l1t1 = {l1h1}")
           case True' : True

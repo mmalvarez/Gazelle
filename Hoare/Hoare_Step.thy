@@ -29,6 +29,12 @@ definition no_control_lifting :: "('a, 'b1, 'b2 :: {Bogus, Pord}) lifting \<Righ
 "no_control_lifting l =
   schem_lift NC (SP NX (SP NX (SINJ l NC)))"
 
+lemma zztest :
+  obtains ntest :: nat where True
+  by auto
+
+term "ntest"
+
 (* something is weird with the pord constraint here. *)
 definition no_control_l :: "
 ('a, 'b1, 'b2 :: {Bogus, Pord}) lifting \<Rightarrow>
@@ -36,6 +42,12 @@ definition no_control_l :: "
 ('a \<Rightarrow> ('x, 'b2 :: {Bogus, Pord}) control \<Rightarrow> ('x, 'b2 ) control)" where
 "no_control_l l f =
   lift_map_s id (no_control_lifting l) f"
+
+lemma no_control_lifting_validb :
+  assumes H : "lifting_valid l S"
+  obtains S' where "lifting_valid (no_control_lifting l) S'"
+  apply(auto simp add:  intro: lifting_valid_vsg)
+  
 
 (* TODO: this hypothesis is rather inconvenient. *)
 (* TODO: there is a not-very-nice control flow interaction here, wherein we actually
@@ -51,6 +63,7 @@ definition no_control_l :: "
    * for all _other_ semantics. no_control_lifting should do the rest. i think.
  *)
 
+term "seq_sem_l_gen"
 
 (* TODO: for this to be true, we need to lift P1 and P2 using l *)
 lemma HTS_imp_HT' :
@@ -60,6 +73,7 @@ lemma HTS_imp_HT' :
   assumes H0 : "gs = pcomps fs"
   assumes Hpres : "sups_pres (set fs)"
   assumes Hseq : "seq_sem_l_gen lfts \<in> set fs"
+  assumes Skip : "lfts c = Sskip"
   assumes Hnemp : "g \<in> (set fs - {seq_sem_l_gen lfts})"
   assumes Hdom : "(f' \<downharpoonleft> (set fs - {seq_sem_l_gen lfts}) c)"
   shows "|gs| {~ (lift_pred_valid_s id l S c P1) ~} [G c z] {~ (lift_pred_valid_s id l S c P2) ~}"
@@ -140,12 +154,51 @@ proof(rule HT'I)
 
           show "[seq_sem_l_gen lfts] \<noteq> []" by simp
         qed
-             
 
-        have "gs = pcomps [pcomps fs_sub, seq_sem_l_gen lfts]"
-          using Assoc
+        have Set_alt : "set (fs_sub @ [seq_sem_l_gen lfts]) = set fs"
+          unfolding set_append Fs_sub
+          using Un_Diff_cancel2 Hseq
+          by auto
+
+        have Gs_alt : "gs = pcomps (fs_sub @ [seq_sem_l_gen lfts])"
+          using pcomps_set_eq[OF Hpres Hseq _ Set_alt, of fs] H0
+          by auto
+          
+(* TODO: find a better solution than this awful type annotation hack *)
+        have Seq_pres : 
+          "sups_pres {(seq_sem_l_gen lfts  :: ('a \<Rightarrow> 'a gensyn list md_triv option md_prio \<times>
+            String.literal md_triv option md_prio \<times> 'c
+            \<Rightarrow> 'a gensyn list md_triv option md_prio \<times>
+               String.literal md_triv option md_prio \<times>
+               'c))}"
+          using sups_pres_subset[OF Hpres, of "{seq_sem_l_gen lfts}"] Hseq
+          by(auto)
+
+
+        have Gs_alt' : "gs = pcomps [pcomps fs_sub, seq_sem_l_gen lfts]"
+          using Gs_alt pcomps_singleton[OF Seq_pres, of "[seq_sem_l_gen lfts]"]
+          unfolding Assoc
           unfolding append.simps H0
-          sorry
+          by auto
+
+        have Hdom' :  "f' \<downharpoonleft> (set fs_sub) c"
+          using Fs_sub Hdom by auto
+        have Dominate1 : "pcomps fs_sub c m = f' c m" using dominant_pcomps[OF _ _ Hdom', of g m] Pres' Hnemp Fs_sub
+          by auto
+
+(* almost have this. the missing ingredient is using the fact that
+ * information content will increase (for a strong-valid lifting) *)
+
+        have "LOut (no_control_lifting l) c (gs c m) = LOut (no_control_lifting l) c (f' c m)"
+          using Gs_alt' Dominate1 Skip Hpay Hcont
+          apply(auto simp add: seq_sem_l_gen_def seq_sem_lifting_gen_def 
+lift_pred_valid_s_def lift_pred_s_def
+no_control_lifting_def cont_def
+schem_lift_defs fst_l_def snd_l_def prio_l_def triv_l_def option_l_def seq_sem_def
+prod_bsup
+split: md_prio.splits prod.splits md_triv.splits option.splits list.split_asm)
+          term "m"
+
 
 (* key sub-result. *)
         have Pay_final : "payload m' = LUpd l c (f c (LOut l c (payload m))) (payload m)"
