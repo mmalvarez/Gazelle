@@ -28,12 +28,48 @@ begin
 (* vsg versions add a side condition on equality of the valid set,
    which might make them more useful. *)
 
+
+
+lemma schem_lift_S_base_idA_alt :
+  "(schem_lift_S NA NA) = (\<lambda> _ . UNIV)"
+  by(rule ext; auto simp add: schem_lift_S_base_idA_def)
+lemma schem_lift_S_base_idB_alt :
+  "(schem_lift_S NB NB) = (\<lambda> _ . UNIV)"
+  by(rule ext; auto simp add: schem_lift_S_base_idB_def)
+lemma schem_lift_S_base_idC_alt :
+  "(schem_lift_S NC NC) = (\<lambda> _ . UNIV)"
+  by(rule ext; auto simp add: schem_lift_S_base_idC_def)
+lemma schem_lift_S_base_idD_alt :
+  "(schem_lift_S ND ND) = (\<lambda> _ . UNIV)"
+  by(rule ext; auto simp add: schem_lift_S_base_idD_def)
+lemma schem_lift_S_base_idE_alt :
+  "(schem_lift_S NE NE) = (\<lambda> _ . UNIV)"
+  by(rule ext; auto simp add: schem_lift_S_base_idE_def)
+lemma schem_lift_S_base_idF_alt :
+  "(schem_lift_S NF NF) = (\<lambda> _ . UNIV)"
+  by(rule ext; auto simp add: schem_lift_S_base_idF_def)
+lemma schem_lift_S_base_idG_alt :
+  "(schem_lift_S NG NG) = (\<lambda> _ . UNIV)"
+  by(rule ext; auto simp add: schem_lift_S_base_idG_def)
+lemma schem_lift_S_base_idH_alt :
+  "(schem_lift_S NH NH) = (\<lambda> _ . UNIV)"
+  by(rule ext; auto simp add: schem_lift_S_base_idH_def)
+lemma schem_lift_S_base_idI_alt :
+  "(schem_lift_S NI NI) = (\<lambda> _ . UNIV)"
+  by(rule ext; auto simp add: schem_lift_S_base_idI_def)
+lemma schem_lift_S_base_idJ_alt :
+  "(schem_lift_S NJ NJ) = (\<lambda> _ . UNIV)"
+  by(rule ext; auto simp add: schem_lift_S_base_idJ_def)
+lemma schem_lift_S_base_idK_alt :
+  "(schem_lift_S NK NK) = (\<lambda> _ . UNIV)"
+  by(rule ext; auto simp add: schem_lift_S_base_idK_def)
+
 lemmas schem_lift_S_defs =
-  schem_lift_S_base_idA_def
-  schem_lift_S_base_idB_def
-  schem_lift_S_base_idC_def
-  schem_lift_S_base_idD_def
-  schem_lift_S_base_idE_def
+  schem_lift_S_base_idA_alt
+  schem_lift_S_base_idB_alt
+  schem_lift_S_base_idC_alt
+  schem_lift_S_base_idD_alt
+  schem_lift_S_base_idE_alt
 
   schem_lift_S_option_recR_def
   schem_lift_S_prio_recR_def
@@ -65,58 +101,15 @@ lemmas schem_lift_S_defs =
 
 
 (* test *)
-
-(* need validb for merge_l *)
-
 lemma lift_test :
+
+
+
   shows "lifting_validb (schem_lift (SP NA NB) (SP (SPRI (SO NA)) (SPRI (SO NB))))
                        (schem_lift_S (SP NA NB) (SP (SPRI (SO NA)) (SPRI (SO NB))))"
-  apply(auto simp add: schem_lift_defs schem_lift_S_defs lifting_valid_set_defs
-intro: lifting_valid_vsg
+by(fastforce simp add: schem_lift_defs schem_lift_S_defs
+intro: lifting_valid_vsg lifting_ortho_alt
 )
-  apply(rule merge_l_validb)
-  apply(auto simp add: schem_lift_defs schem_lift_S_defs lifting_valid_set_defs
-intro: lifting_valid_vsg'
-)
-    apply(rule fst_l_validb) apply(rule prio_l_validb_stronger)
-       apply(rule option_l_valid_weakb)
-  apply(rule triv_l_valid_weak)
-       apply(simp add: prio_l_S_def option_l_S_def schem_lift_S_defs)
-      apply(auto)
-
-  apply(case_tac xa; auto)
-    apply(simp add: schem_lift_S_defs option_l_S_def)
-(* TODO: figure out how to deal with fst vs. snd... *)
-(* probably we need to relax merge_l_validb... *)
-   apply(rule snd_l_validb_vsg)
-    defer
-    apply(rule prio_l_validb_stronger)
-      apply(rule option_l_valid_weakb)
-       apply(rule triv_l_valid_weak)
-      apply(rule subset_refl)
-     apply(simp)
-  apply(simp)
-   defer
-
-  apply(rule ext)
-   apply(auto simp add: fst_l_S_def snd_l_S_def prio_l_S_def option_l_S_def schem_lift_S_defs
-split: md_prio.splits)
-
-       defer
-       apply(rule option_l_valid_weakb)
-       apply(rule triv_l_valid_weak)
-  apply(auto)
-  apply(auto simp add: prio_l_S_def option_l_S_def schem_lift_S_defs split: md_prio.splits)
-
-    apply(auto intro: fst_l_valid prio_l_valid option_l_valid)
-
-    apply(rule prio_l_validb_strong_vsg)
-     apply(rule option_l_validb)
-  apply(rule triv_l_valid)
-  apply(rule )
-
-
-(* lifting_valid? *)
 
 
 end

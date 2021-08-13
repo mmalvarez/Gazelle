@@ -484,7 +484,7 @@ definition schem_lift_S_recL ::
    (('s1l :: schem, 's1r :: schem) sprod, 's2 :: schem, 'x, 'b2 :: Mergeable) schem_lift_S" where
 "schem_lift_S_recL recl recr s1 s2 =
   (case s1 of
-    SP s1l s1r \<Rightarrow> (recl s1l s2))"
+    SP s1l s1r \<Rightarrow> (\<lambda> syn . (recl s1l s2) syn \<inter> (recr s1r s2) syn))"
 (*(\<lambda> syn . (recl s1l s2) syn \<inter> (recr s1r s2) syn)*)
 
 adhoc_overloading schem_lift_S

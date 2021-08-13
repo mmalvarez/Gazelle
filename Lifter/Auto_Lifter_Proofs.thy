@@ -95,10 +95,13 @@ lemmas lifting_valid =
 
   prio_l_valid_weak
   prio_l_valid
-  prio_l_valid_strong
+  (*prio_l_valid_strong*)
+  prio_l_valid_stronger
   prio_l_valid_weakb
   prio_l_validb
-  prio_l_validb_strong
+  (*prio_l_validb_strong*)
+  prio_l_validb_stronger
+  
 
   fst_l_valid_weak
   fst_l_valid
@@ -110,8 +113,13 @@ lemmas lifting_valid =
   snd_l_valid_weakb
   snd_l_validb
 
-  merge_l_valid
+  (*merge_l_valid*)
+  merge_l_valid_gen
+merge_l_validb_gen
 
+(* TODO: is this one useful still?
+ * i feel like maybe vsg' is overall better.
+ *)
 lemmas lifting_valid_vsg =
   id_l_valid_weak_vsg
 
@@ -132,10 +140,12 @@ lemmas lifting_valid_vsg =
 *)
   prio_l_valid_weak_vsg
   prio_l_valid_vsg
-  prio_l_valid_strong_vsg
+  (*prio_l_valid_strong_vsg*)
+  prio_l_valid_stronger
   prio_l_valid_weakb_vsg
   prio_l_validb_vsg
-  prio_l_validb_strong_vsg
+  (*prio_l_validb_strong_vsg*)
+  prio_l_validb_stronger
 
   fst_l_valid_weak_vsg
   fst_l_valid_vsg
@@ -147,7 +157,8 @@ lemmas lifting_valid_vsg =
   snd_l_valid_weakb_vsg
   snd_l_validb_vsg
 
-  merge_l_valid_vsg
+  merge_l_valid_gen_vsg'
+merge_l_validb_gen_vsg'
 
 
 lemmas lifting_valid_vsg' =
@@ -171,10 +182,12 @@ lemmas lifting_valid_vsg' =
 *)
   prio_l_valid_weak_vsg
   prio_l_valid_vsg
-  prio_l_valid_strong_vsg'
+  (*prio_l_valid_strong_vsg'*)
+prio_l_valid_stronger
   prio_l_valid_weakb_vsg
   prio_l_validb_vsg
-  prio_l_validb_strong_vsg'
+(*  prio_l_validb_strong_vsg'*)
+prio_l_valid_stronger
 
   fst_l_valid_weak_vsg
   fst_l_valid_vsg
@@ -187,7 +200,9 @@ lemmas lifting_valid_vsg' =
   snd_l_valid_weakb_vsg
   snd_l_validb_vsg
 
-  merge_l_valid_vsg
+  (*merge_l_valid_vsg*)
+merge_l_valid_gen_vsg'
+  merge_l_validb_gen_vsg'
 
 
 lemmas lifting_valid_set_defs =
@@ -201,10 +216,17 @@ lemmas lifting_valid_set_defs =
 (* TODO: separate out orthogonality lemmas or no? *)
 lemmas lifting_ortho =
   option_ortho
-  (* TODO: prio_ortho, option_ortho *)
   fst_snd_ortho
   snd_fst_ortho
   fst_ortho
   snd_ortho
+
+lemmas lifting_ortho_alt =
+  option_ortho_alt
+  fst_snd_ortho_alt
+  snd_fst_ortho_alt
+  fst_ortho_alt
+  snd_ortho_alt
+
 
 end

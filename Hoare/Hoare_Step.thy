@@ -42,11 +42,6 @@ definition no_control_l :: "
 ('a \<Rightarrow> ('x, 'b2 :: {Bogus, Pord}) control \<Rightarrow> ('x, 'b2 ) control)" where
 "no_control_l l f =
   lift_map_s id (no_control_lifting l) f"
-
-lemma no_control_lifting_validb :
-  assumes H : "lifting_valid l S"
-  obtains S' where "lifting_valid (no_control_lifting l) S'"
-  apply(auto simp add:  intro: lifting_valid_vsg)
   
 
 (* TODO: this hypothesis is rather inconvenient. *)
@@ -63,9 +58,6 @@ lemma no_control_lifting_validb :
    * for all _other_ semantics. no_control_lifting should do the rest. i think.
  *)
 
-term "seq_sem_l_gen"
-
-(* TODO: for this to be true, we need to lift P1 and P2 using l *)
 lemma HTS_imp_HT' :
   assumes H: "f % {{P1}} c {{P2}}"
   assumes Valid : "lifting_valid l S"
@@ -189,37 +181,65 @@ proof(rule HT'I)
 (* almost have this. the missing ingredient is using the fact that
  * information content will increase (for a strong-valid lifting) *)
 
-        have "LOut (no_control_lifting l) c (gs c m) = LOut (no_control_lifting l) c (f' c m)"
-          using Gs_alt' Dominate1 Skip Hpay Hcont
-          apply(auto simp add: seq_sem_l_gen_def seq_sem_lifting_gen_def 
-lift_pred_valid_s_def lift_pred_s_def
-no_control_lifting_def cont_def
-schem_lift_defs fst_l_def snd_l_def prio_l_def triv_l_def option_l_def seq_sem_def
-prod_bsup
-split: md_prio.splits prod.splits md_triv.splits option.splits list.split_asm)
-          term "m"
+(* TODO: declare a lemmas with all the definitions of liftings... *)
+        obtain pri1 pri2 rest where Msplit :
+          "m = (mdp pri1 (Some (mdt (G c z # c'))), mdp pri2 None, rest)"
+          and Rest : "rest \<in> S c"
+          using Gs_alt' Dominate1 Skip Hpay Hcont Hf'
+          by(auto simp add: seq_sem_l_gen_def seq_sem_lifting_gen_def 
+            lift_pred_valid_s_def lift_pred_s_def
+            no_control_lifting_def cont_def
+            schem_lift_defs fst_l_def snd_l_def prio_l_def triv_l_def option_l_def seq_sem_def
+            prod_bsup no_control_l_def
+            split: md_prio.splits prod.splits md_triv.splits option.splits list.split_asm)
+
+        have LUpd_rest1 :
+          "rest <[ LUpd l c (f c (LOut l c rest)) rest"
+          using lifting_validDI[OF Valid Rest]
+          by auto
+
+        have LUpd_rest2 : "[^ LUpd l c (f c (LOut l c rest)) rest, rest ^] = LUpd l c (f c (LOut l c rest)) rest"
+          using bsup_base_leq2[OF LUpd_rest1]
+          by simp
+
+        then have LOut_m : "LOut (no_control_lifting l) c (gs c m) = LOut (no_control_lifting l) c (f' c m)"
+          using Gs_alt' Dominate1 Skip Hpay Hcont Hf' Msplit
+          by(auto simp add: seq_sem_l_gen_def seq_sem_lifting_gen_def 
+            lift_pred_valid_s_def lift_pred_s_def
+            no_control_lifting_def cont_def
+            schem_lift_defs fst_l_def snd_l_def prio_l_def triv_l_def option_l_def seq_sem_def
+            prod_bsup no_control_l_def
+            split: md_prio.splits prod.splits md_triv.splits option.splits list.split_asm)
 
 
 (* key sub-result. *)
         have Pay_final : "payload m' = LUpd l c (f c (LOut l c (payload m))) (payload m)"
-          sorry
+          using Gs_alt' Dominate1 Skip Hpay Hcont Hf' Msplit Inl LUpd_rest2
+          by(auto simp add: seq_sem_l_gen_def seq_sem_lifting_gen_def sem_step_def
+            lift_pred_valid_s_def lift_pred_s_def
+            no_control_lifting_def cont_def
+            schem_lift_defs fst_l_def snd_l_def prio_l_def triv_l_def option_l_def seq_sem_def
+            prod_bsup no_control_l_def
+            split: md_prio.splits prod.splits md_triv.splits option.splits list.split_asm)
 
-(* key sub-result *)
-        have Cont_final : "cont m' = cont (seq_sem_l_gen lfts c m)" sorry
-          (*using  Hcont Inl
-          apply(cases m; cases m'; auto simp add: seq_sem_l_gen_def seq_sem_lifting_gen_def schem_lift_defs seq_sem_def
-fst_l_def prio_l_def option_l_def triv_l_def cont_def LNew_def sem_step_def
-split: md_prio.splits option.splits md_triv.splits)
-*)
-        hence Cont_final' : "cont m' = Inl c'" sorry
+(* key sub-result. idea here is that no_control_l means we won't overwrite. *)
+        have Cont_final : "cont m' = cont (seq_sem_l_gen lfts c m)"
+          using Hcont Msplit Skip Inl Gs_alt' Dominate1 Hf'
+          by(auto simp add: seq_sem_l_gen_def seq_sem_lifting_gen_def sem_step_def
+            lift_pred_valid_s_def lift_pred_s_def
+            no_control_lifting_def cont_def
+            schem_lift_defs fst_l_def snd_l_def prio_l_def triv_l_def option_l_def seq_sem_def
+            prod_bsup no_control_l_def prio_bsup option_bsup leq_refl
+            split: md_prio.splits prod.splits md_triv.splits option.splits list.split_asm)         
 
-
-(*
-        have F_eq : "sem_step f' m = Inl m'"
-          using sym[OF dominant_pcomps_set[OF Pres' Hnemp Hdom Fs_sub]] Hcont Inl H0
-          by(simp add: sem_step_def)
-  *)
-
+        hence Cont_final' : "cont m' = Inl c'"
+          using Hcont Msplit Skip
+          by(auto simp add: seq_sem_l_gen_def seq_sem_lifting_gen_def sem_step_def
+            lift_pred_valid_s_def lift_pred_s_def
+            no_control_lifting_def cont_def
+            schem_lift_defs fst_l_def snd_l_def prio_l_def triv_l_def option_l_def seq_sem_def
+            prod_bsup no_control_l_def
+            split: md_prio.splits prod.splits md_triv.splits option.splits list.split_asm)
 
         have Conc' : "safe_for gs m' npost"
           using guardediD[OF Guard, of "m'"] Hpay' Cont_final'

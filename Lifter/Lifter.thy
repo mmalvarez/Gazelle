@@ -452,5 +452,119 @@ proof(rule monotI)
   by auto
 qed
 
+(* idea: similar to lifting_valid:
+   - Out (upd) preserves
+   - Upd (out) preserves
+   - Set membership preserved
 
+do we need "orthoB" or similar?
+*)
+definition l_ortho_alt ::
+  "('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme \<Rightarrow>
+   ('x, 'b) valid_set \<Rightarrow>
+   ('x, 'a2, 'b, 'z2) lifting_scheme \<Rightarrow>
+   ('x, 'b) valid_set \<Rightarrow>
+   bool" where
+"l_ortho_alt l1 S1 l2 S2 =
+  (
+  (\<forall> s a b . b \<in> S1 s \<longrightarrow> LOut l1 s (LUpd l2 s a b) = LOut l1 s b) \<and>
+  (\<forall> s a b . b \<in> S2 s \<longrightarrow> LOut l2 s (LUpd l1 s a b) = LOut l2 s b) \<and>
+  (\<forall> s a b . b \<in> S1 s \<longrightarrow> LUpd l2 s a b \<in> S1 s) \<and>
+  (\<forall> s a b . b \<in> S2 s \<longrightarrow> LUpd l1 s a b \<in> S2 s))
+ "
+
+lemma l_ortho_altDO1 :
+  fixes s :: 'x
+  assumes H : "l_ortho_alt (l1 :: ('x, 'a1, 'b ::Mergeable, 'z1) lifting_scheme) S1
+                       (l2 :: ('x, 'a2, 'b, 'z2) lifting_scheme) S2"
+  assumes Hin : "b \<in> S1 s"
+  shows "LOut l1 s (LUpd l2 s a b) = LOut l1 s b"
+  using assms
+  by(auto simp add: l_ortho_alt_def; blast)
+
+lemma l_ortho_altDO2 :
+  fixes s :: 'x
+  assumes H : "l_ortho_alt (l1 :: ('x, 'a1, 'b ::Mergeable, 'z1) lifting_scheme) S1
+                       (l2 :: ('x, 'a2, 'b, 'z2) lifting_scheme) S2"
+  assumes Hin : "b \<in> S2 s"
+  shows "LOut l2 s (LUpd l1 s a b) = LOut l2 s b"
+  using assms
+  by(auto simp add: l_ortho_alt_def; blast)
+
+lemma l_ortho_altDP1 :
+  fixes s :: 'x
+  assumes H : "l_ortho_alt (l1 :: ('x, 'a1, 'b ::Mergeable, 'z1) lifting_scheme) S1
+                       (l2 :: ('x, 'a2, 'b, 'z2) lifting_scheme) S2"
+  assumes Hin : "b \<in> S1 s"
+  shows "LUpd l2 s a b \<in> S1 s"
+  using assms
+  by(auto simp add: l_ortho_alt_def; blast)
+
+lemma l_ortho_altDP2 :
+  fixes s :: 'x
+  assumes H : "l_ortho_alt (l1 :: ('x, 'a1, 'b ::Mergeable, 'z1) lifting_scheme) S1
+                       (l2 :: ('x, 'a2, 'b, 'z2) lifting_scheme) S2"
+  assumes Hin : "b \<in> S2 s"
+  shows "LUpd l1 s a b \<in> S2 s"
+  using assms
+  by(auto simp add: l_ortho_alt_def; blast)
+
+lemma l_ortho_altI [intro]:
+  assumes HI1 : "\<And> s a b . b \<in> S1 s \<Longrightarrow> LOut l1 s (LUpd l2 s a b) = LOut l1 s b"
+  assumes HI2 : "\<And> s a b . b \<in> S2 s \<Longrightarrow> LOut l2 s (LUpd l1 s a b) = LOut l2 s b"
+  assumes HP1 : "\<And> s a b . b \<in> S1 s \<Longrightarrow> LUpd l2 s a b \<in> S1 s"
+  assumes HP2 : "\<And> s a b . b \<in> S2 s \<Longrightarrow> LUpd l1 s a b \<in> S2 s" 
+  shows "l_ortho_alt l1 S1 l2 S2"
+  using assms
+  by(auto simp add: l_ortho_alt_def)
+
+definition l_ortho_altb ::
+  "('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme \<Rightarrow>
+   ('x, 'b) valid_set \<Rightarrow>
+   ('x, 'a2, 'b, 'z2) lifting_scheme \<Rightarrow>
+   ('x, 'b) valid_set \<Rightarrow>
+   bool" where
+"l_ortho_altb l1 S1 l2 S2 =
+  (l_ortho_alt l1 S1 l2 S2 \<and>
+  (\<forall> s . LBase l1 s = LBase l2 s))"
+
+lemma l_ortho_altbDB :
+  assumes "l_ortho_altb l1 S1 l2 S2"
+  shows "LBase l1 s = LBase l2 s" using assms
+  by(auto simp add: l_ortho_altb_def)
+
+lemma l_ortho_altbDV :
+  assumes "l_ortho_altb l1 S1 l2 S2"
+  shows "l_ortho_alt l1 S1 l2 S2"
+  using assms
+  by(auto simp add: l_ortho_altb_def)
+
+lemma l_ortho_altbI :
+  assumes HV : "l_ortho_alt l1 S1 l2 S2"
+  assumes HB : "\<And> s . LBase l1 s = LBase l2 s"
+  shows "l_ortho_altb l1 S1 l2 S2"
+  using assms
+  by(auto simp add: l_ortho_altb_def)
+
+lemma l_ortho_alt_comm :
+  assumes H :"l_ortho_alt (l1 :: ('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme) S1
+                      (l2 :: ('x, 'a2, 'b, 'z2) lifting_scheme) S2"
+  shows "l_ortho_alt l2 S2 l1 S1"
+proof(rule l_ortho_altI)
+  show "\<And>s a b. b \<in> S2 s \<Longrightarrow> LOut l2 s (LUpd l1 s a b) = LOut l2 s b"
+    using l_ortho_altDO2[OF H]
+    by(auto)
+next
+  show "\<And>s a b. b \<in> S1 s \<Longrightarrow> LOut l1 s (LUpd l2 s a b) = LOut l1 s b"
+    using l_ortho_altDO1[OF H]
+    by auto
+next
+  show "\<And>s a b. b \<in> S2 s \<Longrightarrow> LUpd l1 s a b \<in> S2 s"
+    using l_ortho_altDP2[OF H]
+    by auto
+next
+  show "\<And>s a b. b \<in> S1 s \<Longrightarrow> LUpd l2 s a b \<in> S1 s"
+    using l_ortho_altDP1[OF H]
+    by auto
+qed
 end

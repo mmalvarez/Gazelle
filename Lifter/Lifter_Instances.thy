@@ -351,6 +351,41 @@ next
 
 qed
 
+lemma option_ortho_alt :
+  assumes H1 : "lifting_valid_weak l1 S1"
+  assumes H2 : "lifting_valid_weak l2 S2"
+  assumes Horth : "l_ortho_alt (l1 :: ('x, 'a1, 'b :: Mergeable) lifting) S1
+                       (l2 :: ('x, 'a2, 'b :: Mergeable) lifting) S2"
+  shows "l_ortho_alt (option_l l1) (option_l_S S1) (option_l l2) (option_l_S S2)"
+proof(rule l_ortho_altI)
+  show "\<And>s a b.
+       b \<in> option_l_S S1 s \<Longrightarrow>
+       LOut (option_l l1) s (LUpd (option_l l2) s a b) =
+       LOut (option_l l1) s b"
+    using l_ortho_altDO1[OF Horth]
+    by(auto simp add: option_l_def option_l_S_def)
+next
+  show "\<And>s a b.
+       b \<in> option_l_S S2 s \<Longrightarrow>
+       LOut (option_l l2) s (LUpd (option_l l1) s a b) =
+       LOut (option_l l2) s b"
+    using l_ortho_altDO2[OF Horth]
+    by(auto simp add: option_l_def option_l_S_def)
+next
+  show "\<And>s a b.
+       b \<in> option_l_S S1 s \<Longrightarrow>
+       LUpd (option_l l2) s a b \<in> option_l_S S1 s"
+    using l_ortho_altDP1[OF Horth]
+    by(auto simp add: option_l_def option_l_S_def)
+next
+  show "\<And>s a b.
+       b \<in> option_l_S S2 s \<Longrightarrow>
+       LUpd (option_l l1) s a b \<in> option_l_S S2 s"
+    using l_ortho_altDP2[OF Horth]
+    by(auto simp add: option_l_def option_l_S_def)
+qed
+(* TODO: ortho_alt for sum types. *)
+
 (* sum types. We define two liftings, inl and inr. For projection to always be well-defined,
  * note that we require the "other" component (e.g. the "right" component for inl)
  * to have a least element. *)
@@ -644,7 +679,7 @@ next
   obtain x1 p where B : "b = mdp p x1" by(cases b; auto)
 
   show "b <[ LUpd (prio_l f0 f1 t) s a b"
-    using lifting_valid_weakDI[OF H] Hmono[of p s] B
+    using Hmono[of p s] B
     by(auto simp add:prio_l_def prio_lv_def LNew_def prio_pleq split:md_prio.splits)
 next
   fix s a 
@@ -1168,6 +1203,117 @@ next
     using l_orthoDB[OF Horth] by(auto simp add: snd_l_def)
 qed
 
+(* TODO: could elide the validity arguments by constraining sets in conclusion to be
+ * fst_l_S, snd_l_S.
+ * this seems better but maybe revisit later
+ *)
+lemma fst_snd_ortho_alt :
+  shows "l_ortho_alt (fst_l (l1 :: ('x, 'a1, 'b1 :: Mergeableb, 'z1) lifting_scheme)) (fst_l_S S1)
+                     (snd_l (l2 :: ('x, 'a2, 'b2 :: Mergeableb, 'z2) lifting_scheme)) (snd_l_S S2)"
+proof(rule l_ortho_altI)
+  show "\<And>s a b.
+       b \<in> fst_l_S S1 s \<Longrightarrow>
+       LOut (fst_l l1) s (LUpd (snd_l l2) s a b) =
+       LOut (fst_l l1) s b"
+    by(auto simp add: fst_l_def snd_l_def)
+next
+  show "\<And>s a b.
+       b \<in> snd_l_S S2 s \<Longrightarrow>
+       LOut (snd_l l2) s (LUpd (fst_l l1) s a b) =
+       LOut (snd_l l2) s b"
+    by(auto simp add: fst_l_def snd_l_def)
+next
+  show "\<And>s a b.
+       b \<in> fst_l_S S1 s \<Longrightarrow>
+       LUpd (snd_l l2) s a b \<in> fst_l_S S1 s"
+    by(auto simp add: fst_l_def snd_l_def fst_l_S_def)
+next
+  show "\<And>s a b.
+        b \<in> snd_l_S S2 s \<Longrightarrow>
+        LUpd (fst_l l1) s a b \<in> snd_l_S S2 s"
+    by(auto simp add: fst_l_def snd_l_def snd_l_S_def)
+qed
+
+lemma snd_fst_ortho_alt :
+  shows "l_ortho_alt (snd_l (l1 :: ('x, 'a1, 'b1 :: Mergeableb, 'z1) lifting_scheme)) (snd_l_S S1)
+                     (fst_l (l2 :: ('x, 'a2, 'b2 :: Mergeableb, 'z2) lifting_scheme)) (fst_l_S S2)"
+  using l_ortho_alt_comm[OF fst_snd_ortho_alt]
+  by auto
+
+
+(* TODO: ortho_alt for fst and snd *)
+lemma fst_ortho_alt :
+  assumes H1 : "lifting_validb l1 S1"
+  assumes H2 : "lifting_validb l2 S2"
+  assumes Horth : "l_ortho_alt l1 S1 l2 S2"
+  shows "l_ortho_alt (fst_l l1 :: ('x, 'a1, ('b1 :: Mergeableb) * 'b2 :: Mergeableb) lifting)
+                     (fst_l_S S1)
+                     (fst_l l2 :: ('x, 'a2, ('b1 :: Mergeableb) * 'b2 :: Mergeableb) lifting)
+                     (fst_l_S S2)"
+proof(rule l_ortho_altI)
+  show "\<And>s a b.
+       b \<in> fst_l_S S1 s \<Longrightarrow>
+       LOut (fst_l l1) s (LUpd (fst_l l2) s a b) =
+       LOut (fst_l l1) s b"
+    using l_ortho_altDO1[OF Horth]
+    by(auto simp add: fst_l_def fst_l_S_def split:prod.splits)
+next
+  show "\<And>s a b.
+       b \<in> fst_l_S S2 s \<Longrightarrow>
+       LOut (fst_l l2) s (LUpd (fst_l l1) s a b) =
+       LOut (fst_l l2) s b"
+    using l_ortho_altDO2[OF Horth]
+    by(auto simp add: fst_l_def fst_l_S_def split:prod.splits)
+next
+  show "\<And>s a b.
+       b \<in> fst_l_S S1 s \<Longrightarrow>
+       LUpd (fst_l l2) s a b \<in> fst_l_S S1 s"
+    using l_ortho_altDP1[OF Horth]
+    by(auto simp add: fst_l_def fst_l_S_def split:prod.splits)
+next
+  show "\<And>s a b.
+       b \<in> fst_l_S S2 s \<Longrightarrow>
+       LUpd (fst_l l1) s a b \<in> fst_l_S S2 s"
+    using l_ortho_altDP2[OF Horth]
+    by(auto simp add: fst_l_def fst_l_S_def split:prod.splits)
+qed
+
+lemma snd_ortho_alt :
+  assumes H1 : "lifting_validb l1 S1"
+  assumes H2 : "lifting_validb l2 S2"
+  assumes Horth : "l_ortho_alt l1 S1 l2 S2"
+  shows "l_ortho_alt (snd_l l1 :: ('x, 'a1, ('b1 :: Mergeableb) * 'b2 :: Mergeableb) lifting)
+                     (snd_l_S S1)
+                     (snd_l l2 :: ('x, 'a2, ('b1 :: Mergeableb) * 'b2 :: Mergeableb) lifting)
+                     (snd_l_S S2)"
+proof(rule l_ortho_altI)
+  show "\<And>s a b.
+       b \<in> snd_l_S S1 s \<Longrightarrow>
+       LOut (snd_l l1) s (LUpd (snd_l l2) s a b) =
+       LOut (snd_l l1) s b"
+    using l_ortho_altDO1[OF Horth]
+    by(auto simp add: snd_l_def snd_l_S_def split:prod.splits)
+next
+  show "\<And>s a b.
+       b \<in> snd_l_S S2 s \<Longrightarrow>
+       LOut (snd_l l2) s (LUpd (snd_l l1) s a b) =
+       LOut (snd_l l2) s b"
+    using l_ortho_altDO2[OF Horth]
+    by(auto simp add: snd_l_def snd_l_S_def split:prod.splits)
+next
+  show "\<And>s a b.
+       b \<in> snd_l_S S1 s \<Longrightarrow>
+       LUpd (snd_l l2) s a b \<in> snd_l_S S1 s"
+    using l_ortho_altDP1[OF Horth]
+    by(auto simp add: snd_l_def snd_l_S_def split:prod.splits)
+next
+  show "\<And>s a b.
+       b \<in> snd_l_S S2 s \<Longrightarrow>
+       LUpd (snd_l l1) s a b \<in> snd_l_S S2 s"
+    using l_ortho_altDP2[OF Horth]
+    by(auto simp add: snd_l_def snd_l_S_def split:prod.splits)
+qed
+
 
 (*
  * One of the more interesting definitions in this file. Merge_l describes
@@ -1263,73 +1409,6 @@ qed
 
 (* TODO: do valid sets need to be equal? or is some kind of sub/superset possible? *)
 (*
-lemma merge_l_valid_nope :
-  assumes H1 : "lifting_valid (l1 :: ('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme) S1"
-  assumes H2 : "lifting_valid (l2 :: ('x, 'a2, 'b :: Mergeable, 'z2) lifting_scheme) S2"
-  assumes Hort : "l_ortho l1 l2"
-  shows "lifting_valid (merge_l l1 l2) (\<lambda> s . S1 s \<inter> S2 s)"
-proof(rule lifting_validI)
-  fix s :: 'x
-  fix a :: "'a1 * 'a2"
-  fix b :: "'b"
-
-  obtain a1 a2 where A : "a = (a1, a2)" by (cases a; auto)
-
-  have C' : "LOut l1 s (LUpd l2 s a2 (LUpd l1 s a1 b)) = a1"
-    using lifting_validDO[OF H1] sym[OF l_orthoDI[OF Hort]]
-    by(auto)
-
-  then show "LOut (merge_l l1 l2) s (LUpd (merge_l l1 l2) s a b) = a"
-    using A lifting_validDO[OF H1] lifting_validDO[OF H2]
-    by(auto simp add: merge_l_def )
-next
-  fix s :: 'x
-  fix a :: "'a1 * 'a2"
-  fix b :: 'b
-
-  obtain a1 a2 where A : "a = (a1, a2)" by (cases a; auto)
-
-  assume Hb : "b \<in> S1 s \<inter> S2 s"
-  hence Hb1 : "b \<in> S1 s" and Hb2 : "b \<in> S2 s"  by auto
-
-  have "(LUpd l1 s a1 b) \<in> S1 s"
-    using lifting_validDP[OF H1] by auto
-
-  hence In2: "(LUpd l2 s a2 b) \<in> S2 s"
-    using lifting_validDP[OF H2] Hb2 by auto
-
-  have Leq2 : "LUpd l1 s a1 b <[ LUpd l2 s a2 (LUpd l1 s a1 b)"
-    using l_orthoDI
-    using lifting_validDI[OF H2 In2] by auto
-
-  have Leq1 : "b <[ LUpd l1 s a1 b"
-    using lifting_validDI[OF H1 Hb1] by auto
-
-  show "b <[ LUpd (merge_l l1 l2) s a b" 
-    using A leq_trans[OF Leq1 Leq2] by (auto simp add: merge_l_def)
-next
-  fix s :: 'x
-  fix a :: "'a1 * 'a2"
-  fix b :: 'b
-
-  obtain a1 a2 where A : "a = (a1, a2)" by (cases a; auto)
-
-  have "(LUpd l1 s a1 b) \<in> S1 s"
-    using lifting_validDP[OF H1] by auto
-
-  hence "(LUpd l1 s a1 b) \<in> S2 s" unfolding Heq by auto
-
-  hence "LUpd l2 s a2 (LUpd l1 s a1 b) \<in> S2 s"
-    using lifting_validDP[OF H2] by auto
-
-  hence "LUpd l2 s a2 (LUpd l1 s a1 b) \<in> S1 s"
-    unfolding Heq by auto
-
-  thus "LUpd (merge_l l1 l2) s a b \<in> S1 s" using A
-    by(auto simp add: merge_l_def)
-qed
-*)
-
 definition merge_l_bsup ::
   "('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme \<Rightarrow>
    ('x, 'a2, 'b :: Mergeable, 'z2) lifting_scheme \<Rightarrow>
@@ -1343,10 +1422,11 @@ definition merge_l_bsup ::
     (\<lambda> s b . (LOut t1 s b, LOut t2 s b))
   , LBase =
     (\<lambda> s . LBase t1 s) \<rparr>"
-
+*)
 
 (* one idea:
- * enrich orthogonality to include
+ * enrich orthogonality to include that sup is equal to the merge (?)
+ * or at least that it's a mutual UB...
  *
  * another idea: use a more bsup-oriented notion of orthogonality.
  * the problem is that this may not work well with the lifting definition
@@ -1354,7 +1434,7 @@ definition merge_l_bsup ::
 lemma merge_l_valid_gen :
   assumes H1 : "lifting_valid (l1 :: ('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme) S1"
   assumes H2 : "lifting_valid (l2 :: ('x, 'a2, 'b :: Mergeable, 'z2) lifting_scheme) S2"
-  assumes Hort : "l_ortho l1 l2"
+  assumes Hort : "l_ortho_alt l1 S1 l2 S2"
   shows "lifting_valid (merge_l l1 l2) (\<lambda> s . S1 s \<inter> S2 s)"
 proof(rule lifting_validI)
   fix s :: 'x
@@ -1364,7 +1444,7 @@ proof(rule lifting_validI)
   obtain a1 a2 where A : "a = (a1, a2)" by (cases a; auto)
 
   have C' : "LOut l1 s (LUpd l2 s a2 (LUpd l1 s a1 b)) = a1"
-    using lifting_validDO[OF H1] sym[OF l_orthoDI[OF Hort]]
+    using lifting_validDO[OF H1] l_ortho_altDO1[OF Hort] lifting_validDP[OF H1]
     by(auto)
 
   then show "LOut (merge_l l1 l2) s (LUpd (merge_l l1 l2) s a b) = a"
@@ -1380,99 +1460,9 @@ next
   assume Hb : "b \<in> S1 s \<inter> S2 s"
   hence Hb1 : "b \<in> S1 s" and Hb2 : "b \<in> S2 s"  by auto
 
-  have "(LUpd l1 s a1 b) \<in> S1 s"
-    using lifting_validDP[OF H1] by auto
+  hence In2: "(LUpd l1 s a1 b) \<in> S2 s" using l_ortho_altDP2[OF Hort Hb2] by auto
 
-  hence In2: "(LUpd l2 s a2 b) \<in> S2 s"
-    using lifting_validDP[OF H2] Hb2 by auto
-
-  have In1' : "LUpd l1 s a1 (LUpd l2 s a2 b) \<in> S1 s"
-    using lifting_validDP[OF H1] by auto
-
-  have In2' : "LUpd l2 s a2 (LUpd l1 s a1 b) \<in> S2 s"
-    using lifting_validDP[OF H2] by auto
-
-  have Eq : "LUpd l2 s a2 (LUpd l1 s a1 b) = LUpd l1 s a1 (LUpd l2 s a2 b)"
-    using l_orthoDI[OF Hort] by auto
-
-  have In1'' : "LUpd l1 s a1 (LUpd l2 s a2 b) \<in> S2 s"
-    using In2' unfolding Eq by simp
-
-  have In2'' : "LUpd l2 s a2 (LUpd l1 s a1 b) \<in> S1 s"
-    using In1' unfolding Eq by simp
-
-(*
-  show "b <[ LUpd (merge_l l1 l2) s a b"
-    apply(auto simp add: merge_l_def split: prod.splits)
-*)
-  have Leq2 : "LUpd l1 s a1 b <[ LUpd l2 s a2 (LUpd l1 s a1 b)"
-    using lifting_validDI[OF H2 ] by auto
-
-  have Leq1 : "b <[ LUpd l1 s a1 b"
-    using lifting_validDI[OF H1 Hb1] by auto
-
-  show "b <[ LUpd (merge_l l1 l2) s a b" 
-    using A leq_trans[OF Leq1 Leq2] by (auto simp add: merge_l_def)
-next
-  fix s :: 'x
-  fix a :: "'a1 * 'a2"
-  fix b :: 'b
-
-  obtain a1 a2 where A : "a = (a1, a2)" by (cases a; auto)
-
-  have "(LUpd l1 s a1 b) \<in> S1 s"
-    using lifting_validDP[OF H1] by auto
-
-  hence "(LUpd l1 s a1 b) \<in> S2 s" unfolding Heq by auto
-
-  hence "LUpd l2 s a2 (LUpd l1 s a1 b) \<in> S2 s"
-    using lifting_validDP[OF H2] by auto
-
-  hence "LUpd l2 s a2 (LUpd l1 s a1 b) \<in> S1 s"
-    unfolding Heq by auto
-
-  thus "LUpd (merge_l l1 l2) s a b \<in> S1 s" using A
-    by(auto simp add: merge_l_def)
-qed
-
-
-lemma merge_l_bsup_valid :
-  assumes H1 : "lifting_valid (l1 :: ('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme) S1"
-  assumes H2 : "lifting_valid (l2 :: ('x, 'a2, 'b :: Mergeable, 'z2) lifting_scheme) S2"
-  assumes Hort : "l_ortho l1 l2"
-  shows "lifting_valid (merge_l_bsup l1 l2) (\<lambda> s . S1 s \<inter> S2 s)"
-proof(rule lifting_validI)
-  fix s :: 'x
-  fix a :: "'a1 * 'a2"
-  fix b :: "'b"
-
-  obtain a1 a2 where A : "a = (a1, a2)" by (cases a; auto)
-
-  have C' : "LOut l1 s (LUpd l2 s a2 (LUpd l1 s a1 b)) = a1"
-    using lifting_validDO[OF H1] sym[OF l_orthoDI[OF Hort]]
-    by(auto)
-
-  then show "LOut (merge_l_bsup l1 l2) s (LUpd (merge_l_bsup l1 l2) s a b) = a"
-    using A lifting_validDO[OF H1] lifting_validDO[OF H2]
-    apply(auto simp add: merge_l_bsup_def )
-next
-  fix s :: 'x
-  fix a :: "'a1 * 'a2"
-  fix b :: 'b
-
-  obtain a1 a2 where A : "a = (a1, a2)" by (cases a; auto)
-
-  assume Hb : "b \<in> S1 s \<inter> S2 s"
-  hence Hb1 : "b \<in> S1 s" and Hb2 : "b \<in> S2 s"  by auto
-
-  have "(LUpd l1 s a1 b) \<in> S1 s"
-    using lifting_validDP[OF H1] by auto
-
-  hence In2: "(LUpd l2 s a2 b) \<in> S2 s"
-    using lifting_validDP[OF H2] Hb2 by auto
-
-  have Leq2 : "LUpd l1 s a1 b <[ LUpd l2 s a2 (LUpd l1 s a1 b)"
-    using l_orthoDI
+  hence Leq2 : "LUpd l1 s a1 b <[ LUpd l2 s a2 (LUpd l1 s a1 b)"
     using lifting_validDI[OF H2 In2] by auto
 
   have Leq1 : "b <[ LUpd l1 s a1 b"
@@ -1487,21 +1477,18 @@ next
 
   obtain a1 a2 where A : "a = (a1, a2)" by (cases a; auto)
 
-  have "(LUpd l1 s a1 b) \<in> S1 s"
+  have In1 : "(LUpd l1 s a1 b) \<in> S1 s"
     using lifting_validDP[OF H1] by auto
 
-  hence "(LUpd l1 s a1 b) \<in> S2 s" unfolding Heq by auto
+  have Conc1 : "LUpd l2 s a2 (LUpd l1 s a1 b) \<in> S1 s"
+    using l_ortho_altDP1[OF Hort In1] by auto
 
-  hence "LUpd l2 s a2 (LUpd l1 s a1 b) \<in> S2 s"
+  have Conc2 : "LUpd l2 s a2 (LUpd l1 s a1 b) \<in> S2 s"
     using lifting_validDP[OF H2] by auto
 
-  hence "LUpd l2 s a2 (LUpd l1 s a1 b) \<in> S1 s"
-    unfolding Heq by auto
-
-  thus "LUpd (merge_l l1 l2) s a b \<in> S1 s" using A
+  show "LUpd (merge_l l1 l2) s a b \<in> S1 s \<inter> S2 s" using A Conc1 Conc2
     by(auto simp add: merge_l_def)
 qed
-
 
 lemma merge_l_valid_vsg :
   assumes H1 : "lifting_valid (l1 :: ('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme) S1"
@@ -1511,6 +1498,24 @@ lemma merge_l_valid_vsg :
   assumes Heq2 : "S2 = S3"
   shows "lifting_valid (merge_l l1 l2) S3"
   using assms merge_l_valid by auto
+
+lemma merge_l_valid_gen_vsg' :
+  assumes H1 : "lifting_valid (l1 :: ('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme) S1"
+  assumes H2 : "lifting_valid (l2 :: ('x, 'a2, 'b :: Mergeable, 'z2) lifting_scheme) S2"
+  assumes Hort : "l_ortho_alt l1 S1 l2 S2"
+  assumes HS3 : "\<And> s . S3 s = S1 s \<inter> S2 s"
+  shows "lifting_valid (merge_l l1 l2) S3"
+proof-
+
+  have HS3' : "S3 = (\<lambda> s . S1 s \<inter> S2 s)"
+    using HS3
+    by blast
+
+  then show "lifting_valid (merge_l l1 l2) S3"
+    using merge_l_valid_gen[OF H1 H2 Hort]
+    by auto
+qed
+  
 
 lemma merge_l_validb :
   assumes H1 : "lifting_validb (l1 :: ('x, 'a1, 'b :: Mergeableb, 'z1) lifting_scheme) S1"
@@ -1528,6 +1533,39 @@ next
   show "LBase (merge_l l1 l2) s = \<bottom>"
     using lifting_validbDB[OF H1]
     by(simp add: merge_l_def)
+qed
+
+lemma merge_l_validb_gen :
+  assumes H1 : "lifting_validb (l1 :: ('x, 'a1, 'b :: Mergeableb, 'z1) lifting_scheme) S1"
+  assumes H2 : "lifting_validb (l2 :: ('x, 'a2, 'b :: Mergeableb, 'z2) lifting_scheme) S2"
+  assumes Hort : "l_ortho_alt l1 S1 l2 S2"
+  shows "lifting_validb (merge_l l1 l2) (\<lambda> s . S1 s \<inter> S2 s)"
+proof(rule lifting_validbI')
+  show "lifting_valid (merge_l l1 l2) (\<lambda>s. S1 s \<inter> S2 s)"
+    using merge_l_valid_gen[OF lifting_validbDV[OF H1] lifting_validbDV[OF H2] Hort]
+    by simp
+next
+  fix s
+  show "LBase (merge_l l1 l2) s = \<bottom>"
+    using lifting_validbDB[OF H1]
+    by(auto simp add: merge_l_def)
+qed
+
+lemma merge_l_validb_gen_vsg' :
+  assumes H1 : "lifting_validb (l1 :: ('x, 'a1, 'b :: Mergeableb, 'z1) lifting_scheme) S1"
+  assumes H2 : "lifting_validb (l2 :: ('x, 'a2, 'b :: Mergeableb, 'z2) lifting_scheme) S2"
+  assumes Hort : "l_ortho_alt l1 S1 l2 S2"
+  assumes HS3 : "\<And> s . S3 s = S1 s \<inter> S2 s"
+  shows "lifting_validb (merge_l l1 l2) S3"
+proof-
+
+  have HS3' : "S3 = (\<lambda> s . S1 s \<inter> S2 s)"
+    using HS3
+    by blast
+
+  then show "lifting_validb (merge_l l1 l2) S3"
+    using merge_l_validb_gen[OF H1 H2 Hort]
+    by auto
 qed
 
 
