@@ -16,6 +16,7 @@ definition sem_final' :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) 
 "sem_final' =
   pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
 
+(* How does no_control_l fit into this picture? *)
 
 lemma pres :
 "sups_pres sems"
@@ -645,6 +646,11 @@ lemma prog1_spec :
 (* TODO: st_valid need to be replaced *)
 
 (* ok, st_valid should be somethng like (is in a valid_s of some kind) *)
+
+(* lift_pred_valid_s
+ok, but what is S here?
+it is the the S from lifting_valid of the lifting.
+*)
 
 shows "|sem_final| {~ st_valid ~}
                    [prog1 i1 i2]

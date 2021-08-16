@@ -74,14 +74,14 @@ type_synonym ('s, 'x) state = "('s, int swr * int swr * int swr * int swr * (Str
  * this is inefficient *)
 fun mem_prio_mem ::
   "syn \<Rightarrow> nat" where
-"mem_prio_mem (Swrite _ _) = 1"
-| "mem_prio_mem _ = 0"
+"mem_prio_mem (Swrite _ _) = 2"
+| "mem_prio_mem _ = 1"
 
 fun mem_prio_reg ::
   "reg_id \<Rightarrow> syn \<Rightarrow> nat" where
 "mem_prio_reg r (Sread _ r') =
-  (if r = r' then 1 else 0)"
-| "mem_prio_reg _ _ = 0"
+  (if r = r' then 2 else 1)"
+| "mem_prio_reg _ _ = 1"
   
 definition mem_sem_lifting_inner ::
   "(syn, int, int md_triv option md_prio) lifting"
@@ -130,105 +130,6 @@ definition mem_sem_l_gen :: "('s \<Rightarrow> syn) \<Rightarrow> (syn, ('s, 'x 
 
 
 (* another attempt to build mem_sem, without liftings *)
-(*
-fun mem_sem :: "syn \<Rightarrow> ('s, 'x) state \<Rightarrow> ('s, 'x) state" where
-"mem_sem (Sread s r) (x0, x1, reg_flag, reg_c, reg_a, reg_b, mem, xz) =
-  (case (get mem s) of
-   Some (mdp _ (Some (mdt v))) \<Rightarrow> 
-    (case r of
-      Reg_a \<Rightarrow> 
-        (case reg_a of
-          (mdp p1 (Some (mdt _))) \<Rightarrow> (x0, x1, reg_flag, reg_c, (mdp (1 + p1) (Some (mdt v)), reg_b, mem, xz))
-          | _ \<Rightarrow> (x0, x1, reg_flag, reg_c, (mdp 0 (Some (mdt v)), reg_b, mem, xz)))
-      | Reg_b \<Rightarrow> 
-        (case reg_b of
-          (mdp p1 (Some (mdt _))) \<Rightarrow> (x0, x1, reg_flag, reg_c, reg_a, (mdp (1 + p1) (Some (mdt v)), mem, xz))
-          | _ \<Rightarrow> (x0, x1, reg_flag, reg_c, reg_a, (mdp 0 (Some (mdt v)), mem, xz)))
-      | Reg_c \<Rightarrow> 
-        (case reg_c of
-          (mdp p1 (Some (mdt _))) \<Rightarrow> (x0, x1, reg_flag, (mdp (1 + p1) (Some (mdt v))), reg_a, reg_b, mem, xz)
-          | _ \<Rightarrow> (x0, x1, reg_flag, (mdp 0 (Some (mdt v))), reg_a, reg_b, mem, xz))
-      | Reg_flag \<Rightarrow> 
-        (case reg_flag of
-          (mdp p1 (Some (mdt _))) \<Rightarrow> (x0, x1, (mdp (1 + p1) (Some (mdt v))), reg_c, reg_a, reg_b, mem, xz)
-          | _ \<Rightarrow> (x0, x1, (mdp 0 (Some (mdt v))), reg_c, reg_a, reg_b, mem, xz)))
-   | _ \<Rightarrow> (x0, x1, reg_flag, reg_c, reg_a, reg_b, mem, xz))"
-
-| "mem_sem (Swrite s r) (x0, x1, reg_flag, reg_c, reg_a, reg_b, mem, xz)  =
-   (let p1 =
-    (case get mem s of
-      Some (mdp p1 _) \<Rightarrow> p1
-      | _ \<Rightarrow> 0) in
-   (case r of
-    Reg_a \<Rightarrow> 
-      (case reg_a of
-        (mdp _ (Some (mdt x))) \<Rightarrow> (x0, x1, reg_flag, reg_c, reg_a, reg_b, 
-                                    update s (mdp (1 + p1) (Some (mdt x))) mem, xz)
-        | _ \<Rightarrow> (x0, x1, reg_flag, reg_c, reg_a, reg_b, mem, xz))
-    | Reg_b \<Rightarrow>
-      (case reg_b of
-        (mdp _ (Some (mdt x))) \<Rightarrow> (x0, x1, reg_flag, reg_c, reg_a, reg_b, 
-                                    update s (mdp (1 + p1) (Some (mdt x))) mem, xz)
-        | _ \<Rightarrow> (x0, x1, reg_flag, reg_c, reg_a, reg_b, mem, xz))
-
-    | Reg_c \<Rightarrow>
-      (case reg_c of
-        (mdp _ (Some (mdt x))) \<Rightarrow> (x0, x1, reg_flag, reg_c, reg_a, reg_b, 
-                                    update s (mdp (1 + p1) (Some (mdt x))) mem, xz)
-        | _ \<Rightarrow> (x0, x1, reg_flag, reg_c, reg_a, reg_b, mem, xz))
-
-    | Reg_flag \<Rightarrow>
-      (case reg_flag of
-        (mdp _ (Some (mdt x))) \<Rightarrow> (x0, x1, reg_flag, reg_c, reg_a, reg_b, 
-                                    update s (mdp (1 + p1) (Some (mdt x))) mem, xz)
-        | _ \<Rightarrow> (x0, x1, reg_flag, reg_c, reg_a, reg_b, mem, xz))))"
-| "mem_sem _ st = st"
-*)
-(*
-definition test_store where
-"test_store = to_oalist
-  [ (STR ''a'', Swr (0 :: int))
-  , (STR ''b'', Swr 2)
-  , (STR ''z'', Swr (-1))]"
-
-definition test_state where
-"test_state =
-  (mdp 0 (Some (mdt 9))
-  , (mdp 0 (Some (mdt 5)))
-  , (mdp 0 (Some (mdt 0)))
-  , (mdp 0 (Some (mdt 0)))
-  , test_store)"
-
-value "mem_sem (Sread (STR ''b'' ) Reg_a) test_state"
-value "mem_sem (Swrite (STR ''f'') Reg_b) test_state"
-*)
-(*
-definition t1 where
-"t1 = (oalist_l mem_key_src ((prio_l_keep o option_l  o triv_l) id_l))"
-
-definition t2 where
-"t2 = (oalist_l mem_key_dest ((prio_l_inc o option_l  o triv_l) id_l))"
-
-definition s where
-"s = (Scopy (STR ''a'') (STR ''b''))"
-
-
-value "LUpd t1 (Scopy (STR ''a'') (STR ''b'')) (80 :: int) test_store"
-value "LUpd t2 (Scopy (STR ''a'') (STR ''b'')) (80 :: int) test_store"
-
-value "LBase t1 s :: (_, int md_triv option md_prio) oalist"
-
-
-
-value "mem_sem (Slit (STR ''f'') (4 :: int)) test_store"
-value "mem_sem (Slit (STR ''b'') (4 :: int)) test_store"
-
-
-value "mem_sem (Scopy (STR ''a'') (STR ''f'')) test_store"
-value "mem_sem (Scopy (STR ''a'') (STR ''b'')) test_store"
-*)
-
-
 
 
 end

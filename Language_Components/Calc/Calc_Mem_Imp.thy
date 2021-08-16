@@ -75,6 +75,10 @@ definition calc_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) 
 *)
 
 term "no_control_lifting (schem_lift (SP NA (SP NB NC)) (SP (SPRI (SO NC)) (SP (SPRI (SO NB)) (SP (SPRI (SO NA)) NX ))))"
+term "no_control_lifting"
+
+term "(SP NA (SP NB NC))"
+term "(SP NX (SP (SPRC calc_prio (SO NC)) (SP (SPRK (SO NA)) (SP (SPRK (SO NB)) NX ))))"
 
 definition calc_lift :: "(Calc.calc, Calc.calc_state, ('s, 'x :: {Bogus, Pord, Mergeableb}) Mem_Simple.state) lifting" where
 "calc_lift = 
@@ -118,6 +122,8 @@ definition sem_final :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) s
   pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
 
 (* testing *)
+
+
 
 (*
 term "(schem_lift (SP NA (SP NB (SP NC (SP ND (NE)))))

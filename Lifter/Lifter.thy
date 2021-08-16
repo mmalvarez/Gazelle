@@ -101,9 +101,9 @@ type_synonym ('syn, 'b) valid_set =
 definition lifting_valid_weak :: 
   "('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow> ('x, 'b) valid_set \<Rightarrow> bool" where
 "lifting_valid_weak l S =
-  (\<forall> s a b . a = (LOut l s (LUpd l s a b)) \<and>
-  (\<forall> s b . b \<in> S s \<longrightarrow> b <[ LUpd l s (LOut l s b) b) \<and>
-  (\<forall> s a b . LUpd l s a b \<in> S s))"
+  ((\<forall> s a b . a = (LOut l s (LUpd l s a b))) \<and>
+   (\<forall> s b . b \<in> S s \<longrightarrow> b <[ LUpd l s (LOut l s b) b) \<and>
+   (\<forall> s a b . LUpd l s a b \<in> S s))"
 
 lemma lifting_valid_weakI :
   assumes HI : "\<And> s a b . LOut l s (LUpd l s a b) = a"
@@ -198,8 +198,8 @@ definition lifting_validb :: "('x, 'a, 'b :: Pordb, 'z) lifting_scheme \<Rightar
   (\<forall> s . LBase l s = \<bottom>))"
 
 lemma lifting_validbI :
-  assumes HI : "\<And> s a b . LOut l s (LUpd l s a b) = a"
-  assumes HO : "\<And> s a b. b \<in> S s \<Longrightarrow> b <[ LUpd l s a b"
+  assumes HO : "\<And> s a b . LOut l s (LUpd l s a b) = a"
+  assumes HI : "\<And> s a b. b \<in> S s \<Longrightarrow> b <[ LUpd l s a b"
   assumes HP : "\<And> s a b . LUpd l s a b \<in> S s"
   assumes HB : "\<And> s . LBase l s = \<bottom>"
   shows "lifting_validb l S" using assms

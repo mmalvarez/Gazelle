@@ -894,6 +894,13 @@ definition fst_l_S :: "('x, 'b1 :: Pord) valid_set \<Rightarrow> ('x, ('b1 * 'b2
 "fst_l_S S s =
   { b . case b of (b1, _) \<Rightarrow> (b1 \<in> S s) }"
 
+(* generalized version of fst and snd.
+ * useful for merging? or do we just use merge_l_S for this? *)
+definition prod_l_S ::
+  "('x, 'b1 :: Pord) valid_set \<Rightarrow> ('x, 'b2 :: Pord) valid_set \<Rightarrow> ('x, ('b1 * 'b2)) valid_set"
+  where
+"prod_l_S S1 S2 s =
+  { b . case b of (b1, b2) \<Rightarrow> b1 \<in> S1 s \<and> b2 \<in> S2 s }" 
 
 lemma fst_l_valid_weak  :
   assumes H : "lifting_valid_weak t S"

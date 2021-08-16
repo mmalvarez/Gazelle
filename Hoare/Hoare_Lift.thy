@@ -1,5 +1,6 @@
 theory Hoare_Lift imports Hoare_Indexed Hoare_Indexed_Sound Hoare_Direct
   "../Lifter/Lifter" "../Composition/Composition" "../Composition/Dominant"
+"../Lifter/LifterX"
 begin
 
 (* TODO rename this file to Hoare_Direct_Lift (or Hoare_Step_Lift...) *)
@@ -71,6 +72,17 @@ definition lift_pred_valid_s ::
 "lift_pred_valid_s l' l S syn P st =
   (lift_pred_s l' l syn P st \<and> st \<in> S (l' syn))"
 
+(* Now, some stuff from Hoare_Lift. *)
+definition lift_pred_validx_s ::
+  "('a1, 'b1) syn_lifting \<Rightarrow>
+   ('a1, 'a2, 'b2 :: {Pord, Okay}, 'z) lifting_scheme \<Rightarrow>
+   ('a1 \<Rightarrow> 'b2 set) \<Rightarrow>
+   'b1 \<Rightarrow>
+   ('a2 \<Rightarrow> bool) \<Rightarrow>
+   ('b2 \<Rightarrow> bool)"
+  where
+"lift_pred_validx_s l' l S syn P st =
+  (lift_pred_s l' l syn P st \<and> st \<in> ok_S)" 
 
 lemma Vlift_valid' :
   assumes Valid : "lifting_valid l S" 
@@ -81,6 +93,16 @@ lemma Vlift_valid' :
   unfolding HTS_def HT_def lift_pred_s_def lift_map_s_def lift_pred_valid_s_def
   using lifting_validDP[OF Valid]
   by(auto simp add: lifting_validDO[OF Valid])
+
+lemma Vlift_validx' :
+  assumes Validx : "lifting_validx l S" 
+  assumes V: "(sem) % {{P}} x {{Q}}"
+  assumes Syn : "l' x' = x"
+  shows "(lift_map_s l' l sem) % {{lift_pred_validx_s l' l S x' P}} x' {{lift_pred_validx_s l' l S x' Q}}"
+ using V Syn
+  unfolding HTS_def HT_def lift_pred_s_def lift_map_s_def lift_pred_valid_s_def lift_pred_validx_s_def
+  using lifting_validDP[OF lifting_validxDV[OF Validx]] lifting_validxDP'[OF Validx]
+  by(auto simp add: lifting_validDO[OF lifting_validxDV[OF Validx]])
 
 
 (*
