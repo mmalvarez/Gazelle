@@ -34,6 +34,14 @@ definition prod_ok_S : "(ok_S :: ('a * 'b) set) = { x :: 'a * 'b . \<exists> a' 
 instance proof qed
 end
 
+instantiation oalist :: (linorder, Okay) Okay
+begin
+
+definition oalist_ok_S :
+  "(ok_S :: ('a, 'b) oalist set) = { x  :: ('a, 'b) oalist . oalist_all_val (\<lambda> y . y \<in> ok_S) x }"
+instance proof qed
+end
+
 (* idea:
    - normal validity
    - valid_set has certain relation (superset) to Okay set
@@ -255,6 +263,9 @@ next
     using lifting_validxDP'[OF H1] lifting_validxDP'[OF H2]
     by(auto simp add: merge_l_def)
 qed
+
+
+
 
 
 end

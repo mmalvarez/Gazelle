@@ -169,6 +169,37 @@ proof(rule HTSI)
     by(cases c; cases a; auto simp add: split: prod.splits)
 qed
 
+(* need to push through lifting first. *)
+lemma HCalc_calc' :
+  assumes Hc : "c \<noteq> Cskip"
+  shows "\<And> P1 . Calc.calc_sem % {{P1}} c
+                         {{(\<lambda> X st . case st of
+                              (x1, x2, x3) \<Rightarrow> 
+                              (\<exists> x3' . X (x1, x2, x3')) \<and>
+                              (\<forall> x3' . calc_sem c (x1, x2, x3') = st)) P1}}"
+  using HCalc_calc Hc
+  by auto
+
+lemma HCalc_calc'' :
+  assumes Hc : "c \<noteq> Cskip"
+  shows "\<And> P1 . Calc.calc_sem % {{P1}} c
+                         {{(\<lambda> X st . case st of
+                              (x1, x2, x3) \<Rightarrow> 
+                              (\<exists> x3' . X (x1, x2, x3')) \<and>
+                              (\<forall> x3' . calc_sem c (x1, x2, x3') = st)) P1}}"
+  using HCalc_calc Hc
+  by auto
+
+  
+
+lemma huh :
+  assumes Hc : "c \<noteq> Cskip"
+ shows False
+proof-
+  have False
+    using liftt_conc_spec[OF _ HCalc_calc'[OF Hc], of calc_lift _ calc_trans _,
+folded calc_sem_l_def]
+
 
 lemma HCalc_skip :
   shows "Calc.calc_sem % {{P1}} Cskip
@@ -637,6 +668,12 @@ proof(rule HTSI)
   qed
 qed
 
+(*
+
+*)
+
+term "sem_final"
+
 (* TODO: need to figure out how the lifting works. *)
 
 lemma prog1_spec :
@@ -647,9 +684,8 @@ lemma prog1_spec :
 
 (* ok, st_valid should be somethng like (is in a valid_s of some kind) *)
 
-(* lift_pred_valid_s
-ok, but what is S here?
-it is the the S from lifting_valid of the lifting.
+(* use Ok here.
+problem: will this be enough? or will we still need to figure out how to "frame out" everything else?
 *)
 
 shows "|sem_final| {~ st_valid ~}

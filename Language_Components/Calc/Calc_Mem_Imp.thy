@@ -15,8 +15,8 @@ fun calc_trans :: "syn \<Rightarrow> calc" where
 | "calc_trans _ = Cskip"
 
 fun calc_prio :: "(Calc.calc \<Rightarrow> nat)" where
-"calc_prio (Cskip) = 0"
-| "calc_prio _ = 1"
+"calc_prio (Cskip) = 1"
+| "calc_prio _ = 2"
 
 fun mem_trans :: "syn \<Rightarrow> Mem_Simple.syn" where
 "mem_trans (Sm m) = m"
@@ -29,8 +29,8 @@ fun cond_trans :: "syn \<Rightarrow> Cond.cond" where
 | "cond_trans _ = Sskip_cond"
 
 fun cond_prio :: "Cond.cond \<Rightarrow> nat" where
-"cond_prio (Sskip_cond) = 0"
-| "cond_prio _ = 1"
+"cond_prio (Sskip_cond) = 1"
+| "cond_prio _ = 2"
 
 fun seq_trans :: "syn \<Rightarrow> Seq.syn" where
 "seq_trans (Ss x) = x"
