@@ -60,7 +60,7 @@ definition calc_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) 
 fun mem_trans :: "syn \<Rightarrow> Mem_Simple.syn" where
 "mem_trans (Sm m) = m"
 | "mem_trans _ = Sskip"
-
+(*
 definition mem_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
 "mem_sem_l = 
   lift_map_s mem_trans id_l
@@ -71,5 +71,5 @@ term "mem_sem_l"
 definition sem_final :: "(syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state)" where
 "sem_final = 
   pcomps [calc_sem_l, mem_sem_l]"
-
+*)
 end

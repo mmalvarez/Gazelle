@@ -42,6 +42,13 @@ definition oalist_ok_S :
 instance proof qed
 end
 
+instantiation unit :: Okay
+begin
+definition unit_ok_S :
+  "(ok_S :: unit set) = UNIV"
+instance proof qed
+end
+
 (* idea:
    - normal validity
    - valid_set has certain relation (superset) to Okay set

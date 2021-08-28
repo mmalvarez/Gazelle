@@ -42,8 +42,47 @@ lemma liftt_conc_spec :
   apply(drule_tac x = "(\<lambda>st. \<exists>full. LOut l (l' x') full = st \<and> P' full)" in spec)
   apply(auto)
   done
-  
-  
+term "LOut"
+
+  (* new idea: a more streamlined version. *)
+(* TODO: give this a better name *)
+(* TODO: do we need Hok? *)
+lemma new_lift :
+  fixes P' :: "_ \<Rightarrow> bool"
+  assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut l x st)"
+  assumes HOk : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
+  assumes HV : "lifting_validx l S"
+  assumes Hsyn : "l' x' = x"
+  assumes HT : "sem % {{P'}} x {{Q'}}"
+  shows "(lift_map_s l' l sem) % 
+    {{P}} x' 
+    {{(\<lambda> st . \<exists> old_big small_new . P old_big \<and> Q' small_new \<and> st = LUpd l x small_new old_big \<and> st \<in> ok_S)}}"
+proof(rule HTSI)
+  fix a
+  assume H : "P a"
+
+  then have H' : "P' (LOut l x a)"
+    using HP
+    by blast
+
+  have Q' : "Q' (sem x (LOut l x a))"
+    using HTSE[OF HT H']
+    by auto
+
+  have Ok' : "LUpd l x (sem x (LOut l x a)) a \<in> ok_S"
+    using lifting_validxDP'[OF HV HOk[OF H]]
+    by auto
+
+  show " \<exists>old_big small_new.
+            P old_big \<and>
+            Q' small_new \<and>
+            lift_map_s l' l sem x' a = LUpd l x small_new old_big \<and>
+            lift_map_s l' l sem x' a \<in> ok_S"
+    unfolding lift_map_s_def Hsyn
+    using H Q' Ok'
+    by blast
+qed
+
 
 (*
 definition liftt_pred_validx_s ::

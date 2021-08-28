@@ -1,4 +1,4 @@
-theory Calc_Mem_Imp_Hoare
+theory Calc_Mem_Imp_Hoare_Older
   imports Calc_Mem_Imp "../../Hoare/Hoare_Step" "../../Hoare/Hoare_Lift" "../Mem/Mem_Simple"
 begin
 
@@ -19,11 +19,7 @@ definition sem_final' :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) 
 "sem_final' =
   pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
 
-term "(x :: (_, _) state)"
-
-(* New idea: have a lifting for use in theorems about the state. *)
-(* in this case we can just use mem_lift1 I think. *)
-  
+(* How does no_control_l fit into this picture? *)
 
 lemma pres :
 "sups_pres sems"
@@ -770,6 +766,7 @@ unfolded mem_trans.simps, OF HMem_Sread]
 
   sorry
 
+
 (* TODO: write version of Read_Final lemma *)
 lemma Mem_Write_Final : 
   fixes gs :: "syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb})) state"
@@ -804,6 +801,10 @@ shows " |gs| {~P~} [G (Calc_Mem_Imp.syn.Sm (Swrite v r))
 unfolded mem_trans.simps, OF HMem_Swrite]
 
   sorry
+
+value " LOut calc_lift' (Cnum i1) (reg_flag, reg_c, reg_a, reg_b, mem, xz)"
+
+value " LUpd calc_lift' (Cnum i1) (x1, x2, x3) (reg_flag, reg_c, reg_a, reg_b, mem, xz)"
 
 (* TODO: need to figure out how the lifting works. *)
 
@@ -846,11 +847,14 @@ while (arg2 > 0) {
 
 *)
 
+  
+  
+
 shows "|sem_final| {~ (\<lambda> st . st \<in> ok_S) ~}
                    [prog1 i1 i2]
                    {~ (\<lambda> st . st \<in> ok_S \<and>
                       (case st of
-                        (reg_flag, reg_c, reg_a, reg_b, mem, xz) \<Rightarrow>
+                        (x0, x1, reg_flag, reg_c, reg_a, reg_b, mem, xz) \<Rightarrow>
                           \<exists> p . get mem (STR ''acc'') = Some (mdp p (Some (mdt (i1 * i2))))))
   ~}"
 (*
@@ -862,19 +866,20 @@ proof-
 
   have 1: "|sem_final| {~(\<lambda> st . st \<in> ok_S) ~}
 [ G (Sc (Cnum i1)) []] 
-  {~(\<lambda> st . st \<in> ok_S \<and> 
-    (case st of (reg_flag, reg_c, reg_a, reg_b, mem, xz) \<Rightarrow>
-      (case reg_c of mdp p reg_c \<Rightarrow> reg_c = Some (mdt i1))))~}"
+  {~(\<lambda> st . st \<in> ok_S \<and> (\<exists> x1 x2 . LOut calc_lift' (Cnum i1) st = (x1, x2, i1)))~}"
 (is "|sem_final| {~ ?P0 ~}
 [ G (Sc (Cnum i1)) []] 
   {~ ?P1~}")
 
+
     apply(rule HT'Conseq)
       apply(rule_tac P' = "\<lambda> _ . True" in Calc_Final)
-       apply(fast) apply(fast) apply(fast)
+    apply(fast) apply(fast) apply(fast)
     apply(force  simp add: calc_lift'_def schem_lift_defs merge_l_def
 fst_l_def snd_l_def prio_l_def option_l_def triv_l_def
-option_ok_S prod_ok_S prio_ok_S triv_ok_S)
+option_ok_S prod_ok_S prio_ok_S triv_ok_S
+split:
+option.splits md_prio.splits md_triv.splits prod.splits)
     done
 
 (*
@@ -889,18 +894,36 @@ option_ok_S prod_ok_S prio_ok_S triv_ok_S)
 *)
 
 (* NB: this used to work before we plugged in i1, but that is what we really want here. *)
-(* TODO: need oalist zip vs get lemma *)
   have 2 : "|sem_final| 
     {~ ?P1 ~}
     [G (Sm (Swrite (STR ''arg1'') (Reg_c))) []]
-{~(\<lambda>st. st \<in> ok_S \<and> (case st of
-                     (reg_flag, mdp pc (Some (mdt reg_c)), reg_a, reg_b,  m, xz) \<Rightarrow>
-                          \<exists> p . get m (STR ''arg1'') = Some (mdp p (Some  (mdt i1)))))~}"
+{~(\<lambda>st. \<exists>old_big small_new.
+                                 ?P1 old_big \<and>
+                                 (case small_new of
+                                  (reg_flag, reg_c, reg_a, reg_b, m) \<Rightarrow>
+                                     get m (STR ''arg1'') = Some i1 \<and>
+                                     st = LUpd mem_lift1 (Swrite (STR ''arg1'') (Reg_c)) small_new old_big))~}"
 (is "|sem_final| 
     {~ ?P1 ~}
     [G (Sm (Swrite (STR ''arg1'') (Reg_c))) []]
   {~ ?P2 ~}")
 
+(*
+(\<lambda>st. \<exists>old_big small_new.
+                                 P old_big \<and>
+                                 (case small_new of
+                                  (reg_flag, reg_c, reg_a, reg_b, m) \<Rightarrow>
+                                    (case r of Reg_a \<Rightarrow> get m v = Some reg_a
+                                     | Reg_b \<Rightarrow> get m v = Some reg_b
+                                     | Reg_c \<Rightarrow> get m v = Some reg_c
+                                     | Reg_flag \<Rightarrow> get m v = Some reg_flag) \<and>
+                                    ((\<exists>old. P' (reg_flag, reg_c, reg_a, reg_b,
+ update v old m)) \<or>
+                                     P' (reg_flag, reg_c, reg_a, reg_b, delete v m))) \<and>
+                                 st = LUpd mem_lift1 (Swrite v r) small_new old_big)
+*)
+
+(* ok_s - need to add this. *)
 
     apply(rule HT'Conseq)
       apply(rule_tac
@@ -915,12 +938,7 @@ in  Mem_Write_Final
 
       (* apply(simp add: mem_lift1_def schem_lift_defs ) *)
 (* inspect *)
-      apply(auto simp add: calc_lift'_def schem_lift_defs merge_l_def mem_lift1_def
-mem_sem_lifting_inner_def
-fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
-option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S)
-    defer
-      apply(auto simp add: mem_lift1_def calc_lift'_def schem_lift_defs merge_l_def snd_l_def fst_l_def
+      apply(simp add: mem_lift1_def calc_lift'_def schem_lift_defs merge_l_def snd_l_def fst_l_def
      prio_l_def option_l_def triv_l_def)
 
      apply(simp)

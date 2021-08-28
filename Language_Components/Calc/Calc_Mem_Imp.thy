@@ -22,7 +22,7 @@ fun mem_trans :: "syn \<Rightarrow> Mem_Simple.syn" where
 "mem_trans (Sm m) = m"
 | "mem_trans _ = Mem_Simple.Sskip"
 
-(* mem_prio not needed, handled by custom implementation *)
+(* mem_prio not needed, handled by custom implementation (?still true?) *)
 
 fun cond_trans :: "syn \<Rightarrow> Cond.cond" where
 "cond_trans (Sb x) = x"
@@ -80,7 +80,7 @@ term "no_control_lifting"
 term "(SP NA (SP NB NC))"
 term "(SP NX (SP (SPRC calc_prio (SO NC)) (SP (SPRK (SO NA)) (SP (SPRK (SO NB)) NX ))))"
 
-definition calc_lift :: "(Calc.calc, Calc.calc_state, ('s, 'x :: {Bogus, Pord, Mergeableb}) Mem_Simple.state) lifting" where
+definition calc_lift :: "(Calc.calc, Calc.calc_state, ('s, 'x :: {Bogus, Pord, Mergeableb, Okay}) Mem_Simple.state) lifting" where
 "calc_lift = 
   no_control_lifting (schem_lift (SP NA (SP NB NC)) (SP NX (SP (SPRC calc_prio (SO NC)) (SP (SPRK (SO NA)) (SP (SPRK (SO NB)) NX )))))"
 
@@ -92,13 +92,13 @@ definition calc_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) 
 "calc_sem_l =
  lift_map_s calc_trans calc_lift
 calc_sem"
-
+(*
 definition mem_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
 "mem_sem_l = 
   lift_map_s mem_trans
     id_l
   mem_sem"
-
+*)
 definition cond_lift where
 "cond_lift = 
   no_control_lifting (schem_lift (SP NA NB) (SP (SPRC cond_prio (SO NA)) (SP (SPRK (SO NB)) NX)))"
@@ -116,10 +116,17 @@ definition imp_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) s
 definition seq_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
 "seq_sem_l = seq_sem_l_gen seq_trans"
 
+definition mem_lift where
+"mem_lift = no_control_lifting mem_lift1"
+
+definition mem_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
+"mem_sem_l = lift_map_s mem_trans mem_lift mem0_sem"
 
 definition sem_final :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
 "sem_final =
   pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
+
+
 
 (* testing *)
 

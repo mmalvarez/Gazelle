@@ -64,10 +64,12 @@ fun mem_key :: "syn \<Rightarrow> str" where
 
 type_synonym state0 = "int * int * int * int * (String.literal, int) oalist"
 
-type_synonym ('s, 'x) state' = "('s, (bool md_triv option md_prio * int md_triv option md_prio * 'x)) control"
+type_synonym 'x state1 = "int swr * int swr * int swr * int swr * (String.literal, int swr) oalist * 'x"
+
 (* tuple layout:
  * (continuation list, error flag, 
  *  bool condition flag, result register (c), register a, register b, mem, other stuff) *)
+(* no_control_l *)
 type_synonym ('s, 'x) state = "('s, int swr * int swr * int swr * int swr * (String.literal, int swr) oalist * 'x) control"
 
 (* TODO: we are updating the priority of the entire memory
@@ -90,6 +92,8 @@ where
 
 
 (* -, -, int, int, int, int, oalist, whatever*)
+(* TODO: change this to no_control_l *)
+(*
 definition mem_sem_lifting_gen ::
   "(syn, state0, ('s, ('x :: Mergeableb)) state) lifting" where
 "mem_sem_lifting_gen =
@@ -99,6 +103,31 @@ definition mem_sem_lifting_gen ::
                   (SP (SPRC (mem_prio_reg Reg_a) (SO NC))
                   (SP (SPRC (mem_prio_reg Reg_b) (SO ND))
                   (SP (SINJ (oalist_map_l mem_sem_lifting_inner) (NE)) NX)))))))"
+*)
+
+definition mem_lift1 ::
+  "(syn, state0, _ state1) lifting" where
+"mem_lift1 =
+  schem_lift (SP NA (SP NB (SP NC (SP ND NE))))
+  (SP (SPRC (mem_prio_reg Reg_flag) (SO NA)) 
+                  (SP (SPRC (mem_prio_reg Reg_c) (SO NB))
+                  (SP (SPRC (mem_prio_reg Reg_a) (SO NC))
+                  (SP (SPRC (mem_prio_reg Reg_b) (SO ND))
+                  (SP (SINJ (oalist_map_l mem_sem_lifting_inner) (NE)) NX)))))"
+
+term "mem_lift1"
+
+(*
+definition mem_sem_lifting_gen ::
+  "(syn, state0, ('s, ('x :: Mergeableb)) state) lifting" where
+"mem_sem_lifting_gen =
+  schem_lift (SP NA (SP NB (SP NC (SP ND NE))))
+    (SP NX (SP NX (SP (SPRC (mem_prio_reg Reg_flag) (SO NA)) 
+                  (SP (SPRC (mem_prio_reg Reg_c) (SO NB))
+                  (SP (SPRC (mem_prio_reg Reg_a) (SO NC))
+                  (SP (SPRC (mem_prio_reg Reg_b) (SO ND))
+                  (SP (SINJ (oalist_map_l mem_sem_lifting_inner) (NE)) NX)))))))"
+*)
 
 fun mem0_sem :: "syn \<Rightarrow> state0 \<Rightarrow> state0" where
 "mem0_sem (Sread s r) (reg_flag, reg_c, reg_a, reg_b, mem) = 
@@ -118,7 +147,7 @@ fun mem0_sem :: "syn \<Rightarrow> state0 \<Rightarrow> state0" where
     | Reg_flag \<Rightarrow> (reg_flag, reg_c, reg_a, reg_b, update s reg_flag mem))"
 | "mem0_sem _ st = st"
 
-
+(*
 definition mem_sem :: "syn \<Rightarrow> ('s, 'x :: Mergeableb) state \<Rightarrow> ('s, 'x) state" where
 "mem_sem = 
   lift_map_s id mem_sem_lifting_gen mem0_sem"
@@ -127,9 +156,7 @@ definition mem_sem_l_gen :: "('s \<Rightarrow> syn) \<Rightarrow> (syn, ('s, 'x 
 "mem_sem_l_gen lfts lft =
   lift_map_s lfts
     (schem_lift NA (SINJ lft NA)) mem_sem"
-
-
-(* another attempt to build mem_sem, without liftings *)
+*)
 
 
 end
