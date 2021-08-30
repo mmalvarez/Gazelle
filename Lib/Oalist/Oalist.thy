@@ -1233,7 +1233,165 @@ lemma update_update :
   "update k v' (update k v l) = update k v' l"
   by(transfer; auto simp add: str_ord_update_str_ord_update)
 
-  
 
+lemma alist_all_val_get :
+  assumes H : "alist_all_val P l"
+  assumes K : "map_of l k = Some r"
+  shows "P r" using assms
+proof(induction l arbitrary: k)
+  case Nil
+  then show ?case 
+    by(auto)
+next
+  case (Cons lh lt)
 
+  obtain lhk lhv where Lh :  "lh = (lhk, lhv)"
+    by(cases lh; auto)
+
+  show ?case 
+  proof(cases "lhk = k")
+    case True
+    then show ?thesis using Cons Lh
+      by(auto simp add: alist_all_val_def)
+  next
+    case False
+
+    have Ind : "alist_all_val P lt" using Cons
+      by(auto simp add: alist_all_val_def)
+
+    show ?thesis using Cons.prems Cons.IH[OF Ind] Lh False
+      by(auto)
+  qed
+qed
+
+lemma oalist_all_val_get :
+  assumes H : "oalist_all_val P l"
+  assumes K : "get l k = Some r"
+  shows "P r"
+  using assms
+proof(transfer)
+  fix P l k r
+  show "strict_order (map fst l) \<Longrightarrow> alist_all_val P l \<Longrightarrow> map_of l k = Some r \<Longrightarrow> P r"
+    using assms alist_all_val_get[of P l k r]
+    by auto
+qed
+
+lemma alist_all_val_get_conv :
+  assumes H0 : "strict_order (map fst l)"
+  assumes H : "\<And> k r . map_of l k = Some r \<Longrightarrow> P r"
+  shows "alist_all_val P l"
+  using assms
+proof(induction l)
+  case Nil
+  then show ?case by (auto simp add: alist_all_val_def)
+next
+  case (Cons lh lt)
+
+  obtain lhk lhv where Lh :  "lh = (lhk, lhv)"
+    by(cases lh; auto)
+
+  show ?case 
+  proof(cases "P lhv")
+    case True
+
+    have Ord_tl : "strict_order (map fst lt)"
+      using strict_order_tl[of lhk "map fst lt"] Cons.prems Lh
+      by auto
+
+    have Hyp : "(\<And>k r. map_of lt k = Some r \<Longrightarrow> P r)"
+    proof-
+      fix k r
+      assume M : "map_of lt k = Some r"
+
+      then have Neq : "k \<noteq> lhk"
+      proof(cases "k = lhk")
+        case True' : True
+
+        then have In : "k \<in> set (map fst lt)" using imageI[OF map_of_SomeD[OF M], of fst]
+          by auto
+
+        then have  False
+          using strict_order_distinct[OF Cons.prems(1)] Lh True'
+          by(auto)
+
+        thus ?thesis by auto
+      next
+        case False' : False
+        then show ?thesis by auto
+      qed
+
+      then have Conc' : "map_of (lh # lt) k = Some r"
+        using Lh M
+        by(auto)
+
+      show "P r" using Cons.prems(2)[OF Conc']
+        by(auto)
+    qed
+
+    show ?thesis using Cons.IH[OF Ord_tl Hyp] True Lh
+      by(auto simp add: alist_all_val_def)
+  next
+    case False
+
+    have "P lhv"
+      using Lh Cons.prems(2)[of lhk lhv]
+      by auto
+
+    hence False using False by auto
+
+    thus ?thesis by auto
+  qed
+qed
+
+lemma oalist_all_val_get_eq :
+  "oalist_all_val P l = (\<forall> k r . get l k = Some r \<longrightarrow> P r)"
+proof(transfer)
+  fix P l
+  assume Ord : "strict_order (map fst l)"
+  show "alist_all_val P l = (\<forall>k r. map_of l k = Some r \<longrightarrow> P r)"
+  proof
+    assume "alist_all_val P l"
+    then show "\<forall>k r. map_of l k = Some r \<longrightarrow> P r"
+      using alist_all_val_get
+      by auto
+  next
+    assume " \<forall>k r. map_of l k = Some r \<longrightarrow> P r"
+    then show "alist_all_val P l"
+      using alist_all_val_get_conv[OF Ord]
+      by auto
+  qed
+qed
+    
+
+(*
+
+  "('v1 \<Rightarrow> bool) \<Rightarrow> ('key * 'v1) list \<Rightarrow> bool" where
+"alist_all_val P l =
+  list_all P (map snd l)"
+*)
+
+lemma str_ord_zip_get :
+  assumes "strict_order (map fst l1)"
+  assumes "strict_order (map fst l2)"
+  shows "map_of (str_ord_zip flr fl fr l1 l2) k =
+    (case (map_of l1 k, map_of l2 k) of (None, None) \<Rightarrow> None | (None, Some vr) \<Rightarrow> Some (fr k vr) | (Some vl, None) \<Rightarrow> Some (fl k vl) | (Some vl, Some vr) \<Rightarrow> Some (flr k vl vr))"
+  using assms str_ord_zip_get' by blast
+
+lemma oalist_zip_get :
+  shows "get (oalist_zip flr fl fr l1 l2) k =
+    (case (get l1 k, get l2 k) of (None, None) \<Rightarrow> None | (None, Some vr) \<Rightarrow> Some (fr k vr) | (Some vl, None) \<Rightarrow> Some (fl k vl) | (Some vl, Some vr) \<Rightarrow> Some (flr k vl vr))"
+proof(transfer)
+  fix flr fl fr l1 l2 k
+  show "strict_order (map fst l1) \<Longrightarrow>
+       strict_order (map fst l2) \<Longrightarrow>
+       map_of (str_ord_zip flr fl fr l1 l2) k =
+       (case (map_of l1 k, map_of l2 k) of
+        (None, None) \<Rightarrow> None
+        | (None, Some vr) \<Rightarrow> Some (fr k vr)
+        | (Some vl, None) \<Rightarrow> Some (fl k vl)
+        | (Some vl, Some vr) \<Rightarrow>
+            Some (flr k vl vr))"
+    using str_ord_zip_get
+    by blast
+qed
 end

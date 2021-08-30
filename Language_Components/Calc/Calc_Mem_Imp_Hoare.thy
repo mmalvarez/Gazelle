@@ -915,23 +915,27 @@ in  Mem_Write_Final
 
       (* apply(simp add: mem_lift1_def schem_lift_defs ) *)
 (* inspect *)
-      apply(auto simp add: calc_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+
+      apply(fastforce simp add: calc_lift'_def schem_lift_defs merge_l_def mem_lift1_def
 mem_sem_lifting_inner_def
 fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
-option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S)
-    defer
-      apply(auto simp add: mem_lift1_def calc_lift'_def schem_lift_defs merge_l_def snd_l_def fst_l_def
-     prio_l_def option_l_def triv_l_def)
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+oalist_zip_get oalist_all_val_get_eq LNew_def
+split: option.splits md_prio.splits)
+      apply(fastforce simp add: calc_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+oalist_zip_get oalist_all_val_get_eq LNew_def
+split: option.splits md_prio.splits)
+      apply(fastforce simp add: calc_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+oalist_zip_get oalist_all_val_get_eq LNew_def
+split: option.splits md_prio.splits)
 
-     apply(simp)
-
-      apply( simp add: mem_lift1_def calc_lift'_def schem_lift_defs merge_l_def snd_l_def fst_l_def
-     prio_l_def option_l_def triv_l_def
-)
-    apply(fastforce)
     done
-
-
 
 (*
     apply(fastforce simp add: calc_lift'_def schem_lift_defs merge_l_def
