@@ -22,7 +22,7 @@ definition no_control_l :: "('s, 'a, 'b :: Pord) lifting \<Rightarrow>
 
 lemma No_Control_LOut :
   shows "LOut (no_control_lifting l) = (\<lambda> s x . LOut l s (payload x))"
-  by(auto simp add:
+  by(cases l; auto simp add:
       no_control_lifting_def schem_lift_defs snd_l_def snd_def)
 
 
@@ -39,7 +39,7 @@ value [nbe] no_control_lifting
 (* OK, we need to say something more about the
  * 
  *)
-
+(*
 lemma No_Control_Seq_Ortho :
   assumes H: "lifting_validb l S"
   shows "l_ortho (no_control_lifting l) (l_synt (t :: 'a \<Rightarrow> Seq.syn) seq_sem_lifting_gen)"
@@ -57,7 +57,7 @@ next
         prio_l_def option_l_def prio_bot option_bot prod_bot
         split:prod.splits)
 qed
-
+*)
 
 (* OK, we now either need a way to synthesize valid liftings (w/ valid sets)
  * or something else *)

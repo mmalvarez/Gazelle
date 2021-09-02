@@ -904,6 +904,215 @@ proof(transfer)
         strict_order_distinct[OF str_ord_update_correct[OF Hord, of k v]], of k v] by auto
 qed
 
+lemma str_ord_update_neq :
+  fixes k k' :: "'a :: linorder"
+  assumes Hneq : "k \<noteq> k'"
+  shows "map_of (str_ord_update k v l) k' =
+         map_of l k'"
+  using assms
+proof(induction l)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons lh lt)
+
+  obtain lhk lhv where Lh : "lh = (lhk, lhv)"
+    by(cases lh; auto)
+
+  then show ?case using Cons
+    by(auto)
+qed
+
+lemma get_update_neq :
+  fixes k k' :: "'a :: linorder"
+  fixes v :: "'b"
+  fixes l :: "('a, 'b) oalist"
+  assumes Hneq : "k \<noteq> k'"
+  shows "get (update k v l) k' = get l k'" using assms
+proof(transfer)
+  fix k k' :: "'a :: linorder"
+  fix v :: "'b"
+  fix l :: "('a * 'b) list"
+  assume Hneq' : "k \<noteq> k'"
+  assume Hord : "strict_order (map fst l)"
+  show "map_of (str_ord_update k v l) k' = map_of l k'"
+    using str_ord_update_neq[OF Hneq', of v l]
+    by auto
+qed
+
+lemma str_ord_get_delete :
+  fixes k :: "'a :: linorder"
+  fixes l :: "('a * 'b) list"
+  assumes H : "strict_order (map fst l)"
+  shows "map_of (str_ord_delete k l) k = None"
+  using assms
+proof(induction l)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons lh lt)
+
+  obtain lhk lhv where Lh : "lh = (lhk, lhv)"
+    by(cases lh; auto)
+
+  have Ord' : "strict_order (map fst lt)"
+    using strict_order_tl[of lhk "map fst lt"]
+    Cons.prems Lh
+    by auto
+
+  show ?case using Cons
+  proof(cases "k = lhk")
+    case True
+
+    have Conc' : "map_of lt lhk = None"
+      using strict_order_distinct[OF Cons.prems(1)] True
+      Lh
+      by(auto simp add: map_of_eq_None_iff)
+
+    then show ?thesis using True Lh Cons.prems
+      by(auto)
+  next
+    case False
+    show ?thesis
+    proof(cases "lhk < k")
+      case True' : True
+      then show ?thesis
+        using Cons.IH[OF Ord'] Lh
+        by(auto)
+    next
+      case False' : False
+
+      then have Less : "k < lhk"
+        using False by auto
+
+
+      show ?thesis 
+      proof(cases "map_of lt k")
+        case None
+        then show ?thesis using Cons.prems Lh Less
+          by(auto simp add: map_of_eq_None_iff)
+      next
+        case (Some bad)
+
+        obtain idx_bad where
+          Idx : "idx_bad < length lt" and
+          Bad : "lt ! idx_bad = (k, bad)"
+          using map_of_SomeD[OF Some]
+          unfolding in_set_conv_nth
+          by auto
+
+        then have False
+          using strict_order_unfold[OF Cons.prems(1), of "1 + idx_bad" 0] Less Lh
+          by(auto)
+
+        then show ?thesis by auto
+      qed
+    qed
+  qed
+qed
+
+lemma get_delete :
+    fixes k :: "'a :: linorder"
+  fixes v :: "'b"
+  fixes l :: "('a, 'b) oalist"
+  shows "get (delete k l) k = None"
+proof(transfer)
+  fix k :: "'a :: linorder"
+  fix v :: "'b"
+  fix l :: "('a * 'b) list"
+  assume Hord : "strict_order (map fst l)"
+  show "map_of (str_ord_delete k l) k = None"
+    using str_ord_get_delete[OF Hord] by auto
+qed
+
+lemma str_ord_get_delete_neq :
+  fixes k k' :: "'a :: linorder"
+  fixes l :: "('a * 'b) list"
+  assumes H : "strict_order (map fst l)"
+  assumes Hneq : "k \<noteq> k'"
+  shows "map_of (str_ord_delete k l) k' = map_of l k'"
+  using assms
+proof(induction l)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons lh lt)
+
+  obtain lhk lhv where Lh : "lh = (lhk, lhv)"
+    by(cases lh; auto)
+
+  have Ord' : "strict_order (map fst lt)"
+    using strict_order_tl[of lhk "map fst lt"]
+    Cons.prems Lh
+    by auto
+
+  show ?case using Cons
+  proof(cases "k = lhk")
+    case True
+
+    have Conc' : "map_of lt lhk = None"
+      using strict_order_distinct[OF Cons.prems(1)] True
+      Lh
+      by(auto simp add: map_of_eq_None_iff)
+
+    then show ?thesis using True Lh Cons.prems
+      by(auto)
+  next
+    case False
+    show ?thesis
+    proof(cases "lhk < k")
+      case True' : True
+      then show ?thesis
+        using Cons.IH[OF Ord' Cons.prems(2)] Lh
+        by(auto)
+    next
+      case False' : False
+
+      then have Less : "k < lhk"
+        using False by auto
+
+
+      show ?thesis 
+      proof(cases "map_of lt k")
+        case None
+        then show ?thesis using Cons.prems Lh Less
+          by(auto simp add: map_of_eq_None_iff)
+      next
+        case (Some bad)
+
+        obtain idx_bad where
+          Idx : "idx_bad < length lt" and
+          Bad : "lt ! idx_bad = (k, bad)"
+          using map_of_SomeD[OF Some]
+          unfolding in_set_conv_nth
+          by auto
+
+        then have False
+          using strict_order_unfold[OF Cons.prems(1), of "1 + idx_bad" 0] Less Lh
+          by(auto)
+
+        then show ?thesis by auto
+      qed
+    qed
+  qed
+qed
+
+lemma get_delete_neq :
+  fixes k k' :: "'a :: linorder"
+  fixes v :: "'b"
+  fixes l :: "('a, 'b) oalist"
+  assumes "k \<noteq> k'"
+  shows "get (delete k l) k' = get l k'" using assms
+proof(transfer)
+  fix k k' :: "'a :: linorder"
+  fix v :: "'b"
+  fix l :: "('a * 'b) list"
+  assume Hneq : "k \<noteq> k'"
+  assume Hord : "strict_order (map fst l)"
+  show "map_of (str_ord_delete k l) k' = map_of l k'"
+    using str_ord_get_delete_neq[OF Hord Hneq] by auto
+qed
+
 
 lemma list_bsup_disj_key1 :
   fixes k :: "'a :: linorder"

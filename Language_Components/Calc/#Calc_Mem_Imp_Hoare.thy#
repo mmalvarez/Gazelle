@@ -1490,7 +1490,7 @@ split: md_triv.splits option.splits)
         (mdp _ (Some (mdt reg_a')), mdp _ (Some (mdt reg_b')), mdp _ (Some (mdt reg_c'))) \<Rightarrow> 
         (case m of
           mdp p (Some (mdt m')) \<Rightarrow>
-            (\<exists> idx . reg_c' = i1 * (i2 - idx) + i1 \<and>
+            (\<exists> idx . reg_c' = i1 * (i2 - idx) \<and>
                      reg_a' = i1 \<and> reg_b' = i1 * (i2 - idx) \<and>  
                      get m' (STR ''acc'') = Some (i1 * (i2 - idx)) \<and>
                      get m' (STR ''arg2'') = Some idx \<and>
@@ -1520,6 +1520,11 @@ option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
 split: md_triv.splits) 
 
       apply(clarify)
+
+      apply(simp)
+
+(* YOU ARE HERE *)
+(* something is weird here - we seem to be unable to rule out the bogus case, but shou
 
   apply(simp add: Inv_def cond_lift'_def calc_lift'_def schem_lift_defs merge_l_def mem_lift1_def
 mem_sem_lifting_inner_def

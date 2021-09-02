@@ -64,13 +64,13 @@ fun mem_key :: "syn \<Rightarrow> str" where
 
 type_synonym state0 = "int * int * int * int * (String.literal, int) oalist"
 
-type_synonym 'x state1 = "int swr * int swr * int swr * int swr * (String.literal, int swr) oalist * 'x"
+type_synonym 'x state1 = "int swr * int swr * int swr * int swr * (String.literal, int) oalist md_triv option md_prio * 'x"
 
 (* tuple layout:
  * (continuation list, error flag, 
  *  bool condition flag, result register (c), register a, register b, mem, other stuff) *)
 (* no_control_l *)
-type_synonym ('s, 'x) state = "('s, int swr * int swr * int swr * int swr * (String.literal, int swr) oalist * 'x) control"
+type_synonym ('s, 'x) state = "('s, int swr * int swr * int swr * int swr * (String.literal, int) oalist md_triv option md_prio * 'x) control"
 
 (* TODO: we are updating the priority of the entire memory
  * this is inefficient *)
@@ -104,7 +104,7 @@ definition mem_sem_lifting_gen ::
                   (SP (SPRC (mem_prio_reg Reg_b) (SO ND))
                   (SP (SINJ (oalist_map_l mem_sem_lifting_inner) (NE)) NX)))))))"
 *)
-
+(*
 definition mem_lift1 ::
   "(syn, state0, _ state1) lifting" where
 "mem_lift1 =
@@ -114,8 +114,18 @@ definition mem_lift1 ::
                   (SP (SPRC (mem_prio_reg Reg_a) (SO NC))
                   (SP (SPRC (mem_prio_reg Reg_b) (SO ND))
                   (SP (SINJ (oalist_map_l mem_sem_lifting_inner) (NE)) NX)))))"
+*)
 
-term "mem_lift1"
+definition mem_lift1 ::
+  "(syn, state0, _ state1) lifting" where
+"mem_lift1 =
+  schem_lift (SP NA (SP NB (SP NC (SP ND NE))))
+  (SP (SPRC (mem_prio_reg Reg_flag) (SO NA)) 
+                  (SP (SPRC (mem_prio_reg Reg_c) (SO NB))
+                  (SP (SPRC (mem_prio_reg Reg_a) (SO NC))
+                  (SP (SPRC (mem_prio_reg Reg_b) (SO ND))
+                  (SP (SPRC mem_prio_mem (SO NE)) NX)))))"
+
 
 (*
 definition mem_sem_lifting_gen ::

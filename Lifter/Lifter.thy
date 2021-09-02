@@ -52,14 +52,28 @@ type_synonym ('a, 'b) syn_lifting = "('b \<Rightarrow> 'a)"
  *
  * We are able to use typeclasses to provide a fair degree of automation on constructing
  * liftings based on a user specification; see Auto_Lift.thy for details.
+ *
+ * Note that we use a tuple rather than a record here, to avoid slowdowns due to Isabelle's
+ * record implementation.
  *)
-record ('syn, 'a, 'b) lifting =
-  LUpd :: "('syn \<Rightarrow> 'a \<Rightarrow> 'b :: Pord \<Rightarrow> 'b)"
-  LOut :: "('syn \<Rightarrow> 'b \<Rightarrow> 'a)"
-  LBase :: "'syn \<Rightarrow> 'b"
 
-declare lifting.defs[simp]
-declare lifting.cases [simp]
+(* 'b should at least be Pord. *)
+type_synonym ('syn, 'a, 'b) lifting =
+  "('syn \<Rightarrow> 'a \<Rightarrow> 'b \<Rightarrow> 'b) *
+   ('syn \<Rightarrow> 'b \<Rightarrow> 'a) *
+   ('syn \<Rightarrow> 'b)"
+
+fun LUpd :: "('syn, 'a, 'b :: Pord) lifting \<Rightarrow> 'syn \<Rightarrow> 'a \<Rightarrow> 'b \<Rightarrow> 'b" where
+"LUpd (upd_fn, _, _) = upd_fn"
+
+fun LOut :: "('syn, 'a, 'b :: Pord) lifting \<Rightarrow> 'syn \<Rightarrow> 'b \<Rightarrow> 'a" where
+"LOut (_, out_fn, _) = out_fn"
+
+fun LBase :: "('syn, 'a, 'b :: Pord) lifting \<Rightarrow> 'syn \<Rightarrow> 'b" where
+"LBase (_, _, base_fn) = base_fn"
+
+fun LMake :: "('syn \<Rightarrow> 'a \<Rightarrow> 'b :: Pord \<Rightarrow> 'b) \<Rightarrow> ('syn \<Rightarrow> 'b \<Rightarrow> 'a) \<Rightarrow> ('syn \<Rightarrow> 'b) \<Rightarrow> ('syn, 'a, 'b) lifting" where
+"LMake upd_fn out_fn base_fn = (upd_fn, out_fn, base_fn)"
 
 (* As we'll see below, there is a traditional "lens law"
  * that we would very much like to hold generally, but that does not. This is the law that
@@ -77,11 +91,12 @@ declare lifting.cases [simp]
  * ("lifting with Valid-set"). This valid set characterizes what subset of the type 'b
  * the above-mentioned law _does_hold for.
  *)
-record ('syn, 'a, 'b) liftingv = "('syn, 'a, 'b :: Pord) lifting" +
-  LOutS :: "'syn \<Rightarrow> 'b set"
 
-definition LNew :: "('syn, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow> 'syn \<Rightarrow> 'a \<Rightarrow> 'b"  where
+definition LNew :: "('syn, 'a, 'b :: Pord) lifting \<Rightarrow> 'syn \<Rightarrow> 'a \<Rightarrow> 'b"  where
 "LNew l s a = LUpd l s a (LBase l s)"
+
+(* TODO: make sure this is a good idea. *)
+declare LNew_def [simp]
 
 type_synonym ('syn, 'b) valid_set =
 "'syn \<Rightarrow> 'b set"
@@ -99,7 +114,7 @@ type_synonym ('syn, 'b) valid_set =
  *)
 
 definition lifting_valid_weak :: 
-  "('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow> ('x, 'b) valid_set \<Rightarrow> bool" where
+  "('x, 'a, 'b :: Pord) lifting \<Rightarrow> ('x, 'b) valid_set \<Rightarrow> bool" where
 "lifting_valid_weak l S =
   ((\<forall> s a b . a = (LOut l s (LUpd l s a b))) \<and>
    (\<forall> s b . b \<in> S s \<longrightarrow> b <[ LUpd l s (LOut l s b) b) \<and>
@@ -120,7 +135,7 @@ lemma lifting_valid_weakDO :
 lemma lifting_valid_weakDO' :
   assumes H : "lifting_valid_weak l S"
   shows "LOut l s (LNew l s a) = a" using assms
-  by(auto simp add: lifting_valid_weak_def LNew_def)
+  by(auto simp add: lifting_valid_weak_def)
 
 lemma lifting_valid_weakDI :
   assumes H : "lifting_valid_weak l S"
@@ -146,15 +161,12 @@ lemma lifting_valid_weakDP :
  * This is quite a strong condition, and usually necessitates the usage of something like md_prio
  * (see Mergeable_Instances.thy).
 *)
-definition lifting_valid :: "('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow>
+definition lifting_valid :: "('x, 'a, 'b :: Pord) lifting \<Rightarrow>
                              ('x, 'b) valid_set \<Rightarrow> bool" where
 "lifting_valid l S =
    ((\<forall> s a b . a = LOut l s (LUpd l s a b)) \<and>
     (\<forall> s a b . b \<in> S s \<longrightarrow> b <[ LUpd l s a b) \<and>
     (\<forall> s a b . LUpd l s a b \<in> S s))"
-
-declare liftingv.defs [simp]
-declare liftingv.cases [simp]
 
 lemma lifting_validI :
   assumes HI : "\<And> s a b . LOut l s (LUpd l s a b) = a"
@@ -171,7 +183,7 @@ lemma lifting_validDO :
 lemma lifting_validDO' :
   assumes H : "lifting_valid l S"
   shows "LOut l s (LNew l s a) = a" using assms
-  by(auto simp add: lifting_valid_def LNew_def)
+  by(auto simp add: lifting_valid_def)
 
 lemma lifting_validDI :
   assumes H : "lifting_valid l S"
@@ -192,7 +204,7 @@ lemma lifting_valid_imp_weak :
 (* Finally, for liftings with a "least" (bottom) element, we want
  * LBase to conincide with that element.
 *)
-definition lifting_validb :: "('x, 'a, 'b :: Pordb, 'z) lifting_scheme \<Rightarrow> ('x, 'b) valid_set \<Rightarrow> bool" where
+definition lifting_validb :: "('x, 'a, 'b :: Pordb) lifting \<Rightarrow> ('x, 'b) valid_set \<Rightarrow> bool" where
 "lifting_validb l S =
   (lifting_valid l S \<and>
   (\<forall> s . LBase l s = \<bottom>))"
@@ -219,7 +231,7 @@ lemma lifting_validbDO :
 lemma lifting_validbDO' :
   assumes H : "lifting_validb l S"
   shows "LOut l s (LNew l s a) = a" using assms
-  by(auto simp add: lifting_valid_def lifting_validb_def LNew_def)
+  by(auto simp add: lifting_valid_def lifting_validb_def)
 
 lemma lifting_validbDI :
   assumes H : "lifting_validb l S"
@@ -243,7 +255,7 @@ lemma lifting_validbDV :
   using assms 
   by(auto simp add:lifting_valid_def lifting_validb_def)
 
-definition lifting_valid_weakb :: "('x, 'a, 'b :: Pordb, 'z) lifting_scheme \<Rightarrow>
+definition lifting_valid_weakb :: "('x, 'a, 'b :: Pordb) lifting\<Rightarrow>
                                    ('x, 'b) valid_set \<Rightarrow> bool" where
 "lifting_valid_weakb l S =
   (lifting_valid_weak l S \<and>
@@ -311,7 +323,7 @@ abbreviation lifting_valid_weakb' where
 *)
 
 definition lift_map ::
-  "('x, 'a , 'b :: Pord, 'z) lifting_scheme \<Rightarrow>
+  "('x, 'a , 'b :: Pord) lifting\<Rightarrow>
     ('x \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow>
     ('x \<Rightarrow> 'b \<Rightarrow> 'b)" where
 "lift_map l sem syn st =
@@ -322,7 +334,7 @@ declare lift_map_def [simp]
 (* trailing s = "with syntax" *)
 definition lift_map_s ::
     "('a1, 'b1) syn_lifting \<Rightarrow>
-     ('a1, 'a2 , 'b2 :: Pord, 'z) lifting_scheme \<Rightarrow>
+     ('a1, 'a2 , 'b2 :: Pord) lifting \<Rightarrow>
      ('a1 \<Rightarrow> 'a2 \<Rightarrow> 'a2) \<Rightarrow>
      ('b1 \<Rightarrow> 'b2 \<Rightarrow> 'b2)" where
 "lift_map_s l' l sem syn st =
@@ -332,7 +344,7 @@ declare lift_map_s_def [simp]
 
 definition lower_map_s ::
   "('a1, 'b1) syn_lifting \<Rightarrow>
-   ('a1, 'a2, 'b2 :: Pord, 'z) lifting_scheme \<Rightarrow>
+   ('a1, 'a2, 'b2 :: Pord) lifting \<Rightarrow>
    ('b1 \<Rightarrow> 'b2 \<Rightarrow> 'b2) \<Rightarrow>
    ('a1 \<Rightarrow> 'a2 \<Rightarrow> 'a2)" where
 "lower_map_s l' l sem syn st =
@@ -345,36 +357,36 @@ declare lower_map_s_def [simp]
 (* syntax-translation of lifting *)
 definition l_synt ::
   "('a1, 'b1) syn_lifting \<Rightarrow>
-   ('a1, 'a2, 'b2 :: Pord, 'z) lifting_scheme \<Rightarrow>
+   ('a1, 'a2, 'b2 :: Pord) lifting \<Rightarrow>
    ('b1, 'a2, 'b2) lifting" where
 "l_synt l' l =
-  \<lparr> LUpd = (LUpd l) o l'
-  , LOut = (LOut l) o l'
-  , LBase = (LBase l) o l'\<rparr>"
+  (case l of
+    (upd_fn, out_fn, base_fn) \<Rightarrow>
+      (upd_fn o l', out_fn o l', base_fn o l'))"
 
 lemma l_synt_valid_weak :
   assumes H : "lifting_valid_weak l S"
   shows "lifting_valid_weak (l_synt l' l) (S o l')" using H
   unfolding lifting_valid_weak_def l_synt_def
-  by(auto)
+  by(cases l; auto)
 
 lemma l_synt_valid :
   assumes H : "lifting_valid l S"
   shows "lifting_valid (l_synt l' l) (S o l')" using H
   unfolding lifting_valid_def l_synt_def
-  by(auto)
+  by(cases l; auto)
 
 lemma l_synt_valid_weakb :
   assumes H : "lifting_valid_weakb l S"
   shows "lifting_valid_weakb (l_synt l' l) (S o l')" using H
   unfolding lifting_valid_weakb_def lifting_valid_weak_def l_synt_def
-  by(auto)
+  by(cases l; auto)
 
 lemma l_synt_validb :
   assumes H : "lifting_validb l S"
   shows "lifting_validb (l_synt l' l) (S o l')" using H
   unfolding lifting_validb_def lifting_valid_def l_synt_def
-  by(auto)
+  by(cases l; auto)
 
 
 (* Now we introduce a concept of "orthogonality" of liftings. This basically says that
@@ -386,10 +398,10 @@ lemma l_synt_validb :
  *
  * TODO: do we actually use this?
  *)
-
+(*
 definition l_ortho ::
-  "('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme \<Rightarrow>
-   ('x, 'a2, 'b, 'z2) lifting_scheme \<Rightarrow>
+  "('x, 'a1, 'b :: Mergeable) lifting \<Rightarrow>
+   ('x, 'a2, 'b) lifting\<Rightarrow>
    bool" where
 "l_ortho l1 l2 =
   (
@@ -399,16 +411,16 @@ definition l_ortho ::
 
 lemma l_orthoDI :
   fixes s :: 'x
-  assumes H : "l_ortho (l1 :: ('x, 'a1, 'b ::Mergeable, 'z1) lifting_scheme)
-                       (l2 :: ('x, 'a2, 'b, 'z2) lifting_scheme)"
+  assumes H : "l_ortho (l1 :: ('x, 'a1, 'b ::Mergeable) lifting)
+                       (l2 :: ('x, 'a2, 'b) lifting)"
   shows "LUpd l1 s a1 (LUpd l2 s a2 b) = LUpd l2 s a2 (LUpd l1 s a1 b)"
   using assms
   by(auto simp add: l_ortho_def; blast)
 
 lemma l_orthoDB :
   fixes s :: 'x
-  assumes H : "l_ortho (l1 :: ('x, 'a1, 'b ::Mergeable, 'z1) lifting_scheme)
-                       (l2 :: ('x, 'a2, 'b, 'z2) lifting_scheme)"
+  assumes H : "l_ortho (l1 :: ('x, 'a1, 'b ::Mergeable) lifting)
+                       (l2 :: ('x, 'a2, 'b) lifting)"
   shows "LBase l1 s = LBase l2 s"
   using assms
   by(auto simp add: l_ortho_def; blast)
@@ -423,8 +435,8 @@ lemma l_orthoI [intro]:
   by(auto simp add: l_ortho_def)
 
 lemma l_ortho_comm :
-  assumes H :"l_ortho (l1 :: ('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme)
-                      (l2 :: ('x, 'a2, 'b, 'z2) lifting_scheme)"
+  assumes H :"l_ortho (l1 :: ('x, 'a1, 'b :: Mergeable) lifting)
+                      (l2 :: ('x, 'a2, 'b) lifting)"
   shows "l_ortho l2 l1"
 proof(rule l_orthoI)
   fix s a1 a2 b
@@ -451,6 +463,7 @@ proof(rule monotI)
   using lifting_validDI[OF Hv Hx]
   by auto
 qed
+*)
 
 (* idea: similar to lifting_valid:
    - Out (upd) preserves
@@ -459,13 +472,13 @@ qed
 
 do we need "orthoB" or similar?
 *)
-definition l_ortho_alt ::
-  "('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme \<Rightarrow>
+definition l_ortho ::
+  "('x, 'a1, 'b :: Mergeable) lifting \<Rightarrow>
    ('x, 'b) valid_set \<Rightarrow>
-   ('x, 'a2, 'b, 'z2) lifting_scheme \<Rightarrow>
+   ('x, 'a2, 'b) lifting \<Rightarrow>
    ('x, 'b) valid_set \<Rightarrow>
    bool" where
-"l_ortho_alt l1 S1 l2 S2 =
+"l_ortho l1 S1 l2 S2 =
   (
   (\<forall> s a b . b \<in> S1 s \<longrightarrow> LOut l1 s (LUpd l2 s a b) = LOut l1 s b) \<and>
   (\<forall> s a b . b \<in> S2 s \<longrightarrow> LOut l2 s (LUpd l1 s a b) = LOut l2 s b) \<and>
@@ -473,98 +486,170 @@ definition l_ortho_alt ::
   (\<forall> s a b . b \<in> S2 s \<longrightarrow> LUpd l1 s a b \<in> S2 s))
  "
 
-lemma l_ortho_altDO1 :
+lemma l_orthoDO1 :
   fixes s :: 'x
-  assumes H : "l_ortho_alt (l1 :: ('x, 'a1, 'b ::Mergeable, 'z1) lifting_scheme) S1
-                       (l2 :: ('x, 'a2, 'b, 'z2) lifting_scheme) S2"
+  assumes H : "l_ortho (l1 :: ('x, 'a1, 'b ::Mergeable) lifting) S1
+                       (l2 :: ('x, 'a2, 'b) lifting) S2"
   assumes Hin : "b \<in> S1 s"
   shows "LOut l1 s (LUpd l2 s a b) = LOut l1 s b"
   using assms
-  by(auto simp add: l_ortho_alt_def; blast)
+  by(auto simp add: l_ortho_def; blast)
 
-lemma l_ortho_altDO2 :
+lemma l_orthoDO2 :
   fixes s :: 'x
-  assumes H : "l_ortho_alt (l1 :: ('x, 'a1, 'b ::Mergeable, 'z1) lifting_scheme) S1
-                       (l2 :: ('x, 'a2, 'b, 'z2) lifting_scheme) S2"
+  assumes H : "l_ortho (l1 :: ('x, 'a1, 'b ::Mergeable) lifting) S1
+                       (l2 :: ('x, 'a2, 'b) lifting) S2"
   assumes Hin : "b \<in> S2 s"
   shows "LOut l2 s (LUpd l1 s a b) = LOut l2 s b"
   using assms
-  by(auto simp add: l_ortho_alt_def; blast)
+  by(auto simp add: l_ortho_def; blast)
 
-lemma l_ortho_altDP1 :
+lemma l_orthoDP1 :
   fixes s :: 'x
-  assumes H : "l_ortho_alt (l1 :: ('x, 'a1, 'b ::Mergeable, 'z1) lifting_scheme) S1
-                       (l2 :: ('x, 'a2, 'b, 'z2) lifting_scheme) S2"
+  assumes H : "l_ortho (l1 :: ('x, 'a1, 'b ::Mergeable) lifting) S1
+                       (l2 :: ('x, 'a2, 'b) lifting) S2"
   assumes Hin : "b \<in> S1 s"
   shows "LUpd l2 s a b \<in> S1 s"
   using assms
-  by(auto simp add: l_ortho_alt_def; blast)
+  by(auto simp add: l_ortho_def; blast)
 
-lemma l_ortho_altDP2 :
+lemma l_orthoDP2 :
   fixes s :: 'x
-  assumes H : "l_ortho_alt (l1 :: ('x, 'a1, 'b ::Mergeable, 'z1) lifting_scheme) S1
-                       (l2 :: ('x, 'a2, 'b, 'z2) lifting_scheme) S2"
+  assumes H : "l_ortho (l1 :: ('x, 'a1, 'b ::Mergeable) lifting) S1
+                       (l2 :: ('x, 'a2, 'b) lifting) S2"
   assumes Hin : "b \<in> S2 s"
   shows "LUpd l1 s a b \<in> S2 s"
   using assms
-  by(auto simp add: l_ortho_alt_def; blast)
+  by(auto simp add: l_ortho_def; blast)
 
-lemma l_ortho_altI [intro]:
+lemma l_orthoI [intro]:
   assumes HI1 : "\<And> s a b . b \<in> S1 s \<Longrightarrow> LOut l1 s (LUpd l2 s a b) = LOut l1 s b"
   assumes HI2 : "\<And> s a b . b \<in> S2 s \<Longrightarrow> LOut l2 s (LUpd l1 s a b) = LOut l2 s b"
   assumes HP1 : "\<And> s a b . b \<in> S1 s \<Longrightarrow> LUpd l2 s a b \<in> S1 s"
   assumes HP2 : "\<And> s a b . b \<in> S2 s \<Longrightarrow> LUpd l1 s a b \<in> S2 s" 
-  shows "l_ortho_alt l1 S1 l2 S2"
+  shows "l_ortho l1 S1 l2 S2"
   using assms
-  by(auto simp add: l_ortho_alt_def)
+  by(auto simp add: l_ortho_def)
 
-definition l_ortho_altb ::
-  "('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme \<Rightarrow>
+definition l_orthob ::
+  "('x, 'a1, 'b :: Mergeable) lifting \<Rightarrow>
    ('x, 'b) valid_set \<Rightarrow>
-   ('x, 'a2, 'b, 'z2) lifting_scheme \<Rightarrow>
+   ('x, 'a2, 'b) lifting \<Rightarrow>
    ('x, 'b) valid_set \<Rightarrow>
    bool" where
-"l_ortho_altb l1 S1 l2 S2 =
-  (l_ortho_alt l1 S1 l2 S2 \<and>
+"l_orthob l1 S1 l2 S2 =
+  (l_ortho l1 S1 l2 S2 \<and>
   (\<forall> s . LBase l1 s = LBase l2 s))"
 
-lemma l_ortho_altbDB :
-  assumes "l_ortho_altb l1 S1 l2 S2"
+lemma l_orthobDB :
+  assumes "l_orthob l1 S1 l2 S2"
   shows "LBase l1 s = LBase l2 s" using assms
-  by(auto simp add: l_ortho_altb_def)
+  by(auto simp add: l_orthob_def)
 
-lemma l_ortho_altbDV :
-  assumes "l_ortho_altb l1 S1 l2 S2"
-  shows "l_ortho_alt l1 S1 l2 S2"
+lemma l_orthobDV :
+  assumes "l_orthob l1 S1 l2 S2"
+  shows "l_ortho l1 S1 l2 S2"
   using assms
-  by(auto simp add: l_ortho_altb_def)
+  by(auto simp add: l_orthob_def)
 
-lemma l_ortho_altbI :
-  assumes HV : "l_ortho_alt l1 S1 l2 S2"
+lemma l_orthobI :
+  assumes HV : "l_ortho l1 S1 l2 S2"
   assumes HB : "\<And> s . LBase l1 s = LBase l2 s"
-  shows "l_ortho_altb l1 S1 l2 S2"
+  shows "l_orthob l1 S1 l2 S2"
   using assms
-  by(auto simp add: l_ortho_altb_def)
+  by(auto simp add: l_orthob_def)
 
-lemma l_ortho_alt_comm :
-  assumes H :"l_ortho_alt (l1 :: ('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme) S1
-                      (l2 :: ('x, 'a2, 'b, 'z2) lifting_scheme) S2"
-  shows "l_ortho_alt l2 S2 l1 S1"
-proof(rule l_ortho_altI)
+lemma l_ortho_comm :
+  assumes H :"l_ortho (l1 :: ('x, 'a1, 'b :: Mergeable) lifting) S1
+                      (l2 :: ('x, 'a2, 'b) lifting) S2"
+  shows "l_ortho l2 S2 l1 S1"
+proof(rule l_orthoI)
   show "\<And>s a b. b \<in> S2 s \<Longrightarrow> LOut l2 s (LUpd l1 s a b) = LOut l2 s b"
-    using l_ortho_altDO2[OF H]
+    using l_orthoDO2[OF H]
     by(auto)
 next
   show "\<And>s a b. b \<in> S1 s \<Longrightarrow> LOut l1 s (LUpd l2 s a b) = LOut l1 s b"
-    using l_ortho_altDO1[OF H]
+    using l_orthoDO1[OF H]
     by auto
 next
   show "\<And>s a b. b \<in> S2 s \<Longrightarrow> LUpd l1 s a b \<in> S2 s"
-    using l_ortho_altDP2[OF H]
+    using l_orthoDP2[OF H]
     by auto
 next
   show "\<And>s a b. b \<in> S1 s \<Longrightarrow> LUpd l2 s a b \<in> S1 s"
-    using l_ortho_altDP1[OF H]
+    using l_orthoDP1[OF H]
     by auto
 qed
+
+(* Bogus: a typeclass for data that we can supply "bogus" default values for (instead of undefined)
+ * this avoids annoying problems that can crop up in the generated code.
+ * The value chosen has no significance; it is just there as a placeholder to avoid
+ * crashing or getting stuck at undefined values.
+ *)
+
+class Bogus =
+  fixes bogus :: "'a"
+
+instantiation nat :: Bogus begin
+definition nat_bogus : "bogus = (0 :: nat)"
+instance proof qed
+end
+
+instantiation bool :: Bogus begin
+definition bool_bogus : "bogus = True"
+instance proof qed
+end
+
+instantiation int :: Bogus begin
+definition int_bogus : "bogus = (0 :: int)"
+instance proof qed
+end
+
+instantiation unit :: Bogus begin
+definition unit_bogus : "bogus = ()"
+instance proof qed
+end
+
+instantiation prod :: (Bogus, Bogus) Bogus begin
+definition prod_bogus : "bogus = (bogus, bogus)"
+instance proof qed
+end
+
+instantiation sum :: (Bogus, _) Bogus begin
+definition sum_bogus : "bogus = Inl bogus"
+instance proof qed
+end
+
+instantiation option :: (Bogus) Bogus begin
+definition option_bogus : "bogus = Some bogus"
+instance proof qed
+end
+
+(* TODO: why not [bogus]? *)
+instantiation list :: (_) Bogus begin
+definition list_bogus : "bogus = []"
+instance proof qed
+end
+
+instantiation md_triv :: (Bogus) Bogus begin
+definition md_triv_bogus : "bogus = mdt bogus"
+instance proof qed
+end
+
+instantiation md_prio :: (Bogus) Bogus begin
+definition md_prio_bogus : "bogus = mdp 0 bogus"
+instance proof qed
+end
+
+instantiation oalist :: (linorder, _) Bogus begin
+definition oalist_bogus : "bogus = (empty :: (_, _) oalist)"
+instance proof qed
+end
+
+instantiation String.literal :: Bogus begin
+definition string_literal_bogus :
+"bogus = STR ''''"
+instance proof qed
+end
+
 end

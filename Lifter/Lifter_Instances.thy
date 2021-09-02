@@ -2,51 +2,13 @@ theory Lifter_Instances imports Lifter
 begin
 
 (*
- * In this file, we construct instances of the lifter record (see Lifter.v)
+ * In this file, we construct instances of the lifter record (see Lifter.thy)
  * that describe how to lift into (and out of) most of the common types we use in Gazelle.
  * Note that some of the lifting instances at the end of this file have proofs admitted.
- * Completing the proofs for oalist and roalist, and eventually purging this development
+ * Completing the proofs for  roalist, and eventually purging this development
  * of admits ("sorry") is an important TODO.
  *)
 
-(* Bogus: a typeclass for data that we can supply "bogus" default values for (instead of undefined)
- * as mentioned in Lifter.v, this avoids annoying problems that can crop up in the generated code.
- * The value chosen has no significance; it is just there as a placeholder to avoid
- * crashing or getting stuck at undefined values.
- *)
-
-class Bogus =
-  fixes bogus :: "'a"
-
-instantiation nat :: Bogus begin
-definition nat_bogus : "bogus = (0 :: nat)"
-instance proof qed
-end
-
-instantiation bool :: Bogus begin
-definition bool_bogus : "bogus = True"
-instance proof qed
-end
-
-instantiation int :: Bogus begin
-definition int_bogus : "bogus = (0 :: int)"
-instance proof qed
-end
-
-instantiation unit :: Bogus begin
-definition unit_bogus : "bogus = ()"
-instance proof qed
-end
-
-instantiation prod :: (Bogus, Bogus) Bogus begin
-definition prod_bogus : "bogus = (bogus, bogus)"
-instance proof qed
-end
-
-instantiation sum :: (Bogus, _) Bogus begin
-definition sum_bogus : "bogus = Inl bogus"
-instance proof qed
-end
 
 
 (* An alternate option instance, in which the bogus value is None
@@ -65,37 +27,7 @@ end
  * (TODO: why exactly is this better?)
  *)
 
-instantiation option :: (Bogus) Bogus begin
-definition option_bogus : "bogus = Some bogus"
-instance proof qed
-end
 
-(* TODO: why not [bogus]? *)
-instantiation list :: (_) Bogus begin
-definition list_bogus : "bogus = []"
-instance proof qed
-end
-
-instantiation md_triv :: (Bogus) Bogus begin
-definition md_triv_bogus : "bogus = mdt bogus"
-instance proof qed
-end
-
-instantiation md_prio :: (Bogus) Bogus begin
-definition md_prio_bogus : "bogus = mdp 0 bogus"
-instance proof qed
-end
-
-instantiation oalist :: (linorder, _) Bogus begin
-definition oalist_bogus : "bogus = (empty :: (_, _) oalist)"
-instance proof qed
-end
-
-instantiation String.literal :: Bogus begin
-definition string_literal_bogus :
-"bogus = STR ''''"
-instance proof qed
-end
 
 
 (* Here we implement the simplest lifting, an identity lifting from 'a to 'a.
@@ -116,12 +48,7 @@ definition id_l' ::
 definition id_l ::
   "('x, 'a :: {Pord, Bogus}, 'a) lifting" where
 "id_l =
-  \<lparr> LUpd = (\<lambda> s a a' . a)
-  , LOut = (\<lambda> s a . a)
-  , LBase = (\<lambda> s . bogus) \<rparr>" 
-
-definition id_lv :: "('x, 'a :: {Pord, Bogus}, 'a) liftingv" where
-"id_lv = lifting.extend id_l \<lparr> LOutS = (\<lambda> _ . UNIV) \<rparr>"
+  LMake (\<lambda> s a a' . a) (\<lambda> s a . a) (\<lambda> s . bogus)" 
 
 
 (* Note that we could prove validb lemmas if we change the hierarchy so that we
@@ -162,14 +89,7 @@ definition triv_l' ::
 definition triv_l ::
   "('x, 'a :: Bogus, 'a md_triv) lifting" where
 "triv_l =
-  \<lparr> LUpd = (\<lambda> s a _ . mdt a)
-  , LOut = (\<lambda> s b . (case b of (mdt b') \<Rightarrow> b'))
-  , LBase = (\<lambda> s . mdt bogus) \<rparr>"
-
-definition triv_lv ::
-  "('x, 'a :: Bogus, 'a md_triv) liftingv" where
-"triv_lv =
-  lifting.extend (triv_l) \<lparr> LOutS = (\<lambda> s . UNIV) \<rparr>"
+  LMake (\<lambda> s a _ . mdt a) (\<lambda> s b . (case b of (mdt b') \<Rightarrow> b')) (\<lambda> s . mdt bogus)"
 
 lemma triv_l_valid_weak : 
   shows "lifting_valid_weak' (triv_l :: ('x, 'a :: Bogus, 'a md_triv) lifting)"
@@ -178,13 +98,13 @@ proof(rule lifting_valid_weakI)
   fix a :: 'a
   fix b
   show "LOut (triv_l) s (LUpd (triv_l) s a b) = a"
-    by(auto simp add:triv_lv_def triv_l_def split:md_triv.splits)
+    by(auto simp add:triv_l_def split:md_triv.splits)
 next
   fix s :: 'x
   fix b :: "'a md_triv"
 
   show "b <[ LUpd triv_l s (LOut triv_l s b) b"
-   by(auto simp add:triv_lv_def triv_l_def triv_pleq
+   by(auto simp add:triv_l_def triv_pleq
           split:md_triv.splits)
 next
   fix s :: 'x
@@ -205,8 +125,6 @@ lemma triv_l_valid_weak_vsg' :
   shows "lifting_valid_weak (triv_l :: ('x, 'a :: Bogus, 'a md_triv) lifting) S"
   using assms triv_l_valid_weak_vsg fun_eq_iff[of S "\<lambda> _ . UNIV"] by auto
 
-
-
 (* option lifting - really a lifting-transformer; from a lifting on 'a \<Rightarrow> 'b,
  * we get a lifting 'a \<Rightarrow> 'b option*)
 
@@ -217,81 +135,84 @@ definition option_l' ::
 "option_l' t =
   case_option undefined t "
 
+
 definition option_l ::
-  "('x, 'a, 'b:: {Pord}, 'z) lifting_scheme \<Rightarrow> ('x, 'a, 'b option) lifting" where
+  "('x, 'a, 'b:: {Pord}) lifting \<Rightarrow> ('x, 'a, 'b option) lifting" where
 "option_l t =
-  \<lparr> LUpd = (\<lambda> s a b . 
-            (case b of
-              Some b' \<Rightarrow> Some (LUpd t s a b')
-              | None \<Rightarrow> Some (LNew t s a)))
-  , LOut = (\<lambda> s b . (case b of Some b' \<Rightarrow> LOut t s b'
-                      | None \<Rightarrow> LOut t s (LBase t s)))
-  , LBase = (\<lambda> s . None)\<rparr>"
+  (case t of
+    (upd_fn, out_fn, base_fn) \<Rightarrow>
+      LMake (\<lambda> s a b . 
+                (case b of
+                  Some b' \<Rightarrow> Some (upd_fn s a b')
+                  | None \<Rightarrow> Some (upd_fn s a (base_fn s))))
+              (\<lambda> s b . (case b of Some b' \<Rightarrow> out_fn s b'
+                          | None \<Rightarrow> out_fn s (base_fn s)))
+              (\<lambda> s . None))"
 
 definition option_l_S :: "('s, 'b) valid_set \<Rightarrow> ('s, 'b option) valid_set" where
 "option_l_S S s = (Some ` S s)"
 
 lemma option_l_valid_weak :
-  assumes H : "lifting_valid_weak (t :: ('x, 'a, 'b :: {Pord}, 'z) lifting_scheme) S"
+  assumes H : "lifting_valid_weak (t :: ('x, 'a, 'b :: {Pord}) lifting) S"
   shows "lifting_valid_weak (option_l t) (option_l_S S)"
 proof(rule lifting_valid_weakI)
   fix s a b
   show "LOut (option_l t) s (LUpd (option_l t) s a b) = a"
     using lifting_valid_weakDO[OF H]
-    by(auto simp add:option_l_def LNew_def split:option.splits)
+    by(cases t; auto simp add:option_l_def LNew_def split:option.splits)
 next
   fix s b
   assume Hb : "b \<in> option_l_S S s"
   thus "b <[ LUpd (option_l t) s (LOut (option_l t) s b) b"
     using lifting_valid_weakDI[OF H]
-    by(auto simp add:option_l_def option_l_S_def LNew_def option_pleq split:option.splits)
+    by(cases t; auto simp add:option_l_def option_l_S_def LNew_def option_pleq split:option.splits)
 next
   fix s :: 'x
   fix a
   fix b :: "'b option"
   show "LUpd (option_l t) s a b \<in> option_l_S S s"
     using lifting_valid_weakDP[OF H]
-    by(auto simp add: option_l_def option_l_S_def LNew_def split:option.splits)
+    by(cases t; auto simp add: option_l_def option_l_S_def LNew_def split:option.splits)
 qed
 
 lemma option_l_valid_weak_vsg :
   assumes Hv : "S' = option_l_S S"
-  assumes H : "lifting_valid_weak (t :: ('x, 'a, 'b :: {Pord}, 'z) lifting_scheme) S"
+  assumes H : "lifting_valid_weak (t :: ('x, 'a, 'b :: {Pord}) lifting) S"
   shows "lifting_valid_weak (option_l t) S'"
-  using assms option_l_valid_weak by auto
+  using assms option_l_valid_weak by (cases t; auto)
 
 (* Option_l is valid (not just valid_weak) *)
 lemma option_l_valid :
-  assumes H : "lifting_valid (t :: ('x, 'a, 'b :: {Pord}, 'z) lifting_scheme) S"
+  assumes H : "lifting_valid (t :: ('x, 'a, 'b :: {Pord}) lifting) S"
   shows "lifting_valid (option_l t) (option_l_S S)"
 proof(rule lifting_validI)
   fix s a b
   show "LOut (option_l t) s (LUpd (option_l t) s a b) = a"
     using lifting_validDO[OF H]
-    by(auto simp add:option_l_def LNew_def split:option.splits)
+    by(cases t; auto simp add:option_l_def LNew_def split:option.splits)
 next
   fix s a b
   assume Hb : "b \<in> (option_l_S S) s"
   thus "b <[ LUpd (option_l t) s a b"
     using lifting_validDI[OF H]
-    by(auto simp add:option_l_def option_l_S_def LNew_def option_pleq split:option.splits)
+    by(cases t; auto simp add:option_l_def option_l_S_def LNew_def option_pleq split:option.splits)
 next
   fix s :: 'x
   fix a :: 'a
   fix b :: "'b option"
   show "LUpd (option_l t) s a b \<in> option_l_S S s"
     using lifting_validDP[OF H]
-    by(auto simp add:option_l_def option_l_S_def LNew_def option_pleq split:option.splits)
+    by(cases t; auto simp add:option_l_def option_l_S_def LNew_def option_pleq split:option.splits)
 qed
 
 lemma option_l_valid_vsg :
   assumes Hv : "S' = option_l_S S"
-  assumes H : "lifting_valid (t :: ('x, 'a, 'b :: {Pord}, 'z) lifting_scheme) S"
+  assumes H : "lifting_valid (t :: ('x, 'a, 'b :: {Pord}) lifting) S"
   shows "lifting_valid (option_l t) S'"
-  using assms option_l_valid by auto
+  using assms option_l_valid by (cases t; auto)
 
 lemma option_l_valid_weakb :
-  assumes H : "lifting_valid_weak (t :: ('x, 'a, 'b :: {Pord}, 'z) lifting_scheme) S"
+  assumes H : "lifting_valid_weak (t :: ('x, 'a, 'b :: {Pord}) lifting) S"
   shows "lifting_valid_weakb (option_l t) (option_l_S S)"
 proof(rule lifting_valid_weakbI')
   show "lifting_valid_weak (option_l t) (option_l_S S)"
@@ -299,17 +220,17 @@ proof(rule lifting_valid_weakbI')
 next
   fix s
   show "LBase (option_l t) s = \<bottom>"
-    by(simp add: option_l_def option_bot)
+    by(cases t; simp add: option_l_def option_bot)
 qed
 
 lemma option_l_valid_weakb_vsg :
   assumes Hv : "S' = option_l_S S"
-  assumes H : "lifting_valid_weak (t :: ('x, 'a, 'b :: {Pord}, 'z) lifting_scheme) S"
+  assumes H : "lifting_valid_weak (t :: ('x, 'a, 'b :: {Pord}) lifting) S"
   shows "lifting_valid_weakb (option_l t) S'"
-  using assms option_l_valid_weakb by auto
+  using assms option_l_valid_weakb by (cases t; auto)
 
 lemma option_l_validb :
-  assumes H : "lifting_valid (t :: ('x, 'a, 'b :: {Pord}, 'z) lifting_scheme) S"
+  assumes H : "lifting_valid (t :: ('x, 'a, 'b :: {Pord}) lifting) S"
   shows "lifting_validb (option_l t) (option_l_S S)"
 proof(rule lifting_validbI')
   show "lifting_valid (option_l t) (option_l_S S)"
@@ -317,89 +238,69 @@ proof(rule lifting_validbI')
 next
   fix s
   show "LBase (option_l t) s = \<bottom>"
-    by(simp add: option_l_def option_bot)
+    by(cases t; simp add: option_l_def option_bot)
 qed
 
 lemma option_l_validb_vsg :
   assumes Hv : "S' = option_l_S S"
-  assumes H : "lifting_valid (t :: ('x, 'a, 'b :: {Pord}, 'z) lifting_scheme) S"
+  assumes H : "lifting_valid (t :: ('x, 'a, 'b :: {Pord}) lifting) S"
   shows "lifting_validb (option_l t) S'"
-  using assms option_l_validb by auto
+  using assms option_l_validb by (cases t; auto)
 
 (* If liftings l2 and l2 are orthogonal, the results of applying the option
  * lifting-transformer to each will be also. *)
+
 lemma option_ortho :
   assumes H1 : "lifting_valid_weak l1 S1"
   assumes H2 : "lifting_valid_weak l2 S2"
-  assumes Horth : "l_ortho (l1 :: ('x, 'a1, 'b :: Mergeable) lifting)
-                       (l2 :: ('x, 'a2, 'b :: Mergeable) lifting)"
-  shows "l_ortho (option_l l1) (option_l l2)"
-proof(rule l_orthoI)
-
-  fix s a1 a2 b
-
-  show "LUpd (option_l l1) s a1 (LUpd (option_l l2) s a2 b) =
-        LUpd (option_l l2) s a2 (LUpd (option_l l1) s a1 b)"
-    using l_orthoDI[OF Horth] l_orthoDB[OF Horth]
-    by(auto simp add: option_l_def LNew_def split:option.splits)
-
-next
-
-  fix s
-  show "LBase (option_l l1) s = LBase (option_l l2) s"
-    by(auto simp add: option_l_def)
-
-qed
-
-lemma option_ortho_alt :
-  assumes H1 : "lifting_valid_weak l1 S1"
-  assumes H2 : "lifting_valid_weak l2 S2"
-  assumes Horth : "l_ortho_alt (l1 :: ('x, 'a1, 'b :: Mergeable) lifting) S1
+  assumes Horth : "l_ortho (l1 :: ('x, 'a1, 'b :: Mergeable) lifting) S1
                        (l2 :: ('x, 'a2, 'b :: Mergeable) lifting) S2"
-  shows "l_ortho_alt (option_l l1) (option_l_S S1) (option_l l2) (option_l_S S2)"
-proof(rule l_ortho_altI)
+  shows "l_ortho (option_l l1) (option_l_S S1) (option_l l2) (option_l_S S2)"
+proof(rule l_orthoI)
   show "\<And>s a b.
        b \<in> option_l_S S1 s \<Longrightarrow>
        LOut (option_l l1) s (LUpd (option_l l2) s a b) =
        LOut (option_l l1) s b"
-    using l_ortho_altDO1[OF Horth]
-    by(auto simp add: option_l_def option_l_S_def)
+    using l_orthoDO1[OF Horth]
+    by(cases l1; cases l2; auto simp add: option_l_def option_l_S_def)
 next
   show "\<And>s a b.
        b \<in> option_l_S S2 s \<Longrightarrow>
        LOut (option_l l2) s (LUpd (option_l l1) s a b) =
        LOut (option_l l2) s b"
-    using l_ortho_altDO2[OF Horth]
-    by(auto simp add: option_l_def option_l_S_def)
+    using l_orthoDO2[OF Horth]
+    by(cases l1; cases l2; auto simp add: option_l_def option_l_S_def)
 next
   show "\<And>s a b.
        b \<in> option_l_S S1 s \<Longrightarrow>
        LUpd (option_l l2) s a b \<in> option_l_S S1 s"
-    using l_ortho_altDP1[OF Horth]
-    by(auto simp add: option_l_def option_l_S_def)
+    using l_orthoDP1[OF Horth]
+    by(cases l1; cases l2; auto simp add: option_l_def option_l_S_def)
 next
   show "\<And>s a b.
        b \<in> option_l_S S2 s \<Longrightarrow>
        LUpd (option_l l1) s a b \<in> option_l_S S2 s"
-    using l_ortho_altDP2[OF Horth]
-    by(auto simp add: option_l_def option_l_S_def)
+    using l_orthoDP2[OF Horth]
+    by(cases l1; cases l2; auto simp add: option_l_def option_l_S_def)
 qed
-(* TODO: ortho_alt for sum types. *)
+(* TODO: ortho for sum types. *)
 
 (* sum types. We define two liftings, inl and inr. For projection to always be well-defined,
  * note that we require the "other" component (e.g. the "right" component for inl)
  * to have a least element. *)
 definition inl_l ::
-  "('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow> 
+  "('x, 'a, 'b :: Pord) lifting \<Rightarrow> 
    ('x, 'a, ('b + 'c :: Pordb)) lifting" where
 "inl_l t =
-  \<lparr> LUpd = (\<lambda> s a b . 
-            (case b of
-              Inl b' \<Rightarrow> Inl (LUpd t s a b')
-              | _ \<Rightarrow> Inl (LNew t s a)))
-  , LOut = (\<lambda> s b . (case b of Inl b' \<Rightarrow> LOut t s b'
-                      | _ \<Rightarrow> LOut t s (LBase t s)))
-  , LBase = (\<lambda> s . Inr \<bottom>)\<rparr>"
+  (case t of
+    (upd_fn, out_fn, base_fn) \<Rightarrow>
+      LMake (\<lambda> s a b . 
+                (case b of
+                  Inl b' \<Rightarrow> Inl (upd_fn s a b')
+                  | _ \<Rightarrow> Inl (upd_fn s a (base_fn s))))
+             (\<lambda> s b . (case b of Inl b' \<Rightarrow> LOut t s b'
+                          | _ \<Rightarrow> out_fn s (base_fn s)))
+             (\<lambda> s . Inr \<bottom>))"
 
 definition inl_l_S ::
   "('x, 'b) valid_set \<Rightarrow> ('x, ('b + 'c :: Pordb)) valid_set" where
@@ -416,21 +317,21 @@ proof(rule lifting_valid_weakI)
   fix b :: "('b + 'c)"
   show "LOut (inl_l t) s (LUpd (inl_l t) s a b) = a"
     using lifting_valid_weakDO[OF H]
-    by(auto simp add: inl_l_def sum_pleq LNew_def split:sum.splits)
+    by(cases t; auto simp add: inl_l_def sum_pleq LNew_def split:sum.splits)
 next
   fix s :: 'x
   fix b :: "'b + 'c"
   assume Hb : "b \<in> inl_l_S S s"
   show "b <[ LUpd (inl_l t) s (LOut (inl_l t) s b) b"
     using lifting_valid_weakDI[OF H] Hb
-    by(auto simp add: inl_l_def inl_l_S_def sum_pleq LNew_def split:sum.splits)
+    by(cases t; auto simp add: inl_l_def inl_l_S_def sum_pleq LNew_def split:sum.splits)
 next
   fix s :: 'x
   fix a
   fix b :: "'b + 'c"
   show "LUpd (inl_l t) s a b \<in> inl_l_S S s"
     using lifting_valid_weakDP[OF H]
-    by(auto simp add: inl_l_def inl_l_S_def LNew_def split:sum.splits)
+    by(cases t; auto simp add: inl_l_def inl_l_S_def LNew_def split:sum.splits)
 qed
 
 lemma inl_l_valid :
@@ -442,7 +343,7 @@ proof(rule lifting_validI)
   fix b :: "('b + 'c)"
   show "LOut (inl_l t) s (LUpd (inl_l t) s a b) = a"
     using lifting_validDO[OF H]
-    by(auto simp add: inl_l_def sum_pleq LNew_def split:sum.splits)
+    by(cases t; auto simp add: inl_l_def sum_pleq LNew_def split:sum.splits)
 next
   fix s :: 'x
   fix a
@@ -450,28 +351,30 @@ next
   assume Hb : "b \<in> inl_l_S S s"
   show "b <[ LUpd (inl_l t) s a b"
     using lifting_validDI[OF H] Hb
-    by(auto simp add: inl_l_def inl_l_S_def sum_pleq LNew_def split:sum.splits)
+    by(cases t; auto simp add: inl_l_def inl_l_S_def sum_pleq LNew_def split:sum.splits)
 next
   fix s :: 'x
   fix a
   fix b :: "'b + 'c"
   show "LUpd (inl_l t) s a b \<in> inl_l_S S s"
     using lifting_validDP[OF H]
-    by(auto simp add: inl_l_def inl_l_S_def LNew_def split:sum.splits)
+    by(cases t; auto simp add: inl_l_def inl_l_S_def LNew_def split:sum.splits)
 qed
 
 (* The other sum lifting: inr *)
 definition inr_l ::
-  "('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow> 
+  "('x, 'a, 'b :: Pord) lifting \<Rightarrow> 
    ('x, 'a, ('c :: Pordb + 'b)) lifting" where
 "inr_l t =
-  \<lparr> LUpd = (\<lambda> s a b . 
-            (case b of
-              Inr b' \<Rightarrow> Inr (LUpd t s a b')
-              | _ \<Rightarrow> Inr (LNew t s a)))
-  , LOut = (\<lambda> s b . (case b of Inr b' \<Rightarrow> LOut t s b'
-                      | _ \<Rightarrow> LOut t s (LBase t s)))
-  , LBase = (\<lambda> s . Inl \<bottom>)\<rparr>"
+  (case t of
+    (upd_fn, out_fn, base_fn) \<Rightarrow>
+      LMake (\<lambda> s a b . 
+                (case b of
+                  Inr b' \<Rightarrow> Inr (upd_fn s a b')
+                  | _ \<Rightarrow> Inr (upd_fn s a (base_fn s))))
+            (\<lambda> s b . (case b of Inr b' \<Rightarrow> out_fn s b'
+                          | _ \<Rightarrow> out_fn s (base_fn s)))
+            (\<lambda> s . Inl \<bottom>))"
 
 definition inr_l_S ::
   "('x, 'b) valid_set \<Rightarrow> ('x, ('c :: Pordb + 'b)) valid_set" where
@@ -488,21 +391,21 @@ proof(rule lifting_valid_weakI)
   fix b :: "('c + 'b)"
   show "LOut (inr_l t) s (LUpd (inr_l t) s a b) = a"
     using lifting_valid_weakDO[OF H]
-    by(auto simp add: inr_l_def sum_pleq LNew_def split:sum.splits)
+    by(cases t; auto simp add: inr_l_def sum_pleq LNew_def split:sum.splits)
 next
   fix s :: 'x
   fix b :: "'c + 'b"
   assume Hb : "b \<in> inr_l_S S s"
   show "b <[ LUpd (inr_l t) s (LOut (inr_l t) s b) b"
     using lifting_valid_weakDI[OF H] Hb
-    by(auto simp add: inr_l_def inr_l_S_def sum_pleq LNew_def split:sum.splits)
+    by(cases t; auto simp add: inr_l_def inr_l_S_def sum_pleq LNew_def split:sum.splits)
 next
   fix s :: 'x
   fix a
   fix b :: "'c + 'b"
   show "LUpd (inr_l t) s a b \<in> inr_l_S S s"
     using lifting_valid_weakDP[OF H]
-    by(auto simp add: inr_l_def inr_l_S_def LNew_def split:sum.splits)
+    by(cases t; auto simp add: inr_l_def inr_l_S_def LNew_def split:sum.splits)
 qed
 
 
@@ -515,7 +418,7 @@ proof(rule lifting_validI)
   fix b :: "('c + 'b)"
   show "LOut (inr_l t) s (LUpd (inr_l t) s a b) = a"
     using lifting_validDO[OF H]
-    by(auto simp add: inr_l_def sum_pleq LNew_def split:sum.splits)
+    by(cases t; auto simp add: inr_l_def sum_pleq LNew_def split:sum.splits)
 next
   fix s :: 'x
   fix a
@@ -523,14 +426,14 @@ next
   assume Hb : "b \<in> inr_l_S S s"
   show "b <[ LUpd (inr_l t) s a b"
     using lifting_validDI[OF H] Hb
-    by(auto simp add: inr_l_def inr_l_S_def sum_pleq LNew_def split:sum.splits)
+    by(cases t; auto simp add: inr_l_def inr_l_S_def sum_pleq LNew_def split:sum.splits)
 next
   fix s :: 'x
   fix a
   fix b :: "'c + 'b"
   show "LUpd (inr_l t) s a b \<in> inr_l_S S s"
     using lifting_validDP[OF H]
-    by(auto simp add: inr_l_def inr_l_S_def LNew_def split:sum.splits)
+    by(cases t; auto simp add: inr_l_def inr_l_S_def LNew_def split:sum.splits)
 qed
 
 (* Priority lifting transformer *)
@@ -550,22 +453,16 @@ definition prio_l' ::
 definition prio_l ::
  "('x \<Rightarrow> nat) \<Rightarrow>
   ('x \<Rightarrow> nat \<Rightarrow> nat) \<Rightarrow>
-  ('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow>
+  ('x, 'a, 'b :: Pord) lifting\<Rightarrow>
   ('x, 'a, 'b md_prio) lifting" where
 "prio_l f0 f1 t =
-  \<lparr> LUpd = (\<lambda> s a b . (case b of
-                         mdp m b' \<Rightarrow> mdp (f1 s m) (LUpd t s a b')))
-  , LOut =
-      (\<lambda> s p . (case p of
-                 mdp m b \<Rightarrow> LOut t s b))
-  , LBase = (\<lambda> s . mdp (f0 s) (LBase t s)) \<rparr>"
-
-definition prio_lv :: "('x \<Rightarrow> nat) \<Rightarrow>
-                       ('x \<Rightarrow> nat \<Rightarrow> nat) \<Rightarrow>
-                       ('x, 'a, 'b :: Pord, 'z) liftingv_scheme \<Rightarrow>
-                       ('x, 'a, 'b md_prio) liftingv" where
-"prio_lv f0 f1 v = lifting.extend (prio_l f0 f1 v)
-              \<lparr> LOutS = (\<lambda> s . { p . \<exists> m b . p = mdp m b \<and> b \<in> LOutS v s})\<rparr>"
+  (case t of
+    (upd_fn, out_fn, base_fn) \<Rightarrow>
+      LMake (\<lambda> s a b . (case b of
+                             mdp m b' \<Rightarrow> mdp (f1 s m) (upd_fn s a b')))
+            (\<lambda> s p . (case p of
+                       mdp m b \<Rightarrow> out_fn s b))
+            (\<lambda> s . mdp (f0 s) (base_fn s)))"
 
 definition prio_l_S :: "('x, 'b) valid_set \<Rightarrow> ('x, 'b md_prio) valid_set" where
 "prio_l_S S s =
@@ -582,18 +479,18 @@ proof(rule lifting_valid_weakI)
   fix s a b
   show "LOut (prio_l f0 f1 t) s (LUpd (prio_l f0 f1 t) s a b) = a"
     using lifting_valid_weakDO[OF H]
-    by(auto simp add:prio_l_def prio_lv_def LNew_def split:md_prio.splits)
+    by(cases t; auto simp add:prio_l_def LNew_def split:md_prio.splits)
 next
   fix s b
   assume Hb : "b \<in> prio_l_S S s"
   show "b <[ LUpd (prio_l f0 f1 t) s (LOut (prio_l f0 f1 t) s b) b"
     using lifting_valid_weakDI[OF H] Hmono Hb
-    by(auto simp add:prio_l_def prio_lv_def prio_l_S_def LNew_def prio_pleq split:md_prio.splits)
+    by(cases t; auto simp add:prio_l_def prio_l_S_def LNew_def prio_pleq split:md_prio.splits)
 next
   fix s a b
   show "LUpd (prio_l f0 f1 t) s a b \<in> prio_l_S S s"
     using lifting_valid_weakDP[OF H]
-    by(auto simp add: prio_l_def prio_l_S_def LNew_def split:md_prio.splits)
+    by(cases t; auto simp add: prio_l_def prio_l_S_def LNew_def split:md_prio.splits)
 qed
 
 lemma prio_l_valid_weak_vsg :
@@ -611,18 +508,18 @@ proof(rule lifting_validI)
   fix s a b
   show "LOut (prio_l f0 f1 t) s (LUpd (prio_l f0 f1 t) s a b) = a"
     using lifting_validDO[OF H]
-    by(auto simp add:prio_l_def prio_lv_def LNew_def split:md_prio.splits)
+    by(cases t; auto simp add:prio_l_def LNew_def split:md_prio.splits)
 next
   fix s a b
   assume Hb : "b \<in> prio_l_S S s"
   show "b <[ LUpd (prio_l f0 f1 t) s a b"
     using lifting_validDI[OF H] Hmono Hb
-    by(auto simp add:prio_l_def prio_l_S_def LNew_def prio_pleq split:md_prio.splits)
+    by(cases t; auto simp add:prio_l_def prio_l_S_def LNew_def prio_pleq split:md_prio.splits)
 next
   fix s a b
   show "LUpd (prio_l f0 f1 t) s a b \<in> prio_l_S S s"
     using lifting_validDP[OF H]
-    by(auto simp add: prio_l_def prio_l_S_def LNew_def split:md_prio.splits)
+    by(cases t; auto simp add: prio_l_def prio_l_S_def LNew_def split:md_prio.splits)
 qed
 
 lemma prio_l_valid_vsg :
@@ -645,7 +542,7 @@ proof(rule lifting_validI)
   fix s a b
   show "LOut (prio_l f0 f1 t) s (LUpd (prio_l f0 f1 t) s a b) = a"
     using lifting_valid_weakDO[OF H]
-    by(auto simp add:prio_l_def prio_lv_def LNew_def split:md_prio.splits)
+    by(cases t; auto simp add:prio_l_def LNew_def split:md_prio.splits)
 next
   fix s a
   fix b :: "'b md_prio"
@@ -654,7 +551,7 @@ next
 
   show "b <[ LUpd (prio_l f0 f1 t) s a b"
     using lifting_valid_weakDI[OF H] Hmono[of p s] B
-    by(auto simp add:prio_l_def prio_lv_def LNew_def prio_pleq split:md_prio.splits)
+    by(cases t; auto simp add:prio_l_def LNew_def prio_pleq split:md_prio.splits)
 next
   fix s a b
   show "LUpd (prio_l f0 f1 t) s a b \<in> UNIV"
@@ -671,7 +568,7 @@ proof(rule lifting_validI)
   fix s a b
   show "LOut (prio_l f0 f1 t) s (LUpd (prio_l f0 f1 t) s a b) = a"
     using lifting_valid_weakDO[OF H]
-    by(auto simp add:prio_l_def prio_lv_def LNew_def split:md_prio.splits)
+    by(cases t; auto simp add:prio_l_def LNew_def split:md_prio.splits)
 next
   fix s a
   fix b :: "'b md_prio"
@@ -680,7 +577,7 @@ next
 
   show "b <[ LUpd (prio_l f0 f1 t) s a b"
     using Hmono[of p s] B
-    by(auto simp add:prio_l_def prio_lv_def LNew_def prio_pleq split:md_prio.splits)
+    by(cases t; auto simp add:prio_l_def LNew_def prio_pleq split:md_prio.splits)
 next
   fix s a 
   fix b :: "('b md_prio)"
@@ -696,7 +593,7 @@ next
     using Hs'[of s] by auto
 
   then show "LUpd (prio_l f0 f1 t) s a b \<in> S' s" using B
-    by(auto simp add: prio_l_def prio_l_S_def split: md_prio.splits)
+    by(cases t; auto simp add: prio_l_def prio_l_S_def split: md_prio.splits)
 qed
 
 
@@ -731,7 +628,7 @@ next
   fix s
   show "LBase (prio_l f0 f1 t) s = \<bottom>"
     using Hzero lifting_valid_weakbDB[OF H]
-    by(simp add: prio_l_def prio_bot)
+    by(cases t; simp add: prio_l_def prio_bot)
 qed
 
 lemma prio_l_valid_weakb_vsg :
@@ -755,7 +652,7 @@ next
   fix s
   show "LBase (prio_l f0 f1 t) s = \<bottom>"
     using Hzero lifting_validbDB[OF H]
-    by(simp add: prio_l_def prio_bot)
+    by(cases t; simp add: prio_l_def prio_bot)
 qed
 
 lemma prio_l_validb_vsg :
@@ -786,7 +683,7 @@ next
 
   show "LBase (prio_l f0 f1 t) s = \<bottom>"
     using Hzero lifting_valid_weakbDB[OF H]
-    by(simp add: prio_l_def prio_bot)  
+    by(cases t; simp add: prio_l_def prio_bot)  
 qed
 
 lemma prio_l_validb_stronger :
@@ -810,7 +707,7 @@ next
 
   show "LBase (prio_l f0 f1 t) s = \<bottom>"
     using lifting_valid_weakbDB[OF H] Hzero
-    by(auto simp add: prio_l_def prio_bot)
+    by(cases t; auto simp add: prio_l_def prio_bot)
 qed
 
 
@@ -861,6 +758,10 @@ definition prio_l_inc2 :: "('x, 'a, 'b :: Pord) lifting \<Rightarrow> ('x, 'a, '
 "prio_l_inc2 =
   prio_l (\<lambda> _ . 0) (\<lambda> _ x . 2 + x)"
 
+definition prio_l_inc3 :: "('x, 'a, 'b :: Pord) lifting \<Rightarrow> ('x, 'a, 'b md_prio) lifting" where
+"prio_l_inc3 =
+  prio_l (\<lambda> _ . 0) (\<lambda> _ x . 3  + x)"
+
 definition prio_l_incN :: "nat \<Rightarrow> ('x, 'a, 'b :: Pord) lifting \<Rightarrow> ('x, 'a, 'b md_prio) lifting" where
 "prio_l_incN n =
   prio_l (\<lambda> _ . 0) (\<lambda> _ x . n + x)"
@@ -883,12 +784,14 @@ definition fst_l' ::
   (\<lambda> x . t (fst x))"
 
 definition fst_l ::
-  "('x, 'a, 'b1 :: Pord, 'z) lifting_scheme \<Rightarrow>
+  "('x, 'a, 'b1 :: Pord) lifting \<Rightarrow>
    ('x, 'a, 'b1 * ('b2 :: Pordb)) lifting" where
 "fst_l t =
-  \<lparr> LUpd = (\<lambda> s a b . (case b of (b1, b2) \<Rightarrow> (LUpd t s a b1, b2)))
-  , LOut = (\<lambda> s x . (LOut t s (fst x)))
-  , LBase = (\<lambda> s . (LBase t s, \<bottom>)) \<rparr>"
+  (case t of
+    (upd_fn, out_fn, base_fn) \<Rightarrow>
+      LMake (\<lambda> s a b . (case b of (b1, b2) \<Rightarrow> (upd_fn s a b1, b2)))
+            (\<lambda> s x . (out_fn s (fst x)))
+            (\<lambda> s . (base_fn s, \<bottom>)))"
 
 definition fst_l_S :: "('x, 'b1 :: Pord) valid_set \<Rightarrow> ('x, ('b1 * 'b2 :: Pordb)) valid_set" where
 "fst_l_S S s =
@@ -932,7 +835,7 @@ lemma fst_l_valid_weak_vsg :
   assumes H : "lifting_valid_weak t S"
   shows "lifting_valid_weak ((fst_l t) :: ('x, 'a, ('b1 :: Pord) * ('b2 :: Pordb)) lifting) 
                             S'"
-  using assms fst_l_valid_weak by auto
+  using assms fst_l_valid_weak by (cases t; auto)
 
 lemma fst_l_valid :
   assumes H : "lifting_valid t S"
@@ -963,7 +866,7 @@ lemma fst_l_valid_vsg :
   assumes Hv : "S' = fst_l_S S"
   assumes H : "lifting_valid t S"
   shows "lifting_valid ((fst_l t) :: ('x, 'a, ('b1 :: Pord) * ('b2 :: Pordb)) lifting) S'"
-  using assms fst_l_valid by auto
+  using assms fst_l_valid by (cases t; auto)
 
 
 lemma fst_l_valid_weakb :
@@ -977,7 +880,7 @@ next
   fix s
   show "LBase (fst_l t) s = \<bottom>"
     using lifting_valid_weakbDB[OF H]
-    by(auto simp add: fst_l_def prod_bot)
+    by(cases t; auto simp add: fst_l_def prod_bot)
 qed
 
 lemma fst_l_valid_weakb_vsg :
@@ -985,7 +888,7 @@ lemma fst_l_valid_weakb_vsg :
   assumes H : "lifting_valid_weakb t S"
   shows "lifting_valid_weakb ((fst_l t) :: ('x, 'a, ('b1 :: Pordb) * ('b2 :: Pordb)) lifting)
                              S'"
-  using assms fst_l_valid_weakb by auto
+  using assms fst_l_valid_weakb by (cases t; auto)
 
 lemma fst_l_validb :
   assumes H : "lifting_validb t S"
@@ -998,14 +901,14 @@ next
   fix s
   show "LBase (fst_l t) s = \<bottom>"
     using lifting_validbDB[OF H]
-    by(auto simp add: fst_l_def prod_bot)
+    by(cases t; auto simp add: fst_l_def prod_bot)
 qed
 
 lemma fst_l_validb_vsg :
   assumes Hv : "S' = fst_l_S S"
   assumes H : "lifting_validb t S"
   shows "lifting_validb ((fst_l t) :: ('x, 'a, ('b1 :: Pordb) * ('b2 :: Pordb)) lifting) S'"
-  using assms fst_l_validb by auto  
+  using assms fst_l_validb by (cases t; auto)
 
 
 definition snd_l' ::
@@ -1015,12 +918,14 @@ definition snd_l' ::
   (\<lambda> x . t (snd x))"
 
 definition snd_l ::
-  "('x, 'a, 'b2 :: Pord, 'z) lifting_scheme \<Rightarrow>
+  "('x, 'a, 'b2 :: Pord) lifting \<Rightarrow>
    ('x, 'a, ('b1 :: Pordb) * 'b2) lifting" where
 "snd_l t =
-  \<lparr> LUpd = (\<lambda> s a b . (case b of (b1, b2) \<Rightarrow> (b1, LUpd t s a b2)))
-  , LOut = (\<lambda> s x . (LOut t s (snd x)))
-  , LBase = (\<lambda> s . (\<bottom>, LBase t s)) \<rparr>"
+  (case t of
+    (upd_fn, out_fn, base_fn) \<Rightarrow>
+      LMake (\<lambda> s a b . (case b of (b1, b2) \<Rightarrow> (b1, upd_fn s a b2)))
+            (\<lambda> s x . (out_fn s (snd x)))
+            (\<lambda> s . (\<bottom>, base_fn s)))"
 
 definition snd_l_S :: "('x, 'b2 :: Pord) valid_set \<Rightarrow> ('x, ('b1 :: Pord * 'b2)) valid_set" where
 "snd_l_S S s =
@@ -1057,7 +962,7 @@ lemma snd_l_valid_weak_vsg :
   assumes H : "lifting_valid_weak v S"
   shows "lifting_valid_weak ((snd_l v) :: ('x, 'a, ('b1 :: Pordb) * ('b2 :: Pord)) lifting)
                             S'"
-  using assms snd_l_valid_weak by auto
+  using assms snd_l_valid_weak by (cases v; auto)
 
 lemma snd_l_valid :
   assumes H : "lifting_valid v S"
@@ -1089,7 +994,7 @@ lemma snd_l_valid_vsg :
   assumes H : "lifting_valid v S"
   shows "lifting_valid ((snd_l v) :: ('x, 'a, ('b1 :: Pordb) * ('b2 :: Pord)) lifting)
                        S'"
-  using assms snd_l_valid by auto
+  using assms snd_l_valid by (cases v; auto)
 
 lemma snd_l_valid_weakb :
   assumes H : "lifting_valid_weakb v S"
@@ -1102,7 +1007,7 @@ next
   fix s
   show "LBase (snd_l v) s = \<bottom>"
     using lifting_valid_weakbDB[OF H]
-    by(auto simp add: snd_l_def prod_bot)
+    by(cases v; auto simp add: snd_l_def prod_bot)
 qed
 
 lemma snd_l_valid_weakb_vsg :
@@ -1110,7 +1015,7 @@ lemma snd_l_valid_weakb_vsg :
   assumes H : "lifting_valid_weakb v S"
   shows "lifting_valid_weakb ((snd_l v) :: ('x, 'a, ('b1 :: Pordb) * ('b2 :: Pordb)) lifting)
                              S'"
-  using assms snd_l_valid_weakb by auto
+  using assms snd_l_valid_weakb by (cases v; auto)
   
 
 lemma snd_l_validb :
@@ -1124,7 +1029,7 @@ next
   fix s
   show "LBase (snd_l v) s = \<bottom>"
     using lifting_validbDB[OF H]
-    by(auto simp add: snd_l_def prod_bot)
+    by(cases v; auto simp add: snd_l_def prod_bot)
 qed
 
 lemma snd_l_validb_vsg :
@@ -1132,7 +1037,7 @@ lemma snd_l_validb_vsg :
   assumes H : "lifting_validb v S"
   shows "lifting_validb ((snd_l v) :: ('x, 'a, ('b1 :: Pordb) * ('b2 :: Pordb)) lifting)
                         S'"
-  using assms snd_l_validb by auto
+  using assms snd_l_validb by (cases v; auto)
 
 (*
  * One important fact about products. Fst and snd are orthogonal regardless of what
@@ -1140,184 +1045,114 @@ lemma snd_l_validb_vsg :
  * separate reasoning about tuple elements.
  *)
 
-lemma fst_snd_ortho :
-  assumes H1 : "lifting_validb l1 S1"
-  assumes H2 : "lifting_validb l2 S2"
-  shows "l_ortho (fst_l (l1 :: ('x, 'a1, 'b1 :: Mergeableb, 'z1) lifting_scheme))
-                 (snd_l (l2 :: ('x, 'a2, 'b2 :: Mergeableb, 'z2) lifting_scheme))"
-proof(rule l_orthoI)
-  fix s a1 a2 b
-  show "LUpd (fst_l l1) s a1 (LUpd (snd_l l2) s a2 b) =
-        LUpd (snd_l l2) s a2 (LUpd (fst_l l1) s a1 b)"
-    by(simp add: fst_l_def snd_l_def split:prod.splits)
-next
-  fix s
-  show "LBase (fst_l l1) s = LBase (snd_l l2) s"
-    using lifting_validbDB[OF H1] lifting_validbDB[OF H2]
-    by(simp add: fst_l_def snd_l_def)
-qed
-
-lemma snd_fst_ortho :
-  assumes H1 : "lifting_validb l1 S1"
-  assumes H2 : "lifting_validb l2 S2"
-  shows 
-  "l_ortho (snd_l (l2 :: ('x, 'a1, 'b :: Mergeableb, 'z1) liftingv_scheme))
-           (fst_l (l1 :: ('x, 'a2, 'b :: Mergeableb, 'z2) liftingv_scheme))"
-  using l_ortho_comm[OF fst_snd_ortho[OF H1 H2]]
-  by auto
-
-(* TODO: do we really need Mergeableb constraint on b2? *)
-(* if l1 and l2 are ortho, so are "fst l1" and "fst l2" *)
-lemma fst_ortho :
-  assumes H1 : "lifting_validb l1 S1"
-  assumes H2 : "lifting_validb l2 S2"
-  assumes Horth : "l_ortho l1 l2"
-  shows "l_ortho (fst_l l1 :: ('x, 'a1, ('b1 :: Mergeableb) * 'b2 :: Mergeableb) lifting)
-                 (fst_l l2 :: ('x, 'a2, ('b1 :: Mergeableb) * 'b2 :: Mergeableb) lifting)"
-proof(rule l_orthoI)
-  fix s :: 'x
-  fix a1 :: 'a1
-  fix a2 :: 'a2
-  fix b :: "'b1 * 'b2"
-  show "LUpd (fst_l l1) s a1 (LUpd (fst_l l2) s a2 b) =
-        LUpd (fst_l l2) s a2 (LUpd (fst_l l1) s a1 b)"
-    using l_orthoDI[OF Horth]
-    by(auto simp add: fst_l_def split:prod.splits)
-next
-  fix s
-  show "LBase (fst_l l1) s = LBase (fst_l l2) s"
-    using l_orthoDB[OF Horth] by(auto simp add: fst_l_def)
-qed
-
-lemma snd_ortho :
-  assumes H1 : "lifting_validb l1 S1"
-  assumes H2 : "lifting_validb l2 S2"
-  assumes Horth : "l_ortho l1 l2"
-  shows "l_ortho (snd_l l1 :: ('x, 'a1, ('b1 :: Mergeableb) * 'b2 :: Mergeableb) lifting)
-                 (snd_l l2 :: ('x, 'a2, ('b1 :: Mergeableb) * 'b2 :: Mergeableb) lifting)"
-proof(rule l_orthoI)
-  fix s :: 'x
-  fix a1 :: 'a1
-  fix a2 :: 'a2
-  fix b :: "('b1 * 'b2)"
-  show "LUpd (snd_l l1) s a1 (LUpd (snd_l l2) s a2 b) =
-        LUpd (snd_l l2) s a2 (LUpd (snd_l l1) s a1 b)"
-    using l_orthoDI[OF Horth]
-    by(auto simp add: snd_l_def split:prod.splits)
-next
-  fix s
-  show "LBase (snd_l l1) s = LBase (snd_l l2) s"
-    using l_orthoDB[OF Horth] by(auto simp add: snd_l_def)
-qed
-
 (* TODO: could elide the validity arguments by constraining sets in conclusion to be
  * fst_l_S, snd_l_S.
  * this seems better but maybe revisit later
  *)
-lemma fst_snd_ortho_alt :
-  shows "l_ortho_alt (fst_l (l1 :: ('x, 'a1, 'b1 :: Mergeableb, 'z1) lifting_scheme)) (fst_l_S S1)
-                     (snd_l (l2 :: ('x, 'a2, 'b2 :: Mergeableb, 'z2) lifting_scheme)) (snd_l_S S2)"
-proof(rule l_ortho_altI)
+lemma fst_snd_ortho :
+  shows "l_ortho (fst_l (l1 :: ('x, 'a1, 'b1 :: Mergeableb) lifting)) (fst_l_S S1)
+                 (snd_l (l2 :: ('x, 'a2, 'b2 :: Mergeableb) lifting)) (snd_l_S S2)"
+proof(rule l_orthoI)
   show "\<And>s a b.
        b \<in> fst_l_S S1 s \<Longrightarrow>
        LOut (fst_l l1) s (LUpd (snd_l l2) s a b) =
        LOut (fst_l l1) s b"
-    by(auto simp add: fst_l_def snd_l_def)
+    by(cases l1; cases l2; auto simp add: fst_l_def snd_l_def)
 next
   show "\<And>s a b.
        b \<in> snd_l_S S2 s \<Longrightarrow>
        LOut (snd_l l2) s (LUpd (fst_l l1) s a b) =
        LOut (snd_l l2) s b"
-    by(auto simp add: fst_l_def snd_l_def)
+    by(cases l1; cases l2; auto simp add: fst_l_def snd_l_def)
 next
   show "\<And>s a b.
        b \<in> fst_l_S S1 s \<Longrightarrow>
        LUpd (snd_l l2) s a b \<in> fst_l_S S1 s"
-    by(auto simp add: fst_l_def snd_l_def fst_l_S_def)
+    by(cases l1; cases l2; auto simp add: fst_l_def snd_l_def fst_l_S_def)
 next
   show "\<And>s a b.
         b \<in> snd_l_S S2 s \<Longrightarrow>
         LUpd (fst_l l1) s a b \<in> snd_l_S S2 s"
-    by(auto simp add: fst_l_def snd_l_def snd_l_S_def)
+    by(cases l1; cases l2; auto simp add: fst_l_def snd_l_def snd_l_S_def)
 qed
 
-lemma snd_fst_ortho_alt :
-  shows "l_ortho_alt (snd_l (l1 :: ('x, 'a1, 'b1 :: Mergeableb, 'z1) lifting_scheme)) (snd_l_S S1)
-                     (fst_l (l2 :: ('x, 'a2, 'b2 :: Mergeableb, 'z2) lifting_scheme)) (fst_l_S S2)"
-  using l_ortho_alt_comm[OF fst_snd_ortho_alt]
-  by auto
+lemma snd_fst_ortho :
+  shows "l_ortho (snd_l (l1 :: ('x, 'a1, 'b1 :: Mergeableb) lifting)) (snd_l_S S1)
+                 (fst_l (l2 :: ('x, 'a2, 'b2 :: Mergeableb) lifting)) (fst_l_S S2)"
+  using l_ortho_comm[OF fst_snd_ortho]
+  by (cases l1; cases l2; auto)
 
 
 (* TODO: ortho_alt for fst and snd *)
-lemma fst_ortho_alt :
+lemma fst_ortho :
   assumes H1 : "lifting_validb l1 S1"
   assumes H2 : "lifting_validb l2 S2"
-  assumes Horth : "l_ortho_alt l1 S1 l2 S2"
-  shows "l_ortho_alt (fst_l l1 :: ('x, 'a1, ('b1 :: Mergeableb) * 'b2 :: Mergeableb) lifting)
-                     (fst_l_S S1)
-                     (fst_l l2 :: ('x, 'a2, ('b1 :: Mergeableb) * 'b2 :: Mergeableb) lifting)
-                     (fst_l_S S2)"
-proof(rule l_ortho_altI)
+  assumes Horth : "l_ortho l1 S1 l2 S2"
+  shows "l_ortho (fst_l l1 :: ('x, 'a1, ('b1 :: Mergeableb) * 'b2 :: Mergeableb) lifting)
+                 (fst_l_S S1)
+                 (fst_l l2 :: ('x, 'a2, ('b1 :: Mergeableb) * 'b2 :: Mergeableb) lifting)
+                 (fst_l_S S2)"
+proof(rule l_orthoI)
   show "\<And>s a b.
        b \<in> fst_l_S S1 s \<Longrightarrow>
        LOut (fst_l l1) s (LUpd (fst_l l2) s a b) =
        LOut (fst_l l1) s b"
-    using l_ortho_altDO1[OF Horth]
+    using l_orthoDO1[OF Horth]
     by(auto simp add: fst_l_def fst_l_S_def split:prod.splits)
 next
   show "\<And>s a b.
        b \<in> fst_l_S S2 s \<Longrightarrow>
        LOut (fst_l l2) s (LUpd (fst_l l1) s a b) =
        LOut (fst_l l2) s b"
-    using l_ortho_altDO2[OF Horth]
+    using l_orthoDO2[OF Horth]
     by(auto simp add: fst_l_def fst_l_S_def split:prod.splits)
 next
   show "\<And>s a b.
        b \<in> fst_l_S S1 s \<Longrightarrow>
        LUpd (fst_l l2) s a b \<in> fst_l_S S1 s"
-    using l_ortho_altDP1[OF Horth]
+    using l_orthoDP1[OF Horth]
     by(auto simp add: fst_l_def fst_l_S_def split:prod.splits)
 next
   show "\<And>s a b.
        b \<in> fst_l_S S2 s \<Longrightarrow>
        LUpd (fst_l l1) s a b \<in> fst_l_S S2 s"
-    using l_ortho_altDP2[OF Horth]
+    using l_orthoDP2[OF Horth]
     by(auto simp add: fst_l_def fst_l_S_def split:prod.splits)
 qed
 
-lemma snd_ortho_alt :
+lemma snd_ortho :
   assumes H1 : "lifting_validb l1 S1"
   assumes H2 : "lifting_validb l2 S2"
-  assumes Horth : "l_ortho_alt l1 S1 l2 S2"
-  shows "l_ortho_alt (snd_l l1 :: ('x, 'a1, ('b1 :: Mergeableb) * 'b2 :: Mergeableb) lifting)
-                     (snd_l_S S1)
-                     (snd_l l2 :: ('x, 'a2, ('b1 :: Mergeableb) * 'b2 :: Mergeableb) lifting)
-                     (snd_l_S S2)"
-proof(rule l_ortho_altI)
+  assumes Horth : "l_ortho l1 S1 l2 S2"
+  shows "l_ortho (snd_l l1 :: ('x, 'a1, ('b1 :: Mergeableb) * 'b2 :: Mergeableb) lifting)
+                 (snd_l_S S1)
+                 (snd_l l2 :: ('x, 'a2, ('b1 :: Mergeableb) * 'b2 :: Mergeableb) lifting)
+                 (snd_l_S S2)"
+proof(rule l_orthoI)
   show "\<And>s a b.
        b \<in> snd_l_S S1 s \<Longrightarrow>
        LOut (snd_l l1) s (LUpd (snd_l l2) s a b) =
        LOut (snd_l l1) s b"
-    using l_ortho_altDO1[OF Horth]
+    using l_orthoDO1[OF Horth]
     by(auto simp add: snd_l_def snd_l_S_def split:prod.splits)
 next
   show "\<And>s a b.
        b \<in> snd_l_S S2 s \<Longrightarrow>
        LOut (snd_l l2) s (LUpd (snd_l l1) s a b) =
        LOut (snd_l l2) s b"
-    using l_ortho_altDO2[OF Horth]
+    using l_orthoDO2[OF Horth]
     by(auto simp add: snd_l_def snd_l_S_def split:prod.splits)
 next
   show "\<And>s a b.
        b \<in> snd_l_S S1 s \<Longrightarrow>
        LUpd (snd_l l2) s a b \<in> snd_l_S S1 s"
-    using l_ortho_altDP1[OF Horth]
+    using l_orthoDP1[OF Horth]
     by(auto simp add: snd_l_def snd_l_S_def split:prod.splits)
 next
   show "\<And>s a b.
        b \<in> snd_l_S S2 s \<Longrightarrow>
        LUpd (snd_l l1) s a b \<in> snd_l_S S2 s"
-    using l_ortho_altDP2[OF Horth]
+    using l_orthoDP2[OF Horth]
     by(auto simp add: snd_l_def snd_l_S_def split:prod.splits)
 qed
 
@@ -1335,84 +1170,20 @@ qed
  *)
 
 definition merge_l ::
-  "('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme \<Rightarrow>
-   ('x, 'a2, 'b :: Mergeable, 'z2) lifting_scheme \<Rightarrow>
+  "('x, 'a1, 'b :: Mergeable) lifting \<Rightarrow>
+   ('x, 'a2, 'b :: Mergeable) lifting \<Rightarrow>
    ('x, 'a1 * 'a2, 'b) lifting" where
 "merge_l t1 t2 =
-  \<lparr> LUpd =
-    (\<lambda> s a b . 
-      (case a of (a1, a2) \<Rightarrow>
-        LUpd t2 s a2 (LUpd t1 s a1 b)))
-  , LOut =
-    (\<lambda> s b . (LOut t1 s b, LOut t2 s b))
-  , LBase =
-    (\<lambda> s . LBase t1 s) \<rparr>"
-
-(* TODO: do valid sets need to be equal? or is some kind of sub/superset possible? *)
-lemma merge_l_valid :
-  assumes H1 : "lifting_valid (l1 :: ('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme) S1"
-  assumes H2 : "lifting_valid (l2 :: ('x, 'a2, 'b :: Mergeable, 'z2) lifting_scheme) S2"
-  assumes Hort : "l_ortho l1 l2"
-  assumes Heq  : "S1 = S2"
-  shows "lifting_valid (merge_l l1 l2) S1"
-proof(rule lifting_validI)
-  fix s :: 'x
-  fix a :: "'a1 * 'a2"
-  fix b :: "'b"
-
-  obtain a1 a2 where A : "a = (a1, a2)" by (cases a; auto)
-
-  have C' : "LOut l1 s (LUpd l2 s a2 (LUpd l1 s a1 b)) = a1"
-    using lifting_validDO[OF H1] sym[OF l_orthoDI[OF Hort]]
-    by(auto)
-
-  then show "LOut (merge_l l1 l2) s (LUpd (merge_l l1 l2) s a b) = a"
-    using A lifting_validDO[OF H1] lifting_validDO[OF H2]
-    by(auto simp add: merge_l_def )
-next
-  fix s :: 'x
-  fix a :: "'a1 * 'a2"
-  fix b :: 'b
-
-  obtain a1 a2 where A : "a = (a1, a2)" by (cases a; auto)
-
-  assume Hb1 : "b \<in> S1 s"
-  hence Hb2 : "b \<in> S2 s" using Heq by auto
-
-  have "(LUpd l1 s a1 b) \<in> S1 s"
-    using lifting_validDP[OF H1] by auto
-
-  hence In2: "(LUpd l1 s a1 b) \<in> S2 s" unfolding Heq by auto
-
-  hence Leq2 : "LUpd l1 s a1 b <[ LUpd l2 s a2 (LUpd l1 s a1 b)"
-    using lifting_validDI[OF H2 In2] by auto
-
-  have Leq1 : "b <[ LUpd l1 s a1 b"
-    using lifting_validDI[OF H1 Hb1] by auto
-
-  show "b <[ LUpd (merge_l l1 l2) s a b" 
-    using A leq_trans[OF Leq1 Leq2] by (auto simp add: merge_l_def)
-next
-  fix s :: 'x
-  fix a :: "'a1 * 'a2"
-  fix b :: 'b
-
-  obtain a1 a2 where A : "a = (a1, a2)" by (cases a; auto)
-
-  have "(LUpd l1 s a1 b) \<in> S1 s"
-    using lifting_validDP[OF H1] by auto
-
-  hence "(LUpd l1 s a1 b) \<in> S2 s" unfolding Heq by auto
-
-  hence "LUpd l2 s a2 (LUpd l1 s a1 b) \<in> S2 s"
-    using lifting_validDP[OF H2] by auto
-
-  hence "LUpd l2 s a2 (LUpd l1 s a1 b) \<in> S1 s"
-    unfolding Heq by auto
-
-  thus "LUpd (merge_l l1 l2) s a b \<in> S1 s" using A
-    by(auto simp add: merge_l_def)
-qed
+  (case t1 of
+    (upd_fn1, out_fn1, base_fn1) \<Rightarrow>
+    (case t2 of
+      (upd_fn2, out_fn2, base_fn2) \<Rightarrow>
+        LMake
+          (\<lambda> s a b . 
+            (case a of (a1, a2) \<Rightarrow>
+              upd_fn2 s a2 (upd_fn1 s a1 b)))
+          (\<lambda> s b . (out_fn1 s b, out_fn2 s b))
+          (\<lambda> s . base_fn1 s)))"
 
 (* TODO: do valid sets need to be equal? or is some kind of sub/superset possible? *)
 (*
@@ -1438,10 +1209,10 @@ definition merge_l_bsup ::
  * another idea: use a more bsup-oriented notion of orthogonality.
  * the problem is that this may not work well with the lifting definition
 *)
-lemma merge_l_valid_gen :
-  assumes H1 : "lifting_valid (l1 :: ('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme) S1"
-  assumes H2 : "lifting_valid (l2 :: ('x, 'a2, 'b :: Mergeable, 'z2) lifting_scheme) S2"
-  assumes Hort : "l_ortho_alt l1 S1 l2 S2"
+lemma merge_l_valid :
+  assumes H1 : "lifting_valid (l1 :: ('x, 'a1, 'b :: Mergeable) lifting) S1"
+  assumes H2 : "lifting_valid (l2 :: ('x, 'a2, 'b :: Mergeable) lifting) S2"
+  assumes Hort : "l_ortho l1 S1 l2 S2"
   shows "lifting_valid (merge_l l1 l2) (\<lambda> s . S1 s \<inter> S2 s)"
 proof(rule lifting_validI)
   fix s :: 'x
@@ -1451,12 +1222,12 @@ proof(rule lifting_validI)
   obtain a1 a2 where A : "a = (a1, a2)" by (cases a; auto)
 
   have C' : "LOut l1 s (LUpd l2 s a2 (LUpd l1 s a1 b)) = a1"
-    using lifting_validDO[OF H1] l_ortho_altDO1[OF Hort] lifting_validDP[OF H1]
+    using lifting_validDO[OF H1] l_orthoDO1[OF Hort] lifting_validDP[OF H1]
     by(auto)
 
   then show "LOut (merge_l l1 l2) s (LUpd (merge_l l1 l2) s a b) = a"
     using A lifting_validDO[OF H1] lifting_validDO[OF H2]
-    by(auto simp add: merge_l_def )
+    by(cases l1; cases l2; auto simp add: merge_l_def )
 next
   fix s :: 'x
   fix a :: "'a1 * 'a2"
@@ -1467,7 +1238,7 @@ next
   assume Hb : "b \<in> S1 s \<inter> S2 s"
   hence Hb1 : "b \<in> S1 s" and Hb2 : "b \<in> S2 s"  by auto
 
-  hence In2: "(LUpd l1 s a1 b) \<in> S2 s" using l_ortho_altDP2[OF Hort Hb2] by auto
+  hence In2: "(LUpd l1 s a1 b) \<in> S2 s" using l_orthoDP2[OF Hort Hb2] by auto
 
   hence Leq2 : "LUpd l1 s a1 b <[ LUpd l2 s a2 (LUpd l1 s a1 b)"
     using lifting_validDI[OF H2 In2] by auto
@@ -1476,7 +1247,7 @@ next
     using lifting_validDI[OF H1 Hb1] by auto
 
   show "b <[ LUpd (merge_l l1 l2) s a b" 
-    using A leq_trans[OF Leq1 Leq2] by (auto simp add: merge_l_def)
+    using A leq_trans[OF Leq1 Leq2] by (cases l1; cases l2; auto simp add: merge_l_def)
 next
   fix s :: 'x
   fix a :: "'a1 * 'a2"
@@ -1488,28 +1259,19 @@ next
     using lifting_validDP[OF H1] by auto
 
   have Conc1 : "LUpd l2 s a2 (LUpd l1 s a1 b) \<in> S1 s"
-    using l_ortho_altDP1[OF Hort In1] by auto
+    using l_orthoDP1[OF Hort In1] by auto
 
   have Conc2 : "LUpd l2 s a2 (LUpd l1 s a1 b) \<in> S2 s"
     using lifting_validDP[OF H2] by auto
 
   show "LUpd (merge_l l1 l2) s a b \<in> S1 s \<inter> S2 s" using A Conc1 Conc2
-    by(auto simp add: merge_l_def)
+    by(cases l1; cases l2; auto simp add: merge_l_def)
 qed
 
-lemma merge_l_valid_vsg :
-  assumes H1 : "lifting_valid (l1 :: ('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme) S1"
-  assumes H2 : "lifting_valid (l2 :: ('x, 'a2, 'b :: Mergeable, 'z2) lifting_scheme) S2"
-  assumes Hort : "l_ortho l1 l2"
-  assumes Heq1 : "S1 = S3"
-  assumes Heq2 : "S2 = S3"
-  shows "lifting_valid (merge_l l1 l2) S3"
-  using assms merge_l_valid by auto
-
-lemma merge_l_valid_gen_vsg' :
-  assumes H1 : "lifting_valid (l1 :: ('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme) S1"
-  assumes H2 : "lifting_valid (l2 :: ('x, 'a2, 'b :: Mergeable, 'z2) lifting_scheme) S2"
-  assumes Hort : "l_ortho_alt l1 S1 l2 S2"
+lemma merge_l_valid_vsg' :
+  assumes H1 : "lifting_valid (l1 :: ('x, 'a1, 'b :: Mergeable) lifting) S1"
+  assumes H2 : "lifting_valid (l2 :: ('x, 'a2, 'b :: Mergeable) lifting) S2"
+  assumes Hort : "l_ortho l1 S1 l2 S2"
   assumes HS3 : "\<And> s . S3 s = S1 s \<inter> S2 s"
   shows "lifting_valid (merge_l l1 l2) S3"
 proof-
@@ -1519,49 +1281,30 @@ proof-
     by blast
 
   then show "lifting_valid (merge_l l1 l2) S3"
-    using merge_l_valid_gen[OF H1 H2 Hort]
+    using merge_l_valid[OF H1 H2 Hort]
     by auto
 qed
   
-
 lemma merge_l_validb :
-  assumes H1 : "lifting_validb (l1 :: ('x, 'a1, 'b :: Mergeableb, 'z1) lifting_scheme) S1"
-  assumes H2 : "lifting_validb (l2 :: ('x, 'a2, 'b :: Mergeableb, 'z2) lifting_scheme) S2"
-  assumes Hort : "l_ortho l1 l2"
-  assumes Heq  : "S1 = S2"
-  shows "lifting_validb (merge_l l1 l2) S1"
-proof(rule lifting_validbI')
-  show "lifting_valid (merge_l l1 l2) S1"
-    using merge_l_valid[OF lifting_validbDV[OF H1]
-                           lifting_validbDV[OF H2] Hort Heq]
-    by auto
-next
-  fix s
-  show "LBase (merge_l l1 l2) s = \<bottom>"
-    using lifting_validbDB[OF H1]
-    by(simp add: merge_l_def)
-qed
-
-lemma merge_l_validb_gen :
-  assumes H1 : "lifting_validb (l1 :: ('x, 'a1, 'b :: Mergeableb, 'z1) lifting_scheme) S1"
-  assumes H2 : "lifting_validb (l2 :: ('x, 'a2, 'b :: Mergeableb, 'z2) lifting_scheme) S2"
-  assumes Hort : "l_ortho_alt l1 S1 l2 S2"
+  assumes H1 : "lifting_validb (l1 :: ('x, 'a1, 'b :: Mergeableb) lifting) S1"
+  assumes H2 : "lifting_validb (l2 :: ('x, 'a2, 'b :: Mergeableb) lifting) S2"
+  assumes Hort : "l_ortho l1 S1 l2 S2"
   shows "lifting_validb (merge_l l1 l2) (\<lambda> s . S1 s \<inter> S2 s)"
 proof(rule lifting_validbI')
   show "lifting_valid (merge_l l1 l2) (\<lambda>s. S1 s \<inter> S2 s)"
-    using merge_l_valid_gen[OF lifting_validbDV[OF H1] lifting_validbDV[OF H2] Hort]
+    using merge_l_valid[OF lifting_validbDV[OF H1] lifting_validbDV[OF H2] Hort]
     by simp
 next
   fix s
   show "LBase (merge_l l1 l2) s = \<bottom>"
     using lifting_validbDB[OF H1]
-    by(auto simp add: merge_l_def)
+    by(cases l1; cases l2; auto simp add: merge_l_def)
 qed
 
 lemma merge_l_validb_gen_vsg' :
-  assumes H1 : "lifting_validb (l1 :: ('x, 'a1, 'b :: Mergeableb, 'z1) lifting_scheme) S1"
-  assumes H2 : "lifting_validb (l2 :: ('x, 'a2, 'b :: Mergeableb, 'z2) lifting_scheme) S2"
-  assumes Hort : "l_ortho_alt l1 S1 l2 S2"
+  assumes H1 : "lifting_validb (l1 :: ('x, 'a1, 'b :: Mergeableb) lifting) S1"
+  assumes H2 : "lifting_validb (l2 :: ('x, 'a2, 'b :: Mergeableb) lifting) S2"
+  assumes Hort : "l_ortho l1 S1 l2 S2"
   assumes HS3 : "\<And> s . S3 s = S1 s \<inter> S2 s"
   shows "lifting_validb (merge_l l1 l2) S3"
 proof-
@@ -1571,7 +1314,7 @@ proof-
     by blast
 
   then show "lifting_validb (merge_l l1 l2) S3"
-    using merge_l_validb_gen[OF H1 H2 Hort]
+    using merge_l_validb[OF H1 H2 Hort]
     by auto
 qed
 
@@ -1582,6 +1325,8 @@ qed
  * to get the key out of _just_ the syntax, without examining the state.
  * In practice this means that we cannot support notions like "dereferencing a pointer"
  * in a single step.
+ * We have replaced these (possibly more efficient, but probably not lawful)
+ * ones with ones that map over the entire oalist.
  *)
 
 (*
@@ -1628,19 +1373,21 @@ definition oalist_l ::
 
 definition oalist_l ::
    "('x \<Rightarrow> ('k :: linorder)) \<Rightarrow>
-    ('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow>
+    ('x, 'a, 'b :: Pord) lifting \<Rightarrow>
     ('x, 'a, ('k, 'b) oalist) lifting" where
 "oalist_l f t =
-  \<lparr> LUpd = (\<lambda> s a l .
-            (let k = f s in
-              (case get l k of
-                  None \<Rightarrow> (update k (LNew t s a) l)
-                  | Some v \<Rightarrow> (update k (LUpd t s a v) l))))
-  , LOut = (\<lambda> s l . (let k = f s in
-                      (case get l k of 
-                        Some a \<Rightarrow> LOut t s a
-                        | None \<Rightarrow> LOut t s (LBase t s))))
-  , LBase = (\<lambda> s . (empty)) \<rparr>"
+  (case t of
+    (upd_fn, out_fn, base_fn) \<Rightarrow>
+      LMake (\<lambda> s a l .
+              (let k = f s in
+                (case get l k of
+                    None \<Rightarrow> (update k (upd_fn s a (base_fn s)) l)
+                    | Some v \<Rightarrow> (update k (upd_fn s a v) l))))
+            (\<lambda> s l . let k = f s in
+                (case get l k of 
+                  Some a \<Rightarrow> out_fn s a
+                  | None \<Rightarrow> out_fn s (base_fn s))))
+            (\<lambda> s . (empty))"
 
 
 definition oalist_l_S :: 
@@ -1709,7 +1456,7 @@ next
   fix s a b
   show "LUpd (oalist_l f lv) s a b \<in> oalist_l_S f S s"
     using lifting_validDP[OF Hv]
-    by(auto simp add: oalist_l_def oalist_l_S_def Let_def LNew_def get_update split: option.splits)
+    by(cases lv; auto simp add: oalist_l_def oalist_l_S_def Let_def LNew_def get_update split: option.splits)
 qed
 
 
@@ -1760,22 +1507,26 @@ qed
 
 (* Utilities for interfacing with Gensyn.
  * prod_fan lets us retain the old "large" of type 'b, while also returning the new "large" value.
+ * we aren't using this so much now.
  *)
 definition prod_fan_l ::
   "('x \<Rightarrow> 'a \<Rightarrow> 'c :: Pord) \<Rightarrow>
-   ('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow>
+   ('x, 'a, 'b :: Pord) lifting \<Rightarrow>
    ('x, 'a, ('c * 'b)) lifting"
   where
 "prod_fan_l f t =
-  \<lparr> LUpd = (\<lambda> x a cb . (f x a, LUpd t x a (snd cb)))
-  , LOut = (\<lambda> x cb . LOut t x (snd cb))
-  , LBase = (\<lambda> x . (f x (LOut t x (LBase t x)), LBase t x)) \<rparr>"
+  (case t of
+    (upd_fn, out_fn, base_fn) \<Rightarrow>
+      LMake 
+        (\<lambda> x a cb . (f x a, upd_fn x a (snd cb)))
+        (\<lambda> x cb . out_fn x (snd cb))
+        (\<lambda> x . (f x (out_fn x (base_fn x)), base_fn x)))"
 
 (* TODO: seems weird that we would need a lifting_scheme argument here.
    we haven't anywhere else. *)
 definition prod_fan_S ::
   "('x \<Rightarrow> 'a \<Rightarrow> 'c :: Pord) \<Rightarrow>
-   ('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow>
+   ('x, 'a, 'b :: Pord) lifting \<Rightarrow>
    ('x, 'b :: Pord) valid_set \<Rightarrow>
    ('x, ('c * 'b)) valid_set"
   where
@@ -1796,7 +1547,7 @@ lemma prod_fan_l_valid :
  * This is mnemonically helpful in some cases when constructing complex liftings,
  * but is a bit of a misnomer since its input and output types don't match. *)
 definition l_reverse ::
-  "('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow>
+  "('x, 'a, 'b :: Pord) lifting \<Rightarrow>
    'x \<Rightarrow> 'b \<Rightarrow> 'a" where
 "l_reverse l =
   LOut l"
@@ -1806,24 +1557,27 @@ definition l_reverse ::
 (* TODO: finish these correctness proofs. *)
 definition roalist_l ::
    "('x \<Rightarrow> ('k :: linorder) option) \<Rightarrow>
-    ('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow>
+    ('x, 'a, 'b :: Pord) lifting \<Rightarrow>
     ('x, 'a, ('k, 'b, 'd :: Pord) roalist) lifting" where
 "roalist_l f t =
-  \<lparr> LUpd = (\<lambda> s a l .
+  (case t of
+    (upd_fn, out_fn, base_fn) \<Rightarrow>
+      LMake
+        (\<lambda> s a l .
             (case (f s) of
               Some k \<Rightarrow>
                 (case roalist_get_v l k of
-                  Some v \<Rightarrow> (roalist_update_v k (LUpd t s a v) l)
-                  | None \<Rightarrow> (roalist_update_v k (LNew t s a) l))
+                  Some v \<Rightarrow> (roalist_update_v k (upd_fn s a v) l)
+                  | None \<Rightarrow> (roalist_update_v k (upd_fn s a (base_fn s)) l))
               | None \<Rightarrow> l))
-  , LOut = (\<lambda> s l . (case (f s) of
-                      Some k \<Rightarrow> (case roalist_get_v l k of 
-                                  Some a \<Rightarrow> LOut t s a
-                                  | None \<Rightarrow> LOut t s (LBase t s))
-                      | None \<Rightarrow> LOut t s (LBase t s)))
-  , LBase = (\<lambda> s . (case (f s) of
-                        Some k \<Rightarrow> roalist_update_v k (LBase t s) roalist_empty
-                        | None \<Rightarrow> roalist_empty)) \<rparr>"
+        (\<lambda> s l . (case (f s) of
+                    Some k \<Rightarrow> (case roalist_get_v l k of 
+                                Some a \<Rightarrow> out_fn s a
+                                | None \<Rightarrow> out_fn s (base_fn s))
+                    | None \<Rightarrow> LOut t s (LBase t s)))
+        (\<lambda> s . (case (f s) of
+                    Some k \<Rightarrow> roalist_update_v k (base_fn s) roalist_empty
+                    | None \<Rightarrow> roalist_empty)))"
 
 definition roalist_l_S ::
    "('x \<Rightarrow> ('k :: linorder) option) \<Rightarrow>
@@ -1836,48 +1590,23 @@ definition roalist_l_S ::
  * This is used in Lambda.
  *)
 definition list_hd_l ::
-  "('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow> ('x, 'a, 'b list md_triv) lifting" where
+  "('x, 'a, 'b :: Pord) lifting \<Rightarrow> ('x, 'a, 'b list md_triv) lifting" where
 "list_hd_l t =
-  \<lparr> LUpd = (\<lambda> s a b . 
-            (case b of
-              mdt (b' # rest) \<Rightarrow> mdt ((LUpd t s a b')#rest)
-              | mdt [] \<Rightarrow> mdt [(LNew t s a)]))
-  , LOut = (\<lambda> s b . (case b of mdt (b' # rest) \<Rightarrow> LOut t s b'
-                      | mdt [] \<Rightarrow> LOut t s (LBase t s)))
-  , LBase = (\<lambda> s . mdt [])\<rparr>"
-
+  (case t of
+    (upd_fn, out_fn, base_fn) \<Rightarrow>
+      LMake
+        (\<lambda> s a b . 
+          (case b of
+            mdt (b' # rest) \<Rightarrow> mdt ((upd_fn s a b')#rest)
+            | mdt [] \<Rightarrow> mdt [(upd_fn s a (base_fn s))]))
+        (\<lambda> s b . (case b of mdt (b' # rest) \<Rightarrow> out_fn s b'
+                          | mdt [] \<Rightarrow> out_fn s (base_fn s)))
+        (\<lambda> s . mdt []))"
 
 definition list_hd_l_S ::
   "('x, 'b :: Pord) valid_set \<Rightarrow> ('x, 'b list md_triv) valid_set" where
 "list_hd_l_S S s =
   { l . \<exists> h t . h \<in> S s \<and> l = mdt (h#t)}"
-
-(* another approach to "list-head" lifting:
-   have a "scratch" area that is updated by Upd.
-   Then have Post actually push to the list.
-   "sc" here is short for "scratch"
-*)
-(*
-definition list_hd_sc_pl ::
-  "('x, 'a, 'b, 'z) plifting_scheme \<Rightarrow> ('x, 'a, ('b * 'b list)) plifting" where
-"list_hd_sc_pl t =
-  \<lparr> LUpd = (\<lambda> s a b .
-              (case b of (bh, bl) \<Rightarrow> (LUpd t s a bh, bl)))
-  , LOut = (\<lambda> s b . (case b of (bh, bl) \<Rightarrow> (LOut t s bh)))
-  , LBase = (\<lambda> s . (LBase t s, [])) \<rparr>"
-
-definition list_hd_sc_l ::
-  "('x, 'a, 'b, 'z) lifting_scheme \<Rightarrow> ('x, 'a, ('b * 'b list)) lifting" where
-"list_hd_sc_l t =
-  plifting.extend (list_hd_sc_pl t)
-    \<lparr> LPost = (\<lambda> s b . (case b of (bh, bl) \<Rightarrow> (LPost t s bh, LPost t s bh # bl))) \<rparr>"
-
-definition list_hd_sc_pv ::
-  "('x, 'a, 'b, 'z) pliftingv_scheme \<Rightarrow> ('x, 'a, ('b * 'b list)) pliftingv" where
-"list_hd_sc_pv v =
-  \<lparr> LOutS =
-    (\<lambda> s . { b . (\<exists> bh bl . bh \<in> LOutS v s \<and> (b = (bh, bl)))}) \<rparr>"
-*)
 
 
 (* Liftings for mapping over data structures
@@ -1885,18 +1614,20 @@ definition list_hd_sc_pv ::
  * list of wrapped values to a list of unwrapped values*)
 
 definition list_map_l ::
-  "('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow> ('x, 'a list, 'b list md_triv) lifting" where
+  "('x, 'a, 'b :: Pord) lifting \<Rightarrow> ('x, 'a list, 'b list md_triv) lifting" where
 "list_map_l t =
-  \<lparr> LUpd = (\<lambda> s a b .
+  (case t of
+    (upd_fn, out_fn, base_fn) \<Rightarrow>
+      LMake
+        (\<lambda> s a b .
             (case b of
               mdt b \<Rightarrow>
                 if length a = length b
-                then mdt (map2 (LUpd t s) a b)
-                else mdt (map (LNew t s) a)))
-  , LOut = (\<lambda> s b . 
-               (case b of mdt b \<Rightarrow> map (LOut t s) b))
-  , LBase = (\<lambda> s . mdt [])\<rparr>"
-
+                then mdt (map2 (upd_fn s) a b)
+                else mdt (map (\<lambda> x . upd_fn s x (base_fn s)) a)))
+        (\<lambda> s b . (case b of mdt b \<Rightarrow> map (out_fn s) b))
+        (\<lambda> s . mdt []))"
+(*mdt (map (\<lambda> x . upd_fn s x (base_fn s)))*)
 definition list_map_S ::
   "('x, 'b :: Pord) valid_set \<Rightarrow> ('x, 'b list md_triv) valid_set" where
 "list_map_S S s =
@@ -1904,12 +1635,23 @@ definition list_map_S ::
 (* TODO: correctness *)
 
 (* mappings for oalists are helpful e.g. for memory *)
+(* problem: this might not be lawful...
+   use alist_somes. then at least we have weak validity.
+ *)
+(* NB: this isn't lawful. For now I'm not going to worry about
+ * this and will just wrap it in a trivial ordering. *)
 definition oalist_map_l ::
-  "('x, 'a, 'b :: Pord, 'z) lifting_scheme \<Rightarrow> ('x, ('k::linorder, 'a) oalist, ('k, 'b) oalist) lifting" where
+  "('x, 'a, 'b :: Pord) lifting \<Rightarrow> 
+   ('x, ('k::linorder, 'a) oalist, ('k, 'b) oalist) lifting" where
 "oalist_map_l t =
-  \<lparr> LUpd = (\<lambda> s al bl . oalist_zip (\<lambda> _ a b . LUpd t s a b) (\<lambda> _ a . LNew t s a) (\<lambda> _ b . b) al bl)
-  , LOut = (\<lambda> s bl . oalist_map_val (LOut t s) bl)
-  , LBase = (\<lambda> s . empty)\<rparr>"
+  (case t of
+    (upd_fn, out_fn, base_fn) \<Rightarrow>
+      LMake
+        (\<lambda> s al bl . oalist_zip (\<lambda> _ a b . upd_fn s a b) 
+                                (\<lambda> _ a . upd_fn s a (base_fn s))
+                                (\<lambda> _ b . b) al bl)
+        (\<lambda> s bl . oalist_map_val (out_fn s) bl)
+        (\<lambda> s . empty))"
 
 definition oalist_map_S ::
   "('x, 'b :: Pord) valid_set \<Rightarrow>
@@ -1922,26 +1664,48 @@ definition oalist_map_S ::
  between map and zip. not a huge deal but i don't want to do it now.
 *)
 
+(*
+lemma oalist_map_l_valid_weakb :
+  assumes Hv : "lifting_valid_weak l S"
+  shows "lifting_valid_weakb (oalist_map_l l) (oalist_map_S S)"
+proof(rule lifting_valid_weakbI)
+  fix s a b
+  show "LOut (oalist_map_l l) s (LUpd (oalist_map_l l) s a b) = a"
+    using lifting_valid_weakDO[OF Hv]
+    apply(cases l; auto simp add: oalist_map_l_def oalist_get_eq
+oalist_map_val_get oalist_zip_get split: option.splits)
+*)
+(*
+lemma oalist_map_l_valid_weakb
+
+lemma oalist_map_l_valid
+
+lemma oalist_map_l_validb
+*)
 
 (* sum map-lifting *)
 definition sum_map_l ::
-  "('x, 'a1, 'b1 :: Pord, 'z1) lifting_scheme \<Rightarrow>
-   ('x, 'a2, 'b2 :: Pord, 'z2) lifting_scheme \<Rightarrow>
+  "('x, 'a1, 'b1 :: Pord) lifting \<Rightarrow>
+   ('x, 'a2, 'b2 :: Pord) lifting \<Rightarrow>
    ('x, 'a1 + 'a2, 'b1 + 'b2) lifting" where
 "sum_map_l t1 t2 =
-  \<lparr> LUpd = (\<lambda> s a b . 
-    (case b of
-      Inl bl \<Rightarrow> (case a of
-                  Inl al \<Rightarrow> Inl (LUpd t1 s al bl)
-                  | Inr ar \<Rightarrow> Inr (LNew t2 s ar))
-      | Inr br \<Rightarrow> (case a of
-                  Inl al \<Rightarrow> Inl (LNew t1 s al)
-                  | Inr ar \<Rightarrow> Inr (LUpd t2 s ar br))))
-  , LOut = (\<lambda> s a . (case a of
-                      Inl al \<Rightarrow> Inl (LOut t1 s al)
-                      | Inr ar \<Rightarrow> Inr (LOut t2 s ar)))
-  , LBase = (\<lambda> s . Inl (LBase t1 s))
-  \<rparr>"
+  (case t1 of
+    (upd_fn1, out_fn1, base_fn1) \<Rightarrow>
+      (case t2 of
+        (upd_fn2, out_fn2, base_fn2) \<Rightarrow>
+          LMake
+            (\<lambda> s a b . 
+              (case b of
+                Inl bl \<Rightarrow> (case a of
+                            Inl al \<Rightarrow> Inl (upd_fn1 s al bl)
+                            | Inr ar \<Rightarrow> Inr (upd_fn2 s ar (base_fn2 s)))
+                | Inr br \<Rightarrow> (case a of
+                            Inl al \<Rightarrow> Inl (upd_fn1 s al (base_fn1 s))
+                            | Inr ar \<Rightarrow> Inr (upd_fn2 s ar br))))
+            (\<lambda> s a . (case a of
+                        Inl al \<Rightarrow> Inl (out_fn1 s al)
+                        | Inr ar \<Rightarrow> Inr (out_fn2 s ar)))
+            (\<lambda> s . Inl (base_fn1 s))))"
 
 definition sum_map_l_S ::
   "('x, 'b1 :: Pord) valid_set \<Rightarrow>
@@ -1957,8 +1721,8 @@ definition sum_map_l_S ::
 (* unsure if this should have a 'x (syntax) parameter, but
    that seems like the most straightforward thing *)
 fun roalist_fuse' ::
-"('x, 'v1, 'v2 :: Pord, 'z1) lifting_scheme \<Rightarrow>
- ('x, 'd1, 'd2 :: Pord, 'z2) lifting_scheme \<Rightarrow>
+"('x, 'v1, 'v2 :: Pord) lifting \<Rightarrow>
+ ('x, 'd1, 'd2 :: Pord) lifting \<Rightarrow>
  'x \<Rightarrow>
  ('k :: linorder, 'v1, 'd1 option) roalist' \<Rightarrow> 
  ('k :: linorder, 'v2, 'd2 option) roalist' \<Rightarrow>
@@ -1980,8 +1744,8 @@ fun roalist_fuse' ::
 
 (* TODO: complete necessary proofs to show this works. *)
 lift_definition roalist_fuse :: 
-"('x, 'v1, 'v2 :: Pord, 'z1) lifting_scheme \<Rightarrow>
- ('x, 'd1, 'd2 :: Pord, 'z2) lifting_scheme \<Rightarrow>
+"('x, 'v1, 'v2 :: Pord) lifting \<Rightarrow>
+ ('x, 'd1, 'd2 :: Pord) lifting \<Rightarrow>
  'x \<Rightarrow>
  ('k :: linorder, 'v1, 'd1) roalist \<Rightarrow> 
  ('k :: linorder, 'v2, 'd2) roalist \<Rightarrow>
@@ -1989,17 +1753,17 @@ lift_definition roalist_fuse ::
 is roalist_fuse' sorry
 
 definition roalist_map_l ::
-  "('x, 'v1, 'v2 :: Pord, 'z1) lifting_scheme \<Rightarrow>
-   ('x, 'd1, 'd2 :: Pord, 'z2) lifting_scheme \<Rightarrow>
+  "('x, 'v1, 'v2 :: Pord) lifting \<Rightarrow>
+   ('x, 'd1, 'd2 :: Pord) lifting \<Rightarrow>
    ('x, ('k :: linorder, 'v1, 'd1) roalist, ('k :: linorder, 'v2, 'd2) roalist) lifting"
   where
 "roalist_map_l tv td =
-  \<lparr> LUpd = (\<lambda> s a b . roalist_fuse tv td s a b)
-  , LOut = (\<lambda> s b . roalist_map 
+  LMake (\<lambda> s a b . roalist_fuse tv td s a b)
+        (\<lambda> s b . roalist_map 
                       (\<lambda> _ v . LOut tv s v)
                       (\<lambda> _ d . LOut td s d)
                       b)
-  , LBase = (\<lambda> s . roalist_empty) \<rparr>"
+         (\<lambda> s . roalist_empty)"
     
 
 (* fill this in later; need an analogue of list_all for roalist. *)

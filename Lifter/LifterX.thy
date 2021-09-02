@@ -1,5 +1,5 @@
 theory LifterX
-imports Lifter Lifter_Instances
+imports Lifter
 begin
 
 (* An experiment in developing a variant of Lifter that
@@ -56,7 +56,7 @@ end
    - tighter law 3: if b is in Okay, then so is LUpd l s a b.
 *)
 definition lifting_validx_weak ::
-  "('x, 'a, 'b :: {Pord, Okay}, 'z) lifting_scheme \<Rightarrow> ('x, 'b) valid_set \<Rightarrow> bool" where
+  "('x, 'a, 'b :: {Pord, Okay}) lifting \<Rightarrow> ('x, 'b) valid_set \<Rightarrow> bool" where
 "lifting_validx_weak l S =
  ((lifting_valid_weak l S) \<and>
   (\<forall> s . ok_S \<subseteq> S s) \<and>

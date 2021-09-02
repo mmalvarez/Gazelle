@@ -1394,4 +1394,274 @@ proof(transfer)
     using str_ord_zip_get
     by blast
 qed
+
+lemma strict_order_cons' :
+  assumes H1 : "strict_order (hk#t)"
+  assumes H2 : "k' \<in> set t"
+  shows "hk < k'"
+proof-
+  obtain k'_idx where "t ! k'_idx = k'" "k'_idx < length t"
+    using H2
+    unfolding in_set_conv_nth 
+    by(blast)
+
+  then show ?thesis
+    using strict_order_unfold[OF H1, of "1 + k'_idx" 0]
+    by auto
+qed
+
+lemma str_ord_eq1 :
+  assumes "l1 = l2"
+  shows
+    "map_of l1 k = map_of l2 k"
+  using assms
+  by auto
+
+lemma str_ord_eq2 :
+  assumes H1 : "strict_order (map fst l1)"
+  assumes H2 : "strict_order (map fst l2)"
+  assumes H : "\<And> k . map_of l1 k = map_of l2 k"
+  shows "l1 = l2" using assms
+proof(induction l1 arbitrary: l2)
+  case Nil
+  show ?case
+  proof(cases l2)
+    case Nil' : Nil
+    then show ?thesis using Nil by auto
+  next
+    case Cons' : (Cons l2h l2t)
+
+    obtain l2hk l2hv where L2h : "l2h = (l2hk, l2hv)"
+      by(cases l2h; auto)
+
+    have False using Nil(3)[of l2hk] L2h Cons'
+      by(auto)
+
+    then show ?thesis by auto
+  qed
+next
+  case (Cons l1h l1t)
+
+  obtain l1hk l1hv where L1h : "l1h = (l1hk, l1hv)"
+    by(cases l1h; auto)
+
+  show ?case
+  proof(cases l2)
+    case Nil' : Nil
+    then show ?thesis using Cons.prems(3)[of "l1hk"] L1h
+      by auto
+  next
+    case Cons' : (Cons l2h l2t)
+
+    obtain l2hk l2hv where L2h : "l2h = (l2hk, l2hv)"
+      by(cases l2h; auto)
+
+    consider (1) "l1hk < l2hk" |
+             (2) "l2hk < l1hk" |
+             (3) "l1hk = l2hk"
+      using linorder_class.less_linear
+      by auto
+
+    then show ?thesis
+    proof cases
+      case 1
+
+      have L1hv : "map_of (l1h # l1t) l1hk = Some l1hv"
+        using L1h
+        by auto
+
+      hence L2v : "map_of l2t l1hk = Some l1hv"
+        using Cons.prems(3)[of l1hk] 1 L2h Cons' by auto
+
+      hence L2v' : "l1hk \<in> set (map fst l2t)"
+        using imageI[OF map_of_SomeD[OF L2v], of fst]
+        by auto
+
+      then have False using strict_order_cons'[of l2hk "map fst l2t" "l1hk"] 1
+        Cons.prems(2) Cons' L2h
+        by auto
+
+      then show ?thesis
+        by auto
+    next
+      case 2
+
+      have L2hv : "map_of l2 l2hk = Some l2hv"
+        using L2h Cons'
+        by auto
+
+      hence L1v : "map_of (l1h # l1t) l2hk = Some l2hv"
+        using Cons.prems(3)[of l2hk]
+        by auto
+
+      hence L1v' : "map_of l1t l2hk = Some l2hv"
+        using 2 L1h
+        by(auto split: if_split_asm)
+
+      hence L1v'' : "l2hk \<in> set (map fst (l1t))"
+        using imageI[OF map_of_SomeD[OF L1v'], of fst]
+        by auto
+
+      then have False using strict_order_cons'[of l1hk "map fst (l1t)" "l2hk"] 2
+        Cons.prems(1) Cons' L1h
+        by auto
+
+      then show ?thesis
+        by auto
+    next
+      case 3
+
+      have Ord1' : "strict_order (map fst l1t)"
+        using strict_order_tl Cons.prems(1) L1h
+        by auto
+
+      have Ord2' : "strict_order (map fst l2t)"
+        using strict_order_tl Cons.prems(2) L2h Cons'
+        by auto
+
+      have Ind_Arg : " (\<And>k. map_of l1t k = map_of l2t k)"
+      proof-
+        fix k
+
+        show "map_of l1t k = map_of l2t k"
+        proof(cases "k = l1hk")
+          case True
+
+          have C1 : "map_of l1t k = None"
+          proof(cases "map_of l1t k")
+            case None
+            then show ?thesis by simp
+          next
+            case (Some bad)
+
+            have Bad1 :  "(k, bad) \<in> set l1t"
+              using map_of_SomeD[OF Some] by simp
+
+            hence Bad2 : "k \<in> set (map fst l1t)"
+              using imageI[OF Bad1, of fst]
+              by simp
+
+            then have False 
+              using strict_order_cons'[of l1hk "map fst l1t", of k] Cons.prems(1) L1h True
+              by auto
+
+            thus ?thesis by auto
+          qed
+
+          have C2 : "map_of l2t k = None"
+          proof(cases "map_of l2t k")
+            case None
+            then show ?thesis by simp
+          next
+            case (Some bad)
+
+            have Bad1 :  "(k, bad) \<in> set l2t"
+              using map_of_SomeD[OF Some] by simp
+
+            hence Bad2 : "k \<in> set (map fst l2t)"
+              using imageI[OF Bad1, of fst]
+              by simp
+
+            then have False 
+              using strict_order_cons'[of l2hk "map fst l2t", of k] Cons.prems(2) True 3 L2h Cons'
+              by auto
+
+            thus ?thesis by auto
+          qed
+
+          show "map_of l1t k = map_of l2t k"
+            using C1 C2
+            by auto
+        next
+          case False
+
+          then show "map_of l1t k = map_of l2t k"
+            using Cons.prems(3)[of k] 3 L2h L1h Cons'
+            by(simp)
+        qed
+      qed
+
+      have Vs : "l1hv = l2hv"
+        using Cons.prems(3)[of l1hk] 3 L1h L2h Cons'
+        by auto
+
+      show ?thesis 
+        using Cons.IH[OF Ord1' Ord2' Ind_Arg] Cons.prems 3 L1h L2h Cons' Vs
+        by auto
+    qed
+  qed
+qed
+
+lemma oalist_eq2 :
+  assumes H : "\<And> k . get l1 k = get l2 k"
+  shows "l1 = l2" using assms
+proof(transfer)
+  show "\<And>l1 l2.
+       strict_order (map fst l1) \<Longrightarrow>
+       strict_order (map fst l2) \<Longrightarrow>
+       (\<And>k. map_of l1 k = map_of l2 k) \<Longrightarrow> l1 = l2"
+    using str_ord_eq2
+    by blast
+qed
+
+lemma oalist_get_eq :
+  shows "(l1 = l2) = (\<forall> k . get l1 k = get l2 k)"
+  using oalist_eq2
+  by blast
+
+lemma alist_map_val_get :
+  shows
+  "map_of (alist_map_val f l) k =
+      (case map_of l k of
+        None \<Rightarrow> None
+        | Some v \<Rightarrow> Some (f v))"
+proof(induction l arbitrary: f k)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons lh lt)
+  then show ?case 
+    by(auto)
+qed
+
+lemma oalist_map_val_get :
+  shows "get (oalist_map_val f l) k =
+    (case get l k of
+      None \<Rightarrow> None
+      | Some v \<Rightarrow> Some (f v))"
+proof(transfer)
+  fix f l k
+  show "strict_order (map fst l) \<Longrightarrow>
+        map_of (alist_map_val f l) k =
+        (case map_of l k of None \<Rightarrow> None | Some v \<Rightarrow> Some (f v))"
+    using alist_map_val_get[of f l k]
+    by auto
+qed
+
+fun alist_somes :: "('k :: linorder * 'v option) list \<Rightarrow> ('k * 'v) list"
+  where
+"alist_somes [] = []"
+| "alist_somes ((hk, None)#t) = alist_somes t"
+| "alist_somes ((hk, Some hv)#t) = (hk, hv) # alist_somes t"
+
+(* TODO: implement alist_fuse... *)
+
+lift_definition oalist_eq :: "('k :: linorder, 'v) oalist \<Rightarrow> ('k, 'v) oalist \<Rightarrow> bool"
+is "\<lambda> x y . x = y"
+  .
+
+instantiation oalist :: (linorder, _) equal
+begin
+definition eq_oalist :
+"(HOL.equal l1 l2) = (oalist_eq l1 l2)"
+instance proof
+  fix x y :: "('a, 'b) oalist"
+  show "equal_class.equal x y = (x = y)"
+    unfolding eq_oalist
+    by(transfer; auto)
+qed
+end
+
+
+
 end
