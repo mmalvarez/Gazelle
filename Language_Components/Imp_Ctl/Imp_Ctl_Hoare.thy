@@ -556,7 +556,8 @@ lemma HxWhileC' :
   assumes Hdom : "(f \<downharpoonleft> (set fs) SwhileC')"
   assumes Hsyn : "lfts SwhileC' = SwhileC"
   assumes PX_valid : "\<And> st.  PX st \<Longrightarrow> get_cond st \<noteq> None"
-  assumes Htrue : "\<And> nb2 . \<exists> nb1' . |#gs#| {#- PX, (nb1' + nb2) -#} [body] {#- PX, nb2 -#}"
+(*  assumes Htrue : "\<And> nb2 . \<exists> nb1' . |#gs#| {#- PX, (nb1' + nb2) -#} [body] {#- PX, nb2 -#}" *)
+  assumes Htrue : "\<And> nb2 . \<exists> nb1' . |#gs#| {#- (\<lambda> st. PX st \<and> get_cond st = Some True), (nb1' + nb2) -#} [body] {#- PX, nb2 -#}" 
   assumes NLs : "nl1 \<le> nl2"
   shows "|#gs#| {#- PX, nl1  -#} [G SwhileC' [body]] {#- (\<lambda> st . PX st \<and> get_cond st = Some False), nl2 -#}"
 proof
@@ -668,13 +669,24 @@ proof
             hence G1' :  "|#gs#| {#PX, (Suc nl2' - 1)#} ([G SwhileC' [body]] @ c')"
               using Suc.IH[OF Helper] by auto
 
-            obtain nb where NB : "|#gs#| {#-PX, (nb + nl2')-#} [body] {#-PX, nl2'-#}"
+            obtain nb where NB : "|#gs#| {#-(\<lambda> st . PX st \<and>
+                      get_cond st =
+                      Some
+                       True), (nb + nl2')-#} [body] {#-PX, nl2'-#}"
               using Htrue[of nl2'] by auto
 
-            have Ggood : "|#gs#| {#PX, (nb + nl2')#} ([body] @ [G SwhileC' [body]] @ c')" 
+            have Ggood : "|#gs#| {#(\<lambda> st . PX st \<and>
+                   get_cond st =
+                   Some
+                    True), (nb + nl2')#} ([body] @ [G SwhileC' [body]] @ c')" 
               using HTiE[OF NB G1] by auto
 
-            have Almost :  "safe_for gs m' (nb + nl2')" using guardediD[OF Ggood M'] M'_cont
+            have M'' : "PX (payload m') \<and> get_cond (payload m') = Some True"
+              using M' True Some' Sm'
+              by auto
+
+            have Almost :  "safe_for gs m' (nb + nl2')" using guardediD[OF Ggood] M'
+              using guardediD[OF Ggood M''] M'_cont
               by auto
 
             have Step : "sem_step_p gs m m'" using Inl
@@ -739,12 +751,12 @@ lemma HxWhileC :
   assumes Hdom : "(f \<downharpoonleft> (set fs) SwhileC')"
   assumes Hsyn : "lfts SwhileC' = SwhileC"
   assumes PX_valid : "\<And> st.  PX st \<Longrightarrow> get_cond st \<noteq> None"
-  assumes Htrue : "|gs| {~ PX~} [body] {~ PX~}"
+  assumes Htrue : "|gs| {~ (\<lambda> st . (PX st \<and> get_cond st = Some True))~} [body] {~ PX~}"
   shows "|gs| {~PX~} [G SwhileC' [body]] {~ (\<lambda> st . PX st \<and> get_cond st = Some False)~}"
 proof(rule HT'I)
   fix npost
 
-  have Htrue' : "(\<And>nb2. \<exists>nb1'. |#gs#| {#-PX, (nb1' + nb2)-#} [body] {#-PX, nb2-#})"
+  have Htrue' : "(\<And>nb2. \<exists>nb1'. |#gs#| {#-(\<lambda> st . PX st \<and> get_cond st = Some True), (nb1' + nb2)-#} [body] {#-PX, nb2-#})"
     using HT'D[OF Htrue] by auto
 
   have Conc' : "|#gs#| {#-PX, (0 + npost)-#} [G SwhileC' [body]] {#-(\<lambda>st. PX st \<and> get_cond st = Some False), npost-#}"

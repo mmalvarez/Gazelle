@@ -82,7 +82,7 @@ term "(SP NX (SP (SPRC calc_prio (SO NC)) (SP (SPRK (SO NA)) (SP (SPRK (SO NB)) 
 
 definition calc_lift :: "(Calc.calc, Calc.calc_state, ('s, 'x :: {Bogus, Pord, Mergeableb, Okay}) Mem_Simple.state) lifting" where
 "calc_lift = 
-  no_control_lifting (schem_lift (SP NA (SP NB NC)) (SP NX (SP (SPRC calc_prio (SO NC)) (SP (SPRK (SO NA)) (SP (SPRK (SO NB)) NX )))))"
+  no_control_lifting (schem_lift (SP NA (SP NB NC)) (SP NX (SP (SPRC calc_prio (SO NC)) (SP (SPRI (SO NA)) (SP (SPRI (SO NB)) NX )))))"
 
 
 (* TODO: priority stuff is all wrong here. *)
@@ -101,7 +101,7 @@ definition mem_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) s
 *)
 definition cond_lift where
 "cond_lift = 
-  no_control_lifting (schem_lift (SP NA NB) (SP (SPRC cond_prio (SO NA)) (SP (SPRK (SO NB)) NX)))"
+  no_control_lifting (schem_lift (SP NA NB) (SP (SPRC cond_prio (SO NA)) (SP (SPRI (SO NB)) NX)))"
 
 definition cond_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
 "cond_sem_l =

@@ -733,12 +733,11 @@ qed
 term "sem_final"
 
 definition calc_lift' where
-"calc_lift' =  (schem_lift (SP NA (SP NB NC)) (SP NX (SP (SPRC calc_prio (SO NC)) (SP (SPRK (SO NA)) (SP (SPRK (SO NB)) NX)))))"
+"calc_lift' =  (schem_lift (SP NA (SP NB NC)) (SP NX (SP (SPRC calc_prio (SO NC)) (SP (SPRI (SO NA)) (SP (SPRI (SO NB)) NX)))))"
 
 term "mem_sem_lifting_gen"
-
-(* ok, we need to restructure mem_simple. except, we can't because we need overlap with control. *)
-
+term "calc_lift'"
+(* TODO: the requirement that new and old reg_a and reg_b be equal is a hack. *)
 lemma Calc_Final : 
   fixes gs :: "syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb})) state"
   assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
@@ -754,6 +753,35 @@ lemma Calc_Final :
             apply(rule_tac HCalc_calc)
   sorry
 
+(* Allows us to use the fact that the original inputs are unchanged.
+ * if this ends up helping we need to find a way to generalize/standardize this. *)
+lemma Add_Final : 
+  fixes gs :: "syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb})) state"
+  assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
+  assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut calc_lift' Cadd st)"
+
+  shows "|gs| {~ (\<lambda> st . P st) ~} [G (Sc (Cadd)) z] 
+    {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> (case small_new of
+                                  (c1, c2, x) \<Rightarrow> x = c1 + c2 \<and> (\<exists>old. P' (c1, c2, old) \<and> LOut calc_lift' Cadd old_big = (c1, c2, old))) \<and>
+                                 st = LUpd calc_lift' Cadd small_new old_big) ~}"
+(*  apply(rule HTS_imp_HT'') *)
+(*            apply(rule_tac HCalc_Cadd) *)
+  sorry
+
+lemma Sub_Final : 
+  fixes gs :: "syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb})) state"
+  assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
+  assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut calc_lift' Csub st)"
+
+  shows "|gs| {~ (\<lambda> st . P st) ~} [G (Sc (Csub)) z] 
+    {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> (case small_new of
+                                  (c1, c2, x) \<Rightarrow> x = c1 - c2 \<and> (\<exists>old. P' (c1, c2, old) \<and> LOut calc_lift' Cadd old_big = (c1, c2, old))) \<and>
+                                 st = LUpd calc_lift' Csub small_new old_big) ~}"
+(*  apply(rule HTS_imp_HT'') *)
+(*            apply(rule_tac HCalc_Cadd) *)
+  sorry
+
+
 definition cond_lift' where
 "cond_lift' = (schem_lift (SP NA NB) (SP (SPRC cond_prio (SO NA)) (SP (SPRK (SO NB)) NX)))"
 
@@ -765,11 +793,24 @@ lemma Cond_Final :
   shows "|gs| {~ (\<lambda> st . P st) ~} [G (Sb y) z] 
     {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> (case small_new of
                                   (x1', x2) \<Rightarrow>
-                                    (\<exists>x1'. P' (x1', x2)) \<and>
+                                    (\<exists>x1'. P' (x1', x2) ) \<and>
                                     (\<forall>x1'. cond_sem y (x1', x2) = small_new)) \<and>
                                  st = LUpd cond_lift' y small_new old_big) ~}"
   apply(rule HTS_imp_HT'')
             apply(rule_tac HCond_cond)
+  sorry
+
+(* As with arith. Need to see if we can standardize this. *)
+lemma Gtz_Final :
+  fixes gs :: "syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb})) state"
+  assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
+  assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut cond_lift' (Sgtz) st)"
+
+  shows "|gs| {~ (\<lambda> st . P st) ~} [G (Sb y) z] 
+    {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> (case small_new of
+                                  (x1', x2) \<Rightarrow> x1' = encode_bool (x2 > 0) \<and> (\<exists> old . P' (old, x2) \<and> LOut cond_lift' Sgtz (old_big) = (old, x2)))
+                                    \<and>
+                                 st = LUpd cond_lift' Sgtz small_new old_big) ~}"
   sorry
 
 
@@ -867,7 +908,7 @@ lemma Merge_Out :
 (* now need a sequencing stepping lemma. *)
 
 lemma prog1_spec :
-  assumes Hi1 : "0 \<le> i1"
+  assumes Hi1 : "0 < i1" (* TODO: this should be \<le>, but for (i think) a technical reason this makes things hard (existential quantifier related problems) *)
   assumes Hi2 : "0 \<le> i2"
 
 (* TODO: st_valid need to be replaced *)
@@ -1290,7 +1331,6 @@ split: md_triv.splits)
 invariant: acc = i1 * (arg2 - i2)
 *)
 
-(* TODO: this is not the right inv. *)
 
   have 10 : "|sem_final| 
     {~ ?P9 ~}
@@ -1299,7 +1339,11 @@ invariant: acc = i1 * (arg2 - i2)
                      (reg_flag, reg_c, reg_a, reg_b,  m, xz) \<Rightarrow>
                       (case m of
                         mdp p (Some (mdt m')) \<Rightarrow> 
-                          get m' (STR ''arg1'') = Some i1 \<and> get m' (STR ''arg2'') = Some i2 \<and> get m' (STR ''one'') = Some 1 \<and> get m' (STR ''acc'') = Some 0
+                          get m' (STR ''arg1'') = Some i1 \<and> get m' (STR ''arg2'') = Some i2 \<and> get m' (STR ''one'') = Some 1 \<and> get m' (STR ''acc'') = Some 0 \<and>
+                         (case reg_flag of
+                          mdp p (Some (mdt reg_flag')) \<Rightarrow>
+                            (reg_flag' = 0 \<and> i2 \<le> 0) \<or> (reg_flag' = 1 \<and> i2 > 0)
+                          | _ \<Rightarrow> False)
                          | _ \<Rightarrow> False))) ~}"
 (is "|sem_final|{~ ?P9 ~}
     [G (Sb Sgtz) []]
@@ -1325,8 +1369,29 @@ fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
 option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
  LNew_def
 split: md_triv.splits) 
-  apply(force simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+  apply(simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
 mem_sem_lifting_inner_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def
+split: md_triv.splits) 
+    apply(clarify)
+  apply(simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def cond_sem_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def
+split: md_triv.splits) 
+    apply(clarify)
+    apply(case_tac "(0 < i2)")
+  apply(simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def cond_sem_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def
+split: md_triv.splits) 
+  apply(simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def cond_sem_def
 fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
 option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
  LNew_def
@@ -1338,40 +1403,56 @@ split: md_triv.splits)
                      (reg_flag, reg_c, reg_a, reg_b,  m, xz) \<Rightarrow>
                       (case m of
                         mdp p (Some (mdt m')) \<Rightarrow> 
-                          (\<exists> idx . get m' (STR ''arg1'') = Some i1 \<and> 
+                          (\<exists> (idx :: int) . get m' (STR ''arg1'') = Some i1 \<and> 
                                        get m' (STR ''arg2'') = Some idx \<and>
                                        get m' (STR ''one'') = Some 1 \<and>
                                        get m' (STR ''acc'') = Some (i1 * (i2 - idx)) \<and>
-                                       i2 \<ge> idx \<and>idx \<ge> 0)
+                                       i2 \<ge> idx \<and>
+                                       (case reg_flag of mdp p (Some (mdt reg_flag')) \<Rightarrow>
+                                         ((reg_flag' = 1 \<and> idx > 0) \<or> (reg_flag' = 0 \<and> idx = 0))
+                                         | _ \<Rightarrow> False))
                         | _ \<Rightarrow> False)))"
     by simp
 
 
   have Inv_10 :
-    "\<And> st . ?P10 st \<Longrightarrow> 
+    "\<And> st . (?P10 st) \<Longrightarrow>
   Inv st"
     using Hi2 unfolding Inv_def
     by(auto split: md_triv.splits md_prio.splits option.splits)
 
 (* while loop body *)
-
   have Body1 : 
-"|sem_final| {~ Inv ~}
+"|sem_final| {~ (\<lambda> st . 
+                  Inv st \<and>
+                  (case st of (mdp p (Some (mdt reg_flag')), _) \<Rightarrow>
+                    reg_flag' = 1
+                   | _ \<Rightarrow> False)) ~}
   [G (Calc_Mem_Imp.syn.Sm (Sread STR ''arg1'' Reg_a)) []]
-  {~ (\<lambda> st . Inv st \<and> (case st of (reg_flag, reg_c, reg_a, reg_b,  m, xz) \<Rightarrow> 
+  {~ (\<lambda> st . st \<in> ok_S \<and> (case st of (reg_flag, reg_c, reg_a, reg_b,  m, xz) \<Rightarrow> 
       (case reg_a of
-        mdp p (Some (mdt reg_a')) \<Rightarrow> reg_a' = i1
+        mdp p (Some (mdt reg_a')) \<Rightarrow> reg_a' = i1 \<and>
+        (case m of
+          mdp p (Some (mdt m')) \<Rightarrow> 
+            (\<exists> idx . 
+get m' (STR ''arg1'') = Some i1 \<and>
+get m' (STR ''arg2'') = Some idx \<and>
+                     get m' (STR ''one'') = Some 1 \<and>
+                     get m' (STR ''acc'') = Some (i1 * (i2 - idx)) \<and>
+                     i2 \<ge> idx \<and>idx > 0)
+          | _ \<Rightarrow> False)
         | _ \<Rightarrow> False))) ~}"
-(is "|sem_final| {~ _ ~} _ {~ ?B1 ~}")
+(is "|sem_final| {~ ?B0 ~} _ {~ ?B1 ~}")
     apply(rule HT'Conseq)
-    apply(rule_tac P = Inv
+    apply(rule_tac P = ?B0
 and P' = "\<lambda> st . (case st of
                      (reg_flag, reg_c, reg_a, reg_b,  m) \<Rightarrow>
-                     (\<exists> idx . get m (STR ''arg1'') = Some i1 \<and> 
+                     reg_flag = 1 \<and>
+                     (\<exists> (idx :: int) . get m (STR ''arg1'') = Some i1 \<and> 
                                  get m (STR ''arg2'') = Some idx \<and>
                                  get m (STR ''one'') = Some 1 \<and>
                                  get m (STR ''acc'') = Some (i1 * (i2 - idx)) \<and>
-                                 i2 \<ge> idx \<and>idx \<ge> 0))"
+                                 i2 \<ge> idx \<and>idx > 0))"
 in Mem_Read_Final)
 
   apply(force simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
@@ -1395,7 +1476,7 @@ option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
 split: md_triv.splits) 
 
   apply(fastforce simp add: Inv_def cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
-mem_sem_lifting_inner_def
+mem_sem_lifting_inner_def cond_sem_def
 fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
 option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
  LNew_def
@@ -1422,9 +1503,12 @@ split: md_triv.splits option.splits)
         mdp p (Some (mdt reg_b')) \<Rightarrow> 
         (case m of
           mdp p (Some (mdt m')) \<Rightarrow>
-            (\<exists> idx . i2 \<ge>  idx \<and> idx \<ge> 0 \<and> reg_b' = i1 * (i2 - idx) \<and> get m' (STR ''acc'') = Some (i1 * (i2 - idx)))
-          | _ \<Rightarrow> False)
-        | _ \<Rightarrow> False))) ~}"
+            (\<exists> (idx :: int) . i2 \<ge>  idx \<and> idx > 0 \<and> reg_b' = i1 * (i2 - idx) \<and> 
+            get m' (STR ''arg1'') = Some i1 \<and>
+            get m' (STR ''arg2'') = Some idx \<and>
+            get m' (STR ''acc'') = Some (i1 * (i2 - idx)))
+                      | _ \<Rightarrow> False)
+                    | _ \<Rightarrow> False))) ~}"
 
 (is "|sem_final| {~ _ ~} _ {~ ?B2 ~}")
     apply(rule HT'Conseq)
@@ -1435,35 +1519,52 @@ and P' = "\<lambda> st . (case st of
                                  get m (STR ''arg2'') = Some idx \<and>
                                  get m (STR ''one'') = Some 1 \<and>
                                  get m (STR ''acc'') = Some (i1 * (i2 - idx)) \<and>
-                                 i2 \<ge> idx \<and>idx \<ge> 0))"
+                                 i2 \<ge> idx \<and>idx > 0))"
 in Mem_Read_Final)
 
-  apply(force simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
-mem_sem_lifting_inner_def Inv_def
+
+  apply(force  simp add: Inv_def cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def cond_sem_def
 fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
 option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
  LNew_def
 split: md_triv.splits) 
-  apply(force  simp add: Inv_def cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+
+    apply(clarify)
+
+  apply(simp add: Inv_def cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
 mem_sem_lifting_inner_def
 fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
 option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
  LNew_def
 split: md_triv.splits) 
- 
-  apply(force  simp add: Inv_def cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+      apply(clarify)
+  apply(simp add: Inv_def cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
 mem_sem_lifting_inner_def
 fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
 option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
  LNew_def
 split: md_triv.splits) 
-     apply(force
+     apply(clarify)
+  apply(simp add: Inv_def cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def
+split: md_triv.splits) 
+
+    apply(clarify)
+
+     apply(
  simp add: Inv_def cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
 mem_sem_lifting_inner_def
 fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
 option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
  LNew_def
 split: md_triv.splits option.splits) 
+
+    apply(clarify)
+    apply(blast)
 
     done
 
@@ -1483,6 +1584,7 @@ split: md_triv.splits option.splits)
         | _ \<Rightarrow> False))) ~}"
 (is "|sem_final| {~ _ ~} _ {~ ?B3 ~}")
 *)
+(*
 "|sem_final| {~ ?B2 ~}
   [G (Calc_Mem_Imp.syn.Sc Cadd) []]
   {~ (\<lambda> st . ?B2 st \<and>(case st of (reg_flag, reg_c, reg_a, reg_b,  m, xz) \<Rightarrow> 
@@ -1490,37 +1592,85 @@ split: md_triv.splits option.splits)
         (mdp _ (Some (mdt reg_a')), mdp _ (Some (mdt reg_b')), mdp _ (Some (mdt reg_c'))) \<Rightarrow> 
         (case m of
           mdp p (Some (mdt m')) \<Rightarrow>
-            (\<exists> idx . reg_c' = i1 * (i2 - idx) + i1 \<and>
+            (\<exists> (idx :: int) . reg_c' = i1 + i1 * (i2 - idx) \<and>
                      reg_a' = i1 \<and> reg_b' = i1 * (i2 - idx) \<and>  
                      get m' (STR ''acc'') = Some (i1 * (i2 - idx)) \<and>
                      get m' (STR ''arg2'') = Some idx \<and>
                      i2 \<ge> idx \<and> idx \<ge> 0)
           | _ \<Rightarrow> False)
         | _ \<Rightarrow> False))) ~}"
+*)
+(*
+"|sem_final| {~ ?B2 ~}
+  [G (Calc_Mem_Imp.syn.Sc Cadd) []]
+  {~ (\<lambda> st . ?B2 st \<and>(case st of (reg_flag, reg_c, reg_a, reg_b,  m, xz) \<Rightarrow> 
+      (case (reg_a, reg_b, reg_c) of
+        (mdp _ (Some (mdt reg_a')), mdp _ (Some (mdt reg_b')), mdp _ (Some (mdt reg_c'))) \<Rightarrow> 
+        reg_a' = i1 \<and>
+         (\<exists> (idx :: int) . i2 \<ge> idx \<and> idx > 0 \<and> reg_b' = i1 * (i2 - idx) \<and> reg_c' = i1 + i1 * (i2 - idx))
+        | _ \<Rightarrow> False))) ~}"
+*)
+(*maybe we need a different calc rule(unchanged stuff *)
+"|sem_final| {~ ?B2 ~}
+  [G (Calc_Mem_Imp.syn.Sc Cadd) []]
+  {~ (\<lambda> st . ?B2 st \<and>(case st of (reg_flag, reg_c, reg_a, reg_b,  m, xz) \<Rightarrow> 
+      (case (reg_a, reg_b, reg_c) of
+        (mdp _ (Some (mdt reg_a')), mdp _ (Some (mdt reg_b')), mdp _ (Some (mdt reg_c'))) \<Rightarrow> 
+        reg_c' = reg_a' + reg_b'
+                | _ \<Rightarrow> False))) ~}"
+
 (is "|sem_final| {~ _ ~} _ {~ ?B3 ~}")
 
     apply(rule HT'Conseq)
+(*
     apply(rule_tac P = ?B2
-and P' = "\<lambda> st . (case st of
-                     (reg_c, reg_a, reg_b) \<Rightarrow>
-                     (\<exists> idx . reg_a = i1 \<and>
-                              i2 \<ge> idx \<and> idx \<ge> 0 \<and> reg_b = i1 * (i2 - idx)))"
+and P' = "\<lambda> _ . True"
 in Calc_Final)
+*)
+    apply(rule_tac P = ?B2
+and P' = "\<lambda> st . case st of (reg_a, reg_b, reg_c) \<Rightarrow>
+          reg_a = i1 \<and>
+          (\<exists> (idx :: int) . i2 \<ge> idx \<and> idx > 0 \<and> reg_b = i1 * (i2 - idx))"
+in Add_Final)
+
+
   apply(force simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
 mem_sem_lifting_inner_def Inv_def
 fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
 option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
  LNew_def
 split: md_triv.splits) 
-  apply(simp add: Inv_def cond_lift'_def calc_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+
+    apply(insert Hi2)
+    apply(insert Hi1)
+    apply(simp add: Inv_def cond_lift'_def calc_lift'_def schem_lift_defs merge_l_def mem_lift1_def
 mem_sem_lifting_inner_def
 fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
 option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
  LNew_def 
-split: md_triv.splits) 
-
+split: md_triv.splits md_prio.splits)
+      apply(clarify)
+    apply(simp add: Inv_def cond_lift'_def calc_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def 
+split: md_triv.splits md_prio.splits)
       apply(clarify)
 
+    apply(simp add: Inv_def cond_lift'_def calc_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def 
+split: md_triv.splits md_prio.splits)
+    apply(clarify)
+
+
+    apply(simp)
+    apply(insert Hi2)
+    apply(insert Hi1)
+
   apply(simp add: Inv_def cond_lift'_def calc_lift'_def schem_lift_defs merge_l_def mem_lift1_def
 mem_sem_lifting_inner_def
 fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
@@ -1528,16 +1678,372 @@ option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
  LNew_def 
 split: md_triv.splits) 
 
-    apply(auto)
+    apply(clarify)
+    apply(simp (no_asm_simp))
 
- 
-  apply(force  simp add: Inv_def cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+  apply(simp add: Inv_def cond_lift'_def calc_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def split: md_triv.splits
+) 
+
+    done
+
+  have Body4 :
+"|sem_final| {~ ?B3 ~}
+  [G (Calc_Mem_Imp.syn.Sm (Swrite STR ''acc'' Reg_c)) []]
+  {~ (\<lambda> st .  st \<in> ok_S \<and> (case st of (reg_flag, reg_c, reg_a, reg_b,  m, xz) \<Rightarrow> 
+      (case (reg_a, reg_b, reg_c, m) of
+        (mdp _ (Some (mdt reg_a')), mdp _ (Some (mdt reg_b')), mdp _ (Some (mdt reg_c')), mdp _ (Some (mdt m'))) \<Rightarrow> 
+        \<exists> (idx :: int) . i2 \<ge>  idx \<and> idx > 0 \<and> reg_b' = i1 * (i2 - idx) \<and> reg_c' = i1 + i1 * (i2 - idx) \<and> reg_a' = i1 \<and>
+            get m' (STR ''arg1'') = Some i1 \<and>
+            get m' (STR ''arg2'') = Some idx \<and>
+            get m' (STR ''one'') = Some (1) \<and>
+            get m' (STR ''acc'') = Some ( i1 + i1 * (i2 - idx))
+        | _ \<Rightarrow> False))) ~}"
+
+(is "|sem_final| {~ _ ~} _ {~ ?B4 ~}")
+
+    apply(rule HT'Conseq)
+(*
+    apply(rule_tac P = ?B2
+and P' = "\<lambda> _ . True"
+in Calc_Final)
+*)
+    apply(rule_tac P = ?B3
+and P' = "\<lambda> st . case st of (reg_flag', reg_c', reg_a', reg_b', m') \<Rightarrow>
+            \<exists> (idx :: int) . i2 \<ge>  idx \<and> idx > 0 \<and> reg_b' = i1 * (i2 - idx) \<and> reg_c' = i1 + i1 * (i2 - idx) \<and> reg_a' = i1 \<and>
+            get m' (STR ''arg1'') = Some i1 \<and>
+            get m' (STR ''arg2'') = Some idx \<and>
+            get m' (STR ''acc'') = Some ( i1 * (i2 - idx)) \<and>
+ get m' (STR ''one'') = Some (1)"
+in Mem_Write_Final)
+
+
+  apply(force simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def Inv_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def
+split: md_triv.splits) 
+  apply(force simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def Inv_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def
+split: md_triv.splits) 
+  apply(force simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def Inv_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def
+split: md_triv.splits) 
+  apply(force simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def Inv_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def get_update_neq get_delete_neq get_update
+split: md_triv.splits) 
+    done
+
+  have Body5 : 
+    "|sem_final| {~ ?B4 ~}
+  [G (Calc_Mem_Imp.syn.Sm (Sread STR ''arg2'' Reg_a)) []]
+  {~ (\<lambda> st .  st \<in> ok_S \<and> (case st of (reg_flag, reg_c, reg_a, reg_b,  m, xz) \<Rightarrow> 
+      (case (reg_a, reg_b, reg_c, m) of
+        (mdp _ (Some (mdt reg_a')), mdp _ (Some (mdt reg_b')), mdp _ (Some (mdt reg_c')), mdp _ (Some (mdt m'))) \<Rightarrow> 
+        \<exists> (idx :: int) . i2 \<ge>  idx \<and> idx > 0 \<and> reg_b' = i1 * (i2 - idx) \<and> reg_c' = i1 + i1 * (i2 - idx) \<and> reg_a' = idx \<and>
+            get m' (STR ''arg1'') = Some i1 \<and>
+            get m' (STR ''arg2'') = Some idx \<and>
+            get m' (STR ''one'') = Some (1) \<and>
+            get m' (STR ''acc'') = Some ( i1 + i1 * (i2 - idx))
+        | _ \<Rightarrow> False))) ~}"
+
+(is "|sem_final| {~ _ ~} _ {~ ?B5 ~}")
+    apply(rule HT'Conseq)
+    apply(rule_tac P = ?B4
+and P' = "\<lambda> st . case st of (reg_flag', reg_c', reg_a', reg_b', m') \<Rightarrow>
+            \<exists> (idx :: int) . i2 \<ge>  idx \<and> idx > 0 \<and> reg_b' = i1 * (i2 - idx) \<and> reg_c' = i1 + i1 * (i2 - idx) \<and> reg_a' = i1 \<and>
+            get m' (STR ''arg1'') = Some i1 \<and>
+            get m' (STR ''arg2'') = Some idx \<and>
+            get m' (STR ''acc'') = Some (i1 + i1 * (i2 - idx)) \<and>
+ get m' (STR ''one'') = Some (1)"
+in Mem_Read_Final)
+
+  apply(force simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def Inv_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def get_update_neq get_delete_neq get_update
+split: md_triv.splits) 
+  apply(force simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def Inv_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def get_update_neq get_delete_neq get_update
+split: md_triv.splits) 
+  apply(force simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def Inv_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def get_update_neq get_delete_neq get_update
+split: md_triv.splits) 
+    apply(simp add: Inv_def cond_lift'_def calc_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def 
+split: md_triv.splits md_prio.splits)
+      apply(clarify)
+    apply(simp add: Inv_def cond_lift'_def calc_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def 
+split: md_triv.splits md_prio.splits)
+      apply(clarify)
+
+    apply(simp add: Inv_def cond_lift'_def calc_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def 
+split: md_triv.splits md_prio.splits)
+    apply(auto split: option.splits)
+    done
+
+
+  have Body6 :
+    "|sem_final| {~ ?B5 ~}
+  [G (Calc_Mem_Imp.syn.Sm (Sread STR ''one'' Reg_b)) []]
+  {~ (\<lambda> st .  st \<in> ok_S \<and> (case st of (reg_flag, reg_c, reg_a, reg_b,  m, xz) \<Rightarrow> 
+      (case (reg_a, reg_b, reg_c, m) of
+        (mdp _ (Some (mdt reg_a')), mdp _ (Some (mdt reg_b')), mdp _ (Some (mdt reg_c')), mdp _ (Some (mdt m'))) \<Rightarrow> 
+        \<exists> (idx :: int) . i2 \<ge>  idx \<and> idx > 0 \<and> reg_b' = 1 \<and> reg_c' = i1 + i1 * (i2 - idx) \<and> reg_a' = idx \<and>
+            get m' (STR ''arg1'') = Some i1 \<and>
+            get m' (STR ''arg2'') = Some idx \<and>
+            get m' (STR ''one'') = Some (1) \<and>
+            get m' (STR ''acc'') = Some ( i1 + i1 * (i2 - idx))
+        | _ \<Rightarrow> False))) ~}"
+(is "|sem_final| {~ _ ~} _ {~ ?B6 ~}")
+    apply(rule HT'Conseq)
+    apply(rule_tac P = ?B5
+and P' = "\<lambda> st . case st of (reg_flag', reg_c', reg_a', reg_b', m') \<Rightarrow>
+            \<exists> (idx :: int) . i2 \<ge>  idx \<and> idx > 0 \<and> reg_b' = i1 * (i2 - idx) \<and> reg_c' = i1 + i1 * (i2 - idx) \<and> reg_a' = idx \<and>
+            get m' (STR ''arg1'') = Some i1 \<and>
+            get m' (STR ''arg2'') = Some idx \<and>
+            get m' (STR ''acc'') = Some (i1 + i1 * (i2 - idx)) \<and>
+ get m' (STR ''one'') = Some (1)"
+in Mem_Read_Final)
+
+  apply(force simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def Inv_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def get_update_neq get_delete_neq get_update
+split: md_triv.splits) 
+  apply(force simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def Inv_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def get_update_neq get_delete_neq get_update
+split: md_triv.splits) 
+  apply(force simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def Inv_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def get_update_neq get_delete_neq get_update
+split: md_triv.splits) 
+    apply(simp add: Inv_def cond_lift'_def calc_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def 
+split: md_triv.splits md_prio.splits)
+      apply(clarify)
+    apply(simp add: Inv_def cond_lift'_def calc_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def 
+split: md_triv.splits md_prio.splits)
+      apply(clarify)
+
+    apply(simp add: Inv_def cond_lift'_def calc_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def 
+split: md_triv.splits md_prio.splits)
+    apply(auto split: option.splits)
+    done
+
+  have Body7 :
+    "|sem_final| {~ ?B6 ~}
+  [G (Calc_Mem_Imp.syn.Sc Csub) []]
+  {~ (\<lambda> st .  st \<in> ok_S \<and> (case st of (reg_flag, reg_c, reg_a, reg_b,  m, xz) \<Rightarrow> 
+      (case (reg_a, reg_b, reg_c, m) of
+        (mdp _ (Some (mdt reg_a')), mdp _ (Some (mdt reg_b')), mdp _ (Some (mdt reg_c')), mdp _ (Some (mdt m'))) \<Rightarrow> 
+        \<exists> (idx :: int) . i2 \<ge>  idx \<and> idx > 0 \<and> reg_b' = 1 \<and> reg_c' = idx - 1 \<and> reg_a' = idx \<and>
+            get m' (STR ''arg1'') = Some i1 \<and>
+            get m' (STR ''arg2'') = Some idx \<and>
+            get m' (STR ''one'') = Some (1) \<and>
+            get m' (STR ''acc'') = Some ( i1 + i1 * (i2 - idx))
+        | _ \<Rightarrow> False))) ~}"
+(is "|sem_final| {~ _ ~} _ {~ ?B7 ~}")
+    apply(rule HT'Conseq)
+    apply(rule_tac P = ?B6
+and P' = "\<lambda> st . case st of (reg_a', reg_b', reg_c') \<Rightarrow>
+            \<exists> (idx :: int) . i2 \<ge>  idx \<and> idx > 0 \<and> reg_b' = 1  \<and> reg_a' = idx"
+in Sub_Final)
+  apply(force simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def Inv_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def
+split: md_triv.splits) 
+
+
+    apply(insert Hi2)
+    apply(insert Hi1)
+    apply(simp add: Inv_def cond_lift'_def calc_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def 
+split: md_triv.splits md_prio.splits)
+      apply(clarify)
+    apply(simp add: Inv_def cond_lift'_def calc_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def 
+split: md_triv.splits md_prio.splits)
+     apply(clarify)
+
+    apply(simp)
+    apply(clarify)
+    apply(simp add: Inv_def cond_lift'_def calc_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def 
+split: md_triv.splits)
+    apply(clarify)
+
+
+  apply(simp add: Inv_def cond_lift'_def calc_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def 
+split: md_triv.splits) 
+
+    done
+
+    have Body8 :
+    "|sem_final| {~ ?B7 ~}
+  [G (Calc_Mem_Imp.syn.Sm (Swrite STR ''arg2'' Reg_c)) []]
+  {~ (\<lambda> st .  st \<in> ok_S \<and> (case st of (reg_flag, reg_c, reg_a, reg_b,  m, xz) \<Rightarrow> 
+      (case (reg_a, reg_b, reg_c, m) of
+        (mdp _ (Some (mdt reg_a')), mdp _ (Some (mdt reg_b')), mdp _ (Some (mdt reg_c')), mdp _ (Some (mdt m'))) \<Rightarrow> 
+        \<exists> (idx :: int) . i2 \<ge>  idx \<and> idx > 0 \<and> reg_b' = 1 \<and> reg_c' = idx - 1 \<and> reg_a' = idx \<and>
+            get m' (STR ''arg1'') = Some i1 \<and>
+            get m' (STR ''arg2'') = Some (idx - 1) \<and>
+            get m' (STR ''one'') = Some (1) \<and>
+            get m' (STR ''acc'') = Some ( i1 + i1 * (i2 - idx))
+        | _ \<Rightarrow> False))) ~}"
+(is "|sem_final| {~ _ ~} _ {~ ?B8 ~}")
+      apply(rule_tac HT'Conseq)
+    apply(rule_tac P = ?B7
+and P' = "\<lambda> st . case st of (reg_flag', reg_c', reg_a', reg_b', m') \<Rightarrow>
+            \<exists> (idx :: int) . i2 \<ge>  idx \<and> idx > 0 \<and> reg_b' = 1 \<and> reg_c' = idx - 1 \<and> reg_a' = idx \<and>
+            get m' (STR ''arg1'') = Some i1 \<and>
+            get m' (STR ''arg2'') = Some idx \<and>
+            get m' (STR ''acc'') = Some ( i1 + i1 * (i2 - idx))\<and>
+ get m' (STR ''one'') = Some (1)"
+in Mem_Write_Final)
+
+
+  apply(force simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def Inv_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def
+split: md_triv.splits) 
+  apply(force simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def Inv_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def
+split: md_triv.splits) 
+  apply(force simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def Inv_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def
+split: md_triv.splits) 
+  apply(force simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def Inv_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def get_update_neq get_delete_neq get_update
+split: md_triv.splits) 
+      done
+
+    have Body9 :
+    "|sem_final| {~ ?B8 ~}
+  [G (Calc_Mem_Imp.syn.Sm (Sread STR ''arg2'' Reg_c)) []]
+  {~ (\<lambda> st .  st \<in> ok_S \<and> (case st of (reg_flag, reg_c, reg_a, reg_b,  m, xz) \<Rightarrow> 
+      (case (reg_a, reg_b, reg_c, m) of
+        (mdp _ (Some (mdt reg_a')), mdp _ (Some (mdt reg_b')), mdp _ (Some (mdt reg_c')), mdp _ (Some (mdt m'))) \<Rightarrow> 
+        \<exists> (idx :: int) . i2 \<ge>  idx \<and> idx > 0 \<and> reg_b' = 1 \<and> reg_c' = idx - 1 \<and> reg_a' = idx \<and>
+            get m' (STR ''arg1'') = Some i1 \<and>
+            get m' (STR ''arg2'') = Some (idx - 1) \<and>
+            get m' (STR ''one'') = Some (1) \<and>
+            get m' (STR ''acc'') = Some ( i1 + i1 * (i2 - idx))
+        | _ \<Rightarrow> False))) ~}"
+(is "|sem_final| {~ _ ~} _ {~ ?B9 ~}")
+      apply(rule_tac HT'Conseq)
+    apply(rule_tac P = ?B8
+and P' = "\<lambda> st . case st of (reg_flag', reg_c', reg_a', reg_b', m') \<Rightarrow>
+            \<exists> (idx :: int) . i2 \<ge>  idx \<and> idx > 0 \<and> reg_b' = 1 \<and> reg_c' = idx - 1 \<and> reg_a' = idx \<and>
+            get m' (STR ''arg1'') = Some i1 \<and>
+            get m' (STR ''arg2'') = Some (idx - 1) \<and>
+            get m' (STR ''acc'') = Some ( i1 + i1 * (i2 - idx))\<and>
+ get m' (STR ''one'') = Some (1)"
+in Mem_Read_Final)
+
+
+  apply(force simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def Inv_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def
+split: md_triv.splits) 
+  apply(force simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def Inv_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def
+split: md_triv.splits) 
+  apply(force simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def Inv_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def
+split: md_triv.splits) 
+  apply(simp add: Inv_def cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
 mem_sem_lifting_inner_def
 fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
 option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
  LNew_def
 split: md_triv.splits) 
-     apply(force
+
+    apply(clarify)
+
+     apply(
  simp add: Inv_def cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
 mem_sem_lifting_inner_def
 fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
@@ -1545,11 +2051,83 @@ option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
  LNew_def
 split: md_triv.splits option.splits) 
 
+      done
+
+    have Helper : "\<And> (x :: int) (y :: int) . x + x * y = x * (1 + y)"
+    proof-
+      fix x y :: int
+      show "x + x * y = x * (1 + y)"
+        using int_distrib
+        by auto
+    qed
+
+    have Body10:
+    "|sem_final| {~ ?B9 ~}
+  [G (Sb Sgtz) []]
+  {~ Inv ~}"
+(is "|sem_final| {~ _ ~} _ {~ _ ~}")
+      apply(rule_tac HT'Conseq)
+        apply(rule_tac
+P = ?B9 and
+P' = "\<lambda> st . (case st of (b, x) \<Rightarrow> \<exists> idx . i2 \<ge>  idx \<and> idx > 0 \<and> x = (idx - 1))" in
+ Gtz_Final)
+  apply(force simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def Inv_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def
+split: md_triv.splits) 
+  apply(force simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def Inv_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def
+split: md_triv.splits) 
+  apply(force simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def Inv_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def
+split: md_triv.splits) 
+  apply(simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def Inv_def cond_sem_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def
+split: md_triv.splits) 
+      apply(clarify)
+  apply(simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
+mem_sem_lifting_inner_def Inv_def
+fst_l_def snd_l_def prio_l_def option_l_def triv_l_def oalist_map_l_def
+option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
+ LNew_def int_distrib
+split: md_triv.splits) 
+      done
+
+      have Conclusion :
+        "\<And> st . Inv st \<Longrightarrow> 
+         get_cond st = Some False \<Longrightarrow>
+    (case st of (_, _, _, _, mdp p (Some (mdt m')), _) \<Rightarrow> get m' (STR ''acc'') = Some (i1 * i2)
+     | _ \<Rightarrow> False
+      )"
+    using Hi1 Hi2 unfolding Inv_def
+    apply(auto simp add: get_cond_def split: md_triv.splits md_prio.splits)
+    apply(case_tac x2a; simp)
+    apply(case_tac a; simp)
+    apply(case_tac x2; simp)
+    apply(case_tac ad; simp)
+    apply(case_tac "xa = 0"; simp)
     done
 
+
+(* YOU ARE HERE *)
+
+(* TODO: is our loop invariant correct? *)
+
+
 (*
- [G (Calc_Mem_Imp.syn.Sm (Swrite STR ''acc'' Reg_c)) [], G (Calc_Mem_Imp.syn.Sm (Sread STR ''arg2'' Reg_a)) [],
-          G (Calc_Mem_Imp.syn.Sm (Sread STR ''one'' Reg_b)) [], G (Calc_Mem_Imp.syn.Sc Csub) [], G (Calc_Mem_Imp.syn.Sm (Swrite STR ''arg2'' Reg_c)) [], G (Calc_Mem_Imp.syn.Sm (Sread STR ''arg2'' Reg_c)) [], G (Sb Sgtz) []]]]
+ [, ,
+          , , , G (Calc_Mem_Imp.syn.Sm (Sread STR ''arg2'' Reg_c)) [], G (Sb Sgtz) []]]]
 *)
 
 
