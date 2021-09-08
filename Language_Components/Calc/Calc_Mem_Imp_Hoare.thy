@@ -21,12 +21,35 @@ definition sem_final' :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) 
 
 (* New idea: have a lifting for use in theorems about the state. *)
 (* in this case we can just use mem_lift1 I think. *)
-  
+
+term "sems"
+
+(* OK, how to prove sups_pres.
+ * 
+*)
 
 lemma pres :
 "sups_pres sems"
+proof(rule sups_presI)
+
+  fix x :: "('a, 'b) state"
+  fix sup :: "('a, 'b) state"
+  fix syn :: syn
+  fix Xs :: "('a, 'b) state set"
+  fix Fs' :: "(syn \<Rightarrow> ('a, 'b) state \<Rightarrow> ('a, 'b) state) set"
+  fix f :: "(syn \<Rightarrow> ('a, 'b) state \<Rightarrow> ('a, 'b) state)"
+  assume In_Xs : "x \<in> Xs"
+  assume Fin_Xs : "finite Xs"
+  assume Sup : "is_sup Xs sup"
+  assume Fs' : "Fs' \<subseteq> (sems :: (syn \<Rightarrow> ('a, 'b) state \<Rightarrow> ('a, 'b) state) set)"
+  assume "f \<in> Fs'"
+  show "\<exists>sup'.
+          is_sup ((\<lambda>f. f syn sup) ` Fs') sup' \<and> is_sup (scross ((\<lambda>f. f syn) ` Fs') Xs) sup'"
+    using Fs'
+    apply(auto simp add: is_sup_def is_least_def is_ub_def)
   sorry
 
+(*
 lemma calc_dom :
   "\<And> c . calc_sem_l \<downharpoonleft> sems_nos (Sc c)"
   sorry
@@ -46,7 +69,7 @@ lemma seq_dom :
 lemma imp_dom :
   "\<And> i . imp_sem_l \<downharpoonleft> sems (Si i)"
   sorry
-
+*)
 
 (* concrete state *)
 type_synonym cstate = "(syn, unit) Mem_Simple.state"
@@ -2129,7 +2152,7 @@ split: md_triv.splits)
  [, ,
           , , , G (Calc_Mem_Imp.syn.Sm (Sread STR ''arg2'' Reg_c)) [], G (Sb Sgtz) []]]]
 *)
-
+*)
 
 
 end
