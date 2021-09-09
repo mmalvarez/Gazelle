@@ -167,7 +167,10 @@ proof(rule sups_presI)
     by(auto)
 qed
 
-
+(* TODO: we weren't using this lemma, but the fact that
+ * we couldn't prove it under our new definition may be a bad sign.
+ *)
+(*
 lemma sups_pres_pair :
   assumes Hf : "sups_pres {f1, f2} S"
   assumes Hsup : "is_sup {x1, x2} sp"
@@ -196,7 +199,8 @@ proof-
 
   have Sub : "{f1 syn x1, f2 syn x2} \<subseteq> { f1 syn x1, f1 syn x2, f2 syn x1, f2 syn x2 }"
     by blast
-(* stronger closure property needed here? *)
+(* stronger closure property needed here? or can we play around with another piece of the thm
+*)
   show "\<exists>sp'. is_sup {f1 syn x1, f2 syn x2} sp' \<and> sp' \<in> S"
 (*
     using has_sup_subset[OF _ Z, of "{f1 syn x1, f2 syn x2}" "f1 syn x1"] *)
@@ -204,6 +208,7 @@ proof-
     unfolding Scross_eq
     by blast
 qed
+*)
 
 lemma scross_singleton1 :
 "scross {f} Xs = f ` Xs"
@@ -221,11 +226,11 @@ lemma scross_singleton2 :
  * pcomps l syn sem
  *)
 
-lemma sups_pres_pcomps_sup :
+lemma sups_pres_pcomps_sup' :
   assumes Hp : "sups_pres (set l) S"
   assumes Hnemp : "l \<noteq> []"
   assumes Hsem : "sem \<in> S"
-  shows "is_sup ((\<lambda> f . f syn sem) ` (set l)) (pcomps l syn sem)" using assms
+  shows "is_sup ((\<lambda> f . f syn sem) ` (set l)) (pcomps l syn sem) \<and> (pcomps l syn sem) \<in> S" using assms
 proof (induction l arbitrary: syn sem)
   case Nil
   then show ?case by auto
@@ -234,7 +239,24 @@ next
   show ?case 
   proof(cases t1)
     case Nil' : Nil
-    then show ?thesis by(auto simp add: sup_singleton)
+
+    have SP : "sups_pres ({h1}) S"
+      using sups_pres_subset[OF Cons.prems(1), of "set t1"] Cons.prems Nil'
+      by auto
+
+    obtain sup' where Sup' : "is_sup ((\<lambda>f. f syn sem) ` {h1}) sup'" 
+       "is_sup (scross ((\<lambda>f. f syn) ` {h1}) {sem}) sup'"
+       "sup' \<in> S"
+      using Cons.prems sups_presD[OF SP, of "sem" "{sem}" "sem" "{h1}" "h1" syn]
+      by(auto simp add: sup_singleton)
+
+    have Eq : "sup' = h1 syn sem"
+      
+      using is_sup_unique[OF Sup'(2)] sup_singleton[of "h1 syn sem"]
+      by(auto simp add: scross_def)
+
+    then show ?thesis using Nil' Cons.prems Sup'(3)
+      by(auto simp add: sup_singleton scross_def)
   next
     case Cons' : (Cons h2 t2)
 
@@ -246,34 +268,32 @@ next
 
     have HSup : "is_sup {h1 syn sem} (h1 syn sem)" using sup_singleton by auto
 
+
+    have Eq3 : "(\<lambda>f. f sem) ` (\<lambda>f. f syn) ` set (h1 # t1) = {h1 syn sem} \<union> (\<lambda>f. f syn sem) ` set t1"
+      by auto
+
+    have Sing : "is_sup {sem} sem"
+      using sup_singleton[of sem] by(auto simp add: has_sup_def)
+
+    have Sing_sem : "{sem} \<subseteq> S" using Cons.prems by auto
+
+    obtain sup' where Sup' :
+      "is_sup ((\<lambda>f. f syn sem) ` set (h1 # t1)) sup'"
+       "is_sup (scross ((\<lambda>f. f syn) ` set (h1 # t1)) {sem}) sup'"
+       "sup' \<in> S"
+      using sups_presD[OF Cons.prems(1) _ Sing_sem _ Sing, of sem "set (h1#t1)" "h1" "syn"] Hsem Cons.prems
+      by auto
+
+    then obtain s where S: "is_sup (scross ((\<lambda>f. f syn) ` set (h1 # t1)) {sem}) s"
+      by(auto simp add: has_sup_def)
+
+    have Union : "is_sup ({h1 syn sem} \<union> (\<lambda>f. f syn sem) ` set t1) s" using S 
+      unfolding scross_singleton2 Eq3
+      by auto
+
     have Conc' : "has_sup {h1 syn sem, pcomps t1 syn sem}"
-    proof-
-
-      have Eq3 : "(\<lambda>f. f sem) ` (\<lambda>f. f syn) ` set (h1 # t1) = {h1 syn sem} \<union> (\<lambda>f. f syn sem) ` set t1"
-        by auto
-
-      have Sing : "is_sup {sem} sem"
-        using sup_singleton[of sem] by(auto simp add: has_sup_def)
-
-      have Sing_sem : "{sem} \<subseteq> S" using Cons.prems by auto
-
-      obtain sup' where
-        "is_sup ((\<lambda>f. f syn sem) ` set (h1 # t1)) sup' \<and>
-     is_sup (scross ((\<lambda>f. f syn) ` set (h1 # t1)) {sem}) sup' \<and>
-     sup' \<in> S"
-        using sups_presD[OF Cons.prems(1) _ Sing_sem _ Sing, of sem "set (h1#t1)" "h1" "syn"] Hsem
-        by auto
-
-      then obtain s where S: "is_sup (scross ((\<lambda>f. f syn) ` set (h1 # t1)) {sem}) s"
-        by(auto simp add: has_sup_def)
-
-      have Union : "is_sup ({h1 syn sem} \<union> (\<lambda>f. f syn sem) ` set t1) s" using S 
-        unfolding scross_singleton2 Eq3
-        by auto
-
-      show ?thesis using sup_union2[OF HSup Sup Union]
-        by(auto simp add: has_sup_def)
-    qed
+      using sup_union2[OF HSup Sup Union]
+      by(auto simp add: has_sup_def)
 
     then obtain s' where S' : "is_sup {h1 syn sem, pcomps t1 syn sem} s'"
       by(auto simp add: has_sup_def)
@@ -286,11 +306,35 @@ next
    (insert (h1 syn sem) (insert (h2 syn sem) ((\<lambda>x. x syn sem) ` set t2)))"
       by auto
 
-    show ?thesis 
+    have Conc1 : "is_sup ((\<lambda>f. f syn sem) ` set (h1 # t1)) (pcomps (h1 # t1) syn sem)"
       using sup_union1[OF HSup Sup Conc'']
       by(auto simp add: Cons' Eqn)
+
+
+    have Conc2 : "pcomps (h1 # t1) syn sem \<in> S"
+      using is_sup_unique[OF Sup'(1) Conc1] Sup'(3)
+      by(auto)
+
+    show ?thesis using Conc1 Conc2 by auto
   qed
 qed
+
+
+lemma sups_pres_pcomps_sup1 :
+  assumes Hp : "sups_pres (set l) S"
+  assumes Hnemp : "l \<noteq> []"
+  assumes Hsem : "sem \<in> S"
+  shows "is_sup ((\<lambda> f . f syn sem) ` (set l)) (pcomps l syn sem)" using assms
+    sups_pres_pcomps_sup'
+  by fast
+
+lemma sups_pres_pcomps_sup2 :
+  assumes Hp : "sups_pres (set l) S"
+  assumes Hnemp : "l \<noteq> []"
+  assumes Hsem : "sem \<in> S"
+  shows "(pcomps l syn sem) \<in> S" using assms
+    sups_pres_pcomps_sup'
+  by fast
 
 (*
  * Another key theorem, both for understanding the correctness of the specification,
@@ -313,25 +357,27 @@ proof-
     using sups_pres_subset[OF H _ _ F1]  by auto
 
   have Sup1: "is_sup ((\<lambda> f . f syn x) ` (set l1)) (pcomps l1 syn x)"
-    using sups_pres_pcomps_sup[OF H1 Nemp1 X] by auto
+    "(pcomps l1 syn x) \<in> S"
+    using sups_pres_pcomps_sup'[OF H1 Nemp1 X] by auto
 
   obtain f2 where F2 : "f2 \<in> set l2" using Nemp2 by(cases l2; auto)
 
   have H2 : "sups_pres (set l2) S"
     using sups_pres_subset[OF H _ _ F2]  by auto
 
-  have Sup2: "is_sup ((\<lambda> f . f syn x) ` (set l2)) (pcomps l2 syn x)"
-    using sups_pres_pcomps_sup[OF H2 Nemp2 X] by auto
+  have Sup2: "is_sup ((\<lambda> f . f syn x) ` (set l2)) (pcomps l2 syn x)" "(pcomps l2 syn x) \<in> S"
+    using sups_pres_pcomps_sup'[OF H2 Nemp2 X] by auto
 
   have Unions : "set (l1 @ l2) = set l1 \<union> set l2" by auto
 
   have SupAll1 : "is_sup ((\<lambda> f . f syn x) ` (set (l1 @ l2))) (pcomps (l1 @ l2) syn x)"
-    using sups_pres_pcomps_sup[of "l1 @ l2"] H Nemp1 X
+    "(pcomps (l1 @ l2) syn x) \<in> S"
+    using sups_pres_pcomps_sup'[of "l1 @ l2"] H Nemp1 X
     unfolding Unions by(auto)
 
   have SupAll2 : "is_sup ((\<lambda> f . f syn x) ` ({pcomps l1, pcomps l2})) (pcomps (l1 @ l2) syn x)"
     unfolding pcomps.simps
-    using sup_union2[OF Sup1 Sup2, of "(pcomps (l1 @ l2) syn x)"] SupAll1 X
+    using sup_union2[OF Sup1(1) Sup2(1), of "(pcomps (l1 @ l2) syn x)"] SupAll1 X
     unfolding Unions Set.image_Un
     by(auto)
 
@@ -358,6 +404,7 @@ lemma sups_pres_pcomps_gen' :
   assumes Hx : "x \<in> Xs"
   assumes Hsub : "Xs \<subseteq> S"
   assumes Hsup : "is_sup Xs xsup"
+  assumes Hsup_in : "xsup \<in> S"
   shows "is_sup (scross ((\<lambda> f . f syn) ` (set l)) Xs) (pcomps l syn xsup) \<and> pcomps l syn xsup \<in> S" using assms
 
 proof(induction l arbitrary: f x Xs xsup)
@@ -378,8 +425,7 @@ next
     obtain sup' where Sup'1 : "is_sup ((\<lambda>f. f syn xsup) ` {fh1}) sup'" and
       Sup'2 : "is_sup (scross ((\<lambda>f. f syn) ` {fh1}) Xs) sup'" and
       Sup'3 : "sup' \<in> S"
-      using sups_presD[OF Cons.prems(1) Cons.prems(4) Cons.prems(5) Cons.prems(3) Cons.prems(6) _ _,
-             of "{fh1}" fh1 syn]
+      using sups_presD[OF Cons.prems(1) Cons.prems(4) Cons.prems(5) Cons.prems(3) Cons.prems(6) Cons.prems(7), of "{fh1}" fh1 syn]
       by auto
 
 
@@ -404,7 +450,7 @@ next
       using sups_pres_subset[OF Cons.prems(1), of "set ft1"] Cons' by auto
 
     have Tsup : "is_sup (scross ((\<lambda>f. f syn) ` set ft1) Xs) (pcomps ft1 syn xsup)" and Tsup_in : "pcomps ft1 syn xsup \<in> S"
-      using Cons.IH[OF SP _ Cons.prems(3) Cons.prems(4) Cons.prems(5) Cons.prems(6)]
+      using Cons.IH[OF SP _ Cons.prems(3) Cons.prems(4) Cons.prems(5) Cons.prems(6) Cons.prems(7)]
       Cons' 
       unfolding has_sup_def
       by( auto)
@@ -479,7 +525,7 @@ next
     obtain sup' where Sup' :
       "is_sup (scross ((\<lambda>f. f syn) ` set (fh1 # ft1)) Xs) sup'" and
       Sup'_In : "sup' \<in> S"
-      using sups_presD[OF Cons.prems(1) Cons.prems(4) Cons.prems(5) Cons.prems(3) Cons.prems(6), of "set (fh1 # ft1)" fh1 syn]
+      using sups_presD[OF Cons.prems(1) Cons.prems(4) Cons.prems(5) Cons.prems(3) Cons.prems(6) Cons.prems(7), of "set (fh1 # ft1)" fh1 syn]
       by auto
 
     have Sup'_Eq :
@@ -504,6 +550,7 @@ lemma sups_pres_pcomps_gen1 :
   assumes Hx : "x \<in> Xs"
   assumes Hsub : "Xs \<subseteq> S"
   assumes Hsup : "is_sup Xs xsup"
+  assumes Hsup_in : "xsup \<in> S"
   shows "is_sup (scross ((\<lambda> f . f syn) ` (set l)) Xs) (pcomps l syn xsup)"
   using assms sups_pres_pcomps_gen'[OF H Hf Hxs Hx Hsub Hsup]
   by auto
@@ -515,6 +562,7 @@ lemma sups_pres_pcomps_gen2 :
   assumes Hx : "x \<in> Xs"
   assumes Hsub : "Xs \<subseteq> S"
   assumes Hsup : "is_sup Xs xsup"
+  assumes Hsup_in : "xsup \<in> S"
   shows "pcomps l syn xsup \<in> S" using assms
   using assms sups_pres_pcomps_gen'[OF H Hf Hxs Hx Hsub Hsup]
   by auto
@@ -668,11 +716,11 @@ proof-
     by(simp)
 
   have SupAll1 : "is_sup ((\<lambda> f . f syn x) ` (set [f1, f2])) (pcomps [f1, f2] syn x)"
-    using sups_pres_pcomps_sup[OF H0, of x syn] Hx
+    using sups_pres_pcomps_sup'[OF H0, of x syn] Hx
     by auto
 
   have SupAll2 : "is_sup ((\<lambda> f . f syn x) ` (set [f2, f1])) (pcomps [f2, f1] syn x)"
-    using sups_pres_pcomps_sup[OF H1, of x syn] Hx
+    using sups_pres_pcomps_sup'[OF H1, of x syn] Hx
     by auto
 
   hence SupAll2' : "is_sup ((\<lambda> f . f syn x) ` (set [f1, f2])) (pcomps [f2, f1] syn x)"
@@ -682,7 +730,7 @@ proof-
     using is_sup_unique[OF SupAll1 SupAll2'] by simp
 qed
 
-lemma sups_pres_pcomps_sup2 :
+lemma sups_pres_pcomps_fuse :
   assumes H : "sups_pres (set l1 \<union> set l2) S"
   assumes Hnemp1 : "l1 \<noteq> []"
   assumes Hnemp2 : "l2 \<noteq> []"
@@ -699,6 +747,7 @@ proof(rule sups_presI)
   assume HXs_S : "Xs \<subseteq> S"
   assume Hfin_Xs : "finite Xs"
   assume H' : "is_sup Xs sup1"
+  assume H'_in : "sup1 \<in> S"
   assume Hfs_sub : "Fs_sub \<subseteq> {pcomps l1, pcomps l2}"
   assume Hnemp_Fs_sub : "f \<in> Fs_sub"
 
@@ -722,7 +771,7 @@ proof(rule sups_presI)
   have Sup : "is_sup
      (scross ((\<lambda>f. f syn) ` set (l1 @ l2)) Xs)
      (pcomps (l1 @ l2) syn sup1)"
-    using sups_pres_pcomps_gen1[OF Pres' Nemp' Hfin_Xs Hnemp_Xs HXs_S H']
+    using sups_pres_pcomps_gen1[OF Pres' Nemp' Hfin_Xs Hnemp_Xs HXs_S H' H'_in]
     by simp
 
   have Scross_eq : 
@@ -740,19 +789,19 @@ proof(rule sups_presI)
     using pcomps_assoc[OF H Hnemp1 Hnemp2] by simp
 
   have Sup1 : "is_sup (scross ((\<lambda>f. f syn) ` set l1) Xs) (pcomps l1 syn sup1)"
-    using sups_pres_pcomps_gen1[OF Pres1 F1 Hfin_Xs Hnemp_Xs HXs_S H', of syn]
+    using sups_pres_pcomps_gen1[OF Pres1 F1 Hfin_Xs Hnemp_Xs HXs_S H' H'_in, of syn]
     by auto
 
   have Sup1_in : "(pcomps l1 syn sup1) \<in> S"
-    using sups_pres_pcomps_gen2[OF Pres1 F1 Hfin_Xs Hnemp_Xs HXs_S H', of syn]
+    using sups_pres_pcomps_gen2[OF Pres1 F1 Hfin_Xs Hnemp_Xs HXs_S H' H'_in, of syn]
     by auto
 
   have Sup2 : "is_sup (scross ((\<lambda>f. f syn) ` set l2) Xs) (pcomps l2 syn sup1)"
-    using sups_pres_pcomps_gen1[OF Pres2 F2 Hfin_Xs Hnemp_Xs HXs_S H', of syn]
+    using sups_pres_pcomps_gen1[OF Pres2 F2 Hfin_Xs Hnemp_Xs HXs_S H' H'_in, of syn]
     by auto
 
   have Sup2_in : "(pcomps l2 syn sup1) \<in> S"
-    using sups_pres_pcomps_gen2[OF Pres2 F2 Hfin_Xs Hnemp_Xs HXs_S H', of syn]
+    using sups_pres_pcomps_gen2[OF Pres2 F2 Hfin_Xs Hnemp_Xs HXs_S H' H'_in, of syn]
     by auto
 
   have Sup12 : "is_sup ((\<lambda>f. f syn sup1) ` {pcomps l1, pcomps l2}) (pcomps (l1 @ l2) syn sup1)"
@@ -791,17 +840,18 @@ proof(rule sups_presI)
       then obtain x where Xin : "x \<in> Xs" and Xy : "pcomps l1 syn x = y"
         by blast
 
+      have Xin' : "x \<in> S" using HXs_S Xin by auto
+
       have Leq1 : "x <[ sup1" using is_supD1[OF H' Xin] by simp
 
-      have Xin' : "x \<in> S" using HXs_S Xin by auto
 
 (* TODO: how can we show that sup1 is in S? do we need some kind of closure property? *)
 (* YOU ARE HERE *)
 (* perhaps we need to modify the definition of sups_pres (again) to force 
    sup1 to be in the set S *)
       show "y <[ pcomps l1 syn sup1"
-        using pcomps_mono[OF Pres1 F1 Xin' _ Leq1]
-        using pcomps_mono[OF Pres1 F1 Leq1] unfolding sym[OF Xy] by simp
+        using pcomps_mono[OF Pres1 F1 Xin' H'_in Leq1]
+        unfolding sym[OF Xy] by simp
     next
       fix y'
 
@@ -817,14 +867,14 @@ proof(rule sups_presI)
 
         have Leq1 : "z <[ sup1" using is_supD1[OF H' Zin] by simp
 
-        have PresX : "sups_pres (set [fz])"
+        have PresX : "sups_pres (set [fz]) S"
           using sups_pres_subset[OF Pres1, of "set [fz]"] Fzin
           by(auto)
 
         have Fzin' : "fz \<in> set [fz]" by simp
 
         have Fz_sup : "is_sup (scross ((\<lambda>f. f syn) ` set [fz]) Xs) (pcomps [fz] syn sup1)"
-          using sups_pres_pcomps_gen[OF PresX Fzin' Hfin_Xs Hnemp_Xs H', of syn] 
+          using sups_pres_pcomps_gen'[OF PresX Fzin' Hfin_Xs Hnemp_Xs HXs_S H' H'_in] 
           by simp
 
         have Uncross : "(scross ((\<lambda>f. f syn) ` set [fz]) Xs) = (fz syn) ` Xs"
@@ -837,8 +887,11 @@ proof(rule sups_presI)
           using is_supD1[OF Fz_sup', of "fz syn z"] Zin
           by blast
 
+        have Zin' : "z \<in> S"
+          using Zin HXs_S by auto
+
         have Fz_sup'' : "is_sup ((\<lambda>f. f syn z) ` set l1) (pcomps l1 syn z)"
-          using sups_pres_pcomps_gen[OF Pres1, of fz "{z}" z z syn] Fzin sup_singleton[of z]
+          using sups_pres_pcomps_gen'[OF Pres1 Fzin, of "{z}" z z syn] sup_singleton[of z] Fzin Zin'
           unfolding scross_singleton2 image_comp
           by(auto)
 
@@ -861,7 +914,7 @@ proof(rule sups_presI)
         using is_supD2[OF Sup1 Ub'] by simp
     qed
 
-    show ?thesis using C1 C2 L1' by auto
+    show ?thesis using C1 C2 L1' Sup1_in by auto
   next
     case L2
 
@@ -881,11 +934,12 @@ proof(rule sups_presI)
 
       then obtain x where Xin : "x \<in> Xs" and Xy : "pcomps l2 syn x = y"
         by blast
+      have Xin' : "x \<in> S" using HXs_S Xin by auto
 
       have Leq1 : "x <[ sup1" using is_supD1[OF H' Xin] by simp
 
       show "y <[ pcomps l2 syn sup1"
-        using pcomps_mono[OF Pres2 F2 Leq1] unfolding sym[OF Xy] by simp
+        using pcomps_mono[OF Pres2 F2 Xin' H'_in Leq1] unfolding sym[OF Xy] by simp
     next
       fix y'
 
@@ -901,14 +955,14 @@ proof(rule sups_presI)
 
         have Leq1 : "z <[ sup1" using is_supD1[OF H' Zin] by simp
 
-        have PresX : "sups_pres (set [fz])"
+        have PresX : "sups_pres (set [fz]) S"
           using sups_pres_subset[OF Pres2, of "set [fz]"] Fzin
           by(auto)
 
         have Fzin' : "fz \<in> set [fz]" by simp
 
         have Fz_sup : "is_sup (scross ((\<lambda>f. f syn) ` set [fz]) Xs) (pcomps [fz] syn sup1)"
-          using sups_pres_pcomps_gen[OF PresX Fzin' Hfin_Xs Hnemp_Xs H', of syn] 
+            using sups_pres_pcomps_gen'[OF PresX Fzin' Hfin_Xs Hnemp_Xs HXs_S H' H'_in] 
           by simp
 
         have Uncross : "(scross ((\<lambda>f. f syn) ` set [fz]) Xs) = (fz syn) ` Xs"
@@ -921,8 +975,11 @@ proof(rule sups_presI)
           using is_supD1[OF Fz_sup', of "fz syn z"] Zin
           by blast
 
+        have Zin' : "z \<in> S"
+          using Zin HXs_S by auto
+
         have Fz_sup'' : "is_sup ((\<lambda>f. f syn z) ` set l2) (pcomps l2 syn z)"
-          using sups_pres_pcomps_gen[OF Pres2, of fz "{z}" z z syn] Fzin sup_singleton[of z]
+          using sups_pres_pcomps_gen'[OF Pres2 Fzin, of "{z}" z z syn] sup_singleton[of z] Fzin Zin'
           unfolding scross_singleton2 image_comp
           by(auto)
 
@@ -945,7 +1002,7 @@ proof(rule sups_presI)
         using is_supD2[OF Sup2 Ub'] by simp
     qed
 
-    show ?thesis using C1 C2 L2' by auto
+    show ?thesis using C1 C2 L2' Sup2_in by auto
   next
     case L1_2
 
@@ -972,42 +1029,48 @@ proof(rule sups_presI)
       then show "y <[ pcomps (l1 @ l2) syn sup1"
       proof cases
         case Y1
-          have Leq1 : "x <[ sup1" using is_supD1[OF H' Y1(1)] by simp
+        have Leq1 : "x <[ sup1" using is_supD1[OF H' Y1(1)] by simp
 
-          have Leq2 : "pcomps (l1 @ l2) syn x <[ pcomps (l1 @ l2) syn sup1"
-            using pcomps_mono[OF Pres' Nemp' Leq1] by simp
+        have Xin : "x \<in> S"
+          using Y1 HXs_S by auto
 
-          have Xsup :"is_sup (scross ((\<lambda>f. f syn) ` set (l1 @ l2)) {x}) (pcomps (l1 @ l2) syn x)"
-            using sups_pres_pcomps_gen[OF Pres' Nemp' _ _ sup_singleton[of "x"], of x syn]
-            by simp
+        have Leq2 : "pcomps (l1 @ l2) syn x <[ pcomps (l1 @ l2) syn sup1"
+          using pcomps_mono[OF Pres' Nemp' Xin H'_in Leq1] by simp
 
-          have Subset : "scross ((\<lambda>f. f syn) ` set l1) {x} \<subseteq> scross ((\<lambda>f. f syn) ` set (l1 @ l2)) {x}"
-            using scross_subset[of "(\<lambda>f. f syn) ` set (l1)" "(\<lambda>f. f syn) ` set (l1 @ l2)" "{x}" "{x}"]
-            by auto
+        have Xsup :"is_sup (scross ((\<lambda>f. f syn) ` set (l1 @ l2)) {x}) (pcomps (l1 @ l2) syn x)"
+          using sups_pres_pcomps_gen'[OF Pres' Nemp' _ _ _ sup_singleton[of "x"], of x syn] Xin
+          by simp
 
-          have Xub : "is_ub (scross ((\<lambda>f. f syn) ` set (l1)) {x}) (pcomps (l1 @ l2) syn x)"
-            using sup_subset_ub[OF Xsup Subset] by simp
+        have Subset : "scross ((\<lambda>f. f syn) ` set l1) {x} \<subseteq> scross ((\<lambda>f. f syn) ` set (l1 @ l2)) {x}"
+          using scross_subset[of "(\<lambda>f. f syn) ` set (l1)" "(\<lambda>f. f syn) ` set (l1 @ l2)" "{x}" "{x}"]
+          by auto
 
-          have Xsup_ub : "is_sup (scross ((\<lambda>f. f syn) ` set (l1)) {x}) (pcomps l1 syn x)"
-            using sups_pres_pcomps_gen[OF Pres1 F1 _ _ sup_singleton[of "x"], of x syn]
-            by simp
+        have Xub : "is_ub (scross ((\<lambda>f. f syn) ` set (l1)) {x}) (pcomps (l1 @ l2) syn x)"
+          using sup_subset_ub[OF Xsup Subset] by simp
 
-          have Leq3 : "pcomps l1 syn x <[ pcomps (l1 @ l2) syn x"
-            using is_supD2[OF Xsup_ub Xub] by simp            
+        have Xsup_ub : "is_sup (scross ((\<lambda>f. f syn) ` set (l1)) {x}) (pcomps l1 syn x)"
+          using sups_pres_pcomps_gen'[OF Pres1 F1 _ _ _ sup_singleton[of "x"], of x syn] Xin
+          by simp
 
-          show "y <[ pcomps (l1 @ l2) syn sup1"
-            using leq_trans[OF Leq3 Leq2] Y1(2)
-            by simp
+        have Leq3 : "pcomps l1 syn x <[ pcomps (l1 @ l2) syn x"
+          using is_supD2[OF Xsup_ub Xub] by simp            
+
+        show "y <[ pcomps (l1 @ l2) syn sup1"
+          using leq_trans[OF Leq3 Leq2] Y1(2)
+          by simp
       next
         case Y2
 
         have Leq1 : "x <[ sup1" using is_supD1[OF H' Y2(1)] by simp
 
+        have Xin : "x \<in> S"
+          using Y2 HXs_S by auto
+
         have Leq2 : "pcomps (l1 @ l2) syn x <[ pcomps (l1 @ l2) syn sup1"
-          using pcomps_mono[OF Pres' Nemp' Leq1] by simp
+          using pcomps_mono[OF Pres' Nemp' Xin H'_in Leq1] by simp
 
         have Xsup :"is_sup (scross ((\<lambda>f. f syn) ` set (l1 @ l2)) {x}) (pcomps (l1 @ l2) syn x)"
-          using sups_pres_pcomps_gen[OF Pres' Nemp' _ _ sup_singleton[of "x"], of x syn]
+          using sups_pres_pcomps_gen'[OF Pres' Nemp' _ _ _ sup_singleton[of "x"], of x syn] Xin
           by simp
 
         have Subset : "scross ((\<lambda>f. f syn) ` set l2) {x} \<subseteq> scross ((\<lambda>f. f syn) ` set (l1 @ l2)) {x}"
@@ -1018,7 +1081,7 @@ proof(rule sups_presI)
           using sup_subset_ub[OF Xsup Subset] by simp
 
         have Xsup_ub : "is_sup (scross ((\<lambda>f. f syn) ` set (l2)) {x}) (pcomps l2 syn x)"
-          using sups_pres_pcomps_gen[OF Pres2 F2 _ _ sup_singleton[of "x"], of x syn]
+          using sups_pres_pcomps_gen'[OF Pres2 F2 _ _ _ sup_singleton[of "x"], of x syn] Xin
           by simp
 
         have Leq3 : "pcomps l2 syn x <[ pcomps (l1 @ l2) syn x"
@@ -1052,14 +1115,14 @@ proof(rule sups_presI)
   
           have Leq1 : "z <[ sup1" using is_supD1[OF H' Zin] by simp
   
-          have PresX : "sups_pres (set [fz])"
+          have PresX : "sups_pres (set [fz]) S"
             using sups_pres_subset[OF Pres1, of "set [fz]"] Fzin
             by(auto)
   
           have Fzin' : "fz \<in> set [fz]" by simp
   
           have Fz_sup : "is_sup (scross ((\<lambda>f. f syn) ` set [fz]) Xs) (pcomps [fz] syn sup1)"
-            using sups_pres_pcomps_gen[OF PresX Fzin' Hfin_Xs Hnemp_Xs H', of syn] 
+            using sups_pres_pcomps_gen'[OF PresX Fzin' Hfin_Xs Hnemp_Xs HXs_S H' H'_in]  
             by simp
   
           have Uncross : "(scross ((\<lambda>f. f syn) ` set [fz]) Xs) = (fz syn) ` Xs"
@@ -1071,9 +1134,12 @@ proof(rule sups_presI)
           have Fz_leq1: "fz syn z <[ (pcomps [fz] syn sup1)"
             using is_supD1[OF Fz_sup', of "fz syn z"] Zin
             by blast
+
+          have Zin_S : "z \<in> S"
+            using HXs_S Zin by auto
   
           have Fz_sup'' : "is_sup ((\<lambda>f. f syn z) ` set l1) (pcomps l1 syn z)"
-            using sups_pres_pcomps_gen[OF Pres1, of fz "{z}" z z syn] Fzin sup_singleton[of z]
+            using sups_pres_pcomps_gen'[OF Pres1 Fzin _ _ _ sup_singleton[of z] Zin_S, of z syn] Fzin Zin_S
             unfolding scross_singleton2 image_comp
             by(auto)
   
@@ -1099,14 +1165,18 @@ proof(rule sups_presI)
   
           have Leq1 : "z <[ sup1" using is_supD1[OF H' Zin] by simp
   
-          have PresX : "sups_pres (set [fz])"
+          have PresX : "sups_pres (set [fz]) S"
             using sups_pres_subset[OF Pres2, of "set [fz]"] Fzin
             by(auto)
   
           have Fzin' : "fz \<in> set [fz]" by simp
+
+          have Zin_S : "z \<in> S"
+            using HXs_S Zin by auto
   
+
           have Fz_sup : "is_sup (scross ((\<lambda>f. f syn) ` set [fz]) Xs) (pcomps [fz] syn sup1)"
-            using sups_pres_pcomps_gen[OF PresX Fzin' Hfin_Xs Hnemp_Xs H', of syn] 
+            using sups_pres_pcomps_gen'[OF PresX Fzin' Hfin_Xs Hnemp_Xs HXs_S H' H'_in, of syn] 
             by simp
   
           have Uncross : "(scross ((\<lambda>f. f syn) ` set [fz]) Xs) = (fz syn) ` Xs"
@@ -1120,7 +1190,7 @@ proof(rule sups_presI)
             by blast
   
           have Fz_sup'' : "is_sup ((\<lambda>f. f syn z) ` set l2) (pcomps l2 syn z)"
-            using sups_pres_pcomps_gen[OF Pres2, of fz "{z}" z z syn] Fzin sup_singleton[of z]
+            using sups_pres_pcomps_gen'[OF Pres2 Fzin _ _ _ sup_singleton[of z] Zin_S, of z syn] Fzin Zin_S
             unfolding scross_singleton2 image_comp
             by(auto)
   
@@ -1147,44 +1217,59 @@ proof(rule sups_presI)
     have L1_2' : "(pcomps l1 syn ` Xs \<union> pcomps l2 syn ` Xs) = (scross ((\<lambda>f. f syn) ` {pcomps l1, pcomps l2}) Xs)" 
       unfolding scross_def
       by auto
+
+  (* finally, show membership in S *)
+    obtain f_arb where F_arb : "f_arb \<in> set (l1 @ l2)"
+      using Hnemp1 Hnemp2
+      by(cases l1; cases l2; auto)
+
+    have Conc_In :
+      "(pcomps (l1 @ l2) syn sup1) \<in> S"
+      using sups_pres_pcomps_gen'[OF Pres' F_arb Hfin_Xs Hnemp_Xs HXs_S H' H'_in, of syn]
+      by simp
   
-    show ?thesis using C1 C2 unfolding L1_2' L1_2 by blast
+    show ?thesis using C1 C2 Conc_In unfolding L1_2' L1_2 Conc_In by blast
   qed
 qed
 
 lemma pcomps_comm : 
-  assumes H : "sups_pres (set l1 \<union> set l2)"
+  assumes H : "sups_pres (set l1 \<union> set l2) S"
   assumes Nemp1 : "l1 \<noteq> []"
   assumes Nemp2 : "l2 \<noteq> []"
-  shows "pcomps (l1 @ l2) = pcomps (l2 @ l1)" 
+  assumes Hx : "x \<in> S"
+  shows "pcomps (l1 @ l2) syn x = pcomps (l2 @ l1) syn x" 
 proof-
 
-  have Assoc: "pcomps (l1 @ l2) = pcomps [pcomps l1, pcomps l2]"
-    using pcomps_assoc[OF H Nemp1 Nemp2] by auto
+  have Assoc: "pcomps (l1 @ l2) syn x = pcomps [pcomps l1, pcomps l2] syn x"
+    using pcomps_assoc[OF H Nemp1 Nemp2 Hx] by auto
 
-  have Pres' : "sups_pres {pcomps l1, pcomps l2}"
-    using sups_pres_pcomps_sup2[OF H Nemp1 Nemp2] by simp
+  have H_alt : "sups_pres (set (l1 @ l2)) S"
+    using H by auto
 
-  have Comm : "pcomps [pcomps l1, pcomps l2] = pcomps [pcomps l2, pcomps l1]"
-    using pcomps_comm'[OF Pres'] by auto
+  have Pres' : "sups_pres {pcomps l1, pcomps l2} S"
+    using sups_pres_pcomps_fuse[OF H Nemp1 Nemp2] by simp
 
-  have Pres'' : "sups_pres (set l2 \<union> set l1)" 
+  have Comm : "pcomps [pcomps l1, pcomps l2] syn x = pcomps [pcomps l2, pcomps l1] syn x"
+    using pcomps_comm'[OF Pres' Hx] by auto
+
+  have Pres'' : "sups_pres (set l2 \<union> set l1) S" 
     using H unfolding Un_commute[of "set l1" "set l2"] by simp
 
-  have Conc' : "pcomps [pcomps l2, pcomps l1] = pcomps (l2 @ l1)"
-    using pcomps_assoc[OF Pres'' Nemp2 Nemp1] by auto
+  have Conc' : "pcomps [pcomps l2, pcomps l1] syn x = pcomps (l2 @ l1) syn x"
+    using pcomps_assoc[OF Pres'' Nemp2 Nemp1 Hx] by auto
 
-  show "pcomps (l1 @ l2) = pcomps (l2 @ l1)"
+  show "pcomps (l1 @ l2) syn x = pcomps (l2 @ l1) syn x"
     using Assoc Comm Conc' by simp
 qed
 
 lemma pcomps_set_eq1 :
-  assumes H : "sups_pres S"
-  assumes Hf : "f \<in> S"
-  assumes Hl1 : "set l1 = S"
-  shows "pcomps (f # l1) = pcomps l1"
+  assumes H : "sups_pres Fs S"
+  assumes Hf : "f \<in> Fs"
+  assumes Hl1 : "set l1 = Fs"
+  assumes Hx : "x \<in> S"
+  shows "pcomps (f # l1) syn x = pcomps l1 syn x"
   using assms
-proof(induction l1 arbitrary: f S)
+proof(induction l1 arbitrary: f Fs)
   case Nil
   then show ?case by auto
 next
@@ -1204,45 +1289,45 @@ next
   next
     case Cons' : (Cons l2h l2t)
 
-    have S_eq : "(set [f, l1h] \<union> set l1t) = S"
+    have S_eq : "(set [f, l1h] \<union> set l1t) = Fs"
       using Cons.prems Cons'
       by(auto)
 
-    have Pres' : "sups_pres (set [f, l1h] \<union> set l1t) "
+    have Pres' : "sups_pres (set [f, l1h] \<union> set l1t) S"
       using Cons.prems(1) unfolding S_eq by simp
 
-    have Assoc : "pcomps (f # l1h # l1t) = pcomps [pcomps [f, l1h], pcomps l1t]"
-      using pcomps_assoc[OF Pres'] Cons' H
+    have Assoc : "pcomps (f # l1h # l1t) syn x = pcomps [pcomps [f, l1h], pcomps l1t] syn x"
+      using pcomps_assoc[OF Pres' _ _ Hx] Cons' H
       by auto
 
-    have Pres_h : "sups_pres {f, l1h}"
+    have Pres_h : "sups_pres {f, l1h} S"
       using sups_pres_subset[OF Cons.prems(1), of "{f, l1h}" f] Cons.prems
       by(auto)
       
-    have Comm : "pcomps [f, l1h] = pcomps [l1h, f]"
-      using pcomps_comm'[OF Pres_h] by simp
+    have Comm : "pcomps [f, l1h] syn x = pcomps [l1h, f] syn x"
+      using pcomps_comm'[OF Pres_h Hx] by simp
 
-    have S_eq' : "(set [l1h, f] \<union> set l1t) = S"
+    have S_eq' : "(set [l1h, f] \<union> set l1t) = Fs"
       using Cons.prems Cons'
       by(auto)
 
-    have Pres'' : "sups_pres (set [l1h, f] \<union> set l1t) "
+    have Pres'' : "sups_pres (set [l1h, f] \<union> set l1t) S"
       using Cons.prems(1) unfolding S_eq' by simp
 
-    have Assoc' : "pcomps [pcomps [l1h, f], pcomps l1t] = pcomps (l1h#f#l1t)"
-      using sym[OF pcomps_assoc[OF Pres'']] Cons' by auto
+    have Assoc' : "pcomps [pcomps [l1h, f], pcomps l1t] syn x = pcomps (l1h#f#l1t) syn x"
+      using sym[OF pcomps_assoc[OF Pres'' _ _ Hx]] Cons' by auto
 
     have Rewritten1 :
-      "pcomps (f # l1h # l1t) = pcomps [pcomps [l1h, f], pcomps l1t]"
+      "pcomps (f # l1h # l1t) syn x = pcomps [pcomps [l1h, f], pcomps l1t] syn x"
       using Assoc Comm Assoc'
       by auto
 
-    have Pres''' : "sups_pres (set [f] \<union> set l1t)"
+    have Pres''' : "sups_pres (set [f] \<union> set l1t) S"
       using sups_pres_subset[OF Pres', of "set [f] \<union> set l1t" ]
       by(auto)
 
     have Rewritten2 :
-      "pcomps (f # l1h # l1t) = pcomps (l1h#f#l1t)"
+      "pcomps (f # l1h # l1t) syn x = pcomps (l1h#f#l1t) syn x"
       unfolding Rewritten1 Assoc' by simp
 
     show ?thesis
@@ -1254,7 +1339,7 @@ next
         by blast
 
       have Conc' :
-        "pcomps [pcomps [f], pcomps l1t] = pcomps (f # l1t)"
+        "pcomps [pcomps [f], pcomps l1t] syn x = pcomps (f # l1t) syn x"
         using pcomps_assoc[OF Pres'''] Cons' by auto
 
       then show ?thesis using True unfolding Rewritten1 Eq
@@ -1266,15 +1351,15 @@ next
         using Cons.prems
         by auto
 
-      have Pres_t : "sups_pres (set l1t)"
+      have Pres_t : "sups_pres (set l1t) S"
         using sups_pres_subset[OF Cons.prems(1) _ _ F_in_t] Cons.prems
         by auto
 
-      have IH_spec : "pcomps (f # l1t) = pcomps l1t"
-        using Cons.IH[OF Pres_t F_in_t] 
+      have IH_spec : "pcomps (f # l1t) syn x = pcomps l1t syn x"
+        using Cons.IH[OF Pres_t F_in_t _ Hx] 
         by auto
 
-      show ?thesis using F_in_t unfolding Rewritten2 IH_spec pcomps.simps 
+      show ?thesis using F_in_t unfolding Rewritten2 unfolding pcomps.simps unfolding IH_spec
         by(cases l1t; auto)
     qed
   qed
