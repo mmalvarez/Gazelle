@@ -1366,16 +1366,17 @@ next
 qed
 
 lemma pcomps_singleton :
-  assumes Pres : "sups_pres {x}"
-  assumes H : "set l = {x}"
-  shows "pcomps l = x" using assms
-proof(induction l arbitrary: x)
+  assumes Pres : "sups_pres {f} S"
+  assumes H : "set l = {f}"
+  assumes Hx : "x \<in> S"
+  shows "pcomps l syn x = f syn x" using assms
+proof(induction l arbitrary: f)
   case Nil
   then show ?case by auto
 next
   case (Cons l1h l1t)
 
-  then have L1h : "l1h = x" by auto
+  then have L1h : "l1h = f" by auto
 
   show ?case
   proof(cases l1t)
@@ -1387,31 +1388,33 @@ next
 
     case Cons' : (Cons l2h l2t)
 
-    have L1t : "set l1t = {x}"
+    have L1t : "set l1t = {f}"
       using Cons Cons'
       by auto
 
-    have Conc' : "pcomps (x # l1t) = pcomps l1t"
-      using pcomps_set_eq1[OF Cons.prems(1) _ L1t, of x] by simp
+    have Conc' : "pcomps (f # l1t) syn x = pcomps l1t syn x"
+      using pcomps_set_eq1[OF Cons.prems(1) _ L1t Hx, of f syn]
+      by(auto)
 
-    then show ?thesis using Cons.IH[OF Cons.prems(1) L1t]
+    then show ?thesis using Cons.IH[OF Cons.prems(1) L1t Hx]
       unfolding L1h
       by auto
   qed
 qed
 
 lemma pcomps_swap :
-  assumes H : "sups_pres (set (f1 # f2 # l1))"
-  shows "pcomps (f1 # f2 # l1) = pcomps (f2 # f1 # l1)"
+  assumes H : "sups_pres (set (f1 # f2 # l1)) S"
+  assumes Hx : "x \<in> S"
+  shows "pcomps (f1 # f2 # l1) syn x = pcomps (f2 # f1 # l1) syn x"
 proof(cases l1)
   case Nil
 
-  have Pres' : "sups_pres {f1, f2}"
+  have Pres' : "sups_pres {f1, f2} S"
     using sups_pres_subset[OF H, of "{f1, f2}" f1]
     by auto
 
-  have Comm: "pcomps [f1, f2] = pcomps [f2, f1]"
-    using pcomps_comm'[OF Pres']
+  have Comm: "pcomps [f1, f2] syn x = pcomps [f2, f1] syn x"
+    using pcomps_comm'[OF Pres' Hx]
     by simp
 
   then show ?thesis using Nil
@@ -1419,33 +1422,33 @@ proof(cases l1)
 next
   case (Cons l1h l1t)
 
-  have Pres' : "sups_pres {f1, f2}"
+  have Pres' : "sups_pres {f1, f2} S"
     using sups_pres_subset[OF H, of "{f1, f2}" f1]
     by auto
 
   have Eq1: "set (f1 # f2 # l1) = (set [f1, f2] \<union> set (l1))"
     by auto
 
-  then have Assoc1 : "pcomps ([f1, f2] @ l1) = pcomps [pcomps [f1, f2], pcomps (l1)]"
-    using pcomps_assoc[of "[f1, f2]" "l1"] H Cons
+  then have Assoc1 : "pcomps ([f1, f2] @ l1) syn x = pcomps [pcomps [f1, f2], pcomps (l1)] syn x"
+    using pcomps_assoc[of "[f1, f2]" "l1"] H Cons Hx
     by(auto)
 
-  have Comm: "pcomps [f1, f2] = pcomps [f2, f1]"
-    using pcomps_comm'[OF Pres']
+  have Comm: "pcomps [f1, f2] syn x = pcomps [f2, f1] syn x"
+    using pcomps_comm'[OF Pres' Hx]
     by simp
 
   have Set_comm : "set (f2 # f1 # l1) = set (f1 # f2 # l1)"
     by auto
 
-  have H' : "sups_pres (set (f2 # f1 # l1))"
+  have H' : "sups_pres (set (f2 # f1 # l1)) S"
     using H unfolding Set_comm
     by auto
 
   have Eq2: "set (f2 # f1 # l1) = (set [f2, f1] \<union> set (l1))"
     by auto
     
-  then have Assoc2 : "pcomps ([f2, f1] @ l1) = pcomps [pcomps [f2, f1], pcomps l1]"
-    using pcomps_assoc[of "[f2, f1]" "l1"] H' Cons
+  then have Assoc2 : "pcomps ([f2, f1] @ l1) syn x = pcomps [pcomps [f2, f1], pcomps l1] syn x"
+    using pcomps_assoc[of "[f2, f1]" "l1"] H' Cons Hx
     by(auto)
 
   show ?thesis using Assoc1 Assoc2 Comm
@@ -1453,12 +1456,13 @@ next
 qed
 
 lemma pcomps_removeAll' :
-  assumes H : "sups_pres S"
-  assumes Hf : "f \<in> S"
-  assumes Hl1 : "set l1 = S"
-  shows "pcomps (f # l1) = pcomps (f # (removeAll f l1))"
+  assumes H : "sups_pres Fs S"
+  assumes Hf : "f \<in> Fs"
+  assumes Hl1 : "set l1 = Fs"
+  assumes Hx : "x \<in> S"
+  shows "pcomps (f # l1) syn x = pcomps (f # (removeAll f l1)) syn x"
   using assms
-proof(induction l1 arbitrary: f S)
+proof(induction l1 arbitrary: f Fs)
   case Nil
   then show ?case by auto
 next
@@ -1479,8 +1483,11 @@ next
           using bsup_idem[of "l1h a b"] by simp
       qed
 
-      then show ?thesis using Cons.prems Nil' 
-        by(simp)
+      hence Conc'' : "[^ l1h syn x, l1h syn x ^] = l1h syn x"
+        using fun_cong[OF fun_cong[OF Conc']] by auto
+
+      show ?thesis using Cons.prems Nil' Conc''
+        by simp
     next
       case False
       then show ?thesis using Cons Nil'
@@ -1489,7 +1496,7 @@ next
   next
     case Cons' : (Cons l1h2 l1t2)
 
-    have Pres' : "sups_pres (set l1t)"
+    have Pres' : "sups_pres (set l1t) S"
       using sups_pres_subset[OF Cons.prems(1) _, of "set l1t" l1h2]
         Cons.prems
       unfolding  Cons'
@@ -1503,8 +1510,8 @@ next
       proof(cases "f = l1h")
         case True' : True
 
-        have IndHyp : "pcomps (f # l1t) = pcomps (f # removeAll f l1t)"
-          using Cons.IH[OF Pres' True]
+        have IndHyp : "pcomps (f # l1t) syn x = pcomps (f # removeAll f l1t) syn x"
+          using Cons.IH[OF Pres' True] Cons.prems
           by simp
 
         show ?thesis
@@ -1514,46 +1521,46 @@ next
         case False' : False
 
 
-        have Pres1 : "sups_pres (set (f # l1h # l1t))"
+        have Pres1 : "sups_pres (set (f # l1h # l1t)) S"
           using sups_pres_subset[OF Cons.prems(1), of "set (f # l1h # l1t)" f] Cons' Cons.prems
           by auto
 
-        have Swap: "pcomps (f # l1h # l1t) = pcomps (l1h # f # l1t)"
-          using pcomps_swap[OF Pres1]
+        have Swap: "pcomps (f # l1h # l1t) syn x = pcomps (l1h # f # l1t) syn x"
+          using pcomps_swap[OF Pres1] Cons.prems
           by simp
 
-        have IndHyp : "pcomps (f # l1t) = pcomps (f # removeAll f l1t)"
-          using Cons.IH[OF Pres' True]
+        have IndHyp : "pcomps (f # l1t) syn x = pcomps (f # removeAll f l1t) syn x"
+          using Cons.IH[OF Pres' True] Cons.prems
           by simp
 
-        have Subset2 : "set (f # l1h # removeAll f l1t) \<subseteq> S"
+        have Subset2 : "set (f # l1h # removeAll f l1t) \<subseteq> Fs"
           using Cons.prems Cons' False'
           by(auto)
 
-        have Pres2 : "sups_pres (set (f # l1h # removeAll f l1t))"
+        have Pres2 : "sups_pres (set (f # l1h # removeAll f l1t)) S"
           using sups_pres_subset[OF Cons.prems(1) _ Subset2, of f] Cons.prems
           by auto
 
         have SetEq : "set (l1h # f # removeAll f l1t) = set (f # l1h # removeAll f l1t)"
           by auto
 
-        then have Pres2' : "sups_pres (set (l1h # f # removeAll f l1t))"
+        then have Pres2' : "sups_pres (set (l1h # f # removeAll f l1t)) S"
           using Pres2 by auto
 
         have SetEq' : "set (l1h # f # removeAll f l1t) = (set [l1h] \<union> set (f # removeAll f l1t))"
           by auto
 
-        then have Pres2'' : "sups_pres (set [l1h] \<union> set (f # removeAll f l1t))"
+        then have Pres2'' : "sups_pres (set [l1h] \<union> set (f # removeAll f l1t)) S"
           using Pres2' by auto
 
-        have Swap' : "pcomps (f # l1h # removeAll f l1t) = pcomps (l1h#f#removeAll f l1t)"
-          using pcomps_swap[OF Pres2] by simp
+        have Swap' : "pcomps (f # l1h # removeAll f l1t) syn x = pcomps (l1h#f#removeAll f l1t) syn x"
+          using pcomps_swap[OF Pres2] Cons.prems by simp
 
-        have Assoc1 : "pcomps (l1h # f # l1t) = pcomps [pcomps [l1h], pcomps (f#l1t)]"
-          using pcomps_assoc[of "[l1h]" "f#l1t"] Pres1
+        have Assoc1 : "pcomps (l1h # f # l1t) syn x = pcomps [pcomps [l1h], pcomps (f#l1t)] syn x"
+          using pcomps_assoc[of "[l1h]" "f#l1t" S x syn] Pres1 Cons.prems
           by auto
 
-        have Assoc2 : "pcomps (l1h#f#removeAll f l1t) = pcomps [pcomps [l1h], pcomps (f# removeAll f l1t)]"
+        have Assoc2 : "pcomps (l1h#f#removeAll f l1t) syn x = pcomps [pcomps [l1h], pcomps (f# removeAll f l1t)] syn x"
           using pcomps_assoc[of "[l1h]" "f#removeAll f l1t"] Pres2''
           by auto
 
@@ -1585,22 +1592,24 @@ next
 qed
 
 lemma pcomps_removeAll :
-  assumes H : "sups_pres S"
-  assumes Hf : "f \<in> S"
-  assumes Hl1 : "set l1 = S"
-  shows "pcomps (l1) = pcomps (f # (removeAll f l1))"
-  using pcomps_set_eq1[OF H Hf Hl1]
-    pcomps_removeAll'[OF H Hf Hl1]
+  assumes H : "sups_pres Fs S"
+  assumes Hf : "f \<in> Fs"
+  assumes Hl1 : "set l1 = Fs"
+  assumes Hx : "x \<in> S"
+  shows "pcomps (l1) syn x = pcomps (f # (removeAll f l1)) syn x"
+  using pcomps_set_eq1[OF H Hf Hl1 Hx]
+    pcomps_removeAll'[OF H Hf Hl1 Hx]
   by auto
 
 lemma pcomps_set_eq :
-  assumes H : "sups_pres S"
-  assumes Hf : "f \<in> S"
-  assumes Hl1 : "set l1 = S"
-  assumes Hl2 : "set l2 = S"
-  shows "pcomps l1 = pcomps l2"
+  assumes H : "sups_pres Fs S"
+  assumes Hf : "f \<in> Fs"
+  assumes Hl1 : "set l1 = Fs"
+  assumes Hl2 : "set l2 = Fs"
+  assumes Hx : "x \<in> S"
+  shows "pcomps l1 syn x = pcomps l2 syn x"
   using assms
-proof(induction l1 arbitrary: S f l2)
+proof(induction l1 arbitrary: Fs f l2)
   case Nil1_1 : Nil
   then show ?case 
     by(cases l2; auto)
@@ -1624,12 +1633,12 @@ next
         using Cons1_1.prems Nil1_2
         by(auto)
 
-      have L1h1_pres : "sups_pres {l1h1}"
+      have L1h1_pres : "sups_pres {l1h1} S"
         using sups_pres_subset[OF Cons1_1.prems(1), of "{l1h1}" l1h1] Cons1_1.prems
         by auto
 
-      have L2_eq : "pcomps l2 = l1h1"
-        using pcomps_singleton[OF L1h1_pres L2]
+      have L2_eq : "pcomps l2 syn x = l1h1 syn x"
+        using pcomps_singleton[OF L1h1_pres L2] Cons1_1.prems
         by simp
 
       then show ?thesis
@@ -1648,7 +1657,7 @@ next
     next
       case Cons2_1 : (Cons l2h1 l2t)
 
-      have Pres' : "sups_pres (set (l1h2 # l1t2))"
+      have Pres' : "sups_pres (set (l1h2 # l1t2)) S"
         using sups_pres_subset[OF Cons1_1.prems(1), of "set (l1h2 # l1t2)" l1h2]
           Cons1_1.prems(3)
         unfolding Cons1_2
@@ -1658,22 +1667,22 @@ next
       proof(cases "l1h1 \<in> set l1t1")
         case True
 
-        hence True' : "pcomps l1t1 = pcomps (l1h1#l1t1)"
-          using pcomps_set_eq1[OF Pres', of l1h1 "(l1h2#l1t2)"]
-          unfolding Cons1_2  by auto
+        hence True' : "pcomps l1t1 syn x = pcomps (l1h1#l1t1) syn x"
+          using pcomps_set_eq1[OF Pres', of l1h1 "(l1h2#l1t2)"] Cons1_1.prems
+          unfolding Cons1_2 by auto
 
-        have Set : "set l1t1 = S"
+        have Set : "set l1t1 = Fs"
           using True Cons1_1.prems unfolding Cons1_2
           by auto
 
-        then show ?thesis using Cons1_1.IH[OF Cons1_1.prems(1) Cons1_1.prems(2) Set Cons1_1.prems(4)]
+        then show ?thesis using Cons1_1.IH[OF Cons1_1.prems(1) Cons1_1.prems(2) Set Cons1_1.prems(4)] Cons1_1.prems
           unfolding True'
           by simp
       next
         case False
 
-        have Removed : "pcomps l2 = pcomps (l1h1 # removeAll l1h1 l2)" 
-          using pcomps_removeAll[of "set l2" "l1h1" "l2"]
+        have Removed : "pcomps l2 syn x = pcomps (l1h1 # removeAll l1h1 l2) syn x" 
+          using pcomps_removeAll[of "set l2" "S" "l1h1" "l2"]
             Cons1_1.prems Cons2_1
           by auto
 
@@ -1681,25 +1690,25 @@ next
           using False Cons1_1.prems
           by auto
 
-        have Ind_hyp : "pcomps l1t1 = pcomps (removeAll l1h1 l2)"
-          using Cons1_1.IH[OF _ _ _ Set_eq, of "l1h2"] Pres' Cons1_2
+        have Ind_hyp : "pcomps l1t1 syn x = pcomps (removeAll l1h1 l2) syn x"
+          using Cons1_1.IH[OF _ _ _ Set_eq] Pres' Cons1_2 Cons1_1.prems
           by auto
 
         have Eq1 : "set (l1h1 # l1t1) = set [l1h1] \<union> set l1t1"
           by auto
 
-        have Pres1 : "sups_pres (set [l1h1] \<union> set l1t1)"
+        have Pres1 : "sups_pres (set [l1h1] \<union> set l1t1) S"
           using Cons1_1.prems Eq1
           by auto
 
-        have Assoc1 : "pcomps (l1h1 # l1t1) = pcomps [ pcomps [l1h1], pcomps l1t1]"
+        have Assoc1 : "pcomps (l1h1 # l1t1) syn x = pcomps [ pcomps [l1h1], pcomps l1t1] syn x"
           using pcomps_assoc[OF Pres1] Cons1_2
           by auto
 
         have Eq2 : "set (l1h1 # removeAll l1h1 l2) = set [l1h1] \<union> set (removeAll l1h1 l2)"
           by auto
 
-        have Pres2 : "sups_pres (set [l1h1] \<union> set (removeAll l1h1 l2))"
+        have Pres2 : "sups_pres (set [l1h1] \<union> set (removeAll l1h1 l2)) S"
           using Cons1_1.prems Eq1
           by auto
 
@@ -1727,8 +1736,8 @@ next
           then have Not_empty2 : "removeAll l1h1 l2 \<noteq> []"
             by(cases "removeAll l1h1 l2"; auto)
 
-          have Assoc2 : "pcomps (l1h1 # removeAll l1h1 l2) = pcomps [ pcomps [l1h1], pcomps (removeAll l1h1 l2)]"
-            using pcomps_assoc[OF Pres2 _ Not_empty2] 
+          have Assoc2 : "pcomps (l1h1 # removeAll l1h1 l2) syn x = pcomps [ pcomps [l1h1], pcomps (removeAll l1h1 l2)] syn x"
+            using pcomps_assoc[OF Pres2 _ Not_empty2] Cons1_1.prems
             by auto
   
           show ?thesis using Ind_hyp Removed Assoc1 Assoc2
