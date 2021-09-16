@@ -866,11 +866,6 @@ proof(rule sups_presI)
 
       have Leq1 : "x <[ sup1" using is_supD1[OF H' Xin] by simp
 
-
-(* TODO: how can we show that sup1 is in S? do we need some kind of closure property? *)
-(* YOU ARE HERE *)
-(* perhaps we need to modify the definition of sups_pres (again) to force 
-   sup1 to be in the set S *)
       show "y <[ pcomps l1 syn sup1"
         using pcomps_mono[OF Pres1 F1 Xin' H'_in Leq1]
         unfolding sym[OF Xy] by simp

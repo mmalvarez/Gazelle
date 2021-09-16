@@ -1,5 +1,5 @@
 theory LifterX
-imports Lifter
+imports Lifter Lifter_Instances
 begin
 
 (* An experiment in developing a variant of Lifter that
@@ -7,18 +7,20 @@ has a weaker notion of valid-sets (updates don't unconditionally need to be in t
 instead this is only the case if we started with a valid input
 *)
 
+(* problem:_ if we add this law, we no longer have a valid prio instance *)
 class Okay =
-  fixes ok_S :: "'a set"
+  fixes ok_S :: "('a) set"
+
 
 instantiation md_triv :: (_) Okay
 begin
 definition triv_ok_S : "(ok_S :: 'a md_triv set) = UNIV"
-instance proof qed
+instance proof
+qed
 end
 
 instantiation md_prio :: (Okay) Okay
 begin
-definition prio_ok_S : "(ok_S :: 'a md_prio set) = { x :: 'a md_prio . \<exists> x' p' . x = mdp p' x' \<and> x' \<in> ok_S }"
 instance proof qed
 end
 
@@ -90,7 +92,7 @@ lemma lifting_validx_weakDP' :
   by(auto simp add: lifting_validx_weak_def)
 
 definition lifting_validx_weakb ::
-  "('x, 'a, 'b :: {Pordb, Okay}, 'z) lifting_scheme \<Rightarrow> ('x, 'b) valid_set \<Rightarrow> bool" where
+  "('x, 'a, 'b :: {Pordb, Okay}) lifting \<Rightarrow> ('x, 'b) valid_set \<Rightarrow> bool" where
 "lifting_validx_weakb l S =
  ((lifting_valid_weakb l S) \<and>
   (\<forall> s . ok_S \<subseteq> S s) \<and>
@@ -124,7 +126,7 @@ lemma lifting_validx_weakbDP' :
   by(auto simp add: lifting_validx_weakb_def)
 
 definition lifting_validx ::
-  "('x, 'a, 'b :: {Pord, Okay}, 'z) lifting_scheme \<Rightarrow> ('x, 'b) valid_set \<Rightarrow> bool" where
+  "('x, 'a, 'b :: {Pord, Okay}) lifting\<Rightarrow> ('x, 'b) valid_set \<Rightarrow> bool" where
 "lifting_validx l S =
  ((lifting_valid l S) \<and>
   (\<forall> s . ok_S \<subseteq> S s) \<and>
@@ -158,7 +160,7 @@ lemma lifting_validxDP' :
   by(auto simp add: lifting_validx_def)
 
 definition lifting_validxb ::
-  "('x, 'a, 'b :: {Pordb, Okay}, 'z) lifting_scheme \<Rightarrow> ('x, 'b) valid_set \<Rightarrow> bool" where
+  "('x, 'a, 'b :: {Pordb, Okay}) lifting \<Rightarrow> ('x, 'b) valid_set \<Rightarrow> bool" where
 "lifting_validxb l S =
  ((lifting_validb l S) \<and>
   (\<forall> s . ok_S \<subseteq> S s) \<and>
@@ -210,32 +212,39 @@ next
 qed
 
 lemma option_l_validx_weak :
-  assumes H : "lifting_validx_weak (t :: ('x, 'a, 'b :: {Pord, Okay}, 'z) lifting_scheme) S"
+  assumes H : "lifting_validx_weak (t :: ('x, 'a, 'b :: {Pord, Okay}) lifting) S"
   shows "lifting_validx_weak (option_l t) (option_l_S S)"
 proof(rule lifting_validx_weakI)
   show "lifting_valid_weak (option_l t)
      (option_l_S S)"
-    using option_l_valid_weak lifting_validx_weakDV[OF H] by auto
+    using option_l_valid_weak[OF lifting_validx_weakDV[OF H]] by auto
 next
   show "\<And> s . ok_S \<subseteq> option_l_S S s"
     using lifting_validx_weakDS[OF H]
     by(auto simp add: option_l_S_def option_ok_S)
 next
-  show "\<And>s a b.
-       b \<in> ok_S \<Longrightarrow>
+  fix s :: 'x
+  fix a :: 'a
+  fix b :: "('b :: {Pord, Okay}) option"
+  assume H_Ok : "b \<in> ok_S"
+
+  then obtain b' where H' : "b = Some b'" and H'_Ok : "b' \<in> ok_S"
+    by(auto simp add: option_ok_S)
+
+  show "
        LUpd (option_l t) s a b \<in> ok_S"
-    using lifting_validx_weakDP'[OF H]
-    by(auto simp add: option_l_def option_l_S_def option_ok_S)
+    using lifting_validx_weakDP'[OF H H'_Ok, of s a] H'
+    by(cases t; auto simp add: option_l_def option_l_S_def option_ok_S)
 qed
 
 (* TODO: option_l_valid, option_l_validb *)
 
 lemma fst_l_validx_weak :
-  assumes H : "lifting_validx_weak (t :: ('x, 'a, 'b :: {Pord, Okay}, 'z) lifting_scheme) S"
+  assumes H : "lifting_validx_weak (t :: ('x, 'a, 'b :: {Pord, Okay}) lifting) S"
   shows "lifting_validx_weak (fst_l t) (fst_l_S S)"
 proof(rule lifting_validx_weakI)
   show "lifting_valid_weak (fst_l t) (fst_l_S S)"
-    using lifting_validx_weakDV[OF H] fst_l_valid_weak by auto
+    using lifting_validx_weakDV[OF H] fst_l_valid_weak by(cases t; auto)
 next
   show "\<And>s. ok_S \<subseteq> fst_l_S S s"
     using lifting_validx_weakDS[OF H]
@@ -244,19 +253,19 @@ next
   show "\<And>s a b.
          b \<in> ok_S \<Longrightarrow> LUpd (fst_l t) s a b \<in> ok_S"
     using lifting_validx_weakDP'[OF H]
-    by(auto simp add: fst_l_def fst_l_S_def prod_ok_S)
+    by(cases t; auto simp add: fst_l_def fst_l_S_def prod_ok_S)
 qed
 
 (* TODO: other variants of fst; snd as well *)
 
 lemma merge_l_validx_gen :
-  assumes H1 : "lifting_validx (l1 :: ('x, 'a1, 'b :: {Mergeable, Okay}, 'z1) lifting_scheme) S1"
-  assumes H2 : "lifting_validx (l2 :: ('x, 'a2, 'b :: {Mergeable, Okay}, 'z2) lifting_scheme) S2"
-  assumes Hort : "l_ortho_alt l1 S1 l2 S2"
+  assumes H1 : "lifting_validx (l1 :: ('x, 'a1, 'b :: {Mergeable, Okay}) lifting) S1"
+  assumes H2 : "lifting_validx (l2 :: ('x, 'a2, 'b :: {Mergeable, Okay}) lifting) S2"
+  assumes Hort : "l_ortho l1 S1 l2 S2"
   shows "lifting_validx (merge_l l1 l2) (\<lambda> s . S1 s \<inter> S2 s)"
 proof(rule lifting_validxI)
   show "lifting_valid (merge_l l1 l2) (\<lambda>s. S1 s \<inter> S2 s)"
-    using merge_l_valid_gen[OF lifting_validxDV[OF H1] lifting_validxDV[OF H2] Hort]
+    using merge_l_valid[OF lifting_validxDV[OF H1] lifting_validxDV[OF H2] Hort]
     by auto
 next
   show "\<And> s . ok_S \<subseteq> S1 s \<inter> S2 s"
@@ -268,11 +277,8 @@ next
        b \<in> ok_S \<Longrightarrow>
        LUpd (merge_l l1 l2) s a b \<in> ok_S"
     using lifting_validxDP'[OF H1] lifting_validxDP'[OF H2]
-    by(auto simp add: merge_l_def)
+    by(cases l1; cases l2; auto simp add: merge_l_def)
 qed
-
-
-
 
 
 end
