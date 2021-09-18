@@ -16,6 +16,14 @@ definition lifting_validm_weak ::
  ((lifting_validx_weak l S) \<and> 
   (\<forall> v V supr f s . v \<in> V \<longrightarrow> V \<subseteq> S s \<longrightarrow> is_sup V supr \<longrightarrow> supr \<in> S s \<longrightarrow> is_sup (LMap l f s ` V) (LMap l f s supr)))"
 
+definition lifting_validm_weakb ::
+  "('x, 'a, 'b :: {Pordb, Okay}) lifting \<Rightarrow> ('x, 'b) valid_set \<Rightarrow> bool" where
+"lifting_validm_weakb l S =
+ ((lifting_validx_weakb l S) \<and> 
+  (\<forall> v V supr f s . v \<in> V \<longrightarrow> V \<subseteq> S s \<longrightarrow> is_sup V supr \<longrightarrow> supr \<in> S s \<longrightarrow> is_sup (LMap l f s ` V) (LMap l f s supr)) \<and>
+  (\<forall> s . \<bottom> \<notin> S s))"
+
+
 (* TODO: need membership in S? *)
 lemma lifting_validm_weakI :
   assumes "lifting_validx_weak l S"
@@ -40,6 +48,37 @@ lemma lifting_validm_weakDM :
   assumes "is_sup V supr"
   shows "is_sup (LMap l f s ` V) (LMap l f s supr)"
   using assms by (auto simp add: lifting_validm_weak_def)
+
+lemma lifting_validm_weakbI :
+  assumes "lifting_validx_weakb l S"
+  assumes "\<And> v V supr f s . 
+         v \<in> V \<Longrightarrow>
+         V \<subseteq> S s \<Longrightarrow>
+         is_sup V supr \<Longrightarrow> supr \<in> S s \<Longrightarrow> is_sup (LMap l f s ` V) (LMap l f s supr)"
+  assumes "\<And> s . \<bottom> \<notin> S s"
+  shows "lifting_validm_weakb l S"
+  using assms 
+  by(auto simp add: lifting_validm_weakb_def)
+
+lemma lifting_validm_weakbDV :
+  assumes "lifting_validm_weakb l S" 
+  shows "lifting_validx_weakb l S"
+  using assms by (auto simp add: lifting_validm_weakb_def)
+
+lemma lifting_validm_weakbDM :
+  assumes "lifting_validm_weakb l S" 
+  assumes "v \<in> V"
+  assumes "V \<subseteq> S s" 
+  assumes "supr \<in> S s"
+  assumes "is_sup V supr"
+  shows "is_sup (LMap l f s ` V) (LMap l f s supr)"
+  using assms by (auto simp add: lifting_validm_weakb_def)
+
+lemma lifting_validm_weakbDB :
+  assumes "lifting_validm_weakb l S" 
+  shows "\<bottom> \<notin> S s"
+  using assms
+  by(auto simp add: lifting_validm_weakb_def)
 
 (* TODO: do we only need the finite case? if so we could just prove this for pairs
  and then induct on set size... *)
@@ -131,13 +170,15 @@ lemma lifting_validmDM' :
 
 (* TODO *)
 
+(*
 definition lifting_validm_weakb ::
   "('x, 'a, 'b :: {Pordb, Okay}) lifting \<Rightarrow> ('x, 'b) valid_set \<Rightarrow> bool" where
 "lifting_validm_weakb l S =
  ((lifting_validx_weakb l S) \<and> 
   (\<forall> x1 x2 supr f s . x1 \<in> S s \<longrightarrow> x2 \<in> S s \<longrightarrow> is_sup {x1, x2} supr \<longrightarrow> supr \<in> S s \<longrightarrow> is_sup {LMap l f s x1, LMap l f s x2} (LMap l f s supr)))"
-
+*)
 (* TODO: need membership in S? *)
+(*
 lemma lifting_validm_weakbI :
   assumes "lifting_validx_weakb l S"
   assumes "\<And> x1 x2 supr f s . 
@@ -171,7 +212,7 @@ lemma lifting_validm_weakbDM' :
   assumes "supr \<in> S s"
   shows "is_sup (LMap l f s ` Xs) (LMap l f s supr)"
   sorry  
-
+*)
 definition lifting_validmb ::
   "('x, 'a, 'b :: {Pordb, Okay}) lifting \<Rightarrow> ('x, 'b) valid_set \<Rightarrow> bool" where
 "lifting_validmb l S =
@@ -215,6 +256,7 @@ lemma lifting_validmbDM' :
 
 (* TODO: show the rest of these for the liftings we care about. *)
 
+(* TODO: need a separate notion for triv_l *)
 lemma triv_l_validm_weak :
   shows "lifting_validm_weak (triv_l) (\<lambda> _ . UNIV)"
 proof(rule lifting_validm_weakI)
@@ -280,12 +322,12 @@ lemma is_sup_pair :
   by(auto simp add: is_sup_def is_least_def is_ub_def leq_refl)
 
 (* TODO: do we actually need set restrictions? *)
-lemma option_l_validm_weak :
+lemma option_l_validm_weakb :
   fixes l :: "('a, 'b, ('c :: {Okay, Pord})) lifting"
   assumes H : "lifting_validm_weak l S"
-  shows "lifting_validm_weak (option_l l) (option_l_S S)"
-proof(rule lifting_validm_weakI)
-  show "lifting_validx_weak (option_l l) (option_l_S S)" sorry
+  shows "lifting_validm_weakb (option_l l) (option_l_S S)"
+proof(rule lifting_validm_weakbI)
+  show "lifting_validx_weakb (option_l l) (option_l_S S)" sorry
 next
   fix V
   fix s 
@@ -398,20 +440,29 @@ next
     then show "LMap (option_l l) f s supr <[ z" using V' Z' Supr'
       by(cases l; auto simp add: option_l_def is_ub_def option_pleq)
   qed
+next
+  show "\<And> s . \<bottom> \<notin> option_l_S S s"
+    by(auto simp add: option_l_S_def option_bot)
 qed
 
 (* TODO: should we instead force i to be some increment function? *)
 (* TODO: i think the real issue here might be that we need the converse: if outputs have a sup,
- * then so did inputs. is this something we can assume?
+ * then so did inputs. is this something we can assume? i dont think so - it would force functions
+to be one-to-one (see for instance the md_triv case)
+
+another approach: require that valid elements not be bottom. then the fact that
+supr must be valid will imply that we have a true supremum.
+
+problem: with products, we can have one field be bottom without the whole tuple being bottom
  *)
 lemma prio_l_validm_weak :
-  fixes l :: "('a, 'b, ('c :: {Okay, Pordb})) lifting"
-  assumes H : "lifting_validm_weak l S"
+  fixes l :: "('a, 'b, ('c :: {Okay, Pordbc})) lifting"
+  assumes H : "lifting_validm_weakb l S"
   assumes Hstr1 : "\<And> s p1 p2 . p1 \<le> p2 \<Longrightarrow> i s p1 \<le> i s p2"
   assumes Hstr2 : "\<And> s p1 p2 . p1 < p2 \<Longrightarrow> i s p1 < i s p2"
-  shows "lifting_validm_weak (prio_l b i l) (prio_l_S S)"
-proof(rule lifting_validm_weakI)
-  show "lifting_validx_weak (prio_l b i l) (prio_l_S S)" sorry
+  shows "lifting_validm_weakb (prio_l b i l) (prio_l_S S)"
+proof(rule lifting_validm_weakbI)
+  show "lifting_validx_weakb (prio_l b i l) (prio_l_S S)" sorry
 next
   fix V
   fix s 
@@ -461,8 +512,8 @@ next
 
     have "xo <[ supr" using is_supD1[OF Hsup Xo(1)] by simp
 
-    have "x \<in> prio_l_S S s"
-      using lifting_valid_weakDP[OF lifting_validx_weakDV[OF lifting_validm_weakDV[OF H]]] Xo
+    have "x \<in> prio_l_S S s" 
+      using lifting_valid_weakbDP[OF lifting_validx_weakbDV[OF lifting_validm_weakbDV[OF H]]] Xo
       by(cases l; auto simp add: prio_l_S_def prio_l_def split: md_prio.splits)
 
     then obtain x' px' where X' : "x = mdp px' x'" "x' \<in> S s"
@@ -482,7 +533,7 @@ next
         using is_sup_pair by auto
   
       hence Conc' : "is_sup (LMap l f s ` {xo', supr'}) (LMap l f s supr')"
-        using Xo' Supr' lifting_validm_weakDM[OF H, of xo' "{xo', supr'}" s supr' f] 
+        using Xo' Supr' lifting_validm_weakbDM[OF H, of xo' "{xo', supr'}" s supr' f] 
         by auto
 
       then show ?thesis
@@ -624,6 +675,41 @@ next
       unfolding VSmax
       by blast
 
+    have In_Vmax_Conv :       
+      "\<And> w pw' w' y y' py'. w \<in> Vmax \<Longrightarrow>  w = mdp pw' w' \<Longrightarrow>
+        y \<in> V \<Longrightarrow> y = mdp pw' y'\<Longrightarrow> y \<in> Vmax"
+      unfolding VSmax
+      by(auto)
+
+    have Notin_Vmax : 
+      "\<And> w pw' w' y y' py'. w \<in> Vmax \<Longrightarrow>  w = mdp pw' w' \<Longrightarrow>
+        y \<in> V \<Longrightarrow> y \<notin> Vmax \<Longrightarrow> y = mdp py' y'\<Longrightarrow> py' < pw'"
+    proof-
+      fix w pw' w' y y' py'
+      assume Win : "w \<in> Vmax"
+      assume W' : "w = mdp pw' w'"
+      assume Yin : "y \<in> V"
+      assume Ynotin : "y \<notin> Vmax"
+      assume Y' : "y = mdp py' y'"
+
+      have "py' \<le> pw'" using In_Vmax[OF Win W' Yin Y'] by simp
+
+      show "py' < pw'"
+      proof(cases "py' = pw'")
+        case False
+        then show ?thesis using `py' \<le> pw'` by simp
+      next
+        case True
+
+        then have "y \<in> Vmax" using In_Vmax_Conv[OF Win W' Yin] Y'
+          by auto
+
+        then have False using Ynotin by simp
+
+        thus ?thesis by simp
+      qed
+    qed
+
     (* do we need this? *)
     have "is_sup Vmax supr"
     proof(rule is_supI)
@@ -644,7 +730,6 @@ next
 
         obtain x' px' where X' : "x = mdp px' x'" by(cases x; auto)
 
-(* case split on whether X is in Vmax? *)
         have "px' \<le> pm'"
           using In_Vmax[OF M M' X X'] by simp
 
@@ -653,183 +738,442 @@ next
         have "m <[ w" using is_ubE[OF Ub M] by simp
 
         then show "x <[ w"
-          using `px' \<le> pm'` W' X' M'
-          apply(auto simp add: prio_pleq split: if_splits)
-          sorry
+        proof(cases "x \<in> Vmax")
+          case True
+          then show ?thesis using is_ubE[OF Ub, of x] by simp
+        next
+          case False
+
+          then have "px' < pm'"
+            using Notin_Vmax[OF M M' X False X'] by simp
+
+          then show ?thesis using X' W' M' `m <[ w`
+            by(auto simp add: prio_pleq split: if_splits)
+        qed
       qed
       show "supr <[ w"
         using is_supD2[OF Hsup Ub'] by simp
     qed
-
-    (* z *)
-
-    (* can we find an input corresponding to zo? *)
 
     (* idea: either pm' is equal to supr, or is one less. *)
     show "LMap (prio_l b i l) f s supr <[ zo"
     proof(cases "has_sup Vmaxv")
       case False
 
-      have "is_sup Vmax (mdp (1 + pm') (\<bottom>))"
-      proof(rule is_supI)
+      consider (L) "psupr' < 1 + pm'"
+        | (E) "psupr' = 1 + pm'"
+        | (G) "psupr' > 1 + pm'"
+        using less_linear by auto
+
+      then have Psupr_Inc : "psupr' = 1 + pm'"
+      proof cases
+        case L
+
+        then have Eq : "psupr' = pm'" using Psupr'_max[OF `m \<in> V` M'] by simp
+
+        have "is_sup Vmaxv supr'"
+        proof(rule is_supI)
+          fix w'
+          assume W': "w' \<in> Vmaxv"
+
+          obtain pw' where W: "(mdp pw' w') \<in> Vmax" using W'
+            unfolding VSmaxv
+            by(auto split: md_prio.splits)
+
+          have Pw' : "pw' = pm'"
+            using VSmax_eq[OF M W M']
+            by auto
+
+          have "mdp pw' w' <[ supr" using is_supD1[OF `is_sup Vmax supr` W]
+            by simp
+
+          then show "w' <[ supr'"
+            using Eq Pw' Supr'
+            by(auto simp add: prio_pleq)
+        next
+          fix z'
+
+          assume Z' : "is_ub Vmaxv z'"
+
+          have Zmax : "is_ub Vmax (mdp pm' z')"
+          proof(rule is_ubI)
+            fix w
+            assume W : "w \<in> Vmax"
+
+            obtain pw' w' where W' : "w = mdp pw' w'" by(cases w; auto)
+
+            have Pw' : "pw' = pm'"
+              using VSmax_eq[OF M W M' W'] by simp
+
+            have "w' \<in> Vmaxv" using W W'
+              unfolding VSmaxv using imageI[OF W, of "case_md_prio (\<lambda>px' x'. x')"]
+              by auto
+
+            then have "w' <[ z'"
+              using is_ubE[OF Z'] by auto
+
+            then show "w <[ mdp pm' z'" using Pw' W'
+              by(auto simp add: prio_pleq split:if_splits)
+          qed
+          
+          show "supr' <[ z'" using is_supD2[OF `is_sup Vmax supr` Zmax] Eq Supr'
+            by(auto simp add: prio_pleq split:if_splits)
+        qed
+
+        then have False using False by(auto simp add: has_sup_def)
+
+        then show "psupr' = 1 + pm'" by simp
+      next
+        case E
+        then show ?thesis by simp
+      next
+        case G
+
+        have Supr_Ub : "is_ub V (mdp (1 + pm') supr')"
+        proof(rule is_ubI)
+          fix w
+
+          assume W : "w \<in> V"
+
+          obtain pw' w' where W' : "w = mdp pw' w'" by(cases w; auto)
+
+          have "pw' \<le> pm'" using In_Vmax[OF M M' W W'] by simp
+
+          then show "w <[ mdp (1 + pm') supr'"
+            using W'
+            by(auto simp add: prio_pleq)
+        qed
+
+        then have "mdp psupr' supr' <[ mdp (1 + pm') supr'"
+          using is_supD2[OF `is_sup V supr` Supr_Ub] Supr'
+          by auto
+
+        then have False using G
+          by(auto simp add: prio_pleq split:if_splits)
+
+        then show ?thesis by simp
+      qed
+
+      have "is_ub Vmax (mdp (1 + pm') \<bottom>)"
+      proof(rule is_ubI)
         fix w
 
-        assume W : "w \<in> Vmax"
-        obtain w' pw' where W' : "w = mdp pw' w'" by(cases w; auto)
+        assume W: "w \<in> Vmax"
+
+        obtain pw' w' where W' : "w = mdp pw' w'" by(cases w; auto)
 
         have "pw' = pm'" using VSmax_eq[OF W M W' M'] by simp
 
-        thus "w <[ mdp (1 + pm') \<bottom>" using W'
-          by(simp add: prio_pleq)
-      next
+        then show "w <[ mdp (1 + pm') \<bottom>"
+          using W'
+          by(auto simp add: prio_pleq)
+      qed
 
-        fix w
+      hence "supr <[ (mdp (1 + pm') \<bottom>)"
+        using is_supD2[OF `is_sup Vmax supr`] by auto
 
-        assume Ub : "is_ub Vmax w"
-        obtain w' pw' where W' : "w = mdp pw' w'" by(cases w; auto)
+      hence "supr = (mdp (1 + pm') \<bottom>)"
+        using Supr' Psupr_Inc leq_antisym[OF bot_spec[of supr']]
+        by(auto simp add: prio_pleq bot_spec)
 
-        have "pm' \<le> pw'" using is_ubE[OF Ub M] M' W'
+      hence False using lifting_validm_weakbDB[OF H] Supr'
+        by auto
+
+      thus ?thesis by auto
+    next
+      case True
+
+      then obtain vsup where Vsup : "is_sup Vmaxv vsup"
+        by(auto simp add: has_sup_def)
+
+      have "is_ub V (mdp pm' vsup)"
+      proof(rule is_ubI)
+        fix z
+        assume Z: "z \<in> V"
+        obtain pz' z' where Z' : "z = mdp pz' z'"
+          by(cases z; auto)
+
+        show "z <[ mdp pm' vsup"
+        proof(cases "z \<in> Vmax")
+          case True
+
+          have "z' \<in> Vmaxv"
+            using imageI[OF True, of "case_md_prio (\<lambda>px' x'. x')"] Z'
+            unfolding VSmaxv
+            by auto
+
+          have "pz' = pm'"
+            using VSmax_eq[OF True M Z' M'] by simp
+
+          have "z' <[ vsup"
+            using is_supD1[OF Vsup `z' \<in> Vmaxv`] by simp
+
+          then show ?thesis using `pz' = pm'` Z'
+            by(auto simp add: prio_pleq)
+        next
+          case False
+          have "pz' < pm'"
+            using Notin_Vmax[OF M M' Z False Z'] by simp
+
+          then show ?thesis using Z'
+            by(auto simp add: prio_pleq)
+        qed
+      qed
+
+      have Supr_Vmax : "is_sup Vmaxv supr'"
+      proof(rule is_supI)
+        fix w'
+
+        assume W': "w' \<in> Vmaxv"
+
+        obtain pw' where W: "(mdp pw' w') \<in> Vmax" using W'
+          unfolding VSmaxv
+          by(auto split: md_prio.splits)
+
+        have Pw' : "pw' = pm'"
+          using VSmax_eq[OF M W M']
+          by auto
+
+        have "mdp pw' w' <[ supr" using is_supD1[OF `is_sup Vmax supr` W]
+          by simp
+
+
+        have "pw' = psupr'"
+          using is_supD2[OF Hsup `is_ub V (mdp pm' vsup)`]
+            Pw' Supr' `mdp pw' w' <[ supr`
           by(auto simp add: prio_pleq split: if_splits)
 
-        show "mdp (1 + pm') \<bottom> <[ w"
-        proof(cases "pm' = pw'")
-          case Eq : True
+        then show "w' <[ supr'"
+          using Pw' Supr' `mdp pw' w' <[ supr`
+          by(auto simp add: prio_pleq)
+      next
 
-          (* idea: now we are sup of vmaxv, contradiction. *)
+        fix w'
 
-          then show ?thesis sorry
-        next
-          case Less : False
+        assume W' : "is_ub Vmaxv w'"
 
-          then have Less : "pm' < pw'" using `pm' \<le> pw'` by simp
+        have "is_ub V (mdp pm' w')"
+        proof(rule is_ubI)
+          fix z
+          assume Z: "z \<in> V"
+          obtain pz' z' where Z' : "z = mdp pz' z'"
+            by(cases z; auto)
 
-          then show ?thesis sorry
+          show "z <[ mdp pm' w'"
+          proof(cases "z \<in> Vmax")
+            case True
+
+            then have "z' \<in> Vmaxv" 
+              using imageI[OF True, of "case_md_prio (\<lambda>px' x'. x')"] Z'
+              unfolding VSmaxv
+              by auto
+              
+            have "z' <[ w'" using is_ubE[OF W' `z' \<in> Vmaxv`] by simp
+
+            have "pz' = pm'" using VSmax_eq[OF True M Z' M'] by simp
+
+            then show ?thesis using `z' <[ w'` Z'
+              by(auto simp add: prio_pleq split: md_prio.splits)
+          next
+            case False
+
+            have "pz' < pm'"
+              using Notin_Vmax[OF M M' Z False Z'] by simp
+
+            then show ?thesis using Z'
+              by(auto simp add: prio_pleq)
+          qed
         qed
 
-(*
-    proof(cases "psupr' = pm'")
-      case False
+        have "m' \<in> Vmaxv" using M' M
+          unfolding VSmaxv
+          using imageI[OF M, of "case_md_prio (\<lambda>px' x'. x')"]
+          by(auto)
 
-      have Inc : "psupr' = pm' + 1"
-        using 
+        have "m' <[ w'"
+          using is_ubE[OF W' `m' \<in> Vmaxv`] by simp
 
-      then show ?thesis
+        have "supr <[ (mdp pm' w')"
+          using is_supD2[OF Hsup `is_ub V (mdp pm' w')`]
+          by simp
+
+        have "m \<in> V" using M unfolding VSmax by auto
+
+        have "pm' \<le> psupr'"
+          using Psupr'_max[OF `m \<in> V` M'] by simp
+
+        hence "pm' = psupr'"
+          using `supr <[ (mdp pm' w')` Supr'
+          by(auto simp add: prio_pleq split: if_splits)
+
+        then show "supr' <[ w'"
+          using Supr' `supr <[ mdp pm' w'`
+          by(auto simp add: prio_pleq split: if_splits)
+      qed
+
+      have "m' \<in> Vmaxv" using M' M
+        unfolding VSmaxv
+        using imageI[OF M, of "case_md_prio (\<lambda>px' x'. x')"]
+        by(auto)
+
+      have "Vmaxv \<subseteq> S s"
+        using Vsubs
+        unfolding VSmax VSmaxv
+        by auto
+
+      have Supr'_sup_vmax : "is_sup (LMap l f s ` Vmaxv) (LMap l f s supr')"
+        using lifting_validm_weakbDM[OF H `m' \<in> Vmaxv` `Vmaxv \<subseteq> S s` Supr'(2)
+            `is_sup Vmaxv supr'`]
+        by simp
+
+(* pm' is supr of vmaxv
+*)
+
+      consider (L) "pm' < psupr'"
+        | (E) "pm' = psupr'"
+        | (G) "pm' > psupr'"
+        using less_linear by auto
+      then have "pm' = psupr'"
+      proof cases
+        case L
+
+        have "is_ub V (mdp pm' supr')"
+        proof(rule is_ubI)
+          fix w
+          assume W : "w \<in> V"
+
+          obtain pw' w' where W' : "w = mdp pw' w'"
+            by(cases w; auto)
+
+          show "w <[ mdp pm' supr'"
+          proof(cases "w \<in> Vmax")
+            case True
+
+            have "pw' = pm'" using VSmax_eq[OF True M W' M'] by simp
+
+            have "w' \<in> Vmaxv"
+              using imageI[OF True, of "case_md_prio (\<lambda>px' x'. x')"] W'
+              unfolding VSmaxv by auto
+
+            then have "w' <[ supr'"
+              using is_supD1[OF `is_sup Vmaxv supr'`] by auto
+
+            then show "w <[ mdp pm' supr'"
+              using `pw' = pm'` W'
+              by(auto simp add: prio_pleq split: if_splits)
+          next
+            case False
+
+            have "pw' < pm'" using Notin_Vmax[OF M M' W False W'] by simp
+
+            then show "w <[ mdp pm' supr'"
+              using W'
+              by(auto simp add: prio_pleq split: if_splits)
+          qed
+        qed
+
+        have "mdp psupr' supr' <[ mdp pm' supr'"
+          using is_supD2[OF Hsup `is_ub V (mdp pm' supr')`] Supr'
+          by auto
+
+        then have False using L
+          by(auto simp add: prio_pleq split: if_splits)
+
+        then show ?thesis by simp
+      next
+        case E
+        then show ?thesis by simp
+      next
+        case G
+
+        have "m \<in> V" using M
+          unfolding VSmax by auto
+
+        have "mdp pm' m' <[ mdp psupr' supr'"
+          using is_supD1[OF Hsup `m \<in> V`] M' Supr'
+          by auto
+
+        hence False using G
+          by(auto simp add: prio_pleq split: if_splits)
+
+        then show ?thesis by simp
+      qed
+
+      consider (L) "pzo' < i s pm'"
+        | (E) "pzo' = i s pm'"
+        | (G) "pzo' > i s pm'"
+        using less_linear by auto
+      then show "LMap (prio_l b i l) f s supr <[ zo"
+      proof cases
+        case L
+
+        have "m \<in> V"
+          using M VSmax by auto
         
-        sorry
-    next
-      case True
-      then show ?thesis sorry
+        have Bad : "LMap (prio_l b i l) f s m \<in> LMap (prio_l b i l) f s ` V"
+          using imageI[OF `m \<in> V`, of "LMap (prio_l b i l) f s"]
+          by auto
+
+        have False using is_ubE[OF Ub Bad] L M' Z'
+          by(cases l; auto simp add: prio_l_def prio_pleq)
+
+        then show ?thesis by simp
+      next
+        case E
+
+        have Ub_max : "is_ub (LMap l f s ` Vmaxv) zo'"
+        proof(rule is_ubI)
+          fix wo'
+          assume Wo' : "wo' \<in>  LMap l f s ` Vmaxv "
+
+          obtain w pw' w' where W: "w = mdp pw' w'" "w \<in> Vmax" "LMap l f s w' = wo'" using Wo'
+            unfolding VSmaxv
+            by(auto split: md_prio.splits)
+
+          have "pw' = pm'"
+            using VSmax_eq[OF M `w \<in> Vmax` M' `w = mdp pw' w'`]
+            by simp
+
+          have "w \<in> V" using `w \<in> Vmax`
+            unfolding VSmax by auto
+
+          have Wmap : "LMap (prio_l b i l) f s w \<in> (LMap (prio_l b i l) f s ` V)"
+            using imageI[OF `w \<in> V`] by auto
+
+          have "LMap (prio_l b i l) f s w <[ zo"
+            using is_ubE[OF Ub Wmap]  by simp
+
+          then show "wo' <[ zo'"
+            using Z' `pw' = pm'` E W
+            by(cases l; auto simp add: prio_l_def prio_pleq)
+        qed
+
+        then show ?thesis using is_supD2[OF Supr'_sup_vmax Ub_max] E `pm' = psupr'` Z' Supr' Result
+          by(cases l; auto simp add: prio_l_def prio_pleq)
+      next
+        case G
+        have "m' \<in> Vmaxv" using M' M
+          unfolding VSmaxv
+          using imageI[OF M, of "case_md_prio (\<lambda>px' x'. x')"]
+          by(auto)
+
+        have "m \<in> V" using M unfolding VSmax by auto
+
+        have "m' \<in> Vmaxv" using M' M
+          unfolding VSmaxv
+          using imageI[OF M, of "case_md_prio (\<lambda>px' x'. x')"]
+          by(auto)
+
+(* this should be true, but i've lost track of why. *)
+
+        then show ?thesis using Supr' Z' G `pm' = psupr'`
+          by(cases l; auto simp add: prio_l_def prio_pleq)
+      qed
     qed
-*)
-(* here we want basically to see if we can find an input that
- * gives rise to zo, and then show that we supr must have seen that input.
-*)
-
-(* take LUB of that *)
-
-(* zo has to be at least that high priority. *)
-
-(*
- * idea: first compare psupr_res' vs pzo'
- * 
-*)
-
-    consider (Lt) "psupr_res' < pzo'" |
-             (Gt) "pzo' < psupr_res'" |
-             (Eq) "psupr_res' = pzo'"
-      using less_linear
-      by blast
-    then show "LMap (prio_l b i l) f s supr <[ zo"
-    proof cases
-      case Lt
-      then show ?thesis using Result Z'
-        by(auto simp add: prio_pleq)
-    next
-      case Gt
-(* here we want basically to see if we can find an input that
- * gives rise to zo, and then show that we supr must have seen that input.
-*)
-      then show ?thesis 
-    next
-      case Eq
-      then show ?thesis sorry
-    qed
-
-    proof(cases "psupr_res' = pzo'")
-      case True
-      then show ?thesis sorry
-    next
-      case False
-(* YOU ARE HERE. *)
-(* I think this is true, but I am not totally sure why *)
-      then have "psupr' < pz'"
-        using is_ 
-        by(auto simp add: prio_pleq split: if_split_asm)
-
-      obtain supr_res' psupr_res' where Result : "LMap (prio_l b i l) f s supr = mdp psupr_res' supr_res'"
-        by(cases "LMap (prio_l b i l) f s supr"; auto)
-
-      have "px' < psupr_res'" using Hstr2[OF `pxo' < psupr'`, of s]
-          Result X' Xo Xo' Supr'
-        by(cases l; auto simp add: prio_l_def)
-
-      then show ?thesis using X' Xo Xo' Supr' X' Result
-        by(auto simp add:prio_pleq split: md_prio.splits)
-
-
-      then show ?thesis sorry
-    qed
-
-
-    have Supr'_sup : "is_sup V' supr'"
-    proof(rule is_supI)
-      fix x'
-
-      assume "x' \<in> V'"
-
-      then show "x' <[ supr'"
-        using is_supD1[OF Hsup, of "Some x'"] Supr' SV' V'
-        by(auto simp add: option_pleq)
-    next
-
-      fix z'
-
-      assume "is_ub V' z'"
-
-      then have "is_ub V (Some z')"
-        using V' SV'
-        by(auto simp add: option_pleq is_ub_def)
-
-      then show "supr' <[ z'"
-        using is_supD2[OF Hsup, of "Some z'"] Supr'
-        by(auto simp add: option_pleq)
-    qed
-
-    have Supr'_sup : "is_sup (LMap l f s ` V') (LMap l f s supr')"
-      using lifting_validm_weakDM[OF H V'(2) SV'(2) _ Supr'_sup, of f] Supr'(2)
-      by auto
-
-    obtain vr' where Vr' : "LMap (option_l l) f s v = Some vr'"
-      using lifting_valid_weakDP[OF lifting_validx_weakDV[OF lifting_validm_weakDV[OF H]]]  V'
-      by(cases l; auto simp add: option_l_def)
-
-    have "LMap (option_l l) f s v <[ z"
-      using is_ubE[OF Ub, of "LMap (option_l l) f s v"] Nemp
-      by(auto)
-
-    then obtain z' where Z' : "z = Some z'" using Vr'
-      by(cases z; auto simp add: option_pleq)
-
-    hence "is_ub (LMap l f s ` V') z'"
-      using Ub SV'
-      by(cases l; auto simp add: option_l_def is_ub_def option_pleq)
-
-    hence "LMap l f s supr' <[ z'"
-      using is_supD2[OF Supr'_sup] by auto
-
-    then show "LMap (option_l l) f s supr <[ z" using V' Z' Supr'
-      by(cases l; auto simp add: option_l_def is_ub_def option_pleq)
   qed
+next
+  show "\<And>s. \<bottom> \<notin> prio_l_S S s" using lifting_validm_weakbDB[OF H]
+    by(auto simp add: prio_bot prio_l_S_def)
 qed
 
 
