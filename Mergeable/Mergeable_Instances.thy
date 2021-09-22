@@ -173,7 +173,7 @@ instance proof
 qed
 end
 
-instantiation option :: (Pord) Pordb
+instantiation option :: (Pord_Weak) Pord_Weakb
 begin
 
 definition option_bot : "bot = (None :: 'a option)"
@@ -184,6 +184,12 @@ next
   show "\<bottom> <[ a"
     by(auto simp add:option_pleq option_bot)
 qed
+end
+
+
+instantiation option :: (Pord) Pordb
+begin
+instance proof qed
 end
 
 instantiation option :: (Pordc) Pordbc
@@ -476,7 +482,7 @@ instance proof
 qed
 end
 
-instantiation prod :: (Pordb, Pordb) Pordb
+instantiation prod :: (Pord_Weakb, Pord_Weakb) Pord_Weakb
 begin
 definition prod_bot : 
   "(bot :: 'a * 'b) = (bot, bot)"
@@ -484,6 +490,12 @@ instance proof
   fix a :: "'a * 'b"
   show "pleq bot a"
     by(cases a; auto simp add:prod_pleq prod_bot bot_spec)
+qed
+end
+
+instantiation prod :: (Pordb, Pordb) Pordb
+begin
+instance proof
 qed
 end
 
@@ -671,12 +683,28 @@ instance proof
 qed
 end
 
+instantiation md_prio :: (Pord_Weakb) Pord_Weakb
+begin
+
+definition prio_bot :
+"\<bottom> = mdp 0 bot"
+
+instance proof
+  fix a :: "'a md_prio"
+  show "pleq bot a" using bot_spec
+    by(auto simp add: prio_pleq prio_bot split:md_prio.splits)
+qed
+end
+
+instantiation md_prio :: (Pordb) Pordb
+begin
+instance proof qed
+end
+
 (* TODO: could we get away with md_prio :: (Pordb) Pordbc?
  *)
 instantiation md_prio :: (Pordbc) Pordbc
 begin
-definition prio_bot :
-"\<bottom> = mdp 0 bot"
 instance proof
   fix a b :: "'a md_prio"
 
@@ -746,12 +774,6 @@ instance proof
     hence "is_sup {a, b} a" using Ha Hb leq_refl by(auto simp add: is_sup_def is_least_def is_ub_def prio_pleq)
     thus ?thesis by(auto simp only:has_sup_def)
   qed
-
-next
-
-  fix a :: "'a md_prio"
-  show "pleq bot a" using bot_spec
-    by(auto simp add: prio_pleq prio_bot split:md_prio.splits)
 qed
 end
 
@@ -1328,12 +1350,18 @@ instance proof
 qed
 end
 
-instantiation unit :: Pordb begin
+instantiation unit :: Pord_Weakb begin
 definition unit_bot :
 "(\<bottom> :: unit) = ()"
 instance proof
   show "\<And>a::unit. \<bottom> <[ a"
     by(auto simp add: unit_pleq unit_bot)
+qed
+end
+
+
+instantiation unit :: Pordb begin
+instance proof
 qed
 end
 

@@ -1164,8 +1164,6 @@ next
           using imageI[OF M, of "case_md_prio (\<lambda>px' x'. x')"]
           by(auto)
 
-(* this should be true, but i've lost track of why. *)
-
         then show ?thesis using Supr' Z' G `pm' = psupr'`
           by(cases l; auto simp add: prio_l_def prio_pleq)
       qed
@@ -1184,41 +1182,253 @@ lemma fst_l_validm_weak :
 proof(rule lifting_validm_weakI)
   show "lifting_validx_weak (fst_l l) (fst_l_S S)" sorry
 next
-  fix s a1 a2 
-  fix b1 b2 :: "('c * 'd)"
-  fix f
-  assume HB1 : "b1 \<in> fst_l_S S s"
-  assume HB2 : "b2 \<in> fst_l_S S s"
-  assume Lt :"b1 <[ b2"
+  fix v supr :: "('c * 'd)"
+  fix V f s
 
-  obtain b1' b1'r where B1 : "b1 = (b1', b1'r)" "b1' \<in> S s"
-    using HB1 by(cases b1; auto simp add: fst_l_S_def)
+  assume HV : "v \<in> V"
+  assume HS : "V \<subseteq> fst_l_S S s"
+  assume Hsupr : "is_sup V supr"
+  assume Hsupr_S : "supr \<in> fst_l_S S s"
+  show "is_sup (LMap (fst_l l) f s ` V) (LMap (fst_l l) f s supr)"
+  proof(rule is_supI)
 
-  obtain b2' b2'r where B2 : "b2 = (b2', b2'r)" "b2' \<in> S s"
-    using HB2 by(cases b2; auto simp add: fst_l_S_def)
+    fix x
 
-  have Leq : "b1' <[ b2'"
-    using Lt B1 B2 by (auto simp add: prod_pleq)
+    assume Xin : "x \<in> LMap (fst_l l) f s ` V"
 
-  have Leqr : "b1'r <[ b2'r"
-    using Lt B1 B2 by (auto simp add: prod_pleq)
+    obtain x1 x2 where X: "x = (x1, x2)" by(cases x; auto)
 
-  show "LUpd (fst_l l) s
-        (f (LOut (fst_l l) s b1)) b1 <[
-       LUpd (fst_l l) s
-        (f (LOut (fst_l l) s b2)) b2"
-  proof(cases "b1' = b2'")
-    case True
-    then show ?thesis
-      using B1 B2 lifting_validm_weakDM[OF H B1(2) B2(2) Leq] Leqr
+    obtain xi xi1 xi2 where Xi : "xi = (xi1, xi2)" "xi \<in> V" "LMap (fst_l l) f s xi = x"
+      using Xin
+      by auto
+
+    obtain supr1 supr2 where Supr : "supr = (supr1, supr2)" by(cases supr; auto)
+
+    have "xi <[ supr" using is_supD1[OF Hsupr Xi(2)] by simp
+
+    hence "xi1 <[ supr1" "xi2 <[ supr2"
+      using Xi Supr
+      by(auto simp add: prod_pleq split: prod.splits)
+
+    have "x2 = xi2" using Xi X
+      by(cases l; auto simp add: fst_l_def)
+
+    have "x1 = LMap l f s xi1"
+      using Xi X
+      by(cases l; auto simp add: fst_l_def)
+
+    have "LMap (fst_l l) f s supr = (LMap l f s supr1, supr2)"
+      using Supr
+      by(cases l; auto simp add: fst_l_def)
+
+    have Xi1_in : "xi1 \<in> fst ` V"
+      using imageI[OF `xi \<in> V`, of fst] Xi
+      by(auto simp add: fst_l_S_def)
+
+    have Fst_V_sub : "fst ` V \<subseteq> S s"
+      using HS
+      by(auto simp add: fst_l_S_def)
+
+    have "supr1 \<in> S s"
+      using Hsupr_S Supr
+      by(auto simp add: fst_l_S_def)
+
+    have Supr1_sup : "is_sup (fst ` V) supr1"
+    proof(rule is_supI)
+      fix w1
+      assume "w1 \<in> fst ` V"
+
+      then obtain w2 where "(w1, w2) \<in> V"
+        by auto
+
+      hence "(w1, w2) <[ supr" using is_supD1[OF Hsupr, of "(w1, w2)"] by auto
+
+      thus "w1 <[ supr1" using Supr by(auto simp add: prod_pleq)
+    next
+
+      fix z1
+
+      assume Hub : "is_ub (fst ` V) z1"
+
+      have "is_ub V (z1, supr2)"
+      proof(rule is_ubI)
+        fix w
+        assume "w \<in> V"
+
+        obtain w1 w2 where W: "w = (w1, w2)" by(cases w; auto)
+
+        have "w1 \<in> (fst ` V)"
+          using imageI[OF `w \<in> V`, of fst] W by auto
+
+        hence "w1 <[ z1" using is_ubE[OF Hub] by auto
+
+        have "w2 <[ supr2" using is_supD1[OF Hsupr `w \<in> V`] Supr W
+          by(auto simp add: prod_pleq)
+
+        then show "w <[ (z1, supr2)" using W `w1 <[ z1`
+          by(auto simp add: prod_pleq)
+      qed
+
+      show "supr1 <[ z1"
+        using is_supD2[OF Hsupr `is_ub V (z1, supr2)`] Supr
+        by(auto simp add: prod_pleq)
+    qed
+
+    have Supr1_map : "is_sup (LMap l f s ` fst ` V) (LMap l f s supr1)"
+      using lifting_validm_weakDM[OF H Xi1_in Fst_V_sub `supr1 \<in> S s` Supr1_sup, of f]
+      by simp
+
+    have X1_in : "x1 \<in> LMap l f s ` fst ` V"
+      using X Xi imageI[OF `xi \<in> V`, of fst]
+      by(cases l; auto simp add: fst_l_def)
+
+    have "x1 <[ LMap l f s supr1"
+      using is_supD1[OF Supr1_map X1_in]
+      by simp
+
+    have "x2 <[ supr2" using `x2 = xi2` `xi2 <[ supr2` by simp
+
+    then show "x <[ LMap (fst_l l) f s supr"
+      using X Supr `x1 <[ LMap l f s supr1`
       by(cases l; auto simp add: fst_l_def prod_pleq)
   next
-    case False
-    then show ?thesis 
-      using B1 B2 lifting_validm_weakDM[OF H B1(2) B2(2) Leq] Leqr
+    fix x
+
+    assume Xub : "is_ub (LMap (fst_l l) f s ` V) x"
+
+    obtain supr1 supr2 where Supr : "supr = (supr1, supr2)" by(cases supr; auto)
+
+  (* TODO: copy-pasted from first case *)
+    have "LMap (fst_l l) f s supr = (LMap l f s supr1, supr2)"
+      using Supr
+      by(cases l; auto simp add: fst_l_def)
+
+    have Fst_V_sub : "fst ` V \<subseteq> S s"
+      using HS
+      by(auto simp add: fst_l_S_def)
+
+    have "supr1 \<in> S s"
+      using Hsupr_S Supr
+      by(auto simp add: fst_l_S_def)
+
+    have Supr1_sup : "is_sup (fst ` V) supr1"
+    proof(rule is_supI)
+      fix w1
+      assume "w1 \<in> fst ` V"
+
+      then obtain w2 where "(w1, w2) \<in> V"
+        by auto
+
+      hence "(w1, w2) <[ supr" using is_supD1[OF Hsupr, of "(w1, w2)"] by auto
+
+      thus "w1 <[ supr1" using Supr by(auto simp add: prod_pleq)
+    next
+
+      fix z1
+
+      assume Hub : "is_ub (fst ` V) z1"
+
+      have "is_ub V (z1, supr2)"
+      proof(rule is_ubI)
+        fix w
+        assume "w \<in> V"
+
+        obtain w1 w2 where W: "w = (w1, w2)" by(cases w; auto)
+
+        have "w1 \<in> (fst ` V)"
+          using imageI[OF `w \<in> V`, of fst] W by auto
+
+        hence "w1 <[ z1" using is_ubE[OF Hub] by auto
+
+        have "w2 <[ supr2" using is_supD1[OF Hsupr `w \<in> V`] Supr W
+          by(auto simp add: prod_pleq)
+
+        then show "w <[ (z1, supr2)" using W `w1 <[ z1`
+          by(auto simp add: prod_pleq)
+      qed
+
+      show "supr1 <[ z1"
+        using is_supD2[OF Hsupr `is_ub V (z1, supr2)`] Supr
+        by(auto simp add: prod_pleq)
+    qed
+
+    obtain v1 v2 where V : "v = (v1, v2)" "v1 \<in> fst ` V"
+      using imageI[OF HV, of fst]
+      by(cases v; auto)
+
+    have Supr1_map : "is_sup (LMap l f s ` fst ` V) (LMap l f s supr1)"
+      using lifting_validm_weakDM[OF H V(2) Fst_V_sub `supr1 \<in> S s` Supr1_sup] 
+      by simp
+
+    obtain x1 x2 where X: "x = (x1, x2)" by(cases x; auto)
+
+(*
+    have Xub_snd : "is_ub (snd ` LMap (fst_l l) f s ` V) x2" using Xub
+*)
+
+    have X1_ub : "is_ub (LMap l f s ` fst ` V) x1"
+    proof
+      fix w1
+
+      assume W1: "w1 \<in> LMap l f s ` fst ` V"
+
+      then obtain wi wi1 wi2  where Wi : "wi \<in> V" "LMap l f s wi1 = w1" "wi = (wi1, wi2)"
+        by(auto)
+
+      have Wi_in : "LMap (fst_l l) f s wi \<in> LMap (fst_l l) f s ` V"
+        using imageI[OF Wi(1), of "LMap (fst_l l) f s"] by simp
+
+      have "LMap (fst_l l) f s wi <[ x"
+        using is_ubE[OF Xub Wi_in]
+        by simp
+
+      then show "w1 <[ x1"
+        using W1 Wi X
+        by(cases l; auto simp add: prod_pleq fst_l_def)
+    qed  
+
+    have "LMap l f s supr1 <[ x1"
+      using is_supD2[OF Supr1_map X1_ub]
+      by simp
+
+    have "is_ub V (supr1, x2)"
+    proof(rule is_ubI)
+      fix w
+
+      assume Win : "w \<in> V"
+
+      obtain w1 w2 where W: "w = (w1, w2)" by(cases w; auto)
+
+      have W1_in : "w1 \<in> fst ` V"
+        using imageI[OF Win, of fst] W by simp
+
+      have "w1 <[ supr1"
+        using is_supD1[OF Supr1_sup W1_in] by simp
+
+      have "LMap (fst_l l) f s w <[ x"
+        using is_ubE[OF Xub imageI[OF Win]] by simp
+
+      hence "w2 <[ x2" using W X
+        by(cases l; auto simp add: fst_l_def prod_pleq)
+
+      show "w <[ (supr1, x2)"
+        using `w1 <[ supr1` `w2 <[ x2` W
+        by(auto simp add: prod_pleq)
+    qed
+
+(* TODO: figure out second component here. i am almost positive this is true... *)
+
+    have "supr2 <[ x2"
+      using is_supD2[OF Hsupr `is_ub V (supr1, x2)`] Supr
+      by(auto simp add: prod_pleq)
+
+
+    show "LMap (fst_l l) f s supr <[ x"
+      using `LMap l f s supr1 <[ x1` `supr2 <[ x2` X Supr
       by(cases l; auto simp add: fst_l_def prod_pleq)
   qed
 qed
+
 
 (* Lifters that preserve least upper bounds when projecting (?) *)
 (* is this an overly restrictive constraint? *)

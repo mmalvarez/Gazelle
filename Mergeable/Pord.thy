@@ -629,10 +629,13 @@ qed
  * called "pointed"; however, I wished to avoid confusion since "p" in this acronym already
  * stands for "partial"
  *)
-class Pordb =  Pord +
-fixes bot :: "'a :: Pord_Weak" ("\<bottom>")
+
+class Pord_Weakb = Pord_Weak +
+fixes bot :: "'a" ("\<bottom>")
 assumes bot_spec :
   "\<And> (a :: 'a ) .  pleq bot a"
+
+class Pordb =  Pord + Pord_Weakb
 
 (* Pordc and Pordb are basically orthogonal extensions to Pord. Often we care about
  * cases where we have both. *)

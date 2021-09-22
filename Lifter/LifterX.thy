@@ -21,6 +21,7 @@ end
 
 instantiation md_prio :: (Okay) Okay
 begin
+definition prio_ok_S : "(ok_S :: 'a md_prio set) = ({x . \<exists> px vx . x = mdp vx px \<and> px \<in> ok_S})"
 instance proof qed
 end
 
