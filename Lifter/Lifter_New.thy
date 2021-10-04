@@ -129,4 +129,72 @@ locale lifting_valid_weak_base_ok_pres =
 locale lifting_valid_base_ok_pres =
   lifting_valid_base_pres + lifting_valid_base_ok
 
+(* orthogonality, used to define merge correctness *)
+
+locale l_ortho =
+  fixes l1 :: "('a, 'b1, 'c :: Mergeable) lifting"
+  fixes l2 :: "('a, 'b2, 'c) lifting"
+  fixes S1 :: "'a \<Rightarrow> 'c set"
+  fixes S2 :: "'a \<Rightarrow> 'c set"
+  (* TODO: this originally was a weaker version that had b1 = b2 instead of
+   * b1 and b2 having a sup. *)
+
+  assumes compat : "\<And> s a1 a2 b1 b2 bs.
+    is_sup {b1, b2} bs \<Longrightarrow> has_sup {LUpd l1 s a1 b1, LUpd l2 s a2 b2}"
+
+
+  (* TODO: I think these are wrong. - should they look more like compat? *)
+  assumes put2_get1 : "\<And> s a1 a2 b supr . 
+    is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
+    LOut l1 s supr = a1"
+  assumes put1_get2 : "\<And> s a1 a2 b supr .
+    is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
+    LOut l2 s supr = a2"
+  assumes put2_S1 : "\<And> s a1 a2 b supr . 
+    is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
+    supr \<in> S1 s"
+  assumes put1_S2 : "\<And> s a1 a2 b supr . 
+    is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
+    supr \<in> S2 s"
+
+locale l_ortho_base' =
+  fixes l1 :: "('a, 'b1, 'c :: Mergeableb) lifting"
+  fixes l2 :: "('a, 'b2, 'c) lifting"
+
+locale l_ortho_base = l_ortho + l_ortho_base' +
+  assumes bases_compat : "\<And> s . is_sup {LBase l1 s, LBase l2 s} \<bottom>"
+
+locale l_ortho_ok' =
+  fixes l1 :: "('a, 'b1, 'c :: {Mergeable, Okay}) lifting"
+  fixes l2 :: "('a, 'b2, 'c) lifting"
+
+locale l_ortho_ok = l_ortho + l_ortho_ok' +
+  assumes ok_compat :
+    "\<And> s a1 a2 b supr . b \<in> ok_S \<Longrightarrow>
+    is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow> supr \<in> ok_S"
+  
+
+
+
+(* TODO: can we define some other notion of orthogonality that will be useful
+ * for "squishing together" multiple liftings into one when merging semantics?
+ *)
+
+(*
+locale l_ortho =
+  fixes l1 :: "('a, 'b1, 'c :: Mergeable) lifting"
+  fixes l2 :: "('a, 'b2, 'c) lifting"
+  fixes S1 :: "'a \<Rightarrow> 'c set"
+  fixes S2 :: "'a \<Rightarrow> 'c set"
+  assumes pres2 :
+    "\<And> v V supr f1 f2 s . 
+         v \<in> V \<Longrightarrow>
+         V \<subseteq> S1 s \<Longrightarrow>
+         V \<subseteq> S2 s \<Longrightarrow>
+         is_sup V supr \<Longrightarrow>
+         supr \<in> S1 s \<Longrightarrow>
+         supr \<in> S2 s \<Longrightarrow>
+         \<exists> result . is_sup ({LMap l1 f1 s supr, LMap l2 f2 s supr}) result \<and>
+                    is_sup (LMap l1 f1 s ` V \<union> LMap l2 f2 s ` V) (result)"
+*)
 end
