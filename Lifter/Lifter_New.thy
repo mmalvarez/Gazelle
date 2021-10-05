@@ -5,17 +5,45 @@ begin
 (* When we lift syntaxes we reverse the function arrow *)
 type_synonym ('a, 'b) syn_lifting = "('b \<Rightarrow> 'a)"
 
+(*
 datatype ('syn, 'a, 'b) lifting =
   LMake  (LUpd : "('syn \<Rightarrow> 'a \<Rightarrow> 'b \<Rightarrow> 'b)")
          (LOut : "('syn \<Rightarrow> 'b \<Rightarrow> 'a)")
          (LBase : "('syn \<Rightarrow> 'b)")
+*)
+
+(*
+"mappable" typeclass?
+*)
+
+(* need a generic way to talk about things over which LMap makes sense.
+
+*)
+
+datatype ('syn, 'a, 'b, 'f) lifting =
+  LMake  (LUpd : "('syn \<Rightarrow> 'a \<Rightarrow> 'b \<Rightarrow> 'b)")
+         (LOut : "('syn \<Rightarrow> 'b \<Rightarrow> 'a)")
+         (LBase : "('syn \<Rightarrow> 'b)")
+         (LFD : "'f \<Rightarrow> 'syn \<Rightarrow> 'a \<Rightarrow> 'a")
+
+type_synonym ('syn, 'a, 'b) lifting' =
+  "('syn, 'a, 'b, 'syn \<Rightarrow> 'a \<Rightarrow> 'a) lifting"
+
+(*
+definition LUpd ::
+  "('syn, 'a, 'b) lifting \<Rightarrow> 'syn \<Rightarrow> 'a \<Rightarrow> 'b \<Rightarrow> 'b" where
+"LUpd l s a b =
+  LMap l (\<lambda> _ _ . a ) s b"
+*)
+
 
 definition LMap ::
-  "('x, 'a, 'b) lifting \<Rightarrow> ('x \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow> ('x \<Rightarrow> 'b \<Rightarrow> 'b)" where
+  "('x, 'a, 'b, 'f) lifting \<Rightarrow> 'f \<Rightarrow> ('x \<Rightarrow> 'b \<Rightarrow> 'b)" where
 "LMap l f s b =
-  LUpd l s (f s (LOut l s b)) b"
+  LUpd l s (LFD l f s (LOut l s b)) b"
 
-definition LNew :: "('syn, 'a, 'b) lifting \<Rightarrow> 'syn \<Rightarrow> 'a \<Rightarrow> 'b"  where
+
+definition LNew :: "('syn, 'a, 'b, 'f) lifting \<Rightarrow> 'syn \<Rightarrow> 'a \<Rightarrow> 'b"  where
 "LNew l s a = LUpd l s a (LBase l s)"
 
 (* TODO: make sure this is a good idea. *)
@@ -79,7 +107,7 @@ end
 (* weak + (strong?) + (base?) + (ok?) + (pres?) *)
 (* TODO: support for vsg style reasoning *)
 locale lifting_valid_weak =
-  fixes l :: "('syn, 'a, 'b :: Pord_Weak) lifting"
+  fixes l :: "('syn, 'a, 'b :: Pord_Weak, 'f) lifting"
   fixes S :: "('syn, 'b) valid_set"
   assumes put_get : "\<And> a . LOut l s (LUpd l s a b) = a"
   assumes get_put_weak : "\<And> s b . b \<in> S s \<Longrightarrow> b <[ LUpd l s (LOut l s b) b"
@@ -132,15 +160,17 @@ locale lifting_valid_base_ok_pres =
 (* orthogonality, used to define merge correctness *)
 
 locale l_ortho =
-  fixes l1 :: "('a, 'b1, 'c :: Mergeable) lifting"
-  fixes l2 :: "('a, 'b2, 'c) lifting"
+  fixes l1 :: "('a, 'b1, 'c :: Mergeable, 'f1) lifting"
+  fixes l2 :: "('a, 'b2, 'c :: Mergeable, 'f2) lifting"
   fixes S1 :: "'a \<Rightarrow> 'c set"
   fixes S2 :: "'a \<Rightarrow> 'c set"
   (* TODO: this originally was a weaker version that had b1 = b2 instead of
    * b1 and b2 having a sup. *)
-
+(*
   assumes compat : "\<And> s a1 a2 b1 b2 bs.
     is_sup {b1, b2} bs \<Longrightarrow> has_sup {LUpd l1 s a1 b1, LUpd l2 s a2 b2}"
+*)
+  assumes compat : "\<And> s a1 . has_sup {LUpd l1 s a1 b, LUpd l2 s a2 b}"
 
 
   (* TODO: I think these are wrong. - should they look more like compat? *)
@@ -158,15 +188,15 @@ locale l_ortho =
     supr \<in> S2 s"
 
 locale l_ortho_base' =
-  fixes l1 :: "('a, 'b1, 'c :: Mergeableb) lifting"
-  fixes l2 :: "('a, 'b2, 'c) lifting"
+  fixes l1 :: "('a, 'b1, 'c :: Mergeableb, 'f1) lifting"
+  fixes l2 :: "('a, 'b2, 'c, 'f2) lifting"
 
 locale l_ortho_base = l_ortho + l_ortho_base' +
   assumes bases_compat : "\<And> s . is_sup {LBase l1 s, LBase l2 s} \<bottom>"
 
 locale l_ortho_ok' =
-  fixes l1 :: "('a, 'b1, 'c :: {Mergeable, Okay}) lifting"
-  fixes l2 :: "('a, 'b2, 'c) lifting"
+  fixes l1 :: "('a, 'b1, 'c :: {Mergeable, Okay}, 'f1) lifting"
+  fixes l2 :: "('a, 'b2, 'c, 'f2) lifting"
 
 locale l_ortho_ok = l_ortho + l_ortho_ok' +
   assumes ok_compat :
