@@ -1,4 +1,4 @@
-theory Lifter_New 
+theory Lifter
  imports  "../Mergeable/Mergeable_Instances" "../Mergeable/Mergeable_Oalist" "../Mergeable/Mergeable_Roalist" "../Mergeable/Mono"
 begin
 
@@ -162,30 +162,30 @@ locale lifting_valid_base_ok_pres =
 locale l_ortho =
   fixes l1 :: "('a, 'b1, 'c :: Mergeable, 'f1) lifting"
   fixes l2 :: "('a, 'b2, 'c :: Mergeable, 'f2) lifting"
+
+(* TODO: do we need membership hypothesis (s1 \<union> s2)?
+seems like we need:
+if we start in S1, then updating using l2 is still in S1
+and vice versa. might need something stronger but let's see where
+that gets us.
+ *)
+(* do we need put1_get2/put2_get1? *)
   fixes S1 :: "'a \<Rightarrow> 'c set"
   fixes S2 :: "'a \<Rightarrow> 'c set"
-  (* TODO: this originally was a weaker version that had b1 = b2 instead of
-   * b1 and b2 having a sup. *)
-(*
-  assumes compat : "\<And> s a1 a2 b1 b2 bs.
-    is_sup {b1, b2} bs \<Longrightarrow> has_sup {LUpd l1 s a1 b1, LUpd l2 s a2 b2}"
-*)
-  assumes compat : "\<And> s a1 . has_sup {LUpd l1 s a1 b, LUpd l2 s a2 b}"
 
-
-  (* TODO: I think these are wrong. - should they look more like compat? *)
-  assumes put2_get1 : "\<And> s a1 a2 b supr . 
-    is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
-    LOut l1 s supr = a1"
-  assumes put1_get2 : "\<And> s a1 a2 b supr .
-    is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
-    LOut l2 s supr = a2"
-  assumes put2_S1 : "\<And> s a1 a2 b supr . 
-    is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
-    supr \<in> S1 s"
-  assumes put1_S2 : "\<And> s a1 a2 b supr . 
-    is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
-    supr \<in> S2 s"
+  assumes compat : "\<And> s a1 a2 . has_sup {LUpd l1 s a1 b, LUpd l2 s a2 b}"
+  (* compat_S could also be generalized a bit. *)
+  assumes compat_S : "\<And> s a1 a2 supr . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
+                      supr \<in> (S1 s \<inter> S2 s)"
+(* TODO: need these set membership constraints? *)
+  assumes compat_get1 : "\<And> s a1 a2 supr . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
+                      LOut l1 s supr = a1"
+  assumes compat_get2 : "\<And> s a1 a2 supr . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
+                      LOut l2 s supr = a2"
+  assumes put1_get2 : "\<And> s a b . b \<in> S2 s \<Longrightarrow> LOut l2 s (LUpd l1 s a b) = LOut l2 s b"
+  assumes put2_get1 : "\<And> s a b . b \<in> S1 s \<Longrightarrow> LOut l1 s (LUpd l2 s a b) = LOut l1 s b"
+  assumes put1_S2 : "\<And> s a b . b \<in> S2 s \<Longrightarrow> LUpd l1 s a b \<in> S2 s"
+  assumes put2_S1 : "\<And> s a b . b \<in> S1 s \<Longrightarrow> LUpd l2 s a b \<in> S1 s"
 
 locale l_ortho_base' =
   fixes l1 :: "('a, 'b1, 'c :: Mergeableb, 'f1) lifting"
@@ -204,6 +204,14 @@ locale l_ortho_ok = l_ortho + l_ortho_ok' +
     is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow> supr \<in> ok_S"
   
 
+(* lift_map_s is LMap plus a syntax translation *)
+definition lift_map_s ::
+  "('b1 \<Rightarrow> 'a1) \<Rightarrow>
+   ('a1, 'a2, 'b2 :: Pord, 'f) lifting \<Rightarrow>
+   'f \<Rightarrow>
+   ('b1 \<Rightarrow> 'b2 \<Rightarrow> 'b2)" where
+"lift_map_s l' l sem syn st =
+  LMap l sem (l' syn) st"
 
 
 (* TODO: can we define some other notion of orthogonality that will be useful

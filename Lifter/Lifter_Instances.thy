@@ -1,4 +1,4 @@
-theory Lifter_Instances_New imports Lifter_New
+theory Lifter_Instances imports Lifter
 begin
 
 class Bogus =
@@ -2249,8 +2249,12 @@ proof
     using is_sup_unique[OF bsup_sup[OF Supr bsup_spec] Supr] by simp
 
   show "LOut (merge_l l1 l2) s (LUpd (merge_l l1 l2) s a b) = a" 
-    using put2_get1[OF Supr] put1_get2[OF Supr] A Eq
+    using compat_get1[OF Supr] compat_get2[OF Supr]
+    using A Eq
     by(auto simp add: merge_l_def)
+    (* TODO: looks like we need some kind of put2_get1 like rules here. this means our trick
+of combining liftings using merge_l may not work. maybe we just bite the bullet and deal
+with the n^2 blowup? *)
 next
   fix s b
 
@@ -2297,8 +2301,8 @@ next
   have Eq : "[^ LUpd l1 s a1 b, LUpd l2 s a2 b ^] = supr"
     using is_sup_unique[OF bsup_sup[OF Supr bsup_spec] Supr] by simp
 
-  have In1 :"supr \<in> S1 s" using put2_S1[OF Supr] by simp
-  have In2 :"supr \<in> S2 s" using put1_S2[OF Supr] by simp
+  have In1 :"supr \<in> S1 s" and In2 : "supr \<in> S2 s" using compat_S[OF Supr]
+    by auto
 
   show "LUpd (merge_l l1 l2) s a b \<in> S1 s \<inter> S2 s" 
     using In1 In2 A Eq
