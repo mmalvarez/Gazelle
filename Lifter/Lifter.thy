@@ -159,10 +159,20 @@ locale lifting_valid_base_ok_pres =
 
 (* orthogonality, used to define merge correctness *)
 
-locale l_ortho =
-  fixes l1 :: "('a, 'b1, 'c :: Mergeable, 'f1) lifting"
-  fixes l2 :: "('a, 'b2, 'c :: Mergeable, 'f2) lifting"
+locale l_ortho' =
+  fixes l1 :: "('a, 'b1, 'c :: Pord_Weak, 'f1) lifting"
+  fixes S1 :: "'a \<Rightarrow> 'c set"
+  fixes l2 :: "('a, 'b2, 'c :: Pord_Weak, 'f2) lifting"
+  fixes S2 :: "'a \<Rightarrow> 'c set"
 
+locale l_ortho =
+  l_ortho' +
+(*
+if we need these validity assumptions we can add them back.
++
+  in1 : lifting_valid_weak l1 S1 +
+  in2 : lifting_valid_weak l2 S2 +
+*)
 (* TODO: do we need membership hypothesis (s1 \<union> s2)?
 seems like we need:
 if we start in S1, then updating using l2 is still in S1
@@ -170,9 +180,8 @@ and vice versa. might need something stronger but let's see where
 that gets us.
  *)
 (* do we need put1_get2/put2_get1? *)
-  fixes S1 :: "'a \<Rightarrow> 'c set"
-  fixes S2 :: "'a \<Rightarrow> 'c set"
 
+  assumes eq_base : "\<And> s . LBase l1 s = LBase l2 s"
   assumes compat : "\<And> s a1 a2 . has_sup {LUpd l1 s a1 b, LUpd l2 s a2 b}"
   (* compat_S could also be generalized a bit. *)
   assumes compat_S : "\<And> s a1 a2 supr . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
@@ -182,25 +191,25 @@ that gets us.
                       LOut l1 s supr = a1"
   assumes compat_get2 : "\<And> s a1 a2 supr . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
                       LOut l2 s supr = a2"
-  assumes put1_get2 : "\<And> s a b . b \<in> S2 s \<Longrightarrow> LOut l2 s (LUpd l1 s a b) = LOut l2 s b"
-  assumes put2_get1 : "\<And> s a b . b \<in> S1 s \<Longrightarrow> LOut l1 s (LUpd l2 s a b) = LOut l1 s b"
+  (*assumes put1_get2 : "\<And> s a b . b \<in> S2 s \<Longrightarrow> LOut l2 s (LUpd l1 s a b) = LOut l2 s b"
+  assumes put2_get1 : "\<And> s a b . b \<in> S1 s \<Longrightarrow> LOut l1 s (LUpd l2 s a b) = LOut l1 s b"*)
   assumes put1_S2 : "\<And> s a b . b \<in> S2 s \<Longrightarrow> LUpd l1 s a b \<in> S2 s"
   assumes put2_S1 : "\<And> s a b . b \<in> S1 s \<Longrightarrow> LUpd l2 s a b \<in> S1 s"
 
 locale l_ortho_base' =
-  fixes l1 :: "('a, 'b1, 'c :: Mergeableb, 'f1) lifting"
+  fixes l1 :: "('a, 'b1, 'c :: Pord_Weakb, 'f1) lifting"
   fixes l2 :: "('a, 'b2, 'c, 'f2) lifting"
 
 locale l_ortho_base = l_ortho + l_ortho_base' +
-  assumes bases_compat : "\<And> s . is_sup {LBase l1 s, LBase l2 s} \<bottom>"
+  assumes compat_bases : "\<And> s . is_sup {LBase l1 s, LBase l2 s} \<bottom>"
 
 locale l_ortho_ok' =
-  fixes l1 :: "('a, 'b1, 'c :: {Mergeable, Okay}, 'f1) lifting"
+  fixes l1 :: "('a, 'b1, 'c :: {Pord_Weakb, Okay}, 'f1) lifting"
   fixes l2 :: "('a, 'b2, 'c, 'f2) lifting"
 
 locale l_ortho_ok = l_ortho + l_ortho_ok' +
-  assumes ok_compat :
-    "\<And> s a1 a2 b supr . b \<in> ok_S \<Longrightarrow>
+  assumes compat_ok :
+    "\<And> s a1 a2 b supr . \<comment> \<open> b \<in> ok_S \<Longrightarrow> \<close>
     is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow> supr \<in> ok_S"
   
 

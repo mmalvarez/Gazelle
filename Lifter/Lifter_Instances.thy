@@ -2220,10 +2220,13 @@ definition merge_l ::
           (case a1a2 of (a1, a2) \<Rightarrow>
             (LFD t1 f1 s a1, LFD t2 f2 s a2)))"
 
-locale merge_l_valid_weak' = l_ortho
+locale merge_l_valid_weak' = 
+  fixes l1 :: "('x, 'a1, 'b :: Mergeable, 'f1) lifting" 
+  fixes l2 :: "('x, 'a2, 'b :: Mergeable, 'f2) lifting"
 
 locale merge_l_valid_weak =
   merge_l_valid_weak' +
+  l_ortho +
   in1 : lifting_valid_weak l1 S1 +
   in2 : lifting_valid_weak l2 S2
 
@@ -2357,7 +2360,7 @@ proof
   fix s :: "'a"
 
   have Supr : "is_sup {LBase l1 s, LBase l2 s} (\<bottom> :: 'c)" 
-    using bases_compat[of s] by auto
+    using compat_bases[of s] by auto
 
   have Eq : "[^ LBase l1 s, LBase l2 s ^] = \<bottom>"
     using is_sup_unique[OF bsup_sup[OF Supr bsup_spec] Supr] by simp
@@ -2403,7 +2406,7 @@ next
     using is_sup_unique[OF bsup_sup[OF Supr bsup_spec] Supr] by simp
 
   show "LUpd (merge_l l1 l2) s a b \<in> ok_S"
-    using ok_compat[OF B_ok Supr] Eq A
+    using compat_ok[OF Supr] Eq A
     by(auto simp add: merge_l_def)
 qed
 
@@ -2675,9 +2678,864 @@ maybe we need to restrict f to functions that are already sups_pres?
   qed
 qed
 
+locale option_l_ortho =
+  l_ortho (*+
+  in1 : option_l_valid_weak l1 S1 +
+  in2 : option_l_valid_weak l2 S2 *)
+
+lemma is_sup_Some :
+  assumes Hnemp : "x \<in> Xs"
+  assumes H : "is_sup Xs supr"
+  shows "is_sup (Some ` Xs) (Some supr)"
+proof(rule is_supI)
+  fix z
+  assume Z : "z \<in> Some ` Xs"
+  then obtain z' where Z' : "z = Some z'" "z' \<in> Xs"
+    by auto
+
+  show "z <[ Some supr"
+    using is_supD1[OF H Z'(2)] Z'(1)
+    by(auto simp add: option_pleq)
+next
+  fix w
+  assume Ub : "is_ub (Some ` Xs) w"
+
+  have "Some x \<in> Some ` Xs"
+    using Hnemp by auto
+
+  then have "Some x <[ w"
+    using is_ubE[OF Ub]
+    by auto
+
+  then obtain w' where W' : "w = Some w'"
+    by(cases w; auto simp add: option_pleq)
+
+  have "is_ub Xs w'"
+  proof
+    fix z'
+
+    assume Z': "z' \<in> Xs"
+
+    then have "Some z' \<in> Some ` Xs"
+      by auto
+
+    then have "Some z' <[ w"
+      using is_ubE[OF Ub] by auto
+
+    then show "z' <[ w'" using W' by(auto simp add: option_pleq)
+  qed
+
+  then have "supr <[ w'"
+    using is_supD2[OF H] by auto
+
+  then show "Some supr <[ w"
+    using W' by(auto simp add: option_pleq)
+qed
+
+lemma is_sup_Some' :
+  assumes Hnemp : "x \<in> Xs"
+  assumes H: "is_sup (Some ` Xs) (Some supr)"
+  shows "is_sup Xs supr"
+proof(rule is_supI)
+  fix z
+
+  assume Z: "z \<in> Xs"
+
+  then have "Some z <[ Some supr"
+    using is_supD1[OF H, of "Some z"] by auto
+
+  then show "z <[ supr"
+    by(simp add: option_pleq)
+next
+
+  fix w
+
+  assume Ub : "is_ub Xs w"
+
+  have "is_ub (Some ` Xs) (Some w)"
+  proof(rule is_ubI)
+
+    fix z'
+    assume Z' : "z' \<in> Some ` Xs"
+
+    then obtain z where Z: "z' = Some z" "z \<in> Xs"
+      by auto
+
+    have "z <[ w" using is_ubE[OF Ub Z(2)]
+      by auto
+
+    then show "z' <[ Some w"
+      using Z by(auto simp add: option_pleq)
+  qed
+
+  then have "Some supr <[ Some w"
+    using is_supD2[OF H] by auto
+
+  then show "supr <[ w"
+    by(auto simp add: option_pleq)
+qed
+
+sublocale option_l_ortho \<subseteq> out : l_ortho "option_l l1"  "option_l_S S1" "option_l l2" "option_l_S S2"
+proof
+  fix s
+  show "LBase (option_l l1) s = LBase (option_l l2) s"
+    by(auto simp add: option_l_def)
+next
+
+  fix b s 
+  fix a1 :: 'b
+  fix a2 :: 'e
+
+  have Base: "LBase l1 s = LBase l2 s"
+    using eq_base by auto
+
+  show "has_sup
+        {LUpd (option_l l1) s a1 b,
+         LUpd (option_l l2) s a2 b}"
+  proof(cases b)
+    case None
+
+    obtain sup where Sup :"is_sup
+     {LUpd l1 s a1 (LBase l1 s),
+      LUpd l2 s a2 (LBase l2 s)} sup"
+      using compat[of s a1 "LBase l1 s" a2] Base
+      by(auto simp add: has_sup_def)
+
+    then have Sup' : "is_sup {LUpd (option_l l1) s a1 b,
+         LUpd (option_l l2) s a2 b} (Some sup)"
+      using is_sup_Some[OF _ Sup] None
+      by(auto simp add: option_l_def)
+
+    then show ?thesis
+      by(auto simp add: has_sup_def)
+  next
+
+    case (Some b')
+    obtain sup where Sup :"is_sup
+     {LUpd l1 s a1 b',
+      LUpd l2 s a2 b'} sup"
+      using compat[of s a1 "b'" a2] Base
+      by(auto simp add: has_sup_def)
+
+    then have Sup' : "is_sup {LUpd (option_l l1) s a1 b,
+         LUpd (option_l l2) s a2 b} (Some sup)"
+      using is_sup_Some[OF _ Sup] Some
+      by(auto simp add: option_l_def)
+    then show ?thesis
+      by(auto simp add: has_sup_def)
+  qed
+next
+
+  fix b s
+  fix a1 :: 'b
+  fix a2 :: 'e
+  fix supr
+
+  assume Sup: "is_sup {LUpd (option_l l1) s a1 b, LUpd (option_l l2) s a2 b} supr"
+
+  obtain r1 where R1: "LUpd (option_l l1) s a1 b = Some r1"
+    by(cases b; auto simp add: option_l_def)
+
+  obtain r2 where R2 : "LUpd (option_l l2) s a2 b = Some r2"
+    by(cases b; auto simp add: option_l_def)
+
+  show "supr \<in> option_l_S S1 s \<inter> option_l_S S2 s"
+  proof(cases supr)
+    case None
+
+    then have "Some r1 <[ None"
+      using is_supD1[OF Sup, of "Some r1"] unfolding R1 None
+      by auto
+
+    then have False by(simp add: option_pleq)
+
+    thus ?thesis ..
+  next
+    case (Some supr')
+
+    have Sup_map : "is_sup (Some ` {r1, r2}) (Some supr')"
+      using Sup unfolding R1 R2 Some
+      by auto
+
+    hence Sup_inner : "is_sup {r1, r2} supr'"
+      using is_sup_Some'[OF _ Sup_map]
+      by auto
+
+    show ?thesis
+    proof(cases b)
+      case None' : None
+
+      have R1' : "LUpd l1 s a1 (LBase l1 s) = r1"
+        using None' R1
+        by(auto simp add: option_l_def)
+
+      have R2' : "LUpd l2 s a2 (LBase l2 s) = r2"
+        using None' R2
+        by(auto simp add: option_l_def)
+
+      have Bases : "LBase l1 s = LBase l2 s"
+        using eq_base by auto
+
+      have "supr' \<in> S1 s \<inter> S2 s"
+        using compat_S Sup_inner[unfolded sym[OF R1']
+                                ,unfolded sym[OF R2']
+                                ,unfolded Bases]
+        by auto
+        
+      then show ?thesis 
+        using Some
+        by(auto simp add: option_l_S_def)
+    next
+      case Some' : (Some b')
+
+      have R1' : "LUpd l1 s a1 b' = r1"
+        using Some' R1
+        by(auto simp add: option_l_def)
+
+      have R2' : "LUpd l2 s a2 b' = r2"
+        using Some' R2
+        by(auto simp add: option_l_def)
+
+      have "supr' \<in> S1 s \<inter> S2 s"
+        using compat_S Sup_inner R1' R2'
+        by(auto)
+
+      then show ?thesis
+        using Some
+        by(auto simp add: option_l_S_def)
+    qed
+  qed
+next
+
+  fix b s
+  fix a1 :: 'b
+  fix a2 :: 'e
+  fix supr
+
+  assume Sup :
+    "is_sup {LUpd (option_l l1) s a1 b, LUpd (option_l l2) s a2 b} supr"
+
+  obtain r1 where R1: "LUpd (option_l l1) s a1 b = Some r1"
+    by(cases b; auto simp add: option_l_def)
+
+  obtain r2 where R2 : "LUpd (option_l l2) s a2 b = Some r2"
+    by(cases b; auto simp add: option_l_def)
+
+  show "LOut (option_l l1) s supr = a1"
+  proof(cases supr)
+    case None
+
+    then have "Some r1 <[ None"
+      using is_supD1[OF Sup] unfolding R1 None
+      by auto
+
+    then have False by(simp add: option_pleq)
+
+    thus ?thesis ..
+  next
+    case (Some supr')
+
+    have Sup_map : "is_sup (Some ` {r1, r2}) (Some supr')"
+      using Sup unfolding R1 R2 Some
+      by auto
+
+    hence Sup_inner : "is_sup {r1, r2} supr'"
+      using is_sup_Some'[OF _ Sup_map]
+      by auto
+
+    then show ?thesis
+    proof(cases b)
+      case None' : None
+
+      have R1' : "LUpd l1 s a1 (LBase l1 s) = r1"
+        using None' R1
+        by(auto simp add: option_l_def)
+
+      have R2' : "LUpd l2 s a2 (LBase l2 s) = r2"
+        using None' R2
+        by(auto simp add: option_l_def)
+
+      have Bases : "LBase l1 s = LBase l2 s"
+        using eq_base by auto
+
+      then have Sup_inner' :
+        "is_sup {LUpd l1 s a1 (LBase l1 s), LUpd l2 s a2 (LBase l1 s)} supr'"
+        using Sup_inner R1' R2'
+        by auto
+      
+      then have "LOut l1 s supr' = a1"
+        using compat_get1[OF Sup_inner']
+        by auto
+
+      then show ?thesis using Some
+        by(auto simp add: option_l_def)
+    next
+      case Some' : (Some b')
+
+      have R1' : "LUpd l1 s a1 b' = r1"
+        using Some' R1
+        by(auto simp add: option_l_def)
+
+      have R2' : "LUpd l2 s a2 b' = r2"
+        using Some' R2
+        by(auto simp add: option_l_def)
+
+      then have Sup_inner' :
+        "is_sup {LUpd l1 s a1 b', LUpd l2 s a2 b'} supr'"
+        using Sup_inner R1' R2'
+        by auto
+
+      show ?thesis
+        using compat_get1[OF Sup_inner'] Some
+        by(auto simp add: option_l_def)
+    qed
+  qed
+next
+
+  fix b s
+  fix a1 :: 'b
+  fix a2 :: 'e
+  fix supr
+
+  assume Sup :
+    "is_sup {LUpd (option_l l1) s a1 b, LUpd (option_l l2) s a2 b} supr"
+
+  obtain r1 where R1: "LUpd (option_l l1) s a1 b = Some r1"
+    by(cases b; auto simp add: option_l_def)
+
+  obtain r2 where R2 : "LUpd (option_l l2) s a2 b = Some r2"
+    by(cases b; auto simp add: option_l_def)
+
+  show "LOut (option_l l2) s supr = a2"
+  proof(cases supr)
+    case None
+
+    then have "Some r1 <[ None"
+      using is_supD1[OF Sup] unfolding R1 None
+      by auto
+
+    then have False by(simp add: option_pleq)
+
+    thus ?thesis ..
+  next
+    case (Some supr')
+
+    have Sup_map : "is_sup (Some ` {r1, r2}) (Some supr')"
+      using Sup unfolding R1 R2 Some
+      by auto
+
+    hence Sup_inner : "is_sup {r1, r2} supr'"
+      using is_sup_Some'[OF _ Sup_map]
+      by auto
+
+    then show ?thesis
+    proof(cases b)
+      case None' : None
+
+      have R1' : "LUpd l1 s a1 (LBase l1 s) = r1"
+        using None' R1
+        by(auto simp add: option_l_def)
+
+      have R2' : "LUpd l2 s a2 (LBase l2 s) = r2"
+        using None' R2
+        by(auto simp add: option_l_def)
+
+      have Bases : "LBase l1 s = LBase l2 s"
+        using eq_base by auto
+
+      then have Sup_inner' :
+        "is_sup {LUpd l1 s a1 (LBase l1 s), LUpd l2 s a2 (LBase l1 s)} supr'"
+        using Sup_inner R1' R2'
+        by auto
+      
+      then have "LOut l2 s supr' = a2"
+        using compat_get2[OF Sup_inner']
+        by auto
+
+      then show ?thesis using Some
+        by(auto simp add: option_l_def)
+    next
+      case Some' : (Some b')
+
+      have R1' : "LUpd l1 s a1 b' = r1"
+        using Some' R1
+        by(auto simp add: option_l_def)
+
+      have R2' : "LUpd l2 s a2 b' = r2"
+        using Some' R2
+        by(auto simp add: option_l_def)
+
+      then have Sup_inner' :
+        "is_sup {LUpd l1 s a1 b', LUpd l2 s a2 b'} supr'"
+        using Sup_inner R1' R2'
+        by auto
+
+      show ?thesis
+        using compat_get2[OF Sup_inner'] Some
+        by(auto simp add: option_l_def)
+    qed
+  qed
+next
+
+  fix s a b
+
+  assume "b \<in> option_l_S S2 s"
+
+  then obtain b' where B' : "b = Some b'" "b' \<in> S2 s"
+    by(cases b; auto simp add: option_l_S_def)
+
+  then have "LUpd l1 s a b' \<in> S2 s"
+    using put1_S2[OF B'(2)]
+    by auto
+
+  then show "LUpd (option_l l1) s a b \<in> option_l_S S2 s"
+    using B'
+    by(auto simp add: option_l_def option_l_S_def)
+next
+  fix s a b
+
+  assume "b \<in> option_l_S S1 s"
+
+  then obtain b' where B' : "b = Some b'" "b' \<in> S1 s"
+    by(cases b; auto simp add: option_l_S_def)
+
+  then have "LUpd l2 s a b' \<in> S1 s"
+    using put2_S1[OF B'(2)]
+    by auto
+
+  then show "LUpd (option_l l2) s a b \<in> option_l_S S1 s"
+    using B'
+    by(auto simp add: option_l_def option_l_S_def)
+qed
+
+lemma sup_singleton :
+  "is_sup {x} x"
+  by(auto simp add: is_least_def is_ub_def is_sup_def leq_refl)
+
+(* don't need l_ortho_base assumption here. *)
+locale option_l_ortho_base = option_l_ortho + l_ortho_base'
+
+sublocale option_l_ortho_base \<subseteq> out : l_ortho_base "option_l l1" "option_l_S S1" "option_l l2" "option_l_S S2"
+proof
+  fix s
+
+  show "is_sup
+          {LBase (option_l l1) s,
+           LBase (option_l l2) s}
+          \<bottom>"
+    using sup_singleton[of "None"]
+    by(auto simp add: option_l_def option_bot)
+qed
+
+locale option_l_ortho_ok =
+  option_l_ortho + l_ortho_ok
+
+sublocale option_l_ortho_ok \<subseteq> out : l_ortho_ok "option_l l1" "option_l_S S1" "option_l l2" "option_l_S S2"
+proof
+
+  fix s a1 a2 b supr
+
+  assume H: "is_sup {LUpd (option_l l1) s a1 b, LUpd (option_l l2) s a2 b} supr"
+
+  obtain r1 where R1: "LUpd (option_l l1) s a1 b = Some r1"
+    by(cases b; auto simp add: option_l_def)
+
+  obtain r2 where R2 : "LUpd (option_l l2) s a2 b = Some r2"
+    by(cases b; auto simp add: option_l_def)
+
+  show "supr \<in> ok_S"
+  proof(cases supr)
+    case None
+
+    then have "Some r1 <[ None"
+      using is_supD1[OF H] unfolding R1 None
+      by auto
+
+    then have False by(simp add: option_pleq)
+
+    thus ?thesis ..
+  next
+    case (Some supr')
+
+    have Sup_map : "is_sup (Some ` {r1, r2}) (Some supr')"
+      using H unfolding R1 R2 Some
+      by auto
+
+    hence Sup_inner : "is_sup {r1, r2} supr'"
+      using is_sup_Some'[OF _ Sup_map]
+      by auto
+
+    show ?thesis
+    proof(cases b)
+      case None' : None
+
+      have R1' : "LUpd l1 s a1 (LBase l1 s) = r1"
+        using None' R1
+        by(auto simp add: option_l_def)
+
+      have R2' : "LUpd l2 s a2 (LBase l2 s) = r2"
+        using None' R2
+        by(auto simp add: option_l_def)
+
+      have Bases : "LBase l1 s = LBase l2 s"
+        using eq_base by auto
+
+      then have Sup_inner' :
+        "is_sup {LUpd l1 s a1 (LBase l1 s), LUpd l2 s a2 (LBase l1 s)} supr'"
+        using Sup_inner R1' R2'
+        by auto
+      
+      then have "supr' \<in> ok_S"
+        using compat_ok[OF Sup_inner']
+        by auto
+
+      then show ?thesis using Some
+        by(auto simp add: option_l_def option_ok_S)
+    next
+      case Some' : (Some b')
+      have R1' : "LUpd l1 s a1 b' = r1"
+        using Some' R1
+        by(auto simp add: option_l_def)
+
+      have R2' : "LUpd l2 s a2 b' = r2"
+        using Some' R2
+        by(auto simp add: option_l_def)
+
+      then have Sup_inner' :
+        "is_sup {LUpd l1 s a1 b', LUpd l2 s a2 b'} supr'"
+        using Sup_inner R1' R2'
+        by auto
+
+      then have "supr' \<in> ok_S"
+        using compat_ok[OF Sup_inner']
+        by auto
+
+      then show ?thesis using Some
+        by(auto simp add: option_l_def option_ok_S)
+    qed
+  qed
+qed
+
+(* Prio - let's defer this until later as we may not need it.
+ * my guess is it's true, but annoying. *)
+
+(*
+locale prio_l_ortho =
+  l_ortho 
+*)
+
+(* next, products:
+- ortho between fst and fst, if inner liftings ortho
+- snd and snd, ditto
+- fst and snd, unconditionally
+*)
+
+lemma is_sup_fst :
+  assumes Hnemp : "x \<in> Xs"
+  assumes H : "is_sup Xs supr"
+  shows "is_sup ((\<lambda> w . (w, x')) ` Xs) (supr, x')"
+proof(rule is_supI)
+  fix x
+
+  assume X: "x \<in> (\<lambda>w. (w, x')) ` Xs"
+
+  then obtain x1 where X1 :
+    "x = (x1, x')" "x1 \<in> Xs"
+    by auto
+
+  have "x1 <[ supr"
+    using is_supD1[OF H X1(2)] by auto
+
+  then show "x <[ (supr, x')"
+    using X1
+    by(auto simp add: prod_pleq leq_refl)
+next
+
+  fix y
+
+  assume Y: "is_ub ((\<lambda>w. (w, x')) ` Xs) y"
+
+  obtain y1 y2 where Y1_2 : "y = (y1, y2)"
+    by(cases y; auto)
+
+  have "is_ub Xs y1"
+  proof(rule is_ubI)
+    fix z
+
+    assume Z: "z \<in> Xs"
+
+    then have "(z, x') <[ y"
+      using is_ubE[OF Y] by auto
+
+    then show "z <[ y1"
+      using Y1_2
+      by(auto simp add: prod_pleq)
+  qed
+
+  then have "supr <[ y1"
+    using is_supD2[OF H]
+    by auto
+
+  have "(x, x') <[ y"
+    using is_ubE[OF Y] Hnemp
+    by auto
+
+  then have "x' <[ y2"
+    using Y1_2
+    by(auto simp add: prod_pleq)
+
+  show "(supr, x') <[ y"
+    using `supr <[ y1` `x' <[ y2` Y1_2
+    by(auto simp add: prod_pleq)
+qed
+
+(* TODO: we might be able to generalize this.
+ * However I don't think we need to.
+*)
+(*
+lemma is_sup_fst' :
+  assumes Hnemp : "x \<in> Xs"
+  assumes H: "is_sup ((\<lambda> w . (w, x')) ` Xs) (supr, x')"
+  shows "is_sup Xs supr"
+proof(rule is_supI)
+  fix w
+
+  assume W: "w \<in> Xs"
+
+  have "(w, x') <[ (supr, x')"
+    using is_supD1[OF H] W
+    by(auto)
+
+  then show "w <[ supr"
+    by(auto simp add: prod_pleq)
+next
+
+  fix z
+  assume Ub : "is_ub Xs z"
+
+  have "is_ub ((\<lambda> w . (w, x')) ` Xs) (z, x')"
+  proof(rule is_ubI)
+
+    fix y
+
+    assume Y: "y \<in> (\<lambda> w . (w, x')) ` Xs"
+
+    then obtain y1 where Y1 : "y = (y1, x')" "y1 \<in> Xs"
+      by(auto)
+
+    then have "y1 <[ z"
+      using is_ubE[OF Ub Y1(2)] by auto
+
+    then show "y <[ (z, x')" using Y1
+      by(auto simp add: prod_pleq leq_refl)
+  qed
+
+  then have "(supr, x') <[ (z, x')"
+    using is_supD2[OF H]
+    by auto
+
+  then show "supr <[ z"
+    by(auto simp add: prod_pleq)
+qed
+*)
+
+
+
+lemma is_sup_snd :
+  assumes Hnemp : "x \<in> Xs"
+  assumes H : "is_sup Xs supr"
+  shows "is_sup ((\<lambda> w . (x', w)) ` Xs) (x', supr)"
+proof(rule is_supI)
+  fix x
+
+  assume X: "x \<in> (\<lambda>w. (x', w)) ` Xs"
+
+  then obtain x2 where X2 :
+    "x = (x', x2)" "x2 \<in> Xs"
+    by auto
+
+  have "x2 <[ supr"
+    using is_supD1[OF H X2(2)] by auto
+
+  then show "x <[ (x', supr)"
+    using X2
+    by(auto simp add: prod_pleq leq_refl)
+next
+
+  fix y
+
+  assume Y: "is_ub ((\<lambda>w. (x', w)) ` Xs) y"
+
+  obtain y1 y2 where Y1_2 : "y = (y1, y2)"
+    by(cases y; auto)
+
+  have "is_ub Xs y2"
+  proof(rule is_ubI)
+    fix z
+
+    assume Z: "z \<in> Xs"
+
+    then have "(x', z) <[ y"
+      using is_ubE[OF Y] by auto
+
+    then show "z <[ y2"
+      using Y1_2
+      by(auto simp add: prod_pleq)
+  qed
+
+  then have "supr <[ y2"
+    using is_supD2[OF H]
+    by auto
+
+  have "(x', x) <[ y"
+    using is_ubE[OF Y] Hnemp
+    by auto
+
+  then have "x' <[ y1"
+    using Y1_2
+    by(auto simp add: prod_pleq)
+
+  show "(x', supr) <[ y"
+    using `supr <[ y2` `x' <[ y1` Y1_2
+    by(auto simp add: prod_pleq)
+qed
+
+(* TODO: we might be able to generalize this.
+ * However I don't think we need to.
+*)
+lemma is_sup_snd' :
+  assumes Hnemp : "x \<in> Xs"
+  assumes H: "is_sup ((\<lambda> w . (x', w)) ` Xs) (x', supr)"
+  shows "is_sup Xs supr"
+proof(rule is_supI)
+  fix w
+
+  assume W: "w \<in> Xs"
+
+  have "(x', w) <[ (x', supr)"
+    using is_supD1[OF H] W
+    by(auto)
+
+  then show "w <[ supr"
+    by(auto simp add: prod_pleq)
+next
+
+  fix z
+  assume Ub : "is_ub Xs z"
+
+  have "is_ub ((\<lambda> w . (x', w)) ` Xs) (x', z)"
+  proof(rule is_ubI)
+
+    fix y
+
+    assume Y: "y \<in> (\<lambda> w . (x', w)) ` Xs"
+
+    then obtain y2 where Y2 : "y = (x', y2)" "y2 \<in> Xs"
+      by(auto)
+
+    then have "y2 <[ z"
+      using is_ubE[OF Ub Y2(2)] by auto
+
+    then show "y <[ (x', z)" using Y2
+      by(auto simp add: prod_pleq leq_refl)
+  qed
+
+  then have "(x', supr) <[ (x', z)"
+    using is_supD2[OF H]
+    by auto
+
+  then show "supr <[ z"
+    by(auto simp add: prod_pleq)
+qed
+
+locale fst_l_ortho = l_ortho
+
+sublocale fst_l_ortho \<subseteq> out : l_ortho "fst_l l1" "fst_l_S S1" "fst_l l2" "fst_l_S S2"
+proof
+  fix s
+  show "LBase (fst_l l1) s = LBase (fst_l l2) s"
+    using eq_base
+    by(auto simp add: fst_l_def)
+next
+
+  fix b :: "('c * 'g)"
+  fix s
+  fix a1 :: 'b
+  fix a2 :: 'e
+
+  obtain b1 b2 where B: "b = (b1, b2)"
+    by(cases b; auto)
+
+  obtain sup1 where Sup1 :
+    "is_sup {LUpd l1 s a1 b1, LUpd l2 s a2 b1} sup1"
+    using compat[of s a1 b1 a2]
+    by(auto simp add: has_sup_def)
+
+  have "is_sup {LUpd (fst_l l1) s a1 b, LUpd (fst_l l2) s a2 b} (sup1, b2)"
+    using is_sup_fst[OF _ Sup1, of _ b2] B
+    by(auto simp add: fst_l_def)
+
+  then show "has_sup {LUpd (fst_l l1) s a1 b, LUpd (fst_l l2) s a2 b}"
+    by(auto simp add: has_sup_def)
+next
+
+(* something is weird here.  either sup_fst' is not general enough, or
+it is just not the right approach. *)
+  fix b :: "('c * 'g)"
+  fix s
+  fix a1 :: 'b
+  fix a2 :: 'e
+  fix supr :: "('c * 'g)"
+
+  obtain b1 b2 where B: "b = (b1, b2)"
+    by(cases b; auto)
+
+  obtain s1 s2 where S: "supr = (s1, s2)"
+    by(cases supr; auto)
+
+  assume Sup: "is_sup {LUpd (fst_l l1) s a1 b, LUpd (fst_l l2) s a2 b} supr"
+  then have "is_sup {LUpd l1 s a1 b1, LUpd l2 s a2 b1} s1"
+    using B S
+    is_sup_fst'[of _ "{LUpd l1 s a1 b1, LUpd l2 s a2 b1}"  b2 s1]
+    apply(auto simp add: fst_l_def)
+
+  then have Sup' : "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr"
+
+  show "supr \<in> fst_l_S S1 s \<inter> fst_l_S S2 s"
+
+
+
+
+(*
+has_sup {LUpd (fst_l l1) s a1 b, LUpd (fst_l l2) s a2 b}
+*)
+  show "has_sup {LUpd (fst_l l1) s a1 b, LUpd (fst_l l2) s a2 b}" using B
+    apply(auto simp add: fst_l_def)
+
+  (*  *)
+
+  obtain supr where Supr : "True"
+    using compat
+
+  show "has_sup {LUpd (fst_l l1) s a1 b, LUpd (fst_l l2) s a2 b}"
+
 (* next steps:
 - relating sups_pres and ortho?
 - making sure we can actually do everything we need with the new implementation.
 *)
+
+(*
+  next up: ortho instances (and ortho_base, and ortho_ok, and
+  ortho_base_ok
+
+- option
+- prio?
+- fst, fst
+- snd, snd
+- fst, snd
+- merge
+*)
+
+
 
 end

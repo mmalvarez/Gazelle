@@ -365,10 +365,39 @@ proof
   qed
 qed
 
-lemma sups_pres_merge_lift :
-  assumes H : "sups_pres {LFD l1 f1, LFD l2 f2} (\<lambda> s . S1 s \<inter> S2 s)"
-  shows "\<And> x s . pcomps [LFD l1 f1, LFD l2 f2] s x = 
-               LFD (merge_l l1 l2) (f1, f2) s (x, x)"
+lemma merge_lift_pcomps : 
+  shows "LMap (merge_l l1 l2) (f1, f2) s x = pcomps [LMap l1 f1, LMap l2 f2] s x"
+  by(auto simp add: merge_l_def)
 
+(* all syntax? or can we do a specific s? *)
+(* what do we need sups_pres for here, then?
+i guess just maybe showing the validity?
+*)
+(*
+lemma sups_pres_merge_lift :
+  assumes H : " sups_pres {LMap l1 f1, LMap l2 f2} (\<lambda> s . S1 s \<inter> S2 s)"
+  assumes Hx : "x \<in> S1 s \<inter> S2 s"
+  shows "LMap (merge_l l1 l2) (f1, f2) s x = pcomps [LMap l1 f1, LMap l2 f2] s x"
+proof-
+
+  have H' : "sups_pres (set [LMap l1 f1, LMap l2 f2]) (\<lambda> s . S1 s \<inter> S2 s)"
+    using H by auto
+
+  have Sup: "is_sup (scross ((\<lambda>f. f s) ` set [LMap l1 f1, LMap l2 f2]) {x})
+   (pcomps [LMap l1 f1, LMap l2 f2] s x)"
+    using sups_pres_pcomps_gen1[OF H', where
+f = "LMap l1 f1",
+where Xs = "{x}",
+where x = x,
+where syn = s,
+where xsup = x
+(*  *)]
+    using Hx
+    using sup_singleton[of x]
+    by(auto)
+    
+  show "LMap (merge_l l1 l2) (f1, f2) s x = pcomps [LMap l1 f1, LMap l2 f2] s x"
+    apply(simp add: merge_l_def)
+*)
 
 end
