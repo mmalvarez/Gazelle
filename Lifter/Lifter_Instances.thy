@@ -2406,7 +2406,7 @@ next
     using is_sup_unique[OF bsup_sup[OF Supr bsup_spec] Supr] by simp
 
   show "LUpd (merge_l l1 l2) s a b \<in> ok_S"
-    using compat_ok[OF Supr] Eq A
+    using compat_ok[OF  Supr] Eq A
     by(auto simp add: merge_l_def)
 qed
 
@@ -3289,56 +3289,63 @@ next
     by(auto simp add: prod_pleq)
 qed
 
-(* TODO: we might be able to generalize this.
- * However I don't think we need to.
-*)
-(*
 lemma is_sup_fst' :
-  assumes Hnemp : "x \<in> Xs"
-  assumes H: "is_sup ((\<lambda> w . (w, x')) ` Xs) (supr, x')"
-  shows "is_sup Xs supr"
+  assumes Hnemp : "xy \<in> Xys"
+  assumes H : "is_sup Xys (s1, s2)"
+  shows "is_sup (fst ` Xys) s1"
 proof(rule is_supI)
-  fix w
 
-  assume W: "w \<in> Xs"
+  fix x
 
-  have "(w, x') <[ (supr, x')"
-    using is_supD1[OF H] W
+  assume X: "x \<in> fst ` Xys"
+  then obtain y where Xy : "(x, y) \<in> Xys"
     by(auto)
 
-  then show "w <[ supr"
+  then have "(x, y) <[ (s1, s2)"
+    using is_supD1[OF H Xy]
+    by auto
+
+  then show "x <[ s1"
     by(auto simp add: prod_pleq)
 next
 
-  fix z
-  assume Ub : "is_ub Xs z"
+  fix x'
 
-  have "is_ub ((\<lambda> w . (w, x')) ` Xs) (z, x')"
+  assume X' : "is_ub (fst ` Xys) x'"
+
+  have Ub' : "is_ub Xys (x', s2)"
   proof(rule is_ubI)
 
-    fix y
+    fix w
 
-    assume Y: "y \<in> (\<lambda> w . (w, x')) ` Xs"
+    assume W : "w \<in> Xys"
 
-    then obtain y1 where Y1 : "y = (y1, x')" "y1 \<in> Xs"
-      by(auto)
+    obtain w1 w2 where W1_2 :
+      "w = (w1, w2)"
+      by(cases w; auto)
 
-    then have "y1 <[ z"
-      using is_ubE[OF Ub Y1(2)] by auto
+    then have "w1 \<in> fst ` Xys" using imageI[OF W, of fst]
+      by auto
 
-    then show "y <[ (z, x')" using Y1
-      by(auto simp add: prod_pleq leq_refl)
+    then have "w1 <[ x'"
+      using is_ubE[OF X'] by auto
+
+    have "w2 \<in> snd ` Xys" using imageI[OF W, of snd] W1_2
+      by auto
+
+    then have "w2 <[ s2"
+      using is_supD1[OF H W] W1_2
+      by(auto simp add: prod_pleq)
+
+    then show "w <[ (x', s2)"
+      using `w1 <[ x'` W1_2
+      by(auto simp add: prod_pleq)
   qed
 
-  then have "(supr, x') <[ (z, x')"
-    using is_supD2[OF H]
-    by auto
-
-  then show "supr <[ z"
+  show "s1 <[ x'"
+    using is_supD2[OF H Ub']
     by(auto simp add: prod_pleq)
 qed
-*)
-
 
 
 lemma is_sup_snd :
@@ -3400,53 +3407,64 @@ next
     by(auto simp add: prod_pleq)
 qed
 
-(* TODO: we might be able to generalize this.
- * However I don't think we need to.
-*)
 lemma is_sup_snd' :
-  assumes Hnemp : "x \<in> Xs"
-  assumes H: "is_sup ((\<lambda> w . (x', w)) ` Xs) (x', supr)"
-  shows "is_sup Xs supr"
+  assumes Hnemp : "xy \<in> Xys"
+  assumes H : "is_sup Xys (s1, s2)"
+  shows "is_sup (snd ` Xys) s2"
 proof(rule is_supI)
-  fix w
 
-  assume W: "w \<in> Xs"
+  fix y
 
-  have "(x', w) <[ (x', supr)"
-    using is_supD1[OF H] W
+  assume Y: "y \<in> snd ` Xys"
+  then obtain x where Xy : "(x, y) \<in> Xys"
     by(auto)
 
-  then show "w <[ supr"
+  then have "(x, y) <[ (s1, s2)"
+    using is_supD1[OF H Xy]
+    by auto
+
+  then show "y <[ s2"
     by(auto simp add: prod_pleq)
 next
 
-  fix z
-  assume Ub : "is_ub Xs z"
+  fix y'
 
-  have "is_ub ((\<lambda> w . (x', w)) ` Xs) (x', z)"
+  assume Y' : "is_ub (snd ` Xys) y'"
+
+  have Ub' : "is_ub Xys (s1, y')"
   proof(rule is_ubI)
 
-    fix y
+    fix w
 
-    assume Y: "y \<in> (\<lambda> w . (x', w)) ` Xs"
+    assume W : "w \<in> Xys"
 
-    then obtain y2 where Y2 : "y = (x', y2)" "y2 \<in> Xs"
-      by(auto)
+    obtain w1 w2 where W1_2 :
+      "w = (w1, w2)"
+      by(cases w; auto)
 
-    then have "y2 <[ z"
-      using is_ubE[OF Ub Y2(2)] by auto
+    then have "w2 \<in> snd ` Xys" using imageI[OF W, of snd]
+      by auto
 
-    then show "y <[ (x', z)" using Y2
-      by(auto simp add: prod_pleq leq_refl)
+    then have "w2 <[ y'"
+      using is_ubE[OF Y'] by auto
+
+    have "w1 \<in> fst ` Xys" using imageI[OF W, of fst] W1_2
+      by auto
+
+    then have "w1 <[ s1"
+      using is_supD1[OF H W] W1_2
+      by(auto simp add: prod_pleq)
+
+    then show "w <[ (s1, y')"
+      using `w2 <[ y'` W1_2
+      by(auto simp add: prod_pleq)
   qed
 
-  then have "(x', supr) <[ (x', z)"
-    using is_supD2[OF H]
-    by auto
-
-  then show "supr <[ z"
+  show "s2 <[ y'"
+    using is_supD2[OF H Ub']
     by(auto simp add: prod_pleq)
 qed
+
 
 locale fst_l_ortho = l_ortho
 
@@ -3479,8 +3497,6 @@ next
     by(auto simp add: has_sup_def)
 next
 
-(* something is weird here.  either sup_fst' is not general enough, or
-it is just not the right approach. *)
   fix b :: "('c * 'g)"
   fix s
   fix a1 :: 'b
@@ -3494,17 +3510,167 @@ it is just not the right approach. *)
     by(cases supr; auto)
 
   assume Sup: "is_sup {LUpd (fst_l l1) s a1 b, LUpd (fst_l l2) s a2 b} supr"
-  then have "is_sup {LUpd l1 s a1 b1, LUpd l2 s a2 b1} s1"
-    using B S
-    is_sup_fst'[of _ "{LUpd l1 s a1 b1, LUpd l2 s a2 b1}"  b2 s1]
-    apply(auto simp add: fst_l_def)
 
-  then have Sup' : "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr"
+  have Sup' : "is_sup {LUpd l1 s a1 b1, LUpd l2 s a2 b1} s1"
+    using B S
+    is_sup_fst'[OF _ Sup[unfolded S]]
+    by(auto simp add: fst_l_def)
 
   show "supr \<in> fst_l_S S1 s \<inter> fst_l_S S2 s"
+    using compat_S[OF Sup'] S
+    by(auto simp add: fst_l_S_def)
+
+next
+
+  fix b :: "('c * 'g)"
+  fix s
+  fix a1 :: 'b
+  fix a2 :: 'e
+  fix supr :: "('c * 'g)"
+
+  obtain b1 b2 where B: "b = (b1, b2)"
+    by(cases b; auto)
+
+  obtain s1 s2 where S: "supr = (s1, s2)"
+    by(cases supr; auto)
+
+  assume Sup: "is_sup {LUpd (fst_l l1) s a1 b, LUpd (fst_l l2) s a2 b} supr"
+
+  have Sup' : "is_sup {LUpd l1 s a1 b1, LUpd l2 s a2 b1} s1"
+    using B S
+    is_sup_fst'[OF _ Sup[unfolded S]]
+    by(auto simp add: fst_l_def)
+
+  show "LOut (fst_l l1) s supr = a1"
+    using compat_get1[OF Sup'] S
+    by(auto simp add: fst_l_def)
+next
+
+  fix b :: "('c * 'g)"
+  fix s
+  fix a1 :: 'b
+  fix a2 :: 'e
+  fix supr :: "('c * 'g)"
+
+  obtain b1 b2 where B: "b = (b1, b2)"
+    by(cases b; auto)
+
+  obtain s1 s2 where S: "supr = (s1, s2)"
+    by(cases supr; auto)
+
+  assume Sup: "is_sup {LUpd (fst_l l1) s a1 b, LUpd (fst_l l2) s a2 b} supr"
+
+  have Sup' : "is_sup {LUpd l1 s a1 b1, LUpd l2 s a2 b1} s1"
+    using B S
+    is_sup_fst'[OF _ Sup[unfolded S]]
+    by(auto simp add: fst_l_def)
+
+  show "LOut (fst_l l2) s supr = a2"
+    using compat_get2[OF Sup'] S
+    by(auto simp add: fst_l_def)
+
+next
+
+  fix s a b
+
+  assume In: "b \<in> fst_l_S S2 s" 
+
+  obtain b1 b2 where B: "b = (b1, b2)"
+    by(cases b; auto)
+
+  then have "b1 \<in> S2 s" using In
+    by(auto simp add: fst_l_S_def)
+
+  then have "LUpd l1 s a b1 \<in> S2 s"
+    using put1_S2 by auto
+
+  then show "LUpd (fst_l l1) s a b \<in> fst_l_S S2 s"
+    using B
+    by(auto simp add: fst_l_def fst_l_S_def)
+
+next
+
+  fix s a b
+
+  assume In: "b \<in> fst_l_S S1 s" 
+
+  obtain b1 b2 where B: "b = (b1, b2)"
+    by(cases b; auto)
+
+  then have "b1 \<in> S1 s" using In
+    by(auto simp add: fst_l_S_def)
+
+  then have "LUpd l2 s a b1 \<in> S1 s"
+    using put2_S1 by auto
+
+  then show "LUpd (fst_l l2) s a b \<in> fst_l_S S1 s"
+    using B
+    by(auto simp add: fst_l_def fst_l_S_def)
+qed
+
+locale fst_l_ortho_base = fst_l_ortho + l_ortho_base
+
+sublocale fst_l_ortho_base \<subseteq> out : l_ortho_base "fst_l l1" "fst_l_S S1" "fst_l l2" "fst_l_S S2"
+proof
+  fix s
+
+  have Sup: "is_sup {LBase l1 s, LBase l2 s} \<bottom>"
+    using compat_bases by auto
+
+  then show "is_sup
+          {LBase (fst_l l1) s,
+           LBase (fst_l l2) s}
+          \<bottom>"
+    using is_sup_fst[OF _ Sup, of "LBase l1 s" \<bottom>]
+    by(auto simp add: fst_l_def prod_bot)
+qed
+
+locale fst_l_ortho_ok = fst_l_ortho + l_ortho_ok
+
+sublocale fst_l_ortho_ok \<subseteq> out : l_ortho_ok "fst_l l1" "fst_l_S S1" "fst_l l2" "fst_l_S S2"
+proof
+  fix b :: "('c * 'g)"
+  fix s
+  fix a1 :: 'b
+  fix a2 :: 'e
+  fix supr :: "('c * 'g)"
+
+  assume Sup : "is_sup {LUpd (fst_l l1) s a1 b, LUpd (fst_l l2) s a2 b} supr"
+
+  obtain b1 b2 where B: "b = (b1, b2)"
+    by(cases b; auto)
+
+  obtain s1 s2 where S: "supr = (s1, s2)"
+    by(cases supr; auto)
+
+  have Sup' : "is_sup {LUpd l1 s a1 b1, LUpd l2 s a2 b1} s1"
+    using B S
+    is_sup_fst'[OF _ Sup[unfolded S]]
+    by(auto simp add: fst_l_def)
+
+  have "s1 \<in> ok_S"
+    using compat_ok[OF Sup'] by auto
+
+(* TODO: do we want the assumption that the starting value is OK?
+if we don't, it breaks this theorem here. but if we do, it breaks other
+theorems. what's the significance of this? 
+*)
+
+  have "s2 \<in> ok_S"
+    
+    sorry
+
+  show "supr \<in> ok_S"
+    using `s1 \<in> ok_S` `s2 \<in> ok_S` S
+    by(auto simp add: prod_ok_S)
+qed
 
 
+locale fst_l_ortho_ok
 
+(* next: ok and base versions for fst.
+
+then repeat this exercise for snd. *)
 
 (*
 has_sup {LUpd (fst_l l1) s a1 b, LUpd (fst_l l2) s a2 b}
