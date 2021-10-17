@@ -158,11 +158,15 @@ locale lifting_valid_base_ok_pres =
   lifting_valid_base_pres + lifting_valid_base_ok
 
 (* orthogonality, used to define merge correctness *)
-
+(*
+these were originally pord_weak, but this was
+(i think) insufficient to prove fst_l_ortho;
+the strengthening to pord shouldn't be an issue though.
+*)
 locale l_ortho' =
-  fixes l1 :: "('a, 'b1, 'c :: Pord_Weak, 'f1) lifting"
+  fixes l1 :: "('a, 'b1, 'c :: Pord, 'f1) lifting"
   fixes S1 :: "'a \<Rightarrow> 'c set"
-  fixes l2 :: "('a, 'b2, 'c :: Pord_Weak, 'f2) lifting"
+  fixes l2 :: "('a, 'b2, 'c :: Pord, 'f2) lifting"
   fixes S2 :: "'a \<Rightarrow> 'c set"
 
 locale l_ortho =
@@ -209,7 +213,7 @@ locale l_ortho_ok' =
 
 locale l_ortho_ok = l_ortho + l_ortho_ok' +
   assumes compat_ok :
-    "\<And> s a1 a2 b supr . \<comment> \<open> b \<in> ok_S \<Longrightarrow> \<close>
+    "\<And> s a1 a2 b supr . b \<in> ok_S \<Longrightarrow> 
     is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow> supr \<in> ok_S"
   
 

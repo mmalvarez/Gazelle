@@ -2406,7 +2406,7 @@ next
     using is_sup_unique[OF bsup_sup[OF Supr bsup_spec] Supr] by simp
 
   show "LUpd (merge_l l1 l2) s a b \<in> ok_S"
-    using compat_ok[OF  Supr] Eq A
+    using compat_ok[OF  B_ok Supr] Eq A
     by(auto simp add: merge_l_def)
 qed
 
@@ -3137,6 +3137,7 @@ proof
 
   assume H: "is_sup {LUpd (option_l l1) s a1 b, LUpd (option_l l2) s a2 b} supr"
 
+  assume Bok : "b \<in> ok_S"
   obtain r1 where R1: "LUpd (option_l l1) s a1 b = Some r1"
     by(cases b; auto simp add: option_l_def)
 
@@ -3169,6 +3170,9 @@ proof
     proof(cases b)
       case None' : None
 
+      then have False using Bok
+        by(auto simp add:option_ok_S)
+(*
       have R1' : "LUpd l1 s a1 (LBase l1 s) = r1"
         using None' R1
         by(auto simp add: option_l_def)
@@ -3188,11 +3192,16 @@ proof
       then have "supr' \<in> ok_S"
         using compat_ok[OF Sup_inner']
         by auto
-
+*)
       then show ?thesis using Some
         by(auto simp add: option_l_def option_ok_S)
     next
       case Some' : (Some b')
+
+      then have B'ok : "b' \<in> ok_S"
+        using Bok
+        by(auto simp add: option_ok_S)
+
       have R1' : "LUpd l1 s a1 b' = r1"
         using Some' R1
         by(auto simp add: option_l_def)
@@ -3207,7 +3216,7 @@ proof
         by auto
 
       then have "supr' \<in> ok_S"
-        using compat_ok[OF Sup_inner']
+        using compat_ok[OF B'ok Sup_inner']
         by auto
 
       then show ?thesis using Some
@@ -3637,8 +3646,13 @@ proof
 
   assume Sup : "is_sup {LUpd (fst_l l1) s a1 b, LUpd (fst_l l2) s a2 b} supr"
 
+  assume Bok : "b \<in> ok_S"
+
   obtain b1 b2 where B: "b = (b1, b2)"
     by(cases b; auto)
+
+  have B1ok : "b1 \<in> ok_S" and B2ok : "b2 \<in> ok_S"
+    using Bok B by(auto simp add: prod_ok_S)
 
   obtain s1 s2 where S: "supr = (s1, s2)"
     by(cases supr; auto)
@@ -3649,25 +3663,84 @@ proof
     by(auto simp add: fst_l_def)
 
   have "s1 \<in> ok_S"
-    using compat_ok[OF Sup'] by auto
+    using compat_ok[OF B1ok Sup'] by auto
 
-(* TODO: do we want the assumption that the starting value is OK?
-if we don't, it breaks this theorem here. but if we do, it breaks other
-theorems. what's the significance of this? 
-*)
+  have SB2 : "is_sup {b2, b2} b2"
+    using sup_singleton[of b2]
+    by auto
 
-  have "s2 \<in> ok_S"
-    
-    sorry
+  then have SS2:  "is_sup {b2, b2} s2" 
+    using is_sup_snd'[OF _ Sup[unfolded S]] B
+    by(auto simp add: fst_l_def)
+
+(* need actual pord here. or do we? *)
+  then have "b2 = s2"
+    using is_sup_unique[of "{b2, b2}"]
+    using is_sup_unique[OF `is_sup {b2, b2} b2`]
+    by auto
+
+  then have "s2 \<in> ok_S"
+    using B2ok by auto
 
   show "supr \<in> ok_S"
     using `s1 \<in> ok_S` `s2 \<in> ok_S` S
     by(auto simp add: prod_ok_S)
 qed
 
+locale fst_l_snd_l_ortho' =
+  fixes l1 :: "('a, 'b1, 'c1 :: Pordb, 'f1) lifting"
+  fixes S1 :: "'a \<Rightarrow> 'c1 set"
+  fixes l2 :: "('a, 'b2, 'c2 :: Pordb, 'f2) lifting"
+  fixes S2 :: "'a \<Rightarrow> 'c2 set"
 
-locale fst_l_ortho_ok
+locale fst_l_snd_l_ortho = fst_l_snd_l_ortho' +
+  in1 : lifting_valid_base l1 S1 +
+  in2 : lifting_valid_base l2 S2
 
+sublocale fst_l_snd_l_ortho \<subseteq> out : l_ortho "fst_l l1" "fst_l_S S1" "snd_l l2" "snd_l_S S2"
+proof
+  fix s
+  show "LBase (fst_l l1) s = LBase (snd_l l2) s"
+    using in1.base in2.base
+    by(auto simp add: fst_l_def snd_l_def)
+next
+
+  fix b :: "'c * 'f"
+  fix s :: 'a
+  fix a1 :: 'b
+  fix a2 :: 'e
+
+  obtain b1 b2 where B: "b = (b1, b2)"
+    by(cases b; auto)
+
+
+  have "is_sup {LUpd (fst_l l1) s a1 b,
+                LUpd (snd_l l2) s a2 b}
+        ((LUpd l1 s a1 b1), (LUpd l2 s a2 b2))"
+  proof(rule is_supI)
+    fix x
+
+    assume X: "x \<in> {LUpd (fst_l l1) s a1 b, LUpd (snd_l l2) s a2 b}"
+
+    then consider (X1) "x = LUpd (fst_l l1) s a1 b" |
+                  (X2) "x = LUpd (snd_l l2) s a2 b"
+      by auto
+
+    then show "x <[ (LUpd l1 s a1 b1, LUpd l2 s a2 b2)"
+    proof cases
+      case X1
+      then show ?thesis using B leq_refl in2.get_put
+        apply(auto simp add: fst_l_def prod_pleq)
+    next
+      case X2
+      then show ?thesis sorry
+    qed
+
+
+  show "has_sup
+        {LUpd (fst_l l1) s a1 b,
+         LUpd (snd_l l2) s a2 b}"
+  
 (* next: ok and base versions for fst.
 
 then repeat this exercise for snd. *)
