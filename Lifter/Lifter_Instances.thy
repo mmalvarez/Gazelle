@@ -253,8 +253,8 @@ locale option_l_valid = lifting_valid + option_l_valid_weak
 sublocale option_l_valid \<subseteq> param : lifting_valid_base "option_l l" "option_l_S S"
 proof
   fix s a b
-  assume "b \<in> option_l_S S s"
-  then show "b <[ LUpd (option_l l) s a b"
+  (*assume "b \<in> option_l_S S s"*)
+  show "b <[ LUpd (option_l l) s a b"
     using get_put
     by(auto simp add:option_l_def option_l_S_def LNew_def option_pleq split:option.splits)
 qed
@@ -466,17 +466,19 @@ sublocale prio_l_valid \<subseteq> out : lifting_valid "prio_l f0 f1 l" "prio_l_
 proof
   fix s a
   fix b :: "'c md_prio"
+(*
   assume H : "b \<in> prio_l_S S s"
-
+*)
   obtain b' pb'  where B' : "b = mdp pb' b'"
     by(cases b; auto)
 
+(*
   have H' : "b' \<in> S s"
     using H B'
     by(auto simp add: prio_l_S_def)
-
+*)
   show "b <[ LUpd (prio_l f0 f1 l) s a b"
-    using get_put[OF H'] B' f1_nondecrease
+    using get_put B' f1_nondecrease
     by(auto simp add: prio_l_def prio_pleq)
 qed
 
@@ -496,11 +498,11 @@ sublocale prio_l_valid_strong \<subseteq> out : lifting_valid "prio_l f0 f1 l" "
 proof
   fix s a 
   fix b :: "'c md_prio"
-  assume H: "b \<in> prio_l_S S s"
+(*  assume H: "b \<in> prio_l_S S s"*)
   obtain x1 p where B : "b = mdp p x1" by(cases b; auto)
 
   show " b <[ LUpd (prio_l f0 f1 l) s a b"
-    using H B f1_increase[of p s]
+    using B f1_increase[of p s]
     by(auto simp add:prio_l_def LNew_def prio_pleq split:md_prio.splits)
 qed
 
@@ -540,7 +542,7 @@ next
 
   obtain x1 x2 where B : "b = mdp x1 x2"
     by(cases b; auto)
-  assume In : "b \<in> S' s"
+  (*assume In : "b \<in> S' s"*)
   then show "b <[ LUpd (prio_l f0 f1 l) s a b"
     using f1_increase[of x1 s] B
     by(auto simp add:prio_l_def LNew_def prio_pleq split:md_prio.splits)
@@ -569,8 +571,8 @@ sublocale prio_l_valid_base \<subseteq> out : lifting_valid_base "prio_l f0 f1 l
 proof
   fix s a
   fix b :: "'c md_prio"
-  assume "b \<in> prio_l_S S s"
-  then show "b <[ LUpd (prio_l f0 f1 l) s a b"
+  (*assume "b \<in> prio_l_S S s"*)
+  show "b <[ LUpd (prio_l f0 f1 l) s a b"
     using f1_nondecrease get_put
     by(auto simp add: prio_l_def prio_pleq prio_l_S_def split: md_prio.splits)
 qed
@@ -592,24 +594,6 @@ proof
 qed
 
 
-(* now need
-- weak ok D
-- weak base ok D
-
-- regular-ok D
-- regular-base ok D
-- regular base ok pres
-
-- strong-ok
-- strong-base-ok
-- strong ok pres (? does this work?)
-- strong-base-ok-pres ( ? does this work ?)
-- (+/- base) (+/- strong) (+pres) (+ok)
-- base+strong+pres+ok
-- base+pres+ok
-- pres+ok
-- strong+pres+ok
-*)
 locale prio_l_valid_weak_ok = prio_l_valid_weak + lifting_valid_weak_ok
 
 sublocale prio_l_valid_weak_ok \<subseteq> out : lifting_valid_weak_ok "(prio_l f0 f1 l)" "(prio_l_S S)"
@@ -1496,8 +1480,8 @@ sublocale fst_l_valid \<subseteq> out : lifting_valid "fst_l l" "fst_l_S S"
 proof
   fix s a 
   fix b :: "('c :: Pord_Weak) * ('e :: Pord_Weakb)"
-  assume  Hb : "b \<in> fst_l_S S s"
-  thus "b <[ LUpd (fst_l l) s a b"
+  (*assume  Hb : "b \<in> fst_l_S S s"*)
+  show "b <[ LUpd (fst_l l) s a b"
     using get_put
     by(auto simp add: fst_l_def prod_pleq fst_l_S_def leq_refl split:prod.splits)
 qed
@@ -1871,8 +1855,8 @@ sublocale snd_l_valid \<subseteq> out : lifting_valid "snd_l l" "snd_l_S S"
 proof
   fix s a 
   fix b :: "('e :: Pord_Weakb) * ('c :: Pord_Weak)"
-  assume  Hb : "b \<in> snd_l_S S s"
-  thus "b <[ LUpd (snd_l l) s a b"
+  (*assume  Hb : "b \<in> snd_l_S S s"*)
+  show "b <[ LUpd (snd_l l) s a b"
     using get_put
     by(auto simp add: snd_l_def prod_pleq leq_refl snd_l_S_def split:prod.splits)
 qed
@@ -2325,9 +2309,9 @@ proof
   obtain a1 a2 where A: "a = (a1, a2)"
     by(cases a; auto)
 
-  assume "b \<in> S1 s \<inter> S2 s"
+(*  assume "b \<in> S1 s \<inter> S2 s"
 
-  hence B1 : "b \<in> S1 s" by auto
+  hence B1 : "b \<in> S1 s" by auto*)
 
   have "is_sup {b, b} b"
     by(auto simp add: is_sup_def is_least_def is_ub_def leq_refl)
@@ -2340,7 +2324,7 @@ proof
     using is_sup_unique[OF bsup_sup[OF Supr bsup_spec] Supr] by simp
 
   have B_leq1 : "b <[ LUpd l1 s a1 b"
-    using in1.get_put[OF B1] by auto
+    using in1.get_put by auto
 
   have Upd_leq1 : "LUpd l1 s a1 b <[ supr"
     using is_supD1[OF Supr] by auto
@@ -3730,33 +3714,364 @@ next
     proof cases
       case X1
       then show ?thesis using B leq_refl in2.get_put
-        apply(auto simp add: fst_l_def prod_pleq)
+        by(auto simp add: fst_l_def prod_pleq)
     next
       case X2
-      then show ?thesis sorry
+      then show ?thesis using B leq_refl in1.get_put
+        by(auto simp add: snd_l_def prod_pleq)
     qed
+  next
 
+    fix x'
+    assume Ub : "is_ub {LUpd (fst_l l1) s a1 b, LUpd (snd_l l2) s a2 b} x'"
 
-  show "has_sup
+    obtain x'1 x'2 where X': "x' = (x'1, x'2)"
+      by(cases x'; auto)
+
+    have Up1 : "LUpd l1 s a1 b1 <[ x'1" and Up2 : "LUpd l2 s a2 b2 <[ x'2"
+      using X' B is_ubE[OF Ub]
+      by(auto simp add: fst_l_def snd_l_def prod_pleq)
+
+    then show "(LUpd l1 s a1 b1, LUpd l2 s a2 b2) <[ x'"
+      using X'
+      by(auto simp add: prod_pleq)
+  qed
+    
+  then show "has_sup
         {LUpd (fst_l l1) s a1 b,
          LUpd (snd_l l2) s a2 b}"
-  
-(* next: ok and base versions for fst.
+    by(auto simp add: has_sup_def)
 
-then repeat this exercise for snd. *)
+next
+
+  fix b :: "'c * 'f"
+  fix s :: 'a
+  fix a1 :: 'b
+  fix a2 :: 'e
+  fix supr
+
+  assume Sup : "is_sup {LUpd (fst_l l1) s a1 b, LUpd (snd_l l2) s a2 b} supr"
+
+  obtain b1 b2 where B: "b = (b1, b2)"
+    by(cases b; auto)
+
+  obtain supr1 supr2 where Sup1_2 : "supr = (supr1, supr2)"
+    by(cases supr; auto)
+
+  have Sup' : "is_sup {LUpd (fst_l l1) s a1 b,
+                LUpd (snd_l l2) s a2 b}
+        ((LUpd l1 s a1 b1), (LUpd l2 s a2 b2))"
+  proof(rule is_supI)
+    fix x
+
+    assume X: "x \<in> {LUpd (fst_l l1) s a1 b, LUpd (snd_l l2) s a2 b}"
+
+    then consider (X1) "x = LUpd (fst_l l1) s a1 b" |
+                  (X2) "x = LUpd (snd_l l2) s a2 b"
+      by auto
+
+    then show "x <[ (LUpd l1 s a1 b1, LUpd l2 s a2 b2)"
+    proof cases
+      case X1
+      then show ?thesis using B leq_refl in2.get_put
+        by(auto simp add: fst_l_def prod_pleq)
+    next
+      case X2
+      then show ?thesis using B leq_refl in1.get_put
+        by(auto simp add: snd_l_def prod_pleq)
+    qed
+  next
+
+    fix x'
+    assume Ub : "is_ub {LUpd (fst_l l1) s a1 b, LUpd (snd_l l2) s a2 b} x'"
+
+    obtain x'1 x'2 where X': "x' = (x'1, x'2)"
+      by(cases x'; auto)
+
+    have Up1 : "LUpd l1 s a1 b1 <[ x'1" and Up2 : "LUpd l2 s a2 b2 <[ x'2"
+      using X' B is_ubE[OF Ub]
+      by(auto simp add: fst_l_def snd_l_def prod_pleq)
+
+    then show "(LUpd l1 s a1 b1, LUpd l2 s a2 b2) <[ x'"
+      using X'
+      by(auto simp add: prod_pleq)
+  qed
+
+  have Sup_eq : "supr = ((LUpd l1 s a1 b1), (LUpd l2 s a2 b2))"
+    using is_sup_unique[OF Sup Sup']
+    by auto
+    
+(* use is_sup_unique here to show that it is the two components. *)
+  have Conc1 : "supr1 \<in> S1 s"
+    using Sup1_2 Sup_eq
+    in1.put_S
+    by(auto)
+
+  have Conc2 : "supr2 \<in> S2 s"
+    using Sup1_2 Sup_eq
+    in2.put_S
+    by auto
+
+  show "supr
+       \<in> fst_l_S S1 s \<inter>
+          snd_l_S S2 s"
+    using Conc1 Conc2 Sup1_2
+    by(auto simp add: fst_l_S_def snd_l_S_def)
+
+next
+
+  fix b :: "'c * 'f"
+  fix s :: 'a
+  fix a1 :: 'b
+  fix a2 :: 'e
+  fix supr
+
+  assume Sup : "is_sup {LUpd (fst_l l1) s a1 b, LUpd (snd_l l2) s a2 b} supr"
+
+  obtain b1 b2 where B: "b = (b1, b2)"
+    by(cases b; auto)
+
+  obtain supr1 supr2 where Sup1_2 : "supr = (supr1, supr2)"
+    by(cases supr; auto)
+
+  have Sup' : "is_sup {LUpd (fst_l l1) s a1 b,
+                LUpd (snd_l l2) s a2 b}
+        ((LUpd l1 s a1 b1), (LUpd l2 s a2 b2))"
+  proof(rule is_supI)
+    fix x
+
+    assume X: "x \<in> {LUpd (fst_l l1) s a1 b, LUpd (snd_l l2) s a2 b}"
+
+    then consider (X1) "x = LUpd (fst_l l1) s a1 b" |
+                  (X2) "x = LUpd (snd_l l2) s a2 b"
+      by auto
+
+    then show "x <[ (LUpd l1 s a1 b1, LUpd l2 s a2 b2)"
+    proof cases
+      case X1
+      then show ?thesis using B leq_refl in2.get_put
+        by(auto simp add: fst_l_def prod_pleq)
+    next
+      case X2
+      then show ?thesis using B leq_refl in1.get_put
+        by(auto simp add: snd_l_def prod_pleq)
+    qed
+  next
+
+    fix x'
+    assume Ub : "is_ub {LUpd (fst_l l1) s a1 b, LUpd (snd_l l2) s a2 b} x'"
+
+    obtain x'1 x'2 where X': "x' = (x'1, x'2)"
+      by(cases x'; auto)
+
+    have Up1 : "LUpd l1 s a1 b1 <[ x'1" and Up2 : "LUpd l2 s a2 b2 <[ x'2"
+      using X' B is_ubE[OF Ub]
+      by(auto simp add: fst_l_def snd_l_def prod_pleq)
+
+    then show "(LUpd l1 s a1 b1, LUpd l2 s a2 b2) <[ x'"
+      using X'
+      by(auto simp add: prod_pleq)
+  qed
+
+  have Sup_eq : "supr = ((LUpd l1 s a1 b1), (LUpd l2 s a2 b2))"
+    using is_sup_unique[OF Sup Sup']
+    by auto
+
+  show "LOut (fst_l l1) s supr = a1"
+    using Sup_eq in1.put_get
+    by(auto simp add: fst_l_def)
+
+next
+
+  fix b :: "'c * 'f"
+  fix s :: 'a
+  fix a1 :: 'b
+  fix a2 :: 'e
+  fix supr
+
+  assume Sup : "is_sup {LUpd (fst_l l1) s a1 b, LUpd (snd_l l2) s a2 b} supr"
+
+  obtain b1 b2 where B: "b = (b1, b2)"
+    by(cases b; auto)
+
+  obtain supr1 supr2 where Sup1_2 : "supr = (supr1, supr2)"
+    by(cases supr; auto)
+
+  have Sup' : "is_sup {LUpd (fst_l l1) s a1 b,
+                LUpd (snd_l l2) s a2 b}
+        ((LUpd l1 s a1 b1), (LUpd l2 s a2 b2))"
+  proof(rule is_supI)
+    fix x
+
+    assume X: "x \<in> {LUpd (fst_l l1) s a1 b, LUpd (snd_l l2) s a2 b}"
+
+    then consider (X1) "x = LUpd (fst_l l1) s a1 b" |
+                  (X2) "x = LUpd (snd_l l2) s a2 b"
+      by auto
+
+    then show "x <[ (LUpd l1 s a1 b1, LUpd l2 s a2 b2)"
+    proof cases
+      case X1
+      then show ?thesis using B leq_refl in2.get_put
+        by(auto simp add: fst_l_def prod_pleq)
+    next
+      case X2
+      then show ?thesis using B leq_refl in1.get_put
+        by(auto simp add: snd_l_def prod_pleq)
+    qed
+  next
+
+    fix x'
+    assume Ub : "is_ub {LUpd (fst_l l1) s a1 b, LUpd (snd_l l2) s a2 b} x'"
+
+    obtain x'1 x'2 where X': "x' = (x'1, x'2)"
+      by(cases x'; auto)
+
+    have Up1 : "LUpd l1 s a1 b1 <[ x'1" and Up2 : "LUpd l2 s a2 b2 <[ x'2"
+      using X' B is_ubE[OF Ub]
+      by(auto simp add: fst_l_def snd_l_def prod_pleq)
+
+    then show "(LUpd l1 s a1 b1, LUpd l2 s a2 b2) <[ x'"
+      using X'
+      by(auto simp add: prod_pleq)
+  qed
+
+  have Sup_eq : "supr = ((LUpd l1 s a1 b1), (LUpd l2 s a2 b2))"
+    using is_sup_unique[OF Sup Sup']
+    by auto
+
+  show "LOut (snd_l l2) s supr = a2"
+    using Sup_eq in2.put_get
+    by(auto simp add: snd_l_def)
+
+next
+
+  fix b :: "'c * 'f"
+  fix s :: 'a
+  fix a :: 'b
+
+  assume Bin : "b \<in> snd_l_S S2 s"
+
+  then show "LUpd (fst_l l1) s a b \<in> snd_l_S S2 s"
+    by(auto simp add: fst_l_def snd_l_S_def)
+
+next
+
+  fix b :: "'c * 'f"
+  fix s :: 'a
+  fix a :: 'e
+
+  assume Bin : "b \<in> fst_l_S S1 s"
+
+  then show "LUpd (snd_l l2) s a b \<in> fst_l_S S1 s"
+    by(auto simp add: fst_l_S_def snd_l_def)
+qed
+
+(* lifting_valid_weak_ok *)
+locale fst_l_snd_l_ortho_ok =
+  fst_l_snd_l_ortho + 
+  in1 : lifting_valid_weak_ok l1 S1 +
+  in2 : lifting_valid_weak_ok l2 S2
+
+sublocale fst_l_snd_l_ortho_ok \<subseteq> out : l_ortho_ok "fst_l l1" "fst_l_S S1" "snd_l l2" "snd_l_S S2"
+proof
+
+  term "l1"
+  term "l2"
+
+  fix b :: "'c * 'f"
+  fix s :: 'a
+  fix a1 :: 'b
+  fix a2 :: 'e
+  fix supr
+
+  assume Bok : "b \<in> ok_S"
+
+  assume Sup : "is_sup {LUpd (fst_l l1) s a1 b, LUpd (snd_l l2) s a2 b} supr"
+  obtain b1 b2 where B: "b = (b1, b2)"
+    by(cases b; auto)
+
+  obtain supr1 supr2 where Sup1_2 : "supr = (supr1, supr2)"
+    by(cases supr; auto)
+
+  have Sup' : "is_sup {LUpd (fst_l l1) s a1 b,
+                LUpd (snd_l l2) s a2 b}
+        ((LUpd l1 s a1 b1), (LUpd l2 s a2 b2))"
+  proof(rule is_supI)
+    fix x
+
+    assume X: "x \<in> {LUpd (fst_l l1) s a1 b, LUpd (snd_l l2) s a2 b}"
+
+    then consider (X1) "x = LUpd (fst_l l1) s a1 b" |
+                  (X2) "x = LUpd (snd_l l2) s a2 b"
+      by auto
+
+    then show "x <[ (LUpd l1 s a1 b1, LUpd l2 s a2 b2)"
+    proof cases
+      case X1
+      then show ?thesis using B leq_refl in2.get_put
+        by(auto simp add: fst_l_def prod_pleq)
+    next
+      case X2
+      then show ?thesis using B leq_refl in1.get_put
+        by(auto simp add: snd_l_def prod_pleq)
+    qed
+  next
+
+    fix x'
+    assume Ub : "is_ub {LUpd (fst_l l1) s a1 b, LUpd (snd_l l2) s a2 b} x'"
+
+    obtain x'1 x'2 where X': "x' = (x'1, x'2)"
+      by(cases x'; auto)
+
+    have Up1 : "LUpd l1 s a1 b1 <[ x'1" and Up2 : "LUpd l2 s a2 b2 <[ x'2"
+      using X' B is_ubE[OF Ub]
+      by(auto simp add: fst_l_def snd_l_def prod_pleq)
+
+    then show "(LUpd l1 s a1 b1, LUpd l2 s a2 b2) <[ x'"
+      using X'
+      by(auto simp add: prod_pleq)
+  qed
+
+  have Sup_eq : "supr = ((LUpd l1 s a1 b1), (LUpd l2 s a2 b2))"
+    using is_sup_unique[OF Sup Sup']
+    by auto
+
+  then show "supr \<in> ok_S"
+    using Bok B in1.ok_S_put in2.ok_S_put
+    by(auto simp add: prod_ok_S)
+qed
+
+
+locale fst_l_snd_l_ortho_base =
+  fst_l_snd_l_ortho + 
+  in1 : lifting_valid_weak_base l1 S1 +
+  in2 : lifting_valid_weak_base l2 S2
+
+sublocale fst_l_snd_l_ortho_base \<subseteq> out : l_ortho_base "fst_l l1" "fst_l_S S1" "snd_l l2" "snd_l_S S2"
+proof
+  fix s
+
+  have "is_sup {(\<bottom>, \<bottom>)} (\<bottom>, \<bottom>)"
+    using sup_singleton
+    by(auto)
+
+  then show "is_sup
+          {LBase (fst_l l1) s,
+           LBase (snd_l l2) s}
+          \<bottom>"
+    using in1.base in2.base
+    by(auto simp add: fst_l_def snd_l_def prod_bot)
+qed
 
 (*
-has_sup {LUpd (fst_l l1) s a1 b, LUpd (fst_l l2) s a2 b}
+ortho_base
+ortho_ok
 *)
-  show "has_sup {LUpd (fst_l l1) s a1 b, LUpd (fst_l l2) s a2 b}" using B
-    apply(auto simp add: fst_l_def)
 
-  (*  *)
+(*
 
-  obtain supr where Supr : "True"
-    using compat
-
-  show "has_sup {LUpd (fst_l l1) s a1 b, LUpd (fst_l l2) s a2 b}"
+*)
 
 (* next steps:
 - relating sups_pres and ortho?

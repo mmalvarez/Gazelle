@@ -113,8 +113,9 @@ locale lifting_valid_weak =
   assumes get_put_weak : "\<And> s b . b \<in> S s \<Longrightarrow> b <[ LUpd l s (LOut l s b) b"
   assumes put_S : "\<And> s a b . LUpd l s a b \<in> S s"
 
+(* NB: making a huge change w/r/t lifting strength def here (getting rid of \<in> S s assumption) *)
 locale lifting_valid = lifting_valid_weak +
-  assumes get_put : "\<And> s a b . b \<in> S s \<Longrightarrow> b <[ LUpd l s a b"
+  assumes get_put : "\<And> s a b . b <[ LUpd l s a b"
 
 locale lifting_valid_weak_base = lifting_valid_weak +
   assumes base : "\<And> s . LBase l s = \<bottom>"
@@ -185,8 +186,9 @@ that gets us.
  *)
 (* do we need put1_get2/put2_get1? *)
 
-  assumes eq_base : "\<And> s . LBase l1 s = LBase l2 s"
-  assumes compat : "\<And> s a1 a2 . has_sup {LUpd l1 s a1 b, LUpd l2 s a2 b}"
+assumes eq_base : "\<And> s . LBase l1 s = LBase l2 s"
+  (*i think we can't have these set membership premises, but not having them creates problems for fst_snd_ortho *)
+  assumes compat : "\<And> s a1 a2 . \<comment> \<open> b \<in> S1 s \<Longrightarrow> b \<in> S2 s \<Longrightarrow> \<close> has_sup {LUpd l1 s a1 b, LUpd l2 s a2 b}"
   (* compat_S could also be generalized a bit. *)
   assumes compat_S : "\<And> s a1 a2 supr . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
                       supr \<in> (S1 s \<inter> S2 s)"
@@ -226,6 +228,119 @@ definition lift_map_s ::
 "lift_map_s l' l sem syn st =
   LMap l sem (l' syn) st"
 
+
+(* commutativity of l_ortho *)
+sublocale l_ortho \<subseteq> comm :
+  l_ortho l2 S2 l1 S1
+proof
+
+  fix s
+  show "LBase l2 s = LBase l1 s"
+    using eq_base by auto
+next
+
+  fix b s a1 a2
+
+  have Comm : "{LUpd l2 s a1 b, LUpd l1 s a2 b} = 
+               {LUpd l1 s a2 b, LUpd l2 s a1 b}"
+    by auto
+
+  show "has_sup
+        {LUpd l2 s a1 b,
+         LUpd l1 s a2 b}"
+    using compat[of s a2 b a1]
+    unfolding Comm
+    by auto
+
+next
+  fix b s a1 a2 supr
+
+  assume Sup : "is_sup {LUpd l2 s a1 b, LUpd l1 s a2 b} supr"
+
+  have Comm : "{LUpd l2 s a1 b, LUpd l1 s a2 b} = 
+               {LUpd l1 s a2 b, LUpd l2 s a1 b}"
+    by auto
+
+  show "supr \<in> S2 s \<inter> S1 s"
+    using compat_S[OF Sup[unfolded Comm]]
+    by auto
+next
+
+  fix b s a1 a2 supr
+
+  assume Sup : "is_sup {LUpd l2 s a1 b, LUpd l1 s a2 b} supr"
+
+  have Comm : "{LUpd l2 s a1 b, LUpd l1 s a2 b} = 
+               {LUpd l1 s a2 b, LUpd l2 s a1 b}"
+    by auto
+
+  show "LOut l2 s supr = a1"
+    using compat_get2[OF Sup[unfolded Comm]]
+    by auto
+
+next
+
+  fix b s a1 a2 supr
+
+  assume Sup : "is_sup {LUpd l2 s a1 b, LUpd l1 s a2 b} supr"
+
+  have Comm : "{LUpd l2 s a1 b, LUpd l1 s a2 b} = 
+               {LUpd l1 s a2 b, LUpd l2 s a1 b}"
+    by auto
+
+  show "LOut l1 s supr = a2"
+    using compat_get1[OF Sup[unfolded Comm]]
+    by auto
+
+next
+
+  fix s a b
+
+  show "b \<in> S1 s \<Longrightarrow>
+       LUpd l2 s a b \<in> S1 s"
+    using put2_S1[of b s a]
+    by auto
+
+next
+
+  fix s a b
+
+  show "b \<in> S2 s \<Longrightarrow>
+       LUpd l1 s a b \<in> S2 s"
+    using put1_S2[of b s a]
+    by auto
+qed
+
+sublocale l_ortho_base \<subseteq> comm :
+  l_ortho_base l2 S2 l1 S1
+proof
+  fix s
+
+  have Comm : "{LBase l2 s, LBase l1 s} = {LBase l1 s, LBase l2 s}"
+    by auto
+
+  show "is_sup {LBase l2 s, LBase l1 s} \<bottom>"
+    using compat_bases unfolding Comm
+    by auto
+qed
+
+sublocale l_ortho_ok \<subseteq> comm :
+  l_ortho_ok l2 S2 l1 S1
+proof
+  fix s a1 a2 b supr
+
+  assume Sup : "is_sup {LUpd l2 s a1 b, LUpd l1 s a2 b} supr"
+
+  assume Bok : "b \<in> ok_S"
+
+  have Comm : "{LUpd l2 s a1 b, LUpd l1 s a2 b} = 
+               {LUpd l1 s a2 b, LUpd l2 s a1 b}"
+    by auto
+
+  show "supr \<in> ok_S"
+    using compat_ok[OF Bok Sup[unfolded Comm]]
+    by auto
+qed
 
 (* TODO: can we define some other notion of orthogonality that will be useful
  * for "squishing together" multiple liftings into one when merging semantics?
