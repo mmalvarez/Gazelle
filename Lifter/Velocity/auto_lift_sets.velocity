@@ -1,0 +1,60 @@
+#set( $names =
+  [ "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"])
+
+#foreach ($n in $names)
+definition schem_lift_S_prod_recR_${n}_left ::
+  "('n, 'ls, 'x, 'b2 :: Pord) schem_lift_S =>
+   ('n :: n_${n}, ('ls, 'rs :: hasnt${n}) sprod, 'x, 'b2 * ('rest :: Pordb)) schem_lift_S" where
+"schem_lift_S_prod_recR_${n}_left rec n s =
+  (case s of
+    SP ls rs =>
+      fst_l_S (rec n ls))"
+
+definition schem_lift_S_prod_recR_${n}_right ::
+  "('n, 'rs, 'x, 'b2 :: Pord) schem_lift_S =>
+   ('n :: n_${n}, ('ls :: hasnt${n}, 'rs ) sprod, 'x, ('rest :: Pordb) * ('b2)) schem_lift_S" where
+"schem_lift_S_prod_recR_${n}_right rec n s =
+  (case s of
+    SP ls rs =>
+      snd_l_S (rec n rs))"
+
+#end
+
+#foreach ($n in $names)
+definition schem_lift_S_merge_recR_${n}_left ::
+  "('n, 'ls, 'x, 'b2) schem_lift_S =>
+   ('n :: n_${n}, ('ls, 'rs :: hasnt${n}) smerge, 'x, 'b2) schem_lift_S" where
+"schem_lift_S_merge_recR_${n}_left rec n s =
+  (case s of
+    SM ls rs =>
+      (rec n ls))"
+
+definition schem_lift_S_merge_recR_${n}_right ::
+  "('n, 'rs, 'x, 'b2) schem_lift_S =>
+   ('n :: n_${n}, ('ls :: hasnt${n}, 'rs) smerge, 'x, 'b2) schem_lift_S" where
+"schem_lift_S_merge_recR_${n}_right rec n s =
+  (case s of
+    SM ls rs =>
+      (rec n rs))"
+
+#end
+
+adhoc_overloading schem_lift_S
+
+#foreach ($n in $names)
+"schem_lift_S_base_triv${n}"
+#end
+
+#foreach ($n in $names)
+"schem_lift_S_base_id${n}"
+#end
+
+#foreach ($n in $names)
+"schem_lift_S_prod_recR_${n}_left schem_lift_S"
+"schem_lift_S_prod_recR_${n}_right schem_lift_S"
+#end
+
+#foreach ($n in $names)
+"schem_lift_S_merge_recR_${n}_left schem_lift_S"
+"schem_lift_S_merge_recR_${n}_right schem_lift_S"
+#end

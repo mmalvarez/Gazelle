@@ -1,0 +1,179 @@
+#set( $names =
+  [ "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"])
+
+#foreach ($n in $names)
+class n_${n}
+#end
+
+#foreach ($n in $names)
+datatype n${n} = N${n}
+#end
+
+#foreach ($n in $names)
+instantiation n${n} :: n_${n} begin
+instance proof qed
+end
+
+instantiation n${n} :: basename begin
+instance proof qed
+end
+
+#end
+
+#foreach ($n in $names)
+instantiation n${n} :: schem begin
+instance proof qed
+end
+
+#end
+
+#foreach ($n in $names)
+class hasnt${n}
+#end
+
+#foreach ($n in $names)
+instantiation n${n} :: "{
+#foreach ($m in $names)
+#if($n != $m)hasnt${m},
+#end
+#end
+type}"
+begin
+instance proof qed
+end
+
+#end
+
+instantiation nX :: "{
+#foreach ($m in $names)
+hasnt${m},
+#end
+type}"
+begin
+instance proof qed
+end
+
+
+#foreach ($n in $names)
+instantiation sprod :: (hasnt${n}, hasnt${n}) hasnt${n} begin
+instance proof qed
+end
+#end
+
+#foreach ($n in $names)
+instantiation sprio :: (_, hasnt${n}) hasnt${n} begin
+instance proof qed
+end
+#end
+
+#foreach ($n in $names)
+instantiation soption :: (hasnt${n}) hasnt${n} begin
+instance proof qed
+end
+#end
+
+#foreach ($n in $names)
+instantiation soalist :: (_, linorder, hasnt${n}) hasnt${n} begin
+instance proof qed
+end
+#end
+
+#foreach ($n in $names)
+instantiation sroalist :: (_, linorder, hasnt${n}) hasnt${n} begin
+instance proof qed
+end
+#end
+
+#foreach ($n in $names)
+instantiation smerge :: (hasnt${n}, hasnt${n}) hasnt${n} begin
+instance proof qed
+end
+#end
+
+#foreach ($n in $names)
+instantiation sfan :: (_, _, _, hasnt${n}) hasnt${n} begin
+instance proof qed
+end
+#end
+
+#foreach ($n in $names)
+instantiation sinject :: (_, _, _, hasnt${n}) hasnt${n} begin
+instance proof qed
+end
+#end
+
+#foreach ($n in $names)
+instantiation sid :: (hasnt${n}) hasnt${n} begin
+instance proof qed
+end
+#end
+
+#foreach ($n in $names)
+definition schem_lift_base_triv${n} ::  "('n :: n_${n}, 'n, 'x, 'a :: Bogus, 'a md_triv) schem_lift" where
+"schem_lift_base_triv${n} _ _ =
+  triv_l"
+#end
+
+#foreach ($n in $names)
+definition schem_lift_base_id${n} ::  "('n :: n_${n}, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a) schem_lift" where
+"schem_lift_base_id${n} _ _ =
+  id_l"
+#end
+
+#foreach ($n in $names)
+definition schem_lift_prod_recR_${n}_left ::
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_${n}, ('ls, 'rs :: hasnt${n}) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
+"schem_lift_prod_recR_${n}_left rec n s =
+  (case s of
+    SP ls rs =>
+      fst_l (rec n ls))"
+
+definition schem_lift_prod_recR_${n}_right ::
+  "('n, 'rs, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_${n}, ('ls :: hasnt${n}, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
+"schem_lift_prod_recR_${n}_right rec n s =
+  (case s of
+    SP ls rs =>
+      snd_l (rec n rs))"
+
+#end
+
+#foreach ($n in $names)
+definition schem_lift_merge_recR_${n}_left ::
+  "('n, 'ls, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_${n}, ('ls, 'rs :: hasnt${n}) smerge, 'x, 'a, 'b2) schem_lift" where
+"schem_lift_merge_recR_${n}_left rec n s =
+  (case s of
+    SM ls rs =>
+      (rec n ls))"
+
+definition schem_lift_merge_recR_${n}_right ::
+  "('n, 'rs, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_${n}, ('ls :: hasnt${n}, 'rs) smerge, 'x, 'a, 'b2) schem_lift" where
+"schem_lift_merge_recR_${n}_right rec n s =
+  (case s of
+    SM ls rs =>
+      (rec n rs))"
+
+#end
+
+adhoc_overloading schem_lift
+
+#foreach ($n in $names)
+"schem_lift_base_triv${n}"
+#end
+
+#foreach ($n in $names)
+"schem_lift_base_id${n}"
+#end
+
+#foreach ($n in $names)
+"schem_lift_prod_recR_${n}_left schem_lift"
+"schem_lift_prod_recR_${n}_right schem_lift"
+#end
+
+#foreach ($n in $names)
+"schem_lift_merge_recR_${n}_left schem_lift"
+"schem_lift_merge_recR_${n}_right schem_lift"
+#end

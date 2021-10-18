@@ -2417,8 +2417,264 @@ locale merge_l_valid_weak_pres = merge_l_valid_weak +
 sublocale merge_l_valid_weak_pres \<subseteq> out: lifting_valid_weak_pres "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x"
 proof
 
-  term "l1"
+(* function component has type d * f  *)
 
+  fix v supr :: 'c
+  fix V
+  fix f :: "'d * 'f"
+  fix s :: 'a
+
+  assume Vin : "v \<in> V"
+  assume Vsub : "V \<subseteq> S1 s \<inter> S2 s"
+  then have Vsub1 : "V \<subseteq> S1 s" and Vsub2 : "V \<subseteq> S2 s"
+    by auto
+
+  assume Supr : "is_sup V supr" 
+  assume Supr_in : "supr \<in> S1 s \<inter> S2 s"
+
+  then have Supr_in1 : "supr \<in> S1 s" and Supr_in2 : "supr \<in> S2 s"
+    by auto
+
+  obtain f1 f2 where F: "f = (f1, f2)"
+    by(cases f; auto)
+(*
+maybe we need to restrict f to functions that are already sups_pres?
+*)
+
+  show "is_sup (LMap (merge_l l1 l2) f s ` V) (LMap (merge_l l1 l2) f s supr)"
+  proof(rule is_supI)
+    fix xo
+
+    assume Xo: "xo \<in> LMap (merge_l l1 l2) f s ` V"
+
+
+    then obtain xi where Xi : "xi \<in> V" 
+     "xo = [^ LMap l1 f1 s xi, LMap l2 f2 s xi^]"
+      using F
+      by(auto simp add: merge_l_def split: prod.splits)
+
+    then obtain xo' where Xo' : "is_sup {LMap l1 f1 s xi, LMap l2 f2 s xi} xo'"
+      using compat[of s ]
+      by(fastforce simp add:has_sup_def)
+
+    then have Xo_sup : "is_sup {LMap l1 f1 s xi, LMap l2 f2 s xi} xo"
+      using bsup_sup[OF Xo' bsup_spec] Xi
+      by auto
+
+    obtain res' where Res' : "is_sup {LMap l1 f1 s supr, LMap l2 f2 s supr} res'"
+      using compat[of s]
+      by(fastforce simp add: has_sup_def)
+
+    have Res_sup : "is_sup {LMap l1 f1 s supr, LMap l2 f2 s supr} [^ LMap l1 f1 s supr, LMap l2 f2 s supr ^]"
+      using bsup_sup[OF Res' bsup_spec] 
+      by(auto)
+
+    have "xi <[ supr"
+      using is_supD1[OF Supr Xi(1)] by simp
+
+    have Ubx : "is_ub {LMap l1 f1 s xi, LMap l2 f2 s xi} 
+      [^ LMap l1 f1 s supr, LMap l2 f2 s supr ^]"
+    proof(rule is_ubI)
+      fix x
+
+      assume X: "x \<in> {LMap l1 f1 s xi, LMap l2 f2 s xi}"
+
+      then consider (X1) "x = LMap l1 f1 s xi" |
+                    (X2) "x = LMap l2 f2 s xi" by auto
+
+      then show " x <[ [^ LMap l1 f1 s supr, LMap l2 f2 s supr ^]"
+      proof cases
+        case X1
+
+        have Xi_sup : "is_sup {xi, supr} supr"
+          using is_sup_pair[OF `xi <[ supr`] by simp
+
+        have Map_sup : "is_sup (LMap l1 f1 s ` V) (LMap l1 f1 s supr)"
+          using in1.pres[OF Vin Vsub1 Supr Supr_in1, of f1]
+          by simp
+
+        have F1_map : "LMap l1 f1 s xi \<in> LMap l1 f1 s ` V "
+          using imageI[OF Xi(1), of "LMap l1 f1 s"] Xi  X1
+          by(auto)
+
+        have Leq1 : "LMap l1 f1 s xi <[ (LMap l1 f1 s supr)" using is_supD1[OF Map_sup F1_map] 
+          by auto
+
+        have Leq2 :"LMap l1 f1 s supr <[ [^ LMap l1 f1 s supr, LMap l2 f2 s supr ^]"
+          using is_supD1[OF Res_sup]
+          by auto
+
+        show ?thesis using leq_trans[OF Leq1 Leq2] X1
+          by auto
+      next
+
+        case X2
+          
+        have Xi_sup : "is_sup {xi, supr} supr"
+          using is_sup_pair[OF `xi <[ supr`] by simp
+
+        have Map_sup : "is_sup (LMap l2 f2 s ` V) (LMap l2 f2 s supr)"
+          using in2.pres[OF Vin Vsub2 Supr Supr_in2, of f2]
+          by simp
+
+        have F2_map : "LMap l2 f2 s xi \<in> LMap l2 f2 s ` V "
+          using imageI[OF Xi(1), of "LMap l2 f2 s"] Xi  X2
+          by(auto)
+
+        have Leq1 : "LMap l2 f2 s xi <[ (LMap l2 f2 s supr)" using is_supD1[OF Map_sup F2_map] 
+          by auto
+
+        have Leq2 :"LMap l2 f2 s supr <[ [^ LMap l1 f1 s supr, LMap l2 f2 s supr ^]"
+          using is_supD1[OF Res_sup]
+          by auto
+
+        show ?thesis using leq_trans[OF Leq1 Leq2] X2
+          by auto
+
+      qed
+    qed
+
+    show "xo <[ LMap (merge_l l1 l2) f s supr" 
+      using is_supD2[OF Xo_sup Ubx] F
+      by(auto simp add: merge_l_def)
+  next
+
+    fix x'
+
+    assume X' : "is_ub (LMap (merge_l l1 l2) f s ` V) x'"
+
+    obtain res' where Res' : "is_sup {LMap l1 f1 s supr, LMap l2 f2 s supr} res'"
+      using compat[of s]
+      by(fastforce simp add: has_sup_def)
+
+    have Res_sup : "is_sup {LMap l1 f1 s supr, LMap l2 f2 s supr} [^ LMap l1 f1 s supr, LMap l2 f2 s supr ^]"
+      using bsup_sup[OF Res' bsup_spec] 
+      by(auto)
+
+    have Ub: "is_ub {LMap l1 f1 s supr, LMap l2 f2 s supr} x'"
+    proof(rule is_ubI)
+
+      fix x
+
+      assume "x \<in> {LMap l1 f1 s supr, LMap l2 f2 s supr}"
+
+      then consider (1) "x = LMap l1 f1 s supr" | 
+                    (2) "x = LMap l2 f2 s supr"
+        by blast
+
+      then show "x <[ x'"
+      proof cases
+        case 1
+
+        have Map_sup : "is_sup (LMap l1 f1 s ` V) (LMap l1 f1 s supr)"
+          using in1.pres[OF Vin Vsub1 Supr Supr_in1, of f1]
+          by simp
+
+        have Ub : "is_ub (LMap l1 f1 s ` V) (x')"
+        proof(rule is_ubI)
+
+          fix w
+
+          assume W: "w \<in> LMap l1 f1 s ` V"
+
+          then obtain w' where W' : "w' \<in> V" "LMap l1 f1 s w' = w"
+            by auto
+
+          obtain res_w where Resw : "is_sup {LMap l1 f1 s w', LMap l2 f2 s w'} res_w"
+            using compat[of s]
+            by(fastforce simp add: has_sup_def)
+
+          have Resw_sup : "is_sup {LMap l1 f1 s w', LMap l2 f2 s w'} [^ LMap l1 f1 s w', LMap l2 f2 s w' ^]"
+            using bsup_sup[OF Resw bsup_spec] 
+            by(auto)
+
+          have Leq1 : "w <[ LMap (merge_l l1 l2) f s w'"
+            using is_supD1[OF Resw_sup, of w] W' F
+            by(auto simp add: merge_l_def)
+
+          have Map_in : "LMap (merge_l l1 l2) f s w' \<in> LMap (merge_l l1 l2) f s ` V"
+            using imageI[OF W'(1)] by auto
+
+          have Leq2 : "LMap (merge_l l1 l2) f s w' <[ x'"
+            using is_ubE[OF X' Map_in] F
+            by(auto simp add: merge_l_def)
+
+          then show "w <[ x'"
+            using leq_trans[OF Leq1 Leq2]
+            by auto
+        qed
+
+        show "x <[ x'"
+          using is_supD2[OF Map_sup Ub] 1
+          by auto
+      next
+
+        case 2
+        have Map_sup : "is_sup (LMap l2 f2 s ` V) (LMap l2 f2 s supr)"
+          using in2.pres[OF Vin Vsub2 Supr Supr_in2, of f2]
+          by simp
+
+        have Ub : "is_ub (LMap l2 f2 s ` V) (x')"
+        proof(rule is_ubI)
+
+          fix w
+
+          assume W: "w \<in> LMap l2 f2 s ` V"
+
+          then obtain w' where W' : "w' \<in> V" "LMap l2 f2 s w' = w"
+            by auto
+
+          obtain res_w where Resw : "is_sup {LMap l1 f1 s w', LMap l2 f2 s w'} res_w"
+            using compat[of s]
+            by(fastforce simp add: has_sup_def)
+
+          have Resw_sup : "is_sup {LMap l1 f1 s w', LMap l2 f2 s w'} [^ LMap l1 f1 s w', LMap l2 f2 s w' ^]"
+            using bsup_sup[OF Resw bsup_spec] 
+            by(auto)
+
+          have Leq1 : "w <[ LMap (merge_l l1 l2) f s w'"
+            using is_supD1[OF Resw_sup, of w] W' F
+            by(auto simp add: merge_l_def)
+
+          have Map_in : "LMap (merge_l l1 l2) f s w' \<in> LMap (merge_l l1 l2) f s ` V"
+            using imageI[OF W'(1)] by auto
+
+          have Leq2 : "LMap (merge_l l1 l2) f s w' <[ x'"
+            using is_ubE[OF X' Map_in] F
+            by(auto simp add: merge_l_def)
+
+          then show "w <[ x'"
+            using leq_trans[OF Leq1 Leq2]
+            by auto
+        qed
+
+        show "x <[ x'"
+          using is_supD2[OF Map_sup Ub] 2
+          by auto
+      qed
+    qed
+
+    show "LMap (merge_l l1 l2) f s supr <[ x'"
+      using is_supD2[OF Res_sup Ub] F
+      by(auto simp add: merge_l_def)
+  qed
+qed
+
+locale merge_l_valid_presonly' = 
+  fixes l1 :: "('x, 'a1, 'b :: Mergeable, 'f1) lifting" 
+  fixes l2 :: "('x, 'a2, 'b :: Mergeable, 'f2) lifting"
+
+locale merge_l_valid_presonly =
+  merge_l_valid_presonly' +
+  l_ortho +
+  in1 : lifting_valid_presonly l1 S1 +
+  in2 : lifting_valid_presonly l2 S2
+
+sublocale merge_l_valid_presonly \<subseteq> out : lifting_valid_presonly "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x"
+proof
+
+
+next
 (* function component has type d * f  *)
 
   fix v supr :: 'c
@@ -4067,6 +4323,13 @@ qed
 (*
 ortho_base
 ortho_ok
+*)
+
+
+(* merge_l_ortho *)
+
+(*
+merge_l_ortho_presonly
 *)
 
 (*

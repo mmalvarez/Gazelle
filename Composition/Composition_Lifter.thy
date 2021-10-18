@@ -26,13 +26,16 @@ be using that
    - wow this syntax dependence is going to be really annoying...
 *)
 
-(* Hmm, maybe this is the wrong approach. *)
+(* we only use pres and put_S here. so perhaps we can
+ * make this work even though merge_l of our semantics won't
+ * always actually be valid in the get_put sense.
+*)
 lemma l_ortho_sups_pres :
   fixes l1 :: "('x, 'a, 'b :: {Mergeable, Okay}, 'f1) lifting"
   fixes l2 :: "('x, 'a2, 'b, 'f2) lifting"
-  assumes H : "l_ortho l1 l2 S1 S2"
-  assumes H1 : "lifting_valid_ok_pres l1 S1"
-  assumes H2 : "lifting_valid_ok_pres l2 S2"
+  assumes H : "l_ortho l1 S1 l2 S2"
+  assumes H1 : "lifting_valid_presonly l1 S1"
+  assumes H2 : "lifting_valid_presonly l2 S2"
   shows "sups_pres {lift_map_s id l1 f1, lift_map_s id l2 f2} (\<lambda> x . S1 x \<inter> S2 x)"
 
 proof
@@ -57,13 +60,13 @@ proof
   have Sub1 : "Xs \<subseteq> S1 syn" and Sub2 : "Xs \<subseteq> S2 syn"
     using Subs by auto
 
-  interpret LV1: lifting_valid_ok_pres l1 S1
+  interpret LV1: lifting_valid_presonly l1 S1
     using H1 .
 
-  interpret LV2: lifting_valid_ok_pres l2 S2
+  interpret LV2: lifting_valid_presonly l2 S2
     using H2 .
 
-  interpret Ortho: l_ortho l1 l2
+  interpret Ortho: l_ortho l1 S1 l2 S2
     using H .
   
 
@@ -368,6 +371,16 @@ qed
 lemma merge_lift_pcomps : 
   shows "LMap (merge_l l1 l2) (f1, f2) s x = pcomps [LMap l1 f1, LMap l2 f2] s x"
   by(auto simp add: merge_l_def)
+
+
+(* next: want to show that, if for each lifting in a set of lifted functions,
+ * a new lifted function is ortho. to all of them,
+ * and they are sups_pres
+ * then the entire thing is sups_pres.
+
+* idea: we can do this using merge_l_ortho.
+*)
+
 
 (* all syntax? or can we do a specific s? *)
 (* what do we need sups_pres for here, then?

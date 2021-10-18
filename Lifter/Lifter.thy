@@ -104,14 +104,33 @@ definition unit_ok_S :
 instance proof qed
 end
 
+locale lifting_putonly =
+  fixes l :: "('syn, 'a, 'b :: Pord_Weak, 'f) lifting"
+  fixes S :: "('syn, 'b) valid_set"
+  assumes put_S : "\<And> s a b . LUpd l s a b \<in> S s"
+
+locale lifting_presonly =
+  fixes l :: "('syn, 'a, 'b :: Pord_Weak, 'f) lifting"
+  fixes S :: "('syn, 'b) valid_set"
+  assumes pres :
+    "\<And> v V supr f s . 
+         v \<in> V \<Longrightarrow>
+         V \<subseteq> S s \<Longrightarrow>
+         is_sup V supr \<Longrightarrow> supr \<in> S s \<Longrightarrow> is_sup (LMap l f s ` V) (LMap l f s supr)"
+    
+
+(* reduced version of lifting-valid, for use with
+ * improper merges (when using merge_l as a tool for combining
+ * semantics) *)
+locale lifting_valid_presonly =
+  (*lifting_putonly +*) lifting_presonly
+
 (* weak + (strong?) + (base?) + (ok?) + (pres?) *)
 (* TODO: support for vsg style reasoning *)
 locale lifting_valid_weak =
-  fixes l :: "('syn, 'a, 'b :: Pord_Weak, 'f) lifting"
-  fixes S :: "('syn, 'b) valid_set"
+  lifting_putonly +
   assumes put_get : "\<And> a . LOut l s (LUpd l s a b) = a"
   assumes get_put_weak : "\<And> s b . b \<in> S s \<Longrightarrow> b <[ LUpd l s (LOut l s b) b"
-  assumes put_S : "\<And> s a b . LUpd l s a b \<in> S s"
 
 (* NB: making a huge change w/r/t lifting strength def here (getting rid of \<in> S s assumption) *)
 locale lifting_valid = lifting_valid_weak +
@@ -133,11 +152,25 @@ locale lifting_valid_weak_base_ok = lifting_valid_weak_ok + lifting_valid_weak_b
 locale lifting_valid_base_ok = lifting_valid_ok + lifting_valid_base
 
 locale lifting_valid_weak_pres = lifting_valid_weak +
-  assumes pres :
-    "\<And> v V supr f s . 
-         v \<in> V \<Longrightarrow>
-         V \<subseteq> S s \<Longrightarrow>
-         is_sup V supr \<Longrightarrow> supr \<in> S s \<Longrightarrow> is_sup (LMap l f s ` V) (LMap l f s supr)"
+  lifting_presonly
+
+(*
+sublocale lifting_valid_weak_pres \<subseteq> lifting_valid_presonly
+proof
+  show "\<And>s a b. LUpd l s a b \<in> S s"
+    using put_S by auto
+next
+  show "\<And>v V supr f s.
+       v \<in> V \<Longrightarrow>
+       V \<subseteq> S s \<Longrightarrow>
+       is_sup V supr \<Longrightarrow>
+       supr \<in> S s \<Longrightarrow>
+       is_sup (LMap l f s ` V)
+        (LMap l f s supr)"
+    using pres 
+    by auto
+qed
+*)
 
 locale lifting_valid_pres = lifting_valid + lifting_valid_weak_pres
 

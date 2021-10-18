@@ -1,0 +1,4 @@
+These templates are used to generate the auto-lifter files.
+They use loops to automate the process of generating typeclass instances used when searching for liftings.
+The easiest way to use these is to install the "templates" plugin in Isabelle-Jedit.
+Isabelle-jedit tries to look for templates (by default) in $HOME/.isabelle/Isabelle2021/jedit/templates
