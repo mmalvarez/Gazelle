@@ -123,7 +123,7 @@ locale lifting_presonly =
  * improper merges (when using merge_l as a tool for combining
  * semantics) *)
 locale lifting_valid_presonly =
-  (*lifting_putonly +*) lifting_presonly
+  lifting_putonly + lifting_presonly
 
 (* weak + (strong?) + (base?) + (ok?) + (pres?) *)
 (* TODO: support for vsg style reasoning *)
@@ -235,6 +235,11 @@ assumes eq_base : "\<And> s . LBase l1 s = LBase l2 s"
   assumes put1_S2 : "\<And> s a b . b \<in> S2 s \<Longrightarrow> LUpd l1 s a b \<in> S2 s"
   assumes put2_S1 : "\<And> s a b . b \<in> S1 s \<Longrightarrow> LUpd l2 s a b \<in> S1 s"
 
+assumes compat'1 :
+  "\<And> s a1 a2 b . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} (LUpd l1 s a1 (LUpd l2 s a2 b))"
+assumes compat'2 :
+  "\<And> s a1 a2 b . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} (LUpd l2 s a2 (LUpd l1 s a1 b))"
+
 locale l_ortho_base' =
   fixes l1 :: "('a, 'b1, 'c :: Pord_Weakb, 'f1) lifting"
   fixes l2 :: "('a, 'b2, 'c, 'f2) lifting"
@@ -341,6 +346,33 @@ next
   show "b \<in> S2 s \<Longrightarrow>
        LUpd l1 s a b \<in> S2 s"
     using put1_S2[of b s a]
+    by auto
+
+next
+
+  fix s a1 a2 b
+
+  have Comm : "{LUpd l2 s a1 b, LUpd l1 s a2 b} = 
+               {LUpd l1 s a2 b, LUpd l2 s a1 b}"
+    by auto
+
+  show "is_sup {LUpd l2 s a1 b, LUpd l1 s a2 b}
+        (LUpd l2 s a1 (LUpd l1 s a2 b))"
+    unfolding Comm
+    using compat'2[of s a2 b a1, unfolded Comm]
+    by auto
+
+next
+  fix s a1 a2 b
+
+  have Comm : "{LUpd l2 s a1 b, LUpd l1 s a2 b} = 
+               {LUpd l1 s a2 b, LUpd l2 s a1 b}"
+    by auto
+
+  show "is_sup {LUpd l2 s a1 b, LUpd l1 s a2 b}
+        (LUpd l1 s a2 (LUpd l2 s a1 b))"
+    unfolding Comm
+    using compat'1[of s a2 b a1, unfolded Comm]
     by auto
 qed
 
