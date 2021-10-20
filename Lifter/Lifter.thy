@@ -407,25 +407,8 @@ proof
     by auto
 qed
 
-(* TODO: can we define some other notion of orthogonality that will be useful
- * for "squishing together" multiple liftings into one when merging semantics?
- *)
-
-(*
-locale l_ortho =
-  fixes l1 :: "('a, 'b1, 'c :: Mergeable) lifting"
-  fixes l2 :: "('a, 'b2, 'c) lifting"
-  fixes S1 :: "'a \<Rightarrow> 'c set"
-  fixes S2 :: "'a \<Rightarrow> 'c set"
-  assumes pres2 :
-    "\<And> v V supr f1 f2 s . 
-         v \<in> V \<Longrightarrow>
-         V \<subseteq> S1 s \<Longrightarrow>
-         V \<subseteq> S2 s \<Longrightarrow>
-         is_sup V supr \<Longrightarrow>
-         supr \<in> S1 s \<Longrightarrow>
-         supr \<in> S2 s \<Longrightarrow>
-         \<exists> result . is_sup ({LMap l1 f1 s supr, LMap l2 f2 s supr}) result \<and>
-                    is_sup (LMap l1 f1 s ` V \<union> LMap l2 f2 s ` V) (result)"
-*)
+lemma (in l_ortho) compat'_comm :
+  shows "LUpd l1 s a1 (LUpd l2 s a2 b) = LUpd l2 s a2 (LUpd l1 s a1 b)"
+  using is_sup_unique[OF compat'1 compat'2]
+  by auto
 end

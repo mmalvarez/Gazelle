@@ -1,4 +1,4 @@
-theory Lifter_Instances imports Lifter
+theory Lifter_Instances imports Lifter "../Mergeable/Mergeable_Facts"
 begin
 
 class Bogus =
@@ -4849,9 +4849,10 @@ locale merge_l_ortho' =
   fixes S3 :: "'a \<Rightarrow> 'c3 set"
 
 locale merge_l_ortho = merge_l_ortho' +
-  orth1_2 : l_ortho l1 S1 l2 S2 +
+  orth1_2 : l_ortho l1 S1 l2 S2 + 
   orth1_3 : l_ortho l1 S1 l3 S3 +
-  orth2_3 : l_ortho l2 S2 l3 S3
+  orth2_3 : l_ortho l2 S2 l3 S3 +
+  valid3 : lifting_valid_weak l3 S3
 
 sublocale merge_l_ortho \<subseteq> out : l_ortho "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x" l3 S3
 proof
@@ -4870,7 +4871,7 @@ proof
     using is_sup_unique[OF Supr Supr'] by auto
 
   then show "LBase (merge_l l1 l2) s = LBase l3 s"
-    using orth1_2.eq_base[of s] orth2_3.eq_base[of s]
+    using orth1_3.eq_base[of s] orth2_3.eq_base[of s]
     by(auto simp add: merge_l_def)
 
 next
@@ -4882,10 +4883,92 @@ next
   obtain a1 a2 where A1_2 : "a1_2 = (a1, a2)"
     by(cases a1_2; auto)
 
-  obtain sup1_2 where Sup1_2 : "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} sup1_2"
-    using orth1_2.compat
+  have Sup1_2 : "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} (LUpd l1 s a1 (LUpd l2 s a2 b))"
+    using orth1_2.compat'1
+    by fastforce
+
+  then have Bsup1_2 : "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} [^ LUpd l1 s a1 b, LUpd l2 s a2 b ^]"
+    using bsup_sup[OF Sup1_2 bsup_spec]
+    by auto
+
+  have Sup1_3 : "is_sup {LUpd l1 s a1 b, LUpd l3 s a3 b} (LUpd l1 s a1 (LUpd l3 s a3 b))"
+    using orth1_3.compat'1
+    by fastforce
+
+  then have Bsup1_3 : "is_sup {LUpd l1 s a1 b, LUpd l3 s a3 b} [^ LUpd l1 s a1 b, LUpd l3 s a3 b ^]"
+    using bsup_sup[OF Sup1_3 bsup_spec]
+    by auto
+
+  have Eq1_3 : "[^ LUpd l1 s a1 b, LUpd l3 s a3 b ^] = (LUpd l1 s a1 (LUpd l3 s a3 b))"
+    using is_sup_unique[OF Sup1_3 Bsup1_3]
+    by auto
+
+  have Sup2_3 : "is_sup {LUpd l2 s a2 b, LUpd l3 s a3 b} (LUpd l2 s a2 (LUpd l3 s a3 b))"
+    using orth2_3.compat'1
     by(fastforce simp add: has_sup_def)
 
+  then have Bsup2_3 : "is_sup {LUpd l2 s a2 b, LUpd l3 s a3 b} [^ LUpd l2 s a2 b, LUpd l3 s a3 b ^]"
+    using bsup_sup[OF Sup2_3 bsup_spec]
+    by auto
+
+  have Eq2_3 : "[^ LUpd l2 s a2 b, LUpd l3 s a3 b ^] = (LUpd l2 s a2 (LUpd l3 s a3 b))"
+    using is_sup_unique[OF Sup2_3 Bsup2_3]
+    by auto
+
+(* (1, 2) and (3) have least upper bound. *)
+
+  have Full : "is_sup
+   {LUpd l1 s a1 (LUpd l1 s a1 (LUpd l2 s a2 b)),
+    LUpd l3 s a3 (LUpd l1 s a1 (LUpd l2 s a2 b))}
+   (LUpd l1 s a1 (LUpd l3 s a3 (LUpd l1 s a1 (LUpd l2 s a2 b))))"
+    using orth1_3.compat'1[of s a1 "(LUpd l1 s a1 (LUpd l2 s a2 b))" a3]
+    by auto
+
+  have "is_ub {[^ LUpd l1 s a1 b, LUpd l2 s a2 b ^], LUpd l3 s a3 b} (LUpd l1 s a1 (LUpd l3 s a3 (LUpd l1 s a1 (LUpd l2 s a2 b))))"
+  proof(rule is_ubI)
+
+    fix x
+
+    assume "x \<in> {[^ LUpd l1 s a1 b, LUpd l2 s a2 b ^], LUpd l3 s a3 b}"
+
+    then consider (C1_2) "x = [^ LUpd l1 s a1 b, LUpd l2 s a2 b ^]" |
+                  (C3) "x = LUpd l3 s a3 b"
+      by auto
+
+    then show "x <[ LUpd l1 s a1 (LUpd l3 s a3 (LUpd l1 s a1 (LUpd l2 s a2 b)))"
+    proof cases
+      case C1_2
+
+      have Eq : "LUpd l1 s a1 (LUpd l3 s a3 (LUpd l2 s a2 (LUpd l1 s a1 b))) =
+                 LUpd l1 s a1 (LUpd l3 s a3 (LUpd l1 s a1 (LUpd l2 s a2 b)))"
+        unfolding orth1_2.compat'_comm
+        by simp
+
+      have "LUpd l1 s a1 (LUpd l2 s a2 b) <[
+            LUpd l1 s a1 (LUpd l3 s a3 (LUpd l2 s a2 (LUpd l1 s a1 b)))"
+        unfolding Eq
+        using
+
+      then show ?thesis sorry
+    next
+      case C3
+      then show ?thesis sorry
+    qed
+    
+
+  have Full :
+  "is_sup
+   {LUpd l1 s a1 (LUpd l3 s a3 (LUpd l2 s a2 b)),
+    LUpd l3 s a3 (LUpd l3 s a3 (LUpd l2 s a2 b))}
+   (LUpd l1 s a1 (LUpd l3 s a3 (LUpd l3 s a3 (LUpd l2 s a2 b))))"
+    using orth1_3.compat'1[of s a1 "(LUpd l3 s a3 (LUpd l2 s a2 b))" a3]
+    by auto
+
+  
+(* 3/1/2
+ *)
+
+(*
   obtain sup2_3 where Sup2_3 : "is_sup {LUpd l2 s a2 b, LUpd l3 s a3 b} sup2_3"
     using orth2_3.compat
     by(fastforce simp add: has_sup_def)
@@ -4893,7 +4976,14 @@ next
   obtain sup1_3 where Sup1_3 : "is_sup {LUpd l1 s a1 b, LUpd l3 s a3 b} sup1_3"
     using orth1_3.compat
     by(fastforce simp add: has_sup_def)
+*)
+(*
+  have True
+    using orth2_3.compat'1
+*)
 
+(*has_sup {[^ LUpd l1 s a1 b, LUpd l2 s a2 b ^], LUpd l3 s a3 b}*)
+(* *)
   show "has_sup
         {LUpd (merge_l l1 l2) s a1_2 b,
          LUpd l3 s a3 b}"
@@ -4911,10 +5001,6 @@ we could just add the property we want to ortho:
 
 *)
 (*YOU ARE HERE *)
-
-  term "l1"
-  term "l2"
-
 
 (*
 ortho_base

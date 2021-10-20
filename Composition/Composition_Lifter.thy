@@ -26,10 +26,6 @@ be using that
    - wow this syntax dependence is going to be really annoying...
 *)
 
-(* we only use pres and put_S here. so perhaps we can
- * make this work even though merge_l of our semantics won't
- * always actually be valid in the get_put sense.
-*)
 lemma l_ortho_sups_pres :
   fixes l1 :: "('x, 'a, 'b :: {Mergeable, Okay}, 'f1) lifting"
   fixes l2 :: "('x, 'a2, 'b, 'f2) lifting"
@@ -144,6 +140,7 @@ proof
 
     have Result_S1 : "(lift_map_s id l1 f1 syn sup1) \<in> S1 syn"
       unfolding lift_map_s_def LMap_def
+      apply(auto) (* NB: editing here *)
       using LV1.put_S by auto
 
     have Result_S2 : "(lift_map_s id l1 f1 syn sup1) \<in> S2 syn"
