@@ -51,6 +51,33 @@ instance proof
   qed
 end
 
+instantiation md_triv :: (_) Pordps
+begin
+instance proof
+  fix a b c :: "'a md_triv"
+
+  assume "has_sup {a, b}"
+  then have "a = b"
+  by(auto simp add:
+      has_ub_def is_ub_def
+      has_sup_def is_sup_def is_least_def triv_pleq)
+
+  assume "has_sup {b, c}"
+  then have "b = c"
+  by(auto simp add:
+      has_ub_def is_ub_def
+      has_sup_def is_sup_def is_least_def triv_pleq)
+
+  assume "has_sup {a, c}"
+
+  show "has_sup {a, b, c}"
+    unfolding `a = b` `b = c`
+  by(auto simp add:
+      has_ub_def is_ub_def
+      has_sup_def is_sup_def is_least_def triv_pleq)
+qed
+end
+
 instantiation md_triv :: (_) Mergeable 
 begin
 
@@ -167,6 +194,253 @@ instance proof
                 option_pleq is_ub_def is_sup_def is_least_def split:option.splits)
         qed
         thus "has_sup {a, b}" by (auto simp add:has_sup_def)
+      qed
+    qed
+  qed
+qed
+end
+
+lemma is_sup_union_ub :
+  assumes Hsup : "is_sup Xs x"
+  assumes Hy : "is_ub Ys x"
+  shows "is_sup (Xs \<union> Ys) x"
+proof(rule is_supI)
+  fix z
+  assume "z \<in> Xs \<union> Ys"
+  then consider (Z1) "z \<in> Xs" | (Z2) "z \<in> Ys"
+    by(auto)
+  then show "z <[ x"
+  proof cases
+    case Z1
+    then show ?thesis using is_supD1[OF Hsup] by auto
+  next
+    case Z2
+    then show ?thesis using is_ubE[OF Hy] by auto
+  qed
+next
+
+  fix x'
+  assume Ub: "is_ub (Xs \<union> Ys) x'"
+
+  have "is_ub Xs x'"
+  proof(rule is_ubI)
+    fix w
+    assume "w \<in> Xs"
+    then have "w \<in> Xs \<union> Ys" by auto
+    then show "w <[ x'"
+      using is_ubE[OF Ub] by auto
+  qed
+
+  then show "x <[ x'"
+    using is_supD2[OF Hsup] by auto
+qed
+
+lemma is_sup_Some :
+  assumes Hnemp : "x \<in> Xs"
+  assumes H : "is_sup Xs supr"
+  shows "is_sup (Some ` Xs) (Some supr)"
+proof(rule is_supI)
+  fix z
+  assume Z : "z \<in> Some ` Xs"
+  then obtain z' where Z' : "z = Some z'" "z' \<in> Xs"
+    by auto
+
+  show "z <[ Some supr"
+    using is_supD1[OF H Z'(2)] Z'(1)
+    by(auto simp add: option_pleq)
+next
+  fix w
+  assume Ub : "is_ub (Some ` Xs) w"
+
+  have "Some x \<in> Some ` Xs"
+    using Hnemp by auto
+
+  then have "Some x <[ w"
+    using is_ubE[OF Ub]
+    by auto
+
+  then obtain w' where W' : "w = Some w'"
+    by(cases w; auto simp add: option_pleq)
+
+  have "is_ub Xs w'"
+  proof
+    fix z'
+
+    assume Z': "z' \<in> Xs"
+
+    then have "Some z' \<in> Some ` Xs"
+      by auto
+
+    then have "Some z' <[ w"
+      using is_ubE[OF Ub] by auto
+
+    then show "z' <[ w'" using W' by(auto simp add: option_pleq)
+  qed
+
+  then have "supr <[ w'"
+    using is_supD2[OF H] by auto
+
+  then show "Some supr <[ w"
+    using W' by(auto simp add: option_pleq)
+qed
+
+lemma is_sup_Some' :
+  assumes Hnemp : "x \<in> Xs"
+  assumes H: "is_sup (Some ` Xs) (Some supr)"
+  shows "is_sup Xs supr"
+proof(rule is_supI)
+  fix z
+
+  assume Z: "z \<in> Xs"
+
+  then have "Some z <[ Some supr"
+    using is_supD1[OF H, of "Some z"] by auto
+
+  then show "z <[ supr"
+    by(simp add: option_pleq)
+next
+
+  fix w
+
+  assume Ub : "is_ub Xs w"
+
+  have "is_ub (Some ` Xs) (Some w)"
+  proof(rule is_ubI)
+
+    fix z'
+    assume Z' : "z' \<in> Some ` Xs"
+
+    then obtain z where Z: "z' = Some z" "z \<in> Xs"
+      by auto
+
+    have "z <[ w" using is_ubE[OF Ub Z(2)]
+      by auto
+
+    then show "z' <[ Some w"
+      using Z by(auto simp add: option_pleq)
+  qed
+
+  then have "Some supr <[ Some w"
+    using is_supD2[OF H] by auto
+
+  then show "supr <[ w"
+    by(auto simp add: option_pleq)
+qed
+
+instantiation option :: (Pordps) Pordps
+begin
+instance proof
+  fix a b c :: "'a option"
+
+  assume "has_sup {a, b}"
+  then obtain sup_ab where Sup_ab : "is_sup {a, b} sup_ab"
+    by(auto simp add: has_sup_def)
+
+  assume Sup_bc : "has_sup {b, c}"
+  then obtain sup_bc where Sup_bc : "is_sup {b, c} sup_bc"
+    by(auto simp add: has_sup_def)
+
+  assume Sup_ac : "has_sup {a, c}"
+  then obtain sup_ac where Sup_ac : "is_sup {a, c} sup_ac"
+    by(auto simp add: has_sup_def)
+
+  show "has_sup {a, b, c}"
+  proof(cases a)
+    case ANone : None
+
+    then have "is_ub {a} sup_bc"
+      by(auto simp add: is_ub_def option_pleq)
+
+    then have "is_sup {a, b, c} sup_bc"
+      using is_sup_union_ub[OF Sup_bc, of "{a}"] by auto
+
+    then show ?thesis
+      by(auto simp add: has_sup_def)
+  next
+    case ASome : (Some a')
+
+    show ?thesis
+    proof(cases b)
+
+      case BNone : None
+
+      have Comm : "{b, a, c} = {a, b, c}"
+        by auto
+
+      have "is_ub {b} sup_ac" using BNone
+        by(auto simp add: is_ub_def option_pleq)
+  
+      then have "is_sup {a, b, c} sup_ac"
+        using is_sup_union_ub[OF Sup_ac, of "{b}"] Comm
+        by(auto)
+  
+      then show ?thesis
+        by(auto simp add: has_sup_def)
+    next
+
+      case BSome : (Some b')
+
+      show ?thesis
+      proof(cases c)
+
+        case CNone : None
+
+        have Comm : "{c, a, b} = {a, b, c}"
+          by auto
+  
+        have "is_ub {c} sup_ab" using CNone
+          by(auto simp add: is_ub_def option_pleq)
+    
+        then have "is_sup {a, b, c} sup_ab"
+          using is_sup_union_ub[OF Sup_ab, of "{c}"] Comm
+          by(auto)
+    
+        then show ?thesis
+          by(auto simp add: has_sup_def)
+      next
+
+        case CSome : (Some c')
+
+        obtain sup_ab' where Sup_ab' :
+          "sup_ab = Some sup_ab'"
+          using Sup_ab ASome
+          by(cases sup_ab; auto simp add: is_sup_def is_least_def is_ub_def option_pleq)
+
+        obtain sup_bc' where Sup_bc' :
+          "sup_bc = Some sup_bc'"
+          using Sup_bc BSome
+          by(cases sup_bc; auto simp add: is_sup_def is_least_def is_ub_def option_pleq)
+
+        obtain sup_ac' where Sup_ac' :
+          "sup_ac = Some sup_ac'"
+          using Sup_ac ASome
+          by(cases sup_ac; auto simp add: is_sup_def is_least_def is_ub_def option_pleq)
+
+        have Has_ab':
+          "has_sup {a', b'}"
+          using Sup_ab Sup_ab' ASome BSome is_sup_Some'[of a' "{a', b'}" sup_ab']
+          by(auto simp add: has_sup_def)
+
+        have Has_bc':
+          "has_sup {b', c'}"
+          using Sup_bc Sup_bc' BSome CSome is_sup_Some'[of b' "{b', c'}" sup_bc']
+          by(auto simp add: has_sup_def)
+
+        have Has_ac':
+          "has_sup {a', c'}"
+          using Sup_ac Sup_ac' ASome CSome is_sup_Some'[of a' "{a', c'}" sup_ac']
+          by(auto simp add: has_sup_def)
+
+        obtain sup' where Sup' : "is_sup {a', b', c'} sup'"
+          using pairwise_sup[OF Has_ab' Has_bc' Has_ac']
+          by(auto simp add: has_sup_def)
+
+        have "is_sup {a, b, c} (Some sup')"
+          using is_sup_Some[OF _ Sup'] ASome BSome CSome
+          by auto
+
+        then show ?thesis
+          by(auto simp add: has_sup_def)
       qed
     qed
   qed
@@ -411,6 +685,8 @@ end
  * a pair where the first component is guaranteed to be a natural number, and the ordering
  * is lexicographic (see below)
  *)
+
+
 instantiation prod :: (Pord_Weak, Pord_Weak) Pord_Weak
 begin
   definition prod_pleq : 
@@ -479,6 +755,417 @@ instance proof
     by(auto simp add: prod_pleq is_sup_def is_ub_def is_least_def)
 
   thus "has_sup {a, b}" using 0 1 by (auto simp add:has_sup_def)
+qed
+end
+lemma is_sup_fst :
+  assumes Hnemp : "x \<in> Xs"
+  assumes H : "is_sup Xs supr"
+  shows "is_sup ((\<lambda> w . (w, x')) ` Xs) (supr, x')"
+proof(rule is_supI)
+  fix x
+
+  assume X: "x \<in> (\<lambda>w. (w, x')) ` Xs"
+
+  then obtain x1 where X1 :
+    "x = (x1, x')" "x1 \<in> Xs"
+    by auto
+
+  have "x1 <[ supr"
+    using is_supD1[OF H X1(2)] by auto
+
+  then show "x <[ (supr, x')"
+    using X1
+    by(auto simp add: prod_pleq leq_refl)
+next
+
+  fix y
+
+  assume Y: "is_ub ((\<lambda>w. (w, x')) ` Xs) y"
+
+  obtain y1 y2 where Y1_2 : "y = (y1, y2)"
+    by(cases y; auto)
+
+  have "is_ub Xs y1"
+  proof(rule is_ubI)
+    fix z
+
+    assume Z: "z \<in> Xs"
+
+    then have "(z, x') <[ y"
+      using is_ubE[OF Y] by auto
+
+    then show "z <[ y1"
+      using Y1_2
+      by(auto simp add: prod_pleq)
+  qed
+
+  then have "supr <[ y1"
+    using is_supD2[OF H]
+    by auto
+
+  have "(x, x') <[ y"
+    using is_ubE[OF Y] Hnemp
+    by auto
+
+  then have "x' <[ y2"
+    using Y1_2
+    by(auto simp add: prod_pleq)
+
+  show "(supr, x') <[ y"
+    using `supr <[ y1` `x' <[ y2` Y1_2
+    by(auto simp add: prod_pleq)
+qed
+
+lemma is_sup_fst' :
+  assumes Hnemp : "xy \<in> Xys"
+  assumes H : "is_sup Xys (s1, s2)"
+  shows "is_sup (fst ` Xys) s1"
+proof(rule is_supI)
+
+  fix x
+
+  assume X: "x \<in> fst ` Xys"
+  then obtain y where Xy : "(x, y) \<in> Xys"
+    by(auto)
+
+  then have "(x, y) <[ (s1, s2)"
+    using is_supD1[OF H Xy]
+    by auto
+
+  then show "x <[ s1"
+    by(auto simp add: prod_pleq)
+next
+
+  fix x'
+
+  assume X' : "is_ub (fst ` Xys) x'"
+
+  have Ub' : "is_ub Xys (x', s2)"
+  proof(rule is_ubI)
+
+    fix w
+
+    assume W : "w \<in> Xys"
+
+    obtain w1 w2 where W1_2 :
+      "w = (w1, w2)"
+      by(cases w; auto)
+
+    then have "w1 \<in> fst ` Xys" using imageI[OF W, of fst]
+      by auto
+
+    then have "w1 <[ x'"
+      using is_ubE[OF X'] by auto
+
+    have "w2 \<in> snd ` Xys" using imageI[OF W, of snd] W1_2
+      by auto
+
+    then have "w2 <[ s2"
+      using is_supD1[OF H W] W1_2
+      by(auto simp add: prod_pleq)
+
+    then show "w <[ (x', s2)"
+      using `w1 <[ x'` W1_2
+      by(auto simp add: prod_pleq)
+  qed
+
+  show "s1 <[ x'"
+    using is_supD2[OF H Ub']
+    by(auto simp add: prod_pleq)
+qed
+
+lemma is_sup_snd :
+  assumes Hnemp : "x \<in> Xs"
+  assumes H : "is_sup Xs supr"
+  shows "is_sup ((\<lambda> w . (x', w)) ` Xs) (x', supr)"
+proof(rule is_supI)
+  fix x
+
+  assume X: "x \<in> (\<lambda>w. (x', w)) ` Xs"
+
+  then obtain x2 where X2 :
+    "x = (x', x2)" "x2 \<in> Xs"
+    by auto
+
+  have "x2 <[ supr"
+    using is_supD1[OF H X2(2)] by auto
+
+  then show "x <[ (x', supr)"
+    using X2
+    by(auto simp add: prod_pleq leq_refl)
+next
+
+  fix y
+
+  assume Y: "is_ub ((\<lambda>w. (x', w)) ` Xs) y"
+
+  obtain y1 y2 where Y1_2 : "y = (y1, y2)"
+    by(cases y; auto)
+
+  have "is_ub Xs y2"
+  proof(rule is_ubI)
+    fix z
+
+    assume Z: "z \<in> Xs"
+
+    then have "(x', z) <[ y"
+      using is_ubE[OF Y] by auto
+
+    then show "z <[ y2"
+      using Y1_2
+      by(auto simp add: prod_pleq)
+  qed
+
+  then have "supr <[ y2"
+    using is_supD2[OF H]
+    by auto
+
+  have "(x', x) <[ y"
+    using is_ubE[OF Y] Hnemp
+    by auto
+
+  then have "x' <[ y1"
+    using Y1_2
+    by(auto simp add: prod_pleq)
+
+  show "(x', supr) <[ y"
+    using `supr <[ y2` `x' <[ y1` Y1_2
+    by(auto simp add: prod_pleq)
+qed
+
+lemma is_sup_snd' :
+  assumes Hnemp : "xy \<in> Xys"
+  assumes H : "is_sup Xys (s1, s2)"
+  shows "is_sup (snd ` Xys) s2"
+proof(rule is_supI)
+
+  fix y
+
+  assume Y: "y \<in> snd ` Xys"
+  then obtain x where Xy : "(x, y) \<in> Xys"
+    by(auto)
+
+  then have "(x, y) <[ (s1, s2)"
+    using is_supD1[OF H Xy]
+    by auto
+
+  then show "y <[ s2"
+    by(auto simp add: prod_pleq)
+next
+
+  fix y'
+
+  assume Y' : "is_ub (snd ` Xys) y'"
+
+  have Ub' : "is_ub Xys (s1, y')"
+  proof(rule is_ubI)
+
+    fix w
+
+    assume W : "w \<in> Xys"
+
+    obtain w1 w2 where W1_2 :
+      "w = (w1, w2)"
+      by(cases w; auto)
+
+    then have "w2 \<in> snd ` Xys" using imageI[OF W, of snd]
+      by auto
+
+    then have "w2 <[ y'"
+      using is_ubE[OF Y'] by auto
+
+    have "w1 \<in> fst ` Xys" using imageI[OF W, of fst] W1_2
+      by auto
+
+    then have "w1 <[ s1"
+      using is_supD1[OF H W] W1_2
+      by(auto simp add: prod_pleq)
+
+    then show "w <[ (s1, y')"
+      using `w2 <[ y'` W1_2
+      by(auto simp add: prod_pleq)
+  qed
+
+  show "s2 <[ y'"
+    using is_supD2[OF H Ub']
+    by(auto simp add: prod_pleq)
+qed
+
+lemma is_sup_prod :
+  assumes Hx : "is_sup Xs suprx"
+  assumes Hy : "is_sup Ys supry"
+  assumes S1 : "fst ` S = Xs"
+  assumes S2 : "snd ` S = Ys"
+  shows "is_sup S (suprx, supry)"
+proof(rule is_supI)
+  fix w
+  assume W_in : "w \<in> S"
+
+  obtain w1 w2 where W:
+    "w = (w1, w2)"
+    by(cases w; auto)
+
+  have W_Xs : "w1 \<in> Xs" and W_Ys : "w2 \<in> Ys"
+    using S1 S2 W_in W
+    using imageI[OF W_in, of fst] imageI[OF W_in, of snd]
+    by(auto)
+
+  have "w1 <[ suprx" "w2 <[ supry"
+    using is_supD1[OF Hx W_Xs] is_supD1[OF Hy W_Ys] W
+    by auto
+
+  then show "w <[ (suprx, supry)"
+    using W by(auto simp add: prod_pleq)
+next
+
+  fix w'
+  assume Ub : "is_ub S w'"
+
+  obtain w'1 w'2 where W':
+    "w' = (w'1, w'2)"
+    by(cases w'; auto)
+
+  have Ub_Xs : "is_ub Xs w'1"
+  proof(rule is_ubI)
+    fix x
+
+    assume X : "x \<in> Xs"
+
+    then obtain y where Y: "(x, y) \<in> S"
+      using S1
+      by(auto)
+
+    have "(x, y) <[ w'"
+      using is_ubE[OF Ub Y]
+      by auto
+
+    then show "x <[ w'1"
+      using W'
+      by(auto simp add: prod_pleq)
+  qed
+
+  have Ub_Ys : "is_ub Ys w'2"
+  proof(rule is_ubI)
+    fix y
+
+    assume Y : "y \<in> Ys"
+
+    then obtain x where X: "(x, y) \<in> S"
+      using S2
+      by(auto)
+
+    have "(x, y) <[ w'"
+      using is_ubE[OF Ub X]
+      by auto
+
+    then show "y <[ w'2"
+      using W'
+      by(auto simp add: prod_pleq)
+  qed
+
+  have "suprx <[ w'1" "supry <[ w'2"
+    using is_supD2[OF Hx Ub_Xs] is_supD2[OF Hy Ub_Ys]
+    by auto
+
+  then show "(suprx, supry) <[ w'"
+    using W'
+    by(auto simp add: prod_pleq)
+qed
+
+instantiation prod :: (Pordps, Pordps) Pordps
+begin
+instance proof
+  fix a b c :: "'a * 'b"
+
+  assume "has_sup {a, b}"
+  then obtain sup_ab
+    where Sup_ab : "is_sup {a, b} sup_ab"
+    by(auto simp add: has_sup_def)
+
+  obtain sup_ab1 sup_ab2 where
+    Sup_ab12 : "sup_ab = (sup_ab1, sup_ab2)"
+    by(cases sup_ab; auto)
+
+  assume Sup_bc : "has_sup {b, c}"
+  then obtain sup_bc
+    where Sup_bc : "is_sup {b, c} sup_bc"
+    by(auto simp add: has_sup_def)
+
+  obtain sup_bc1 sup_bc2 where
+    Sup_bc12 : "sup_bc = (sup_bc1, sup_bc2)"
+    by(cases sup_bc; auto)
+
+  assume Sup_ac : "has_sup {a, c}"
+  then obtain sup_ac
+    where Sup_ac : "is_sup {a, c} sup_ac"
+    by(auto simp add: has_sup_def)
+
+  obtain sup_ac1 sup_ac2 where
+    Sup_ac12 : "sup_ac = (sup_ac1, sup_ac2)"
+    by(cases sup_ac; auto)
+
+  obtain a1 a2 where A: "a = (a1, a2)"
+    by(cases a; auto)
+
+  obtain b1 b2 where B: "b = (b1, b2)"
+    by(cases b; auto)
+
+  obtain c1 c2 where C: "c = (c1, c2)"
+    by(cases c; auto)
+
+  have Has_sup_ab1 :
+    "has_sup {a1, b1}"
+    using Sup_ab Sup_ab12 A B
+      is_sup_fst'[of a "{a, b}" sup_ab1 sup_ab2]
+    by(auto simp add: has_sup_def)
+
+  have Has_sup_ab2 :
+    "has_sup {a2, b2}"
+    using Sup_ab Sup_ab12 A B
+      is_sup_snd'[of a "{a, b}" sup_ab1 sup_ab2]
+    by(auto simp add: has_sup_def)
+
+  have Has_sup_bc1 :
+    "has_sup {b1, c1}"
+    using Sup_bc Sup_bc12 B C
+      is_sup_fst'[of b "{b, c}" sup_bc1 sup_bc2]
+    by(auto simp add: has_sup_def)
+
+  have Has_sup_bc2 :
+    "has_sup {b2, c2}"
+    using Sup_bc Sup_bc12 B C
+      is_sup_snd'[of b "{b, c}" sup_bc1 sup_bc2]
+    by(auto simp add: has_sup_def)
+
+  have Has_sup_ac1 :
+    "has_sup {a1, c1}"
+    using Sup_ac Sup_ac12 A C
+      is_sup_fst'[of a "{a, c}" sup_ac1 sup_ac2]
+    by(auto simp add: has_sup_def)
+
+  have Has_sup_ac2 :
+    "has_sup {a2, c2}"
+    using Sup_ac Sup_ac12 A C
+      is_sup_snd'[of a "{a, c}" sup_ac1 sup_ac2]
+    by(auto simp add: has_sup_def)
+
+  obtain sup1 where Sup1 :
+    "is_sup {a1, b1, c1} sup1"
+    using pairwise_sup[OF Has_sup_ab1 Has_sup_bc1 Has_sup_ac1]
+    by(auto simp add: has_sup_def)
+
+  obtain sup2 where Sup2 :
+    "is_sup {a2, b2, c2} sup2"
+    using pairwise_sup[OF Has_sup_ab2 Has_sup_bc2 Has_sup_ac2]
+    by(auto simp add: has_sup_def)
+
+  have "is_sup {a, b, c} (sup1, sup2)"
+    using is_sup_prod[OF Sup1 Sup2, of "{a, b, c}"]
+    unfolding A B C
+    by auto
+
+  then show "has_sup {a, b, c}"
+    by(auto simp add: has_sup_def)
 qed
 end
 
@@ -625,6 +1312,7 @@ instance proof
     qed
   qed
 end
+
 
 (* md_prio pairs objects with natural numbers, in which the comparison is
  * "lexicographic-like" in that the comparison is made first between the natural numbers,
@@ -776,6 +1464,580 @@ instance proof
   qed
 qed
 end
+
+fun prio_val :: "'a md_prio \<Rightarrow> 'a" where 
+"prio_val (mdp _ x) = x"
+
+fun prio_prio :: "'a md_prio \<Rightarrow> nat" where
+"prio_prio (mdp n _) = n"
+
+lemma is_sup_prio :
+  assumes Hnemp : "x \<in> Xs"
+  assumes "is_sup Xs (mdp psupr supr)"
+  shows "is_sup (prio_val ` Xs) supr \<or>
+         (\<forall> px' x' . mdp px' x' \<in> Xs \<longrightarrow> px' \<le> prio_prio x)"
+  sorry
+(* make sure this is useful first - TODO *)
+(* Probably a useful theorem, but not sure if it helps immediately here. *)
+(*
+lemma prio_always_sup :
+  fixes V :: "('a :: Pord_Weakb) md_prio set"
+  assumes Hfin : "finite V"
+  assumes Hnemp : "v \<in> V"
+  shows "has_sup V"
+proof-
+
+  obtain V' where SV' : "(\<lambda> x . case x of (mdp p m) \<Rightarrow> m) ` V = V'"
+    by(blast)
+
+  obtain v' pv' where V' : "v = mdp pv' v'" "v' \<in> V'"
+    using SV' imageI[OF Hnemp, of "(\<lambda>x. case x of mdp p m \<Rightarrow> m)"]
+    by(cases v; auto)
+
+  obtain Vmax where VSmax : "Vmax = {w . w \<in> V \<and> 
+    (\<exists> w' pw' . w = mdp pw' w' \<and>
+     (\<forall> y y' py' . y \<in> V \<longrightarrow> y = mdp py' y' \<longrightarrow> py' \<le> pw'))}"
+    by auto
+
+  obtain pbig' where Pbig' : "\<And> n . n\<in>(prio_prio ` V) \<Longrightarrow> n \<le> pbig'"
+    using Hfin finite_nat_set_iff_bounded_le[of "prio_prio ` V"]
+    by auto
+
+  have VSmax_eq : "\<And> w y pw' w' py' y' .
+    w \<in> Vmax \<Longrightarrow> y \<in> Vmax \<Longrightarrow>
+    w = mdp pw' w' \<Longrightarrow>
+    y = mdp py' y' \<Longrightarrow>
+    pw' = py'"
+  proof-
+    fix w y pw' w' py' y'
+    assume Hw1 : "w \<in> Vmax"
+    assume Hy1 : "y \<in> Vmax"
+    assume Hwp1 : "w = mdp pw' w'"
+    assume Hyp1 : "y = mdp py' y'"
+
+    have Hw1_v : "w \<in> V" using VSmax Hw1 by blast
+    have Hy1_v : "y \<in> V" using VSmax Hy1 by blast
+
+
+    have "py' \<le> pw'"
+      using Set.subsetD[OF Set.equalityD1[OF VSmax] Hw1] Hy1_v Hyp1 Hwp1
+      by auto
+
+    have "pw' \<le> py'"
+      using Set.subsetD[OF Set.equalityD1[OF VSmax] Hy1] Hw1_v Hyp1 Hwp1
+      by auto
+
+    show "pw' = py'"
+      using `py' \<le> pw'` `pw' \<le> py'`
+      by auto
+  qed
+
+  have Vmax_fact2 : "\<And> n . Vmax = {} \<Longrightarrow>
+    (\<exists> w pw' w' . w \<in> V \<and> w = mdp pw' w' \<and> pw' > n)"
+  proof-
+    fix n
+    assume Contr : "Vmax = {}"
+    then show "(\<exists> w pw' w' . w \<in> V \<and> w = mdp pw' w' \<and> pw' > n)"
+    proof(induction n)
+      case 0
+      then show ?case unfolding VSmax using V' Hnemp apply(auto)
+        apply(drule_tac x = v in spec)
+        apply(auto)
+        done
+    next
+      case (Suc n)
+
+      obtain w pw' w' where W: "w \<in> V" "w = mdp pw' w'" "n < pw'"
+        using Suc.IH[OF Suc.prems] by auto
+
+      show ?case using W Suc.prems
+        unfolding VSmax using V' Hnemp apply(auto)
+        apply(drule_tac x = w in spec)
+        apply(auto)
+        done
+    qed
+  qed
+
+  have VSmax_nemp : "Vmax = {} \<Longrightarrow> False"
+  proof-
+
+    assume Contr : "Vmax = {}"
+
+    obtain w pw' w' where W: "w \<in> V" "w = mdp pw' w'" "pbig' < pw'"
+      using Vmax_fact2[OF Contr, of pbig']
+      by auto
+
+    have Pw'_prio_prio : "pw' \<in> prio_prio ` V"
+      using imageI[OF W(1), of prio_prio] W
+      by(auto)
+
+    then show False using Pbig'[OF Pw'_prio_prio] W(3)
+      by(auto)
+  qed
+
+  hence "Vmax \<noteq> {}" by auto
+
+  then obtain m where M : "m \<in> Vmax"
+    unfolding sym[OF ex_in_conv]
+    by(auto)
+
+  obtain pm' m' where M' : "m = mdp pm' m'"
+    by(cases m; auto)
+
+  have "m \<in> V"
+    using VSmax M by auto
+
+  obtain Vmaxp where VSmaxp : "Vmaxp = (\<lambda> x . (case x of (mdp px' x') \<Rightarrow> px')) ` Vmax"
+    by simp
+
+  obtain Vmaxv where VSmaxv : "Vmaxv = (\<lambda> x . (case x of (mdp px' x') \<Rightarrow> x')) ` Vmax"
+    by simp
+
+  have In_Vmax  :
+    "\<And> w pw' w' y y' py'. w \<in> Vmax \<Longrightarrow>  w = mdp pw' w' \<Longrightarrow>
+      y \<in> V \<Longrightarrow> y = mdp py' y'\<Longrightarrow> py'\<le> pw'"
+    unfolding VSmax
+    by blast
+
+    have In_Vmax_Conv :       
+      "\<And> w pw' w' y y' py'. w \<in> Vmax \<Longrightarrow>  w = mdp pw' w' \<Longrightarrow>
+        y \<in> V \<Longrightarrow> y = mdp pw' y'\<Longrightarrow> y \<in> Vmax"
+      unfolding VSmax
+      by(auto)
+
+    have Notin_Vmax : 
+      "\<And> w pw' w' y y' py'. w \<in> Vmax \<Longrightarrow>  w = mdp pw' w' \<Longrightarrow>
+        y \<in> V \<Longrightarrow> y \<notin> Vmax \<Longrightarrow> y = mdp py' y'\<Longrightarrow> py' < pw'"
+    proof-
+      fix w pw' w' y y' py'
+      assume Win : "w \<in> Vmax"
+      assume W' : "w = mdp pw' w'"
+      assume Yin : "y \<in> V"
+      assume Ynotin : "y \<notin> Vmax"
+      assume Y' : "y = mdp py' y'"
+
+      have "py' \<le> pw'" using In_Vmax[OF Win W' Yin Y'] by simp
+
+      show "py' < pw'"
+      proof(cases "py' = pw'")
+        case False
+        then show ?thesis using `py' \<le> pw'` by simp
+      next
+        case True
+
+        then have "y \<in> Vmax" using In_Vmax_Conv[OF Win W' Yin] Y'
+          by auto
+
+        then have False using Ynotin by simp
+
+        thus ?thesis by simp
+      qed
+    qed
+*)
+
+(* This is easy if we know Pordb. But what if we do not? *)
+instantiation md_prio :: (Pord) Pordps
+begin
+instance proof
+
+  fix a b c :: "'a md_prio"
+
+  obtain pa' a' where A: "a = mdp pa' a'"
+    by(cases a; auto)
+
+  obtain pb' b' where B: "b = mdp pb' b'"
+    by(cases b; auto)
+
+  obtain pc' c' where C: "c = mdp pc' c'"
+    by(cases c; auto)
+
+  assume "has_sup {a, b}"
+  then obtain sup_ab where Sup_ab :
+    "is_sup {a, b} sup_ab"
+    by(auto simp add: has_sup_def)
+
+  obtain psup_ab' sup_ab' where Sup_ab' :
+    "sup_ab = mdp psup_ab' sup_ab'"
+    by(cases sup_ab; auto)
+
+  assume "has_sup {b, c}"
+  then obtain sup_bc where Sup_bc :
+    "is_sup {b, c} sup_bc"
+    by(auto simp add: has_sup_def)
+
+  obtain psup_bc' sup_bc' where Sup_bc' :
+    "sup_bc = mdp psup_bc' sup_bc'"
+    by(cases sup_bc; auto)
+
+  assume "has_sup {a, c}"
+  then obtain sup_ac where Sup_ac :
+    "is_sup {a, c} sup_ac"
+    by(auto simp add: has_sup_def)
+
+  obtain psup_ac' sup_ac' where Sup_ac' :
+    "sup_ac = mdp psup_ac' sup_ac'"
+    by(cases sup_ac; auto)
+
+(* there is probably a more elegant way to do this. *)
+  consider
+    (Amax) "pb' < pa'" "pc' < pa'" |
+    (Bmax) "pa' < pb'" "pc' < pb'" |
+    (Cmax) "pa' < pc'" "pb' < pc'" |
+    (ABmax) "pa' = pb'" "pc' < pa'" |
+    (BCmax) "pa' < pb'" "pb' = pc'" |
+    (ACmax) "pb' < pa'" "pa' = pc'" |
+    (ABCmax) "pa' = pb'" "pb' = pc'"
+    by(arith)
+
+  then show "has_sup {a, b, c}"
+  proof cases
+    case Amax
+
+    have "is_sup {a, b, c} a"
+    proof(rule is_supI)
+      fix x
+      assume In : "x \<in> {a, b, c}"
+      then show "x <[ a"
+        using Amax
+        unfolding A B C
+        by(auto simp add: leq_refl prio_pleq)
+    next
+      fix x'
+      assume Ub: "is_ub {a, b, c} x'"
+      then show "a <[ x'"
+        using is_ubE[OF Ub, of a] by auto
+    qed
+
+    then show ?thesis
+      by(auto simp add: has_sup_def)
+  next
+    case Bmax
+    have "is_sup {a, b, c} b"
+    proof(rule is_supI)
+      fix x
+      assume In : "x \<in> {a, b, c}"
+      then show "x <[ b"
+        using Bmax
+        unfolding A B C
+        by(auto simp add: leq_refl prio_pleq)
+    next
+      fix x'
+      assume Ub: "is_ub {a, b, c} x'"
+      then show "b <[ x'"
+        using is_ubE[OF Ub, of b] by auto
+    qed
+
+    then show ?thesis
+      by(auto simp add: has_sup_def)
+  next
+    case Cmax
+    have "is_sup {a, b, c} c"
+    proof(rule is_supI)
+      fix x
+      assume In : "x \<in> {a, b, c}"
+      then show "x <[ c"
+        using Cmax
+        unfolding A B C
+        by(auto simp add: leq_refl prio_pleq)
+    next
+      fix x'
+      assume Ub: "is_ub {a, b, c} x'"
+      then show "c <[ x'"
+        using is_ubE[OF Ub, of c] by auto
+    qed
+
+    then show ?thesis
+      by(auto simp add: has_sup_def)
+  next
+    case ABmax
+
+    have "is_sup {a, b, c} sup_ab"
+    proof(rule is_supI)
+      fix x
+      assume In: "x \<in> {a, b, c}"
+      then show "x <[ sup_ab"
+      using is_supD1[OF Sup_ab, of a] is_supD1[OF Sup_ab, of b] ABmax
+      unfolding A B C Sup_ab'
+        by(auto simp add: prio_pleq split:if_splits)
+    next
+
+      fix w
+      assume Ub : "is_ub {a, b, c} w"
+
+      have Ub' : "is_ub {a, b} w"
+      proof(rule is_ubI)
+        fix z
+
+        assume "z \<in> {a, b}" 
+        then have In' : "z \<in> {a, b, c}" by auto
+        show "z <[ w" using is_ubE[OF Ub In']
+          by auto
+      qed
+
+      then show "sup_ab <[ w"
+        using is_supD2[OF Sup_ab]
+        by auto
+    qed
+
+    then show ?thesis by(auto simp add: has_sup_def)
+
+  next
+    case ACmax
+
+    have "is_sup {a, b, c} sup_ac"
+    proof(rule is_supI)
+      fix x
+      assume In: "x \<in> {a, b, c}"
+      then show "x <[ sup_ac"
+      using is_supD1[OF Sup_ac, of a] is_supD1[OF Sup_ac, of c] ACmax
+      unfolding A B C Sup_ac'
+        by(auto simp add: prio_pleq split:if_splits)
+    next
+
+      fix w
+      assume Ub : "is_ub {a, b, c} w"
+
+      have Ub' : "is_ub {a, c} w"
+      proof(rule is_ubI)
+        fix z
+
+        assume "z \<in> {a, c}" 
+        then have In' : "z \<in> {a, b, c}" by auto
+        show "z <[ w" using is_ubE[OF Ub In']
+          by auto
+      qed
+
+      then show "sup_ac <[ w"
+        using is_supD2[OF Sup_ac]
+        by auto
+    qed
+
+    then show ?thesis by(auto simp add: has_sup_def)
+
+  next
+    case BCmax
+
+    have "is_sup {a, b, c} sup_bc"
+    proof(rule is_supI)
+      fix x
+      assume In: "x \<in> {a, b, c}"
+      then show "x <[ sup_bc"
+      using is_supD1[OF Sup_bc, of b] is_supD1[OF Sup_bc, of c] BCmax
+      unfolding A B C Sup_bc'
+        by(auto simp add: prio_pleq split:if_splits)
+    next
+
+      fix w
+      assume Ub : "is_ub {a, b, c} w"
+
+      have Ub' : "is_ub {b, c} w"
+      proof(rule is_ubI)
+        fix z
+
+        assume "z \<in> {b, c}" 
+        then have In' : "z \<in> {a, b, c}" by auto
+        show "z <[ w" using is_ubE[OF Ub In']
+          by auto
+      qed
+
+      then show "sup_bc <[ w"
+        using is_supD2[OF Sup_bc]
+        by auto
+    qed
+
+    then show ?thesis by(auto simp add: has_sup_def)
+
+  next
+
+    case ABCmax
+
+    show ?thesis
+    proof(cases "has_sup {a', b', c'}")
+      case True
+
+      then obtain sup' where Sup'_sup : "is_sup {a', b', c'} sup'"
+        by(auto simp add: has_sup_def)
+
+(* TODO *)
+      have "is_sup {a, b, c} (mdp pa' sup')"
+        sorry
+
+      then show ?thesis by(auto simp add: has_sup_def)
+    next
+
+      case False
+(* idea: we know one of the three pairs must not have a sup. consider to find which one. *)
+      then have "is
+
+(*
+
+      then show ?thesis sorry
+    next
+      case False
+      then show ?thesis sorry
+    qed
+
+(* maybe we can avoid all this mess... *)
+
+    consider (AB_Lt) "psup_ab' < pa'" |
+             (AB_Gt) "pa' < psup_ab'" |
+             (AB_Eq) "pa' = psup_ab'"
+      by arith
+
+    then show ?thesis
+    proof cases
+      case AB_Lt
+
+      then have False using is_supD1[OF Sup_ab, of a]
+        unfolding A Sup_ab'
+        by(auto simp add: prio_pleq)
+
+      then show ?thesis by auto
+    next
+      case AB_Gt
+
+      have Ub_ab: "is_ub {a, b} (mdp (pa' + 1) sup_ab')"
+      proof(rule is_ubI)
+        fix x
+        assume "x \<in> {a, b}"
+        then show "x <[ mdp (pa' + 1) sup_ab'"
+          unfolding A B C ABCmax Sup_ab'
+          by(auto simp add: prio_pleq)
+      qed
+
+      then have "psup_ab' = pa' + 1"
+        using is_supD2[OF Sup_ab Ub_ab] AB_Gt
+        unfolding Sup_ab'
+        by(auto simp add: prio_pleq split: if_splits)
+
+      consider (BC_Lt) "psup_bc' < pa'" |
+               (BC_Gt) "pa' < psup_bc'" |
+               (BC_Eq) "pa' = psup_bc'"
+        by arith
+
+      then show ?thesis
+      proof cases
+
+        case BC_Lt
+
+        then have False using is_supD1[OF Sup_bc, of b]
+          unfolding B Sup_bc' ABCmax
+          by(auto simp add: prio_pleq)
+
+        then show ?thesis by auto
+      next
+
+        case BC_Gt
+
+        have Ub_bc: "is_ub {b, c} (mdp (pa' + 1) sup_bc')"
+        proof(rule is_ubI)
+          fix x
+          assume "x \<in> {b, c}"
+          then show "x <[ mdp (pa' + 1) sup_bc'"
+            unfolding A B C ABCmax Sup_bc'
+            by(auto simp add: prio_pleq)
+        qed
+  
+        then have "psup_bc' = pa' + 1"
+          using is_supD2[OF Sup_bc Ub_bc] BC_Gt
+          unfolding Sup_bc'
+          by(auto simp add: prio_pleq split: if_splits)
+  
+        consider (AC_Lt) "psup_ac' < pa'" |
+                 (AC_Gt) "pa' < psup_ac'" |
+                 (AC_Eq) "pa' = psup_ac'"
+          by arith
+
+          then show ?thesis
+          proof cases
+            case AC_Lt
+  
+            then have False using is_supD1[OF Sup_ac, of a]
+              unfolding A Sup_ac' ABCmax
+              by(auto simp add: prio_pleq)
+    
+            then show ?thesis by auto
+          next
+            case AC_Gt
+
+            have Ub_ac: "is_ub {a, c} (mdp (pa' + 1) sup_ac')"
+            proof(rule is_ubI)
+              fix x
+              assume "x \<in> {a, c}"
+              then show "x <[ mdp (pa' + 1) sup_ac'"
+                unfolding A B C ABCmax Sup_ac'
+                by(auto simp add: prio_pleq)
+            qed
+      
+            then have "psup_ac' = pa' + 1"
+              using is_supD2[OF Sup_ac Ub_ac] AC_Gt
+              unfolding Sup_ac'
+              by(auto simp add: prio_pleq split: if_splits)
+
+            
+
+            then show ?thesis sorry
+          next
+            case AC_Eq
+            then show ?thesis sorry
+          qed
+      
+      next
+        case AB_Eq
+        then show ?thesis sorry
+      qed
+
+
+    have Sup_ab_inner :
+      "is_sup {a', b'} sup_ab'"
+    proof(rule is_supI)
+      fix x
+      assume In: "x \<in> {a', b'}"
+      then show "x <[ sup_ab'"
+        using is_supD1[OF Sup_ab, of a] is_supD1[OF Sup_ab, of b] ABCmax
+        unfolding A B Sup_ab'
+        apply(auto simp add: prio_pleq split:if_splits)
+
+      obtain pw' w' where W: "w = mdp pw' w'"
+        by(cases w; auto)
+
+      consider
+        (Pw'_lt) "pw' < pa'" |
+        (Pw'_eq) "pw' = pa'" |
+        (Pw'_gt) "pw' > pa'"
+        by arith
+
+      then show "sup_ab <[ w"
+      proof cases
+        case Pw'_lt
+
+        then have False using is_ubE[OF Ub, of a]
+          unfolding A W
+          by(auto simp add: prio_pleq split: if_splits)
+
+        then show ?thesis by auto
+      next
+        case Pw'_eq
+        then show ?thesis sorry
+      next
+        case Pw'_gt
+        then show ?thesis sorry
+      qed
+
+
+    then show ?thesis sorry
+  next
+    case BCmax
+    then show ?thesis sorry
+  next
+    case ACmax
+    then show ?thesis sorry
+  next
+    case ABCmax
+    then show ?thesis sorry
+  qed
+*)
+(* how to avoid a horrible casesplit? *)
 
 instantiation md_prio :: (Mergeableb) Mergeableb
 begin

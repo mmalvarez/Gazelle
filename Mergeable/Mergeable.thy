@@ -153,4 +153,10 @@ qed
 class Mergeableb = Mergeable +
   Pordbc
 
+class Mergeableps = Mergeable +
+  Pordps
+
+class Mergeablebps = Mergeableb +
+  Pordps
+
 end

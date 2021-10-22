@@ -234,11 +234,20 @@ assumes eq_base : "\<And> s . LBase l1 s = LBase l2 s"
   assumes put2_get1 : "\<And> s a b . b \<in> S1 s \<Longrightarrow> LOut l1 s (LUpd l2 s a b) = LOut l1 s b"*)
   assumes put1_S2 : "\<And> s a b . b \<in> S2 s \<Longrightarrow> LUpd l1 s a b \<in> S2 s"
   assumes put2_S1 : "\<And> s a b . b \<in> S1 s \<Longrightarrow> LUpd l2 s a b \<in> S1 s"
-
+(*
 assumes compat'1 :
   "\<And> s a1 a2 b . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} (LUpd l1 s a1 (LUpd l2 s a2 b))"
 assumes compat'2 :
   "\<And> s a1 a2 b . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} (LUpd l2 s a2 (LUpd l1 s a1 b))"
+*)
+
+assumes compat'1 :
+  "\<And> s a1 a2 supr . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
+    \<exists> b' . LUpd l1 s a1 b' = supr"
+
+assumes compat'2 :
+  "\<And> s a1 a2 supr . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
+    \<exists> b' . LUpd l2 s a2 b' = supr"
 
 locale l_ortho_base' =
   fixes l1 :: "('a, 'b1, 'c :: Pord_Weakb, 'f1) lifting"
@@ -350,27 +359,34 @@ next
 
 next
 
-  fix s a1 a2 b
+  fix s a1 a2 b supr
+
+  assume Sup : "is_sup
+        {LUpd l2 s a1 b, LUpd l1 s a2 b}
+        supr"
 
   have Comm : "{LUpd l2 s a1 b, LUpd l1 s a2 b} = 
                {LUpd l1 s a2 b, LUpd l2 s a1 b}"
     by auto
 
-  show "is_sup {LUpd l2 s a1 b, LUpd l1 s a2 b}
-        (LUpd l2 s a1 (LUpd l1 s a2 b))"
+  show "\<exists>b'. LUpd l2 s a1 b' = supr" using Sup
     unfolding Comm
     using compat'2[of s a2 b a1, unfolded Comm]
     by auto
 
 next
-  fix s a1 a2 b
+  fix s a1 a2 b supr
+
+  assume Sup : "is_sup
+        {LUpd l2 s a1 b, LUpd l1 s a2 b}
+        supr"
+
 
   have Comm : "{LUpd l2 s a1 b, LUpd l1 s a2 b} = 
                {LUpd l1 s a2 b, LUpd l2 s a1 b}"
     by auto
 
-  show "is_sup {LUpd l2 s a1 b, LUpd l1 s a2 b}
-        (LUpd l1 s a2 (LUpd l2 s a1 b))"
+  show "\<exists>b'. LUpd l1 s a2 b' = supr" using Sup
     unfolding Comm
     using compat'1[of s a2 b a1, unfolded Comm]
     by auto
@@ -406,9 +422,10 @@ proof
     using compat_ok[OF Bok Sup[unfolded Comm]]
     by auto
 qed
-
+(*
 lemma (in l_ortho) compat'_comm :
   shows "LUpd l1 s a1 (LUpd l2 s a2 b) = LUpd l2 s a2 (LUpd l1 s a1 b)"
   using is_sup_unique[OF compat'1 compat'2]
   by auto
+*)
 end

@@ -321,6 +321,24 @@ proof(-)
   show ?thesis using leq_antisym 1 3 by auto
 qed
 
+(*
+Pordps = "PORD + Pairwise Sups"
+(this could be phrased as an extension of Pord_Weak, but i don't think
+this is that useful)
+
+Here we add the assumption that if any 3 elements have pairwise
+sups, all 3 have a sup. This ends up being useful for reasoning about
+liftings.
+
+*)
+
+class Pordps =
+  Pord +
+  assumes pairwise_sup :
+    "has_sup {a, b} \<Longrightarrow> has_sup {b, c} \<Longrightarrow> has_sup {a, c} \<Longrightarrow>
+     has_sup {a, b, c}"
+
+
 (* Pordc = "PORD + Completness" 
  * Note that this is a rather weak notion of completeness; we only require that
  * pairs with upper bounds have sups. Later we show that this implies completeness for
@@ -637,8 +655,14 @@ assumes bot_spec :
 
 class Pordb =  Pord + Pord_Weakb
 
+class Pordbps = Pordb + Pordps
+
+class Pordpsc = Pordps + Pordc
+
 (* Pordc and Pordb are basically orthogonal extensions to Pord. Often we care about
  * cases where we have both. *)
 class Pordbc =  Pordc + Pordb
+
+class Pordbpsc = Pordbc + Pordps
 
 end
