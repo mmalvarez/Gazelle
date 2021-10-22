@@ -1,4 +1,4 @@
-theory Mergeable_Instances imports Mergeable Wrappers
+theory Mergeable_Instances imports Mergeable Wrappers Mergeable_Facts
 begin
 
 (* 
@@ -1471,17 +1471,11 @@ fun prio_val :: "'a md_prio \<Rightarrow> 'a" where
 fun prio_prio :: "'a md_prio \<Rightarrow> nat" where
 "prio_prio (mdp n _) = n"
 
-lemma is_sup_prio :
-  assumes Hnemp : "x \<in> Xs"
-  assumes "is_sup Xs (mdp psupr supr)"
-  shows "is_sup (prio_val ` Xs) supr \<or>
-         (\<forall> px' x' . mdp px' x' \<in> Xs \<longrightarrow> px' \<le> prio_prio x)"
-  sorry
-(* make sure this is useful first - TODO *)
+
 (* Probably a useful theorem, but not sure if it helps immediately here. *)
-(*
+
 lemma prio_always_sup :
-  fixes V :: "('a :: Pord_Weakb) md_prio set"
+  fixes V :: "('a :: Pordbc) md_prio set"
   assumes Hfin : "finite V"
   assumes Hnemp : "v \<in> V"
   shows "has_sup V"
@@ -1599,43 +1593,281 @@ proof-
     unfolding VSmax
     by blast
 
-    have In_Vmax_Conv :       
-      "\<And> w pw' w' y y' py'. w \<in> Vmax \<Longrightarrow>  w = mdp pw' w' \<Longrightarrow>
-        y \<in> V \<Longrightarrow> y = mdp pw' y'\<Longrightarrow> y \<in> Vmax"
-      unfolding VSmax
-      by(auto)
+  have In_Vmax_Conv :       
+    "\<And> w pw' w' y y' py'. w \<in> Vmax \<Longrightarrow>  w = mdp pw' w' \<Longrightarrow>
+      y \<in> V \<Longrightarrow> y = mdp pw' y'\<Longrightarrow> y \<in> Vmax"
+    unfolding VSmax
+    by(auto)
 
-    have Notin_Vmax : 
-      "\<And> w pw' w' y y' py'. w \<in> Vmax \<Longrightarrow>  w = mdp pw' w' \<Longrightarrow>
-        y \<in> V \<Longrightarrow> y \<notin> Vmax \<Longrightarrow> y = mdp py' y'\<Longrightarrow> py' < pw'"
-    proof-
-      fix w pw' w' y y' py'
-      assume Win : "w \<in> Vmax"
-      assume W' : "w = mdp pw' w'"
-      assume Yin : "y \<in> V"
-      assume Ynotin : "y \<notin> Vmax"
-      assume Y' : "y = mdp py' y'"
+  have Notin_Vmax : 
+    "\<And> w pw' w' y y' py'. w \<in> Vmax \<Longrightarrow>  w = mdp pw' w' \<Longrightarrow>
+      y \<in> V \<Longrightarrow> y \<notin> Vmax \<Longrightarrow> y = mdp py' y'\<Longrightarrow> py' < pw'"
+  proof-
+    fix w pw' w' y y' py'
+    assume Win : "w \<in> Vmax"
+    assume W' : "w = mdp pw' w'"
+    assume Yin : "y \<in> V"
+    assume Ynotin : "y \<notin> Vmax"
+    assume Y' : "y = mdp py' y'"
 
-      have "py' \<le> pw'" using In_Vmax[OF Win W' Yin Y'] by simp
+    have "py' \<le> pw'" using In_Vmax[OF Win W' Yin Y'] by simp
 
-      show "py' < pw'"
-      proof(cases "py' = pw'")
-        case False
-        then show ?thesis using `py' \<le> pw'` by simp
+    show "py' < pw'"
+    proof(cases "py' = pw'")
+      case False
+      then show ?thesis using `py' \<le> pw'` by simp
+    next
+      case True
+
+      then have "y \<in> Vmax" using In_Vmax_Conv[OF Win W' Yin] Y'
+        by auto
+
+      then have False using Ynotin by simp
+
+      thus ?thesis by simp
+    qed
+  qed
+
+  show "has_sup V"
+  proof(cases "has_sup Vmaxv")
+    case False
+
+    have "is_sup V (mdp (1 + pm') \<bottom>)"
+    proof(rule is_supI)
+      fix w
+      assume W: "w \<in> V"
+
+      obtain pw' w' where W' : "w = (mdp pw' w')"
+        by(cases w; auto)
+
+      have "pw' \<le> pm'"
+        using In_Vmax[OF M M' W W'] by auto
+
+      then show "w <[ mdp (1 + pm') \<bottom>"
+        unfolding W'
+        by(auto simp add: prio_pleq)
+    next
+
+      fix z
+      assume Ub : "is_ub V z"
+
+      obtain pz' z' where Z' : "z = mdp pz' z'"
+        by(cases z; auto)
+
+      consider (1) "pz' < pm'"
+        | (2) "pz' = pm'"
+        | (3) "pz' = 1 + pm'"
+        | (4) "pz' > 1 + pm'"
+        by(arith)
+      then show "mdp (1 + pm') \<bottom> <[ z"
+      proof cases
+        case 1
+
+        then have False using is_ubE[OF Ub `m \<in> V`]
+          unfolding M' Z'
+          by(auto simp add: prio_pleq)
+
+        then show ?thesis by auto
       next
-        case True
 
-        then have "y \<in> Vmax" using In_Vmax_Conv[OF Win W' Yin] Y'
+        case 2
+
+        have "m' \<in> Vmaxv"
+          using imageI[OF M, of "case_md_prio (\<lambda>px' x'. x')"] M'
+          unfolding VSmaxv
           by auto
 
-        then have False using Ynotin by simp
+        have "finite Vmaxv"
+          using Hfin
+          unfolding VSmaxv VSmax
+          by auto
 
-        thus ?thesis by simp
+        have "is_ub Vmaxv z'"
+        proof(rule is_ubI)
+          fix w'
+
+          assume "w' \<in> Vmaxv"
+
+          then obtain pw' w where W: "w = mdp pw' w'" "w \<in> Vmax"
+            unfolding VSmaxv
+            by(auto split: md_prio.splits)
+
+          then have "pw' = pm'"
+            using VSmax_eq[OF M W(2) M' W(1)] by auto
+
+          have "w \<in> V" using W unfolding VSmax
+            by auto
+
+          then have "w <[ mdp pm' z'"
+            using is_ubE[OF Ub, of w]
+            unfolding Z' 2
+            by auto
+
+          then show "w' <[ z'"
+            unfolding W Z' `pw' = pm'`
+            by(auto simp add: prio_pleq)
+        qed
+
+        then have "has_sup Vmaxv"
+          using finite_complete[OF `finite Vmaxv`  `m' \<in> Vmaxv`, of z']
+          by(auto simp add: has_sup_def)
+
+        then have False using False by auto
+
+        then show ?thesis by auto
+      next
+
+        case 3
+
+        then show ?thesis using bot_spec[of z']
+          unfolding Z'
+          by(auto simp add: prio_pleq)
+      next
+
+        case 4
+
+        then show ?thesis
+          unfolding Z'
+          by(auto simp add: prio_pleq)
       qed
     qed
-*)
 
-(* This is easy if we know Pordb. But what if we do not? *)
+    then show ?thesis
+      by(auto simp add: has_sup_def)
+  next
+
+    case True
+
+    then obtain supr' where Supr' : "is_sup Vmaxv supr'"
+      by(auto simp add: has_sup_def)
+
+    have "is_sup V (mdp pm' supr')"
+    proof(rule is_supI)
+      fix w
+
+      assume W : "w \<in> V"
+      then obtain pw' w' where W' : "w = mdp pw' w'"
+        by(cases w; auto)
+
+      show "w <[ mdp pm' supr'"
+      proof(cases "w \<in> Vmax")
+        case True' : True
+
+        then have "w' \<in> Vmaxv"
+          using imageI[OF True', of "case_md_prio (\<lambda>px' x'. x')"]
+          unfolding VSmaxv W'
+          by(auto split: md_prio.splits)
+
+        then have "w' <[ supr'"
+          using is_supD1[OF Supr']
+          by auto
+
+        have "pw' = pm'"
+          using VSmax_eq[OF M True' M' W'] by auto
+
+        then show "w <[ mdp pm' supr'"
+          using `w' <[ supr'`
+          unfolding W'
+          by(auto simp add: prio_pleq)
+      next
+        case False' : False
+
+        have "pw' < pm'"
+          using Notin_Vmax[OF M M' W False' W']
+          by auto
+
+        then show "w <[ mdp pm' supr'"
+          unfolding W'
+          by(auto simp add: prio_pleq)
+      qed
+    next
+
+      fix z
+
+      assume Ub : "is_ub V z"
+
+      obtain pz' z' where Z' : "z = mdp pz' z'"
+        by(cases z; auto)
+
+      have "Vmax \<subseteq> V"
+        unfolding VSmax
+        by auto
+
+      then have Ub' : "is_ub Vmax z"
+        using ub_subset[OF Ub]
+        by auto
+
+      consider (1) "pz' < pm'"
+        | (2) "pz' = pm'"
+        | (3) "pz' > pm'"
+        by(arith)
+      then show "mdp pm' supr' <[ z"
+      proof cases
+        case 1
+
+        then have "m <[ z"
+          using is_ubE[OF Ub' M] by auto
+
+        then have False using 1
+          unfolding M' Z'
+          by(auto simp add: prio_pleq)
+
+        then show ?thesis by auto
+      next
+
+        case 2
+
+        have Ub'' : "is_ub Vmaxv z'"
+        proof(rule is_ubI)
+
+          fix w'
+          assume W' : "w' \<in> Vmaxv"
+
+          then obtain pw' where Pw' : "mdp pw' w' \<in> Vmax"
+            unfolding VSmaxv
+            by(auto split: md_prio.splits)
+
+          have "pw' = pm'"
+            using VSmax_eq[OF M Pw' M' refl]
+            by auto
+
+          have "mdp pw' w' <[ z"
+            using is_ubE[OF Ub' Pw']
+            unfolding Z'
+            by(auto)
+
+          then show "w' <[ z'" using `pw' = pm'` 2
+            unfolding Z'
+            by(auto simp add: prio_pleq split: if_splits)
+        qed
+
+        have "supr' <[ z'"
+          using is_supD2[OF Supr' Ub'']
+          by auto
+
+        then show "mdp pm' supr' <[ z"
+          using 2
+          unfolding Z'
+          by(auto simp add: prio_pleq)
+      next
+        case 3
+
+        then show "mdp pm' supr' <[ z"
+          unfolding Z'
+          by(auto simp add: prio_pleq)
+      qed
+    qed
+
+    then show "has_sup V"
+      by(auto simp add: has_sup_def)
+  qed
+qed
+
+
+(*
+(* This is easy if we know Pordb. But what if we do not?
+i don't think we can show this in general - can't conclude that {a, b, c}
+having supremum means that the pairs do. *)
 instantiation md_prio :: (Pord) Pordps
 begin
 instance proof
@@ -1858,8 +2090,92 @@ instance proof
       then obtain sup' where Sup'_sup : "is_sup {a', b', c'} sup'"
         by(auto simp add: has_sup_def)
 
-(* TODO *)
       have "is_sup {a, b, c} (mdp pa' sup')"
+      proof(rule is_supI)
+        fix x
+
+        assume X: "x \<in> {a, b, c}"
+        then obtain px' x' where X' : "x = mdp px' x'" "x' \<in> {a', b', c'}"
+          unfolding A B C 
+          by(cases x; auto) 
+
+        have "x' <[ sup'"
+          using is_supD1[OF Sup'_sup X'(2)] by auto
+
+        then show "x <[ mdp pa' sup'"
+          using X unfolding X' A B C ABCmax
+          by(auto simp add: prio_pleq)
+      next
+
+        fix w
+
+        assume W: "is_ub {a, b, c} w"
+
+        then obtain pw' w' where W' : "w = mdp pw' w'"
+          by(cases w; auto)
+
+        consider (WLt) "pw' < pa'" |
+                 (WEq) "pw' = pa'" |
+                 (WGt) "pa' < pw'"
+          by arith
+        then show "mdp pa' sup' <[ w"
+        proof cases
+          case WLt
+
+          then have False using is_ubE[OF W, of a]
+            unfolding A W'
+            by(auto simp add: prio_pleq)
+
+          then show ?thesis by auto
+        next
+          case WEq
+
+          have Ub' : "is_ub {a', b', c'} w'"
+          proof(rule is_ubI)
+            fix z'
+  
+            assume Z': "z' \<in> {a', b', c'}"
+  
+            then have Z_in : "mdp pa' z' \<in> {a, b, c}"
+              unfolding A B C ABCmax
+              by auto
+  
+            then have "mdp pa' z' <[ mdp pa' w'"
+              using is_ubE[OF W Z_in]
+              unfolding W' WEq
+              by auto
+
+            then show "z' <[ w'"
+              by(auto simp add: prio_pleq)
+          qed
+
+          (* problem: what if there is no least upper bound for the pairs?
+             i think we can force one using \<bottom>. but then we don't need to do any of this. *)
+          have Sup_ab'_inner : "is_sup {a', b'} sup_ab'"
+          proof(rule is_supI)
+            fix x'
+
+            assume X' : "x' \<in> {a', b'}"
+            then have X_in : "mdp pa' x' \<in> {a, b}"
+              unfolding A B ABCmax
+              by auto
+
+            show "x' <[ sup_ab'"
+              using is_supD1[OF Sup_ab X_in]
+              unfolding Sup_ab' 
+
+          then show ?thesis
+            using pairwise_sup Sup_ab
+        next
+          case WGt
+          then show ?thesis 
+            unfolding W'
+            by(auto simp add: prio_pleq)
+        qed
+
+
+      qed
+
         sorry
 
       then show ?thesis by(auto simp add: has_sup_def)
@@ -1868,7 +2184,7 @@ instance proof
       case False
 (* idea: we know one of the three pairs must not have a sup. consider to find which one. *)
       then have "is
-
+*)
 (*
 
       then show ?thesis sorry
@@ -2037,7 +2353,19 @@ instance proof
     then show ?thesis sorry
   qed
 *)
-(* how to avoid a horrible casesplit? *)
+
+(* This is easy if we know Pordb. But what if we do not? *)
+instantiation md_prio :: (Pordbc) Pordbps
+begin
+instance proof
+
+  fix a b c :: "'a md_prio"
+
+  show "has_sup {a, b, c}"
+    using prio_always_sup[of "{a, b, c}" a]
+    by auto
+qed
+end
 
 instantiation md_prio :: (Mergeableb) Mergeableb
 begin
