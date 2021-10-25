@@ -1,5 +1,5 @@
 theory Pord_Facts
-  imports Pord Pord_Instances
+  imports Pord
 begin
 
 (* Pord_Facts

@@ -363,4 +363,10 @@ proof
     using is_supD1[OF H Zin'] by simp
 qed
 
+lemma sup_ub :
+  assumes H : "is_sup S x"
+  shows "is_ub S x"
+  using sup_subset_ub[OF H, of S]
+  by auto
+
 end

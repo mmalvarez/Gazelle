@@ -2288,7 +2288,7 @@ next
   have Eq : "[^ LUpd l1 s a1 b, LUpd l2 s a2 b ^] = supr"
     using is_sup_unique[OF bsup_sup[OF Supr bsup_spec] Supr] by simp
 
-  have In1 :"supr \<in> S1 s" and In2 : "supr \<in> S2 s" using compat_S[OF Supr]
+  have In1 :"supr \<in> S1 s" and In2 : "supr \<in> S2 s" using compat_S[OF in1.put_S in2.put_S Supr]
     by auto
 
   show "LUpd (merge_l l1 l2) s a b \<in> S1 s \<inter> S2 s" 
@@ -2929,9 +2929,8 @@ next
   have Supr' : "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} [^ LUpd l1 s a1 b, LUpd l2 s a2 b ^]"
     using bsup_sup[OF Supr bsup_spec] by auto
 
-
   show "LUpd (merge_l l1 l2) s a b \<in> S1 s \<inter> S2 s"
-    using compat_S[OF Supr'] A
+    using compat_S[OF in1.put_S in2.put_S Supr'] A
     by(auto simp add: merge_l_def)
 
 qed
@@ -2992,85 +2991,51 @@ next
       by(auto simp add: has_sup_def)
   qed
 next
-
   fix b s
-  fix a1 :: 'b
-  fix a2 :: 'e
+  fix x1 :: "'c option"
+  fix x2 :: "'c option"
   fix supr
+(* YOU ARE HERE *)
+  assume Sup: "is_sup {x1, x2} supr"
 
-  assume Sup: "is_sup {LUpd (option_l l1) s a1 b, LUpd (option_l l2) s a2 b} supr"
+  assume X1 : "x1 \<in> option_l_S S1 s"
+  assume X2 : "x2 \<in> option_l_S S2 s"
 
-  obtain r1 where R1: "LUpd (option_l l1) s a1 b = Some r1"
-    by(cases b; auto simp add: option_l_def)
+  obtain x1' where X1' : "x1 = Some x1'" "x1' \<in> S1 s"
+    using X1 by(cases x1; auto simp add: option_l_S_def)
 
-  obtain r2 where R2 : "LUpd (option_l l2) s a2 b = Some r2"
-    by(cases b; auto simp add: option_l_def)
+  obtain x2' where X2' : "x2 = Some x2'" "x2' \<in> S2 s"
+    using X2 by(cases x2; auto simp add: option_l_S_def)
 
   show "supr \<in> option_l_S S1 s \<inter> option_l_S S2 s"
   proof(cases supr)
     case None
 
-    then have "Some r1 <[ None"
-      using is_supD1[OF Sup, of "Some r1"] unfolding R1 None
+    then have "x1 <[ None"
+      using is_supD1[OF Sup, of "x1"] unfolding X1 None
       by auto
 
-    then have False by(simp add: option_pleq)
+    then have False using X1' by(simp add: option_pleq)
 
     thus ?thesis ..
   next
     case (Some supr')
 
-    have Sup_map : "is_sup (Some ` {r1, r2}) (Some supr')"
-      using Sup unfolding R1 R2 Some
+    have Sup_map : "is_sup (Some ` {x1', x2'}) (Some supr')"
+      using Sup unfolding X1' X2' Some
       by auto
 
-    hence Sup_inner : "is_sup {r1, r2} supr'"
+    hence Sup_inner : "is_sup {x1', x2'} supr'"
       using is_sup_Some'[OF _ Sup_map]
       by auto
 
-    show ?thesis
-    proof(cases b)
-      case None' : None
+    hence Supr'_in : "supr' \<in> S1 s \<inter> S2 s"
+      using compat_S[OF X1'(2) X2'(2) Sup_inner] by auto
 
-      have R1' : "LUpd l1 s a1 (LBase l1 s) = r1"
-        using None' R1
-        by(auto simp add: option_l_def)
+    then show ?thesis
+      using Some
+      by(auto simp add: option_l_S_def)
 
-      have R2' : "LUpd l2 s a2 (LBase l2 s) = r2"
-        using None' R2
-        by(auto simp add: option_l_def)
-
-      have Bases : "LBase l1 s = LBase l2 s"
-        using eq_base by auto
-
-      have "supr' \<in> S1 s \<inter> S2 s"
-        using compat_S Sup_inner[unfolded sym[OF R1']
-                                ,unfolded sym[OF R2']
-                                ,unfolded Bases]
-        by auto
-        
-      then show ?thesis 
-        using Some
-        by(auto simp add: option_l_S_def)
-    next
-      case Some' : (Some b')
-
-      have R1' : "LUpd l1 s a1 b' = r1"
-        using Some' R1
-        by(auto simp add: option_l_def)
-
-      have R2' : "LUpd l2 s a2 b' = r2"
-        using Some' R2
-        by(auto simp add: option_l_def)
-
-      have "supr' \<in> S1 s \<inter> S2 s"
-        using compat_S Sup_inner R1' R2'
-        by(auto)
-
-      then show ?thesis
-        using Some
-        by(auto simp add: option_l_S_def)
-    qed
   qed
 next
 
@@ -3273,6 +3238,8 @@ next
   then show "LUpd (option_l l2) s a b \<in> option_l_S S1 s"
     using B'
     by(auto simp add: option_l_def option_l_S_def)
+qed
+(*
 next
 
   fix s a1 a2 b supr
@@ -3378,7 +3345,7 @@ next
 *)
 
 qed
-
+*)
 lemma sup_singleton :
   "is_sup {x} x"
   by(auto simp add: is_least_def is_ub_def is_sup_def leq_refl)
@@ -3542,29 +3509,32 @@ next
     by(auto simp add: has_sup_def)
 next
 
-  fix b :: "('c * 'g)"
+  fix x y :: "('c * 'g)"
   fix s
-  fix a1 :: 'b
-  fix a2 :: 'e
   fix supr :: "('c * 'g)"
 
-  obtain b1 b2 where B: "b = (b1, b2)"
-    by(cases b; auto)
+  assume "x \<in> fst_l_S S1 s"
+
+  then obtain x1 x2 where X: "x = (x1, x2)" "x1 \<in> S1 s"
+    by(cases x; auto simp add: fst_l_S_def)
+
+  assume "y \<in> fst_l_S S2 s"
+  then obtain y1 y2 where Y: "y = (y1, y2)" "y1 \<in> S2 s"
+    by(cases y; auto simp add: fst_l_S_def)
+
+  assume Sup : "is_sup {x, y} supr"
 
   obtain s1 s2 where S: "supr = (s1, s2)"
     by(cases supr; auto)
 
-  assume Sup: "is_sup {LUpd (fst_l l1) s a1 b, LUpd (fst_l l2) s a2 b} supr"
-
-  have Sup' : "is_sup {LUpd l1 s a1 b1, LUpd l2 s a2 b1} s1"
-    using B S
+  have Sup' : "is_sup {x1, y1} s1"
+    using X Y S
     is_sup_fst'[OF _ Sup[unfolded S]]
     by(auto simp add: fst_l_def)
 
   show "supr \<in> fst_l_S S1 s \<inter> fst_l_S S2 s"
-    using compat_S[OF Sup'] S
+    using compat_S[OF X(2) Y(2) Sup'] S
     by(auto simp add: fst_l_S_def)
-
 next
 
   fix b :: "('c * 'g)"
@@ -3652,6 +3622,8 @@ next
     using B
     by(auto simp add: fst_l_def fst_l_S_def)
 
+qed
+(*
 next
 
   fix b :: "('c * 'g)"
@@ -3721,7 +3693,7 @@ next
   then show "\<exists>b'. LUpd (fst_l l2) s a2 b' = supr"
     by auto
 qed
-
+*)
 locale fst_l_ortho_base = fst_l_ortho + l_ortho_base
 
 sublocale fst_l_ortho_base \<subseteq> out : l_ortho_base "fst_l l1" "fst_l_S S1" "fst_l l2" "fst_l_S S2"
@@ -3823,29 +3795,31 @@ next
     by(auto simp add: has_sup_def)
 next
 
-  fix b :: "('g * 'c)"
+  fix x y :: "('g * 'c)"
   fix s
-  fix a1 :: 'b
-  fix a2 :: 'e
   fix supr :: "('g * 'c)"
 
-  obtain b1 b2 where B: "b = (b1, b2)"
-    by(cases b; auto)
+  assume "x \<in> snd_l_S S1 s"
+  then obtain x1 x2 where X: "x = (x1, x2)" "x2 \<in> S1 s"
+    by(cases x; auto simp add: snd_l_S_def)
+
+  assume "y \<in> snd_l_S S2 s"
+  then obtain y1 y2 where Y: "y = (y1, y2)" "y2 \<in> S2 s"
+    by(cases y; auto simp add: snd_l_S_def)
+
+  assume Sup : "is_sup {x, y} supr"
 
   obtain s1 s2 where S: "supr = (s1, s2)"
     by(cases supr; auto)
 
-  assume Sup: "is_sup {LUpd (snd_l l1) s a1 b, LUpd (snd_l l2) s a2 b} supr"
-
-  have Sup' : "is_sup {LUpd l1 s a1 b2, LUpd l2 s a2 b2} s2"
-    using B S
+  have Sup' : "is_sup {x2, y2} s2"
+    using X Y S
     is_sup_snd'[OF _ Sup[unfolded S]]
-    by(auto simp add: snd_l_def)
+    by(auto)
 
   show "supr \<in> snd_l_S S1 s \<inter> snd_l_S S2 s"
-    using compat_S[OF Sup'] S
+    using compat_S[OF X(2) Y(2) Sup'] S
     by(auto simp add: snd_l_S_def)
-
 next
 
   fix b :: "('g * 'c)"
@@ -3933,6 +3907,8 @@ next
     using B
     by(auto simp add: snd_l_def snd_l_S_def)
 
+qed
+(*
 next
 
   fix b :: "('g * 'c)"
@@ -3995,7 +3971,7 @@ next
     by auto
 
 qed
-
+*)
 locale snd_l_ortho_base = snd_l_ortho + l_ortho_base
 
 sublocale snd_l_ortho_base \<subseteq> out : l_ortho_base "snd_l l1" "snd_l_S S1" "snd_l l2" "snd_l_S S2"
@@ -4139,20 +4115,27 @@ next
 
 next
 
-  fix b :: "'c * 'f"
+  fix x y :: "'c * 'f"
   fix s :: 'a
-  fix a1 :: 'b
-  fix a2 :: 'e
   fix supr
 
-  assume Sup : "is_sup {LUpd (fst_l l1) s a1 b, LUpd (snd_l l2) s a2 b} supr"
+  assume "x \<in> fst_l_S S1 s"
+  then obtain x1 x2 where X: "x = (x1, x2)" "x1 \<in> S1 s"
+    by(auto simp add: fst_l_S_def)
 
-  obtain b1 b2 where B: "b = (b1, b2)"
-    by(cases b; auto)
+  assume "y \<in> snd_l_S S2 s"
+  then obtain y1 y2 where Y: "y = (y1, y2)" "y2 \<in> S2 s"
+    by(auto simp add: snd_l_S_def)
 
-  obtain supr1 supr2 where Sup1_2 : "supr = (supr1, supr2)"
+  assume Sup : "is_sup {x, y} supr"
+
+  obtain supr1 supr2 where Supr1_2 : "supr = (supr1, supr2)"
     by(cases supr; auto)
 
+  show " supr \<in> fst_l_S S1 s \<inter> snd_l_S S2 s"
+    unfolding fst_l_S_def snd_l_S_def Supr1_2 X Y
+
+(* should we just do away with valid sets *)
   have Sup' : "is_sup {LUpd (fst_l l1) s a1 b,
                 LUpd (snd_l l2) s a2 b}
         ((LUpd l1 s a1 b1), (LUpd l2 s a2 b2))"
@@ -4192,25 +4175,26 @@ next
       by(auto simp add: prod_pleq)
   qed
 
+
   have Sup_eq : "supr = ((LUpd l1 s a1 b1), (LUpd l2 s a2 b2))"
     using is_sup_unique[OF Sup Sup']
     by auto
     
 (* use is_sup_unique here to show that it is the two components. *)
   have Conc1 : "supr1 \<in> S1 s"
-    using Sup1_2 Sup_eq
+    using Supr1_2 Sup_eq
     in1.put_S
     by(auto)
 
   have Conc2 : "supr2 \<in> S2 s"
-    using Sup1_2 Sup_eq
+    using Supr1_2 Sup_eq
     in2.put_S
     by auto
 
   show "supr
        \<in> fst_l_S S1 s \<inter>
           snd_l_S S2 s"
-    using Conc1 Conc2 Sup1_2
+    using Conc1 Conc2 Supr1_2
     by(auto simp add: fst_l_S_def snd_l_S_def)
 
 next
@@ -4361,6 +4345,8 @@ next
   then show "LUpd (snd_l l2) s a b \<in> fst_l_S S1 s"
     by(auto simp add: fst_l_S_def snd_l_def)
 
+qed
+(*
 next
 
   fix b :: "'c * 'f"
@@ -4486,7 +4472,7 @@ next
   then show "\<exists>b'. LUpd (snd_l l2) s a2 b' = supr"
     by blast
 qed
-
+*)
 (* lifting_valid_weak_ok *)
 locale fst_l_snd_l_ortho_ok =
   fst_l_snd_l_ortho + 
@@ -4559,7 +4545,6 @@ proof
     by(auto simp add: prod_ok_S)
 qed
 
-
 locale fst_l_snd_l_ortho_base =
   fst_l_snd_l_ortho + 
   in1 : lifting_valid_weak_base l1 S1 +
@@ -4582,7 +4567,7 @@ proof
 qed
 
 locale merge_l_ortho' =
-  fixes l1 :: "('a, 'b1, 'c :: Mergeableb, 'f1) lifting"
+  fixes l1 :: "('a, 'b1, 'c :: {Mergeableb, Pordps}, 'f1) lifting"
   fixes S1 :: "'a \<Rightarrow> 'c1 set"
   fixes l2 :: "('a, 'b2, 'c, 'f2) lifting"
   fixes S2 :: "'a \<Rightarrow> 'c2 set"
@@ -4592,8 +4577,8 @@ locale merge_l_ortho' =
 locale merge_l_ortho = merge_l_ortho' +
   orth1_2 : l_ortho l1 S1 l2 S2 + 
   orth1_3 : l_ortho l1 S1 l3 S3 +
-  orth2_3 : l_ortho l2 S2 l3 S3 +
-  valid3 : lifting_valid_weak_pres l3 S3
+  orth2_3 : l_ortho l2 S2 l3 S3 
+  (* + valid3 : lifting_valid_weak_pres l3 S3*)
 
 sublocale merge_l_ortho \<subseteq> out : l_ortho "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x" l3 S3
 proof
@@ -4636,194 +4621,47 @@ next
     using is_sup_unique[OF Sup12 Bsup12]
     by auto
 
-  obtain x12 where X12 :
-    "LUpd l1 s a1 x12 = supr12"
-    using orth1_2.compat'1[OF Sup12] by auto
+  obtain sup_full where Full1 :
+    "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b, LUpd l3 s a3 b} sup_full"
+    using pairwise_sup[OF orth1_2.compat orth2_3.compat orth1_3.compat, of s a1 b a2 a3]
+    by(auto simp add: has_sup_def)
 
-  obtain x21 where X21 :
-    "LUpd l2 s a2 x21 = supr12"
-    using orth1_2.compat'2[OF Sup12] by auto
+  have Un : "({LUpd l1 s a1 b, LUpd l2 s a2 b} \<union> {LUpd l3 s a3 b}) = {LUpd l1 s a1 b, LUpd l2 s a2 b, LUpd l3 s a3 b}"
+    by blast
 
-  obtain supr13 where Sup13 : "is_sup {LUpd l1 s a1 b, LUpd l3 s a3 b} supr13"
-    using orth1_3.compat
-    by(fastforce simp add: has_sup_def)
-
-  then have Bsup13 : "is_sup {LUpd l1 s a1 b, LUpd l3 s a3 b} [^ LUpd l1 s a1 b, LUpd l3 s a3 b ^]"
-    using bsup_sup[OF Sup13 bsup_spec]
-    by auto
-
-  have Eq13 : "[^ LUpd l1 s a1 b, LUpd l3 s a3 b ^] = supr13"
-    using is_sup_unique[OF Sup13 Bsup13]
-    by auto
-
-  obtain x13 where X13 :
-    "LUpd l1 s a1 x13 = supr13"
-    using orth1_3.compat'1[OF Sup13]
-    by auto
-
-  obtain x31 where X31 :
-    "LUpd l3 s a3 x31 = supr13"
-    using orth1_3.compat'2[OF Sup13]
-    by auto
-
-  obtain supr23 where Sup23 : "is_sup {LUpd l2 s a2 b, LUpd l3 s a3 b} supr23"
-    using orth2_3.compat
-    by(fastforce simp add: has_sup_def)
-
-  then have Bsup23 : "is_sup {LUpd l2 s a2 b, LUpd l3 s a3 b} [^ LUpd l2 s a2 b, LUpd l3 s a3 b ^]"
-    using bsup_sup[OF Sup23 bsup_spec]
-    by auto
-
-  have Eq23 : "[^ LUpd l2 s a2 b, LUpd l3 s a3 b ^] = supr23"
-    using is_sup_unique[OF Sup23 Bsup23]
-    by auto
-
-  obtain x23 where X23 :
-    "LUpd l2 s a2 x23 = supr23"
-    using orth2_3.compat'1[OF Sup23]
-    by auto
-
-  obtain x32 where X32 :
-    "LUpd l3 s a3 x32 = supr23"
-    using orth2_3.compat'2[OF Sup23]
-    by auto
-
-  obtain supr123 where Sup123 : "is_sup {LUpd l1 s a1 supr12, LUpd l3 s a3 supr12} supr123"
-    using orth1_3.compat
-    by(fastforce simp add: has_sup_def)
-
-  obtain hmm1 where Hmm1 :
-    "LUpd l1 s a1 hmm1 = supr123"
-    using orth1_3.compat'1[OF Sup123]
+  have "is_sup {[^ LUpd l1 s a1 b, LUpd l2 s a2 b^], LUpd l3 s a3 b} sup_full"
+    using sup_union2[OF Bsup12 sup_singleton[of "LUpd l3 s a3 b"], of sup_full] Full1
+    unfolding Un
     by(auto)
-
-  obtain hmm3 where Hmm3 :
-    "LUpd l3 s a3 hmm3 = supr123"
-    using orth1_3.compat'2[OF Sup123]
-    by auto
-
-
-
-(* updating on supr23 vs supr12 *)
-
-(*
-have "LUpd l3 s a3 supr12 = LUpd l3 s a3 (LUpd l1 s a1 x13)
-*)
-
-
-(*
-  show "has_sup {LUpd (merge_l l1 l2) s a1_2 b, LUpd l3 s a3 b}" 
-    using A1_2
-    apply(simp add: merge_l_def)
-*)
-(* (1, 2) and (3) have least upper bound. *)
-
-  have "is_ub {[^ LUpd l1 s a1 b, LUpd l2 s a2 b ^], LUpd l3 s a3 b} (LUpd l3 s a3 supr12)"
-  proof(rule is_ubI)
-
-    fix x
-
-    assume "x \<in> {[^ LUpd l1 s a1 b, LUpd l2 s a2 b ^], LUpd l3 s a3 b}"
-
-    then consider (C1_2) "x = [^ LUpd l1 s a1 b, LUpd l2 s a2 b ^]" |
-                  (C3) "x = LUpd l3 s a3 b"
-      by auto
-
-    then show "x <[ LUpd l3 s a3 supr12"
-    proof cases
-      case C1_2
-
-      show ?thesis sorry (* should be easy, i think. *)
-
-(* ok... do we need something like 
-"a <[ b \<Longrightarrow> Upd l1 x a <[ Upd l1 x b? *)
-
-    next
-      case C3
-      then show ?thesis 
-        apply(simp)
-    qed
     
+  then show "has_sup {LUpd (merge_l l1 l2) s a1_2 b, LUpd l3 s a3 b}"
+    using A1_2
+    by(auto simp add: merge_l_def has_sup_def)
+next
+  (* do we need this? *)
+  fix b supr :: 'c
+  fix a1_2 :: "'b * 'e"
+  fix a3 :: 'g
+  fix s
 
-  have Full :
-  "is_sup
-   {LUpd l1 s a1 (LUpd l3 s a3 (LUpd l2 s a2 b)),
-    LUpd l3 s a3 (LUpd l3 s a3 (LUpd l2 s a2 b))}
-   (LUpd l1 s a1 (LUpd l3 s a3 (LUpd l3 s a3 (LUpd l2 s a2 b))))"
-    using orth1_3.compat'1[of s a1 "(LUpd l3 s a3 (LUpd l2 s a2 b))" a3]
+  assume Supr : 
+    "is_sup {LUpd (merge_l l1 l2) s a1_2 b, LUpd l3 s a3 b} supr"
+
+  obtain a1 a2 where A1_2 : "a1_2 = (a1, a2)"
+    by(cases a1_2; auto)
+
+  obtain supr12 where Sup12 : "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr12"
+    using orth1_2.compat
+    by(fastforce simp add: has_sup_def)
+
+  have "supr12 \<in> (S1 s \<inter> S2 s)"
+    using orth1_2.compat_S[OF Sup12]
     by auto
 
-  
-(* 3/1/2
- *)
 
-(*
-  obtain sup2_3 where Sup2_3 : "is_sup {LUpd l2 s a2 b, LUpd l3 s a3 b} sup2_3"
-    using orth2_3.compat
-    by(fastforce simp add: has_sup_def)
-
-  obtain sup1_3 where Sup1_3 : "is_sup {LUpd l1 s a1 b, LUpd l3 s a3 b} sup1_3"
-    using orth1_3.compat
-    by(fastforce simp add: has_sup_def)
-*)
-(*
-  have True
-    using orth2_3.compat'1
-*)
-
-(*has_sup {[^ LUpd l1 s a1 b, LUpd l2 s a2 b ^], LUpd l3 s a3 b}*)
-(* *)
-  show "has_sup
-        {LUpd (merge_l l1 l2) s a1_2 b,
-         LUpd l3 s a3 b}"
-    using A1_2
-    apply(auto simp add: merge_l_def)
-(* OK, we need to figure out how we can get from
-pairwise sups to single overall sup.
-does sups_pres relate to this?
-if orthogonality is "real" orthogonality it should suffice
-
-we could just add the property we want to ortho:
-"l1 and l2 are ortho if 
-1. they share a sup
-2. for any l3, if l3 shares sup with l1 and l2, then all 3 share a sup
-
-*)
-(*YOU ARE HERE *)
-
-(*
-ortho_base
-ortho_ok
-*)
-
-
-(* merge_l_ortho *)
-
-(*
-merge_l_ortho_presonly
-*)
-
-(*
-
-*)
-
-(* next steps:
-- relating sups_pres and ortho?
-- making sure we can actually do everything we need with the new implementation.
-*)
-
-(*
-  next up: ortho instances (and ortho_base, and ortho_ok, and
-  ortho_base_ok
-
-- option
-- prio?
-- fst, fst
-- snd, snd
-- fst, snd
-- merge
-*)
-
-
+  show "supr \<in> S1 s \<inter> S2 s \<inter> S3 s"
+    using Supr orth1_2.compat_S
+    unfolding A1_2
+    apply(simp add: merge_l_def)
 
 end

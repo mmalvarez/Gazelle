@@ -327,6 +327,38 @@ next
     by(auto simp add: option_pleq)
 qed
 
+
+lemma is_ub_Some :
+  assumes Hnemp : "x \<in> Xs"
+  assumes H : "is_ub Xs ub"
+  shows "is_ub (Some ` Xs) (Some ub)"
+proof(rule is_ubI)
+  fix z
+  assume Z : "z \<in> Some ` Xs"
+  then obtain z' where Z' : "z = Some z'" "z' \<in> Xs"
+    by auto
+
+  show "z <[ Some ub"
+    using is_ubE[OF H Z'(2)] Z'(1)
+    by(auto simp add: option_pleq)
+qed
+
+lemma is_ub_Some' :
+  assumes Hnemp : "x \<in> Xs"
+  assumes H: "is_ub (Some ` Xs) (Some ub)"
+  shows "is_ub Xs ub"
+proof(rule is_ubI)
+  fix z
+
+  assume Z: "z \<in> Xs"
+  
+  then have "Some z <[ Some ub"
+    using is_ubE[OF H, of "Some z"] by auto
+
+  then show "z <[ ub"
+    by(simp add: option_pleq)
+qed
+
 instantiation option :: (Pordps) Pordps
 begin
 instance proof
@@ -757,6 +789,7 @@ instance proof
   thus "has_sup {a, b}" using 0 1 by (auto simp add:has_sup_def)
 qed
 end
+
 lemma is_sup_fst :
   assumes Hnemp : "x \<in> Xs"
   assumes H : "is_sup Xs supr"
@@ -814,6 +847,27 @@ next
   show "(supr, x') <[ y"
     using `supr <[ y1` `x' <[ y2` Y1_2
     by(auto simp add: prod_pleq)
+qed
+
+lemma is_ub_fst :
+  assumes Hnemp : "x \<in> Xs"
+  assumes H : "is_ub Xs ub"
+  shows "is_ub ((\<lambda> w . (w, x')) ` Xs) (ub, x')"
+proof(rule is_ubI)
+  fix x
+
+  assume X: "x \<in> (\<lambda>w. (w, x')) ` Xs"
+
+  then obtain x1 where X1 :
+    "x = (x1, x')" "x1 \<in> Xs"
+    by auto
+
+  have "x1 <[ ub"
+    using is_ubE[OF H X1(2)] by auto
+
+  then show "x <[ (ub, x')"
+    using X1
+    by(auto simp add: prod_pleq leq_refl)
 qed
 
 lemma is_sup_fst' :
@@ -874,6 +928,27 @@ next
     by(auto simp add: prod_pleq)
 qed
 
+lemma is_ub_fst' :
+  assumes Hnemp : "xy \<in> Xys"
+  assumes H : "is_ub Xys (s1, s2)"
+  shows "is_ub (fst ` Xys) s1"
+proof(rule is_ubI)
+
+  fix x
+
+  assume X: "x \<in> fst ` Xys"
+  then obtain y where Xy : "(x, y) \<in> Xys"
+    by(auto)
+
+  then have "(x, y) <[ (s1, s2)"
+    using is_ubE[OF H Xy]
+    by auto
+
+  then show "x <[ s1"
+    by(auto simp add: prod_pleq)
+qed
+
+
 lemma is_sup_snd :
   assumes Hnemp : "x \<in> Xs"
   assumes H : "is_sup Xs supr"
@@ -933,6 +1008,27 @@ next
     by(auto simp add: prod_pleq)
 qed
 
+lemma is_ub_snd :
+  assumes Hnemp : "x \<in> Xs"
+  assumes H : "is_ub Xs ub"
+  shows "is_ub ((\<lambda> w . (x', w)) ` Xs) (x', ub)"
+proof(rule is_ubI)
+  fix x
+
+  assume X: "x \<in> (\<lambda>w. (x', w)) ` Xs"
+
+  then obtain x2 where X2 :
+    "x = (x', x2)" "x2 \<in> Xs"
+    by auto
+
+  have "x2 <[ ub"
+    using is_ubE[OF H X2(2)] by auto
+
+  then show "x <[ (x', ub)"
+    using X2
+    by(auto simp add: prod_pleq leq_refl)
+qed
+
 lemma is_sup_snd' :
   assumes Hnemp : "xy \<in> Xys"
   assumes H : "is_sup Xys (s1, s2)"
@@ -990,6 +1086,27 @@ next
     using is_supD2[OF H Ub']
     by(auto simp add: prod_pleq)
 qed
+
+lemma is_ub_snd' :
+  assumes Hnemp : "xy \<in> Xys"
+  assumes H : "is_ub Xys (s1, s2)"
+  shows "is_ub (snd ` Xys) s2"
+proof(rule is_ubI)
+
+  fix y
+
+  assume Y: "y \<in> snd ` Xys"
+  then obtain x where Xy : "(x, y) \<in> Xys"
+    by(auto)
+
+  then have "(x, y) <[ (s1, s2)"
+    using is_ubE[OF H Xy]
+    by auto
+
+  then show "y <[ s2"
+    by(auto simp add: prod_pleq)
+qed
+
 
 lemma is_sup_prod :
   assumes Hx : "is_sup Xs suprx"
@@ -1070,6 +1187,33 @@ next
   then show "(suprx, supry) <[ w'"
     using W'
     by(auto simp add: prod_pleq)
+qed
+
+lemma is_ub_prod :
+  assumes Hx : "is_ub Xs ubx"
+  assumes Hy : "is_ub Ys uby"
+  assumes S1 : "fst ` S = Xs"
+  assumes S2 : "snd ` S = Ys"
+  shows "is_ub S (ubx, uby)"
+proof(rule is_ubI)
+  fix w
+  assume W_in : "w \<in> S"
+
+  obtain w1 w2 where W:
+    "w = (w1, w2)"
+    by(cases w; auto)
+
+  have W_Xs : "w1 \<in> Xs" and W_Ys : "w2 \<in> Ys"
+    using S1 S2 W_in W
+    using imageI[OF W_in, of fst] imageI[OF W_in, of snd]
+    by(auto)
+
+  have "w1 <[ ubx" "w2 <[ uby"
+    using is_ubE[OF Hx W_Xs] is_ubE[OF Hy W_Ys] W
+    by auto
+
+  then show "w <[ (ubx, uby)"
+    using W by(auto simp add: prod_pleq)
 qed
 
 instantiation prod :: (Pordps, Pordps) Pordps

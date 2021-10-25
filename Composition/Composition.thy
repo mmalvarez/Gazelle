@@ -24,10 +24,6 @@ begin
 (* TODO: do we really need the nonemptiness requirement for Fs' here? *)
 (* Original definition. We are generalizing it here to allow talking about sups_pres
  * restricted to specific subsets of the input space (e.g. ok_S) *)
-
-(* YOU ARE HERE
- * TODO: we need to further restrict sups_pres to allow the "S" set to depend on syntax.
- *)
 (*
 definition sups_pres :: 
   "('a \<Rightarrow> ('b :: Mergeable) \<Rightarrow> 'b) set \<Rightarrow> bool" where

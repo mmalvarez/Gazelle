@@ -222,10 +222,32 @@ that gets us.
 assumes eq_base : "\<And> s . LBase l1 s = LBase l2 s"
   (*i think we can't have these set membership premises, but not having them creates problems for fst_snd_ortho *)
   assumes compat : "\<And> s a1 a2 . \<comment> \<open> b \<in> S1 s \<Longrightarrow> b \<in> S2 s \<Longrightarrow> \<close> has_sup {LUpd l1 s a1 b, LUpd l2 s a2 b}"
-  (* compat_S could also be generalized a bit. *)
+  (* compat_S premise was sup.
+upper bound isn't quite what we want either. nor, i think, do we want the
+more general statement that the sup of anything in S1 and anything in S2
+are in the intersection... we need to take into account the particulars of the
+liftings involved
+
+perhaps a "one-sided" version? that is, one of the two needs to explicitly
+be an update, but the other merely needs to be in its valid set
+i don't think this really solves anything
+
+i also am not sure i fully understand the role of valid sets at this point.
+especially in light of having ok_S
+ *)
+(*
   assumes compat_S : "\<And> s a1 a2 supr . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
                       supr \<in> (S1 s \<inter> S2 s)"
-(* TODO: need these set membership constraints? *)
+*)
+(*
+  assumes compat_S1 : "\<And> s x1 a2 supr . x1 \<in> S1 s \<Longrightarrow> is_sup {x1, LUpd l2 s a2 b} supr \<Longrightarrow>
+                      supr \<in> (S1 s \<inter> S2 s)"
+  assumes compat_S2 : "\<And> s x2 a1 supr . x2 \<in> S2 s \<Longrightarrow> is_sup {LUpd l1 s a1 b, x2} supr \<Longrightarrow>
+                      supr \<in> (S1 s \<inter> S2 s)"
+*)
+  assumes compat_S : "\<And> s x1 x2 supr . x1 \<in> S1 s \<Longrightarrow> x2 \<in> S2 s \<Longrightarrow>
+    is_sup {x1, x2} supr \<Longrightarrow> supr \<in> (S1 s \<inter> S2 s)"
+(* TODO: need these set membership constraints? originally there were some. *)
   assumes compat_get1 : "\<And> s a1 a2 supr . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
                       LOut l1 s supr = a1"
   assumes compat_get2 : "\<And> s a1 a2 supr . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
@@ -240,7 +262,8 @@ assumes compat'1 :
 assumes compat'2 :
   "\<And> s a1 a2 b . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} (LUpd l2 s a2 (LUpd l1 s a1 b))"
 *)
-
+(* TODO: are these compat'1 compat'2 even necessary anymore? *)
+(*
 assumes compat'1 :
   "\<And> s a1 a2 supr . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
     \<exists> b' . LUpd l1 s a1 b' = supr"
@@ -248,7 +271,7 @@ assumes compat'1 :
 assumes compat'2 :
   "\<And> s a1 a2 supr . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
     \<exists> b' . LUpd l2 s a2 b' = supr"
-
+*)
 locale l_ortho_base' =
   fixes l1 :: "('a, 'b1, 'c :: Pord_Weakb, 'f1) lifting"
   fixes l2 :: "('a, 'b2, 'c, 'f2) lifting"
@@ -299,6 +322,7 @@ next
     unfolding Comm
     by auto
 
+(*
 next
   fix b s a1 a2 supr
 
@@ -311,6 +335,7 @@ next
   show "supr \<in> S2 s \<inter> S1 s"
     using compat_S[OF Sup[unfolded Comm]]
     by auto
+*)
 next
 
   fix b s a1 a2 supr
@@ -359,6 +384,40 @@ next
 
 next
 
+  fix s
+  fix x1 :: 'c
+  fix x2 :: 'c
+  fix supr
+
+  assume X1 : "x1 \<in> S2 s"
+  assume X2 : "x2 \<in> S1 s"
+
+  assume Supr: "is_sup {x1, x2} supr"
+
+  have Comm : "{x1, x2} = {x2, x1}"
+    by auto
+
+  show "supr \<in> S2 s \<inter> S1 s"
+    using compat_S[OF X2 X1, of supr] Supr unfolding Comm
+    by auto
+
+(*
+  fix b s a1 a2 supr
+
+  assume Sup: "is_sup {LUpd l2 s a1 b, LUpd l1 s a2 b} supr"
+
+  have Comm : "{LUpd l2 s a1 b, LUpd l1 s a2 b} = 
+               {LUpd l1 s a2 b, LUpd l2 s a1 b}"
+    by auto
+
+  show "supr \<in> S2 s \<inter> S1 s"
+    using compat_S[OF Sup[unfolded Comm]]
+    by auto
+*)
+qed
+(*
+next
+
   fix s a1 a2 b supr
 
   assume Sup : "is_sup
@@ -391,6 +450,7 @@ next
     using compat'1[of s a2 b a1, unfolded Comm]
     by auto
 qed
+*)
 
 sublocale l_ortho_base \<subseteq> comm :
   l_ortho_base l2 S2 l1 S1
