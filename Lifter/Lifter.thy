@@ -154,6 +154,10 @@ locale lifting_valid_base_ok = lifting_valid_ok + lifting_valid_base
 locale lifting_valid_weak_pres = lifting_valid_weak +
   lifting_presonly
 
+(* valid set being closed under <[ *)
+locale lifting_valid_weak_clos = lifting_valid_weak +
+  assumes clos_S : "\<And> a b s . a <[ b \<Longrightarrow> a \<in> S s \<Longrightarrow> b \<in> S s"
+
 (*
 sublocale lifting_valid_weak_pres \<subseteq> lifting_valid_presonly
 proof
@@ -235,18 +239,20 @@ i don't think this really solves anything
 i also am not sure i fully understand the role of valid sets at this point.
 especially in light of having ok_S
  *)
-(*
+
   assumes compat_S : "\<And> s a1 a2 supr . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
                       supr \<in> (S1 s \<inter> S2 s)"
-*)
+
 (*
   assumes compat_S1 : "\<And> s x1 a2 supr . x1 \<in> S1 s \<Longrightarrow> is_sup {x1, LUpd l2 s a2 b} supr \<Longrightarrow>
                       supr \<in> (S1 s \<inter> S2 s)"
   assumes compat_S2 : "\<And> s x2 a1 supr . x2 \<in> S2 s \<Longrightarrow> is_sup {LUpd l1 s a1 b, x2} supr \<Longrightarrow>
                       supr \<in> (S1 s \<inter> S2 s)"
 *)
+(*
   assumes compat_S : "\<And> s x1 x2 supr . x1 \<in> S1 s \<Longrightarrow> x2 \<in> S2 s \<Longrightarrow>
     is_sup {x1, x2} supr \<Longrightarrow> supr \<in> (S1 s \<inter> S2 s)"
+*)
 (* TODO: need these set membership constraints? originally there were some. *)
   assumes compat_get1 : "\<And> s a1 a2 supr . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
                       LOut l1 s supr = a1"
@@ -384,24 +390,6 @@ next
 
 next
 
-  fix s
-  fix x1 :: 'c
-  fix x2 :: 'c
-  fix supr
-
-  assume X1 : "x1 \<in> S2 s"
-  assume X2 : "x2 \<in> S1 s"
-
-  assume Supr: "is_sup {x1, x2} supr"
-
-  have Comm : "{x1, x2} = {x2, x1}"
-    by auto
-
-  show "supr \<in> S2 s \<inter> S1 s"
-    using compat_S[OF X2 X1, of supr] Supr unfolding Comm
-    by auto
-
-(*
   fix b s a1 a2 supr
 
   assume Sup: "is_sup {LUpd l2 s a1 b, LUpd l1 s a2 b} supr"
@@ -413,7 +401,7 @@ next
   show "supr \<in> S2 s \<inter> S1 s"
     using compat_S[OF Sup[unfolded Comm]]
     by auto
-*)
+
 qed
 (*
 next
