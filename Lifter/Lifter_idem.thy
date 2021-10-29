@@ -215,9 +215,9 @@ these were originally pord_weak, but this was
 the strengthening to pord shouldn't be an issue though.
 *)
 locale l_ortho' =
-  fixes l1 :: "('a, 'b1, 'c :: Pord, 'f1) lifting"
+  fixes l1 :: "('a, 'b1, 'c :: {Pord}, 'f1) lifting"
   fixes S1 :: "'a \<Rightarrow> 'c set"
-  fixes l2 :: "('a, 'b2, 'c :: Pord, 'f2) lifting"
+  fixes l2 :: "('a, 'b2, 'c :: {Pord}, 'f2) lifting"
   fixes S2 :: "'a \<Rightarrow> 'c set"
 
 (* need set membership constraints. *)

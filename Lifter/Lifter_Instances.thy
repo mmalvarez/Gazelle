@@ -3328,18 +3328,6 @@ next
   then show "LUpd (option_l l2) s a b \<in> option_l_S S1 s"
     using B'
     by(auto simp add: option_l_def option_l_S_def)
-next
-
-  fix b s a1 a2 supr
-
-  assume "is_sup {LUpd (option_l l1) s a1 b, LUpd (option_l l2) s a2 b} supr"
-  show "\<exists>b'. LUpd (option_l l1) s a1 b' = supr"
-    sorry
-next
-  show "\<And>b s a1 a2 supr.
-       is_sup {LUpd (option_l l1) s a1 b, LUpd (option_l l2) s a2 b} supr \<Longrightarrow>
-       \<exists>b'. LUpd (option_l l2) s a2 b' = supr"
-    sorry
 qed
 (*
 next
@@ -4784,41 +4772,10 @@ next
     using pairwise_sup[OF orth1_2.compat orth2_3.compat orth1_3.compat]
     by fastforce
 
-
-
   then obtain supr' where Supr' : "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b, LUpd l3 s a3 b} supr'"
     by(auto simp add: has_sup_def)
 
-  obtain supr12_sub2 where Supr12_sub2 : "LUpd l1 s a1 supr12_sub2 = supr12" "supr12_sub2 \<in> S2 s"
-    using orth1_2.compat'1[OF Sup12] by auto
-
-  obtain supr12_sub1 where Supr12_sub1 : "LUpd l2 s a2 supr12_sub1 = supr12" "supr12_sub1 \<in> S1 s"
-    using orth1_2.compat'2[OF Sup12] by auto
-
-  obtain foo where Foo : "is_sup {LUpd l1 s a1 supr12_sub2, LUpd l3 s a3 supr12_sub2} foo"
-    using orth1_3.compat by(fastforce simp add: has_sup_def)
-
-  then have Foo' : "is_sup {LUpd l1 s a1 supr12_sub2, LUpd l3 s a3 supr12_sub2} foo"
-
-  obtain mini where Mini : "LUpd l3 s a3 mini = foo" "mini \<in> S1 s"
-    using orth1_3.compat'2[OF Foo]
-    by auto
-
-  obtain supr13_sub3 where Supr13_sub3 : "LUpd l1 s a1 supr13_sub3 = supr13" "supr13_sub3 \<in> S3 s"
-    using orth1_3.compat'1[OF Sup13]
-    by auto
-
-  obtain supr13_sub1 where Supr13_sub2 : "LUpd l3 s a3 supr13_sub1 = supr13" "supr13_sub1 \<in> S1 s"
-    using orth1_3.compat'2[OF Sup13]
-    by auto
-
-  obtain supr23_sub3 where Supr23_sub3 : "LUpd l2 s a2 supr23_sub3 = supr23" "supr23_sub3 \<in> S3 s"
-    using orth2_3.compat'1[OF Sup23] by auto
-
-  obtain supr23_sub2 where Supr23_sub2 : "LUpd l3 s a3 supr23_sub2 = supr23" "supr23_sub2 \<in> S2 s"
-    using orth2_3.compat'2[OF Sup23] by auto
-
-
+  
 
   show "supr \<in> S1 s \<inter> S2 s \<inter> S3 s"
     using pairwise_sup

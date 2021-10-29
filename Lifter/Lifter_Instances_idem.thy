@@ -3568,13 +3568,22 @@ locale option_l_ortho =
   l_ortho (*+
   in1 : option_l_valid_weak l1 S1 +
   in2 : option_l_valid_weak l2 S2 *)
-
+(*
 sublocale option_l_ortho \<subseteq> out : l_ortho "option_l l1"  "option_l_S S1" "option_l l2" "option_l_S S2"
 proof
   fix s
   show "LBase (option_l l1) s = LBase (option_l l2) s"
     by(auto simp add: option_l_def)
 next
+
+  fix s a1 a2 
+  fix b1 b2 :: "'c option"
+  fix supr
+
+  show "has_sup {LUpd_Idem (option_l l1) s a1 b1, LUpd_Idem (option_l l2) s a2 b2}"
+    apply(cases b1; simp; cases b2; simp add: option_l_def)
+
+  assume Supr : "is_sup {b1, b2} supr"
 
   fix b s 
   fix a1 :: 'b
@@ -3996,11 +4005,13 @@ next
 
 qed
 *)
+*)
 lemma sup_singleton :
   "is_sup {x} x"
   by(auto simp add: is_least_def is_ub_def is_sup_def leq_refl)
 
 (* don't need l_ortho_base assumption here. *)
+(*
 locale option_l_ortho_base = option_l_ortho + l_ortho_base'
 
 sublocale option_l_ortho_base \<subseteq> out : l_ortho_base "option_l l1" "option_l_S S1" "option_l l2" "option_l_S S2"
@@ -4112,21 +4123,67 @@ proof
     qed
   qed
 qed
-
+*)
 (* Prio - let's defer this until later as we may not need it.
  * my guess is it's true, but annoying. *)
 
 (*
-locale prio_l_ortho =
-  l_ortho 
-*)
+locale prio_l_ortho' =
+  fixes l1 :: "('a, 'b1, 'c :: {Pord}, 'f1) lifting"
+  fixes l2 :: "('a, 'b2, 'c :: {Pord}, 'f2) lifting"
+  fixes f0_1 :: "'a \<Rightarrow> nat"
+  fixes f0_2 :: "'a \<Rightarrow> nat"
+  fixes f1_1 :: "'a \<Rightarrow> nat \<Rightarrow> nat"
+  fixes f1_2 :: "'a \<Rightarrow> nat \<Rightarrow> nat"
+
+locale prio_l_ortho = prio_l_ortho' +
+  assumes eq_base : "\<And> s . LBase l1 s = LBase l2 s"
+
+sublocale prio_l_ortho \<subseteq>
+  l_ortho "prio_l f0 f1 l1" "prio_l_S S1" "prio_l f0 f1 l2" "prio_l_S S2"
+proof
+  fix s
+  show "LBase (prio_l f0 f1 l1) s = LBase (prio_l f0 f1 l2) s"
+    using eq_base
+    by(auto simp add: prio_l_def)
+next
+  fix s a1 a2
+  fix b1 b2 :: "'c md_prio"
+  fix supr
+  assume Supr : "is_sup {b1, b2} supr"
+
+  obtain pb1' b1' where B1': "b1 = mdp pb1' b1'"
+    by(cases b1; auto)
+
+  obtain pb2' b2' where B2' : "b2 = mdp pb2' b2'"
+    by(cases b2; auto)
+
+  consider (L) "pb1' < pb2'" | (E) "pb1' = pb2'" | (G) "pb1' > pb2'"
+    by arith
+
+  then show "has_sup {LUpd_Idem (prio_l f0 f1 l1) s a1 b1, LUpd_Idem (prio_l f0 f1 l2) s a2 b2}"
+  proof cases
+    case L
+    then show ?thesis sorry
+  next
+    case E
+  then show ?thesis sorry
+  next
+    case G
+    then show ?thesis sorry
+  qed
+
+
+  show "has_sup {LUpd_Idem (prio_l f0 f1 l1) s a1 b1, LUpd_Idem (prio_l f0 f1 l2) s a2 b2}"
+    using B1' B2'
+    apply(auto simp add: prio_l_def)
 
 (* next, products:
 - ortho between fst and fst, if inner liftings ortho
 - snd and snd, ditto
 - fst and snd, unconditionally
 *)
-
+*)
 
 locale fst_l_ortho = l_ortho
 
