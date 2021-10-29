@@ -220,6 +220,7 @@ locale l_ortho' =
   fixes l2 :: "('a, 'b2, 'c :: Pord, 'f2) lifting"
   fixes S2 :: "'a \<Rightarrow> 'c set"
 
+(* need set membership constraints. *)
 locale l_ortho =
   l_ortho' +
 

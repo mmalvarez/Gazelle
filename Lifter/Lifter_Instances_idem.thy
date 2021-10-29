@@ -2830,11 +2830,101 @@ sublocale merge_l_valid_base_ok \<subseteq> out : lifting_valid_base_ok "merge_l
 proof
 qed
 
+(* Supr' could be ub *)
+lemma sup_compare2 :
+  assumes Supr : "is_sup {x, y} z"
+  assumes Supr' : "is_sup {x', y'} z'"
+  assumes Leq_x : "x <[ x'"
+  assumes Leq_y : "y <[ y'"
+  shows "z <[ z'"
+proof-
+
+  have "is_ub {x, y} z'"
+  proof(rule is_ubI)
+    fix w
+    assume "w \<in> {x, y}"
+
+    then consider (1) "w = x" | (2) "w = y"
+      by auto
+    then show "w <[ z'"
+    proof cases
+      case 1
+      have Leq_x' : "x' <[ z'"
+        using is_supD1[OF Supr', of x']
+        by auto
+      then show ?thesis 
+        using leq_trans[OF Leq_x Leq_x'] 1
+        by auto        
+    next
+      case 2
+      have Leq_y' : "y' <[ z'"
+        using is_supD1[OF Supr', of y']
+        by auto
+      then show ?thesis
+        using leq_trans[OF Leq_y Leq_y'] 2
+        by auto
+    qed
+  qed
+
+  then show "z <[ z'"
+    using is_supD2[OF Supr]
+    by auto
+qed
+
+lemma sup_ub_compare2 :
+  assumes Supr : "is_sup {x, y} z"
+  assumes Ub : "is_ub {x', y'} z'"
+  assumes Leq_x : "x <[ x'"
+  assumes Leq_y : "y <[ y'"
+  shows "z <[ z'"
+proof-
+
+  have "is_ub {x, y} z'"
+  proof(rule is_ubI)
+    fix w
+    assume "w \<in> {x, y}"
+
+    then consider (1) "w = x" | (2) "w = y"
+      by auto
+    then show "w <[ z'"
+    proof cases
+      case 1
+      have Leq_x' : "x' <[ z'"
+        using is_ubE[OF Ub, of x']
+        by auto
+      then show ?thesis 
+        using leq_trans[OF Leq_x Leq_x'] 1
+        by auto        
+    next
+      case 2
+      have Leq_y' : "y' <[ z'"
+        using is_ubE[OF Ub, of y']
+        by auto
+      then show ?thesis
+        using leq_trans[OF Leq_y Leq_y'] 2
+        by auto
+    qed
+  qed
+
+  then show "z <[ z'"
+    using is_supD2[OF Supr]
+    by auto
+qed
+
+
+(*
 locale merge_l_valid_weak_pres = merge_l_valid_weak +
   in1 : lifting_valid_weak_pres l1 S1 +
   in2 : lifting_valid_weak_pres l2 S2
+*)
 
-sublocale merge_l_valid_weak_pres \<subseteq> out: lifting_valid_weak_pres "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x"
+locale merge_l_valid_presonly =
+  merge_l_valid_weak' +
+  l_ortho +
+  in1 : lifting_valid_weak_pres l1 S1 +
+  in2 : lifting_valid_weak_pres l2 S2
+
+sublocale merge_l_valid_presonly \<subseteq> out: lifting_presonly "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x"
 proof
 
 (* function component has type d * f  *)
@@ -2870,257 +2960,387 @@ proof
     by(auto simp add: is_sup_def is_least_def is_ub_def leq_refl)
 
   obtain supr1 where Supr1 :
-    "is_sup { (LUpd_Idem l1 s (LFD l1 f1 s (LOut l1 s supr)) supr), (LUpd_Idem l2 s (LFD l2 f2 s (LOut l2 s supr)) supr) } supr1"
+    "is_sup { (LUpd_Idem l1 s (LFD l1 f1 s (LOut l1 s supr)) supr),
+              (LUpd_Idem l2 s (LFD l2 f2 s (LOut l2 s supr)) supr) } supr1"
     using compat_idem[OF SupSup]
     by(fastforce simp add: has_sup_def)
 
-  obtain supr2 where Supr2 : 
+  have Bsupr1 :
+    "[^ (LUpd_Idem l1 s (LFD l1 f1 s (LOut l1 s supr)) supr),
+              (LUpd_Idem l2 s (LFD l2 f2 s (LOut l2 s supr)) supr) ^] = supr1"
+    using sup_to_bsup[OF Supr1]
+    by(auto)
 
-  have "LOut l1 s
-           [^ LPost l1 s
+  obtain supr2 where Supr2 :
+    "is_sup { LPost l1 s (LUpd_Idem l1 s (LFD l1 f1 s (LOut l1 s supr)) supr),
+              LPost l2 s (LUpd_Idem l2 s (LFD l2 f2 s (LOut l2 s supr)) supr) } supr2"
+    using compat_post[OF Supr1]
+    by(fastforce simp add: has_sup_def)
+      
+  have Bsupr2 :
+    "[^ LPost l1 s
                (LUpd_Idem l1 s (LFD l1 f1 s (LOut l1 s supr))
-                 supr), LPost l2 s (LUpd_Idem l2 s (LFD l2 f2 s (LOut l2 s supr)) supr) ^] = LFD l1 f1 s (LOut l1 s supr)"
+                 supr), LPost l2 s (LUpd_Idem l2 s (LFD l2 f2 s (LOut l2 s supr)) supr) ^] = supr2"
+    using sup_to_bsup[OF Supr2]
+    by auto
+
+  have Out1_1 : "LOut l1 s supr1 = LFD l1 f1 s (LOut l1 s supr)"
+    using compat_idem_get1[OF SupSup Supr1]
+    by auto
+    
+  have Out1_2: "LOut l1 s supr2 = LFD l1 f1 s (LOut l1 s supr)"
+    using compat_post_get1[OF Supr1 Supr2] Out1_1
+    by auto
+
+  have Out2_1 : "LOut l2 s supr1 = LFD l2 f2 s (LOut l2 s supr)"
+    using compat_idem_get2[OF SupSup Supr1]
+    by auto
+
+  have Out2_2 : "LOut l2 s supr2 = LFD l2 f2 s (LOut l2 s supr)"
+    using compat_post_get2[OF Supr1 Supr2] Out2_1
+    by auto
+
+  obtain supr3 where Supr3 :
+    "is_sup {LUpd_Idem l1 s (LOut l1 s supr2) supr, LUpd_Idem l2 s (LOut l2 s supr2) supr} supr3" 
+    using compat_idem[OF SupSup]
+    by(fastforce simp add: has_sup_def)
+
+  have Bsupr3 : "[^ LUpd_Idem l1 s (LOut l1 s supr2) supr, LUpd_Idem l2 s (LOut l2 s supr2) supr^] = supr3"
+    using sup_to_bsup[OF Supr3]
+    by auto
+
+  obtain supr4 where Supr4 :
+    "is_sup {LUpd_Idem l1 s (LOut l1 s supr1) supr, LUpd_Idem l2 s (LOut l2 s supr1) supr} supr4" 
+    using compat_idem[OF SupSup]
+    by(fastforce simp add: has_sup_def)
+
+  have Bsupr4 : "[^ LUpd_Idem l1 s (LOut l1 s supr1) supr, LUpd_Idem l2 s (LOut l2 s supr1) supr^] = supr4"
+    using sup_to_bsup[OF Supr4]
+    by auto
+
+  have Pres1 :
+    "is_sup (LMap_Idem l1 f1 s ` V) (LMap_Idem l1 f1 s supr)"
+    using in1.pres[OF Vin Vsub1 Supr Supr_in1, of f1]
+    by auto
+
+  have Pres2 :
+    "is_sup (LMap_Idem l2 f2 s ` V) (LMap_Idem l2 f2 s supr)"
+    using in2.pres[OF Vin Vsub2 Supr Supr_in2, of f2]
+    by auto
 
 
   show "is_sup (LMap_Idem (merge_l l1 l2) f s ` V) (LMap_Idem (merge_l l1 l2) f s supr)"
-    using F
-    apply(simp add: merge_l_def Let_def)
   proof(rule is_supI)
     fix xo
 
     assume Xo: "xo \<in> LMap_Idem (merge_l l1 l2) f s ` V"
-
 
     then obtain xi where Xi : "xi \<in> V" 
      "xo = LMap_Idem (merge_l l1 l2) f s xi"
       using F
       by auto
 
-    then obtain xo' where Xo' : "is_sup {LMap l1 f1 s xi, LMap l2 f2 s xi} xo'"
-      using compat[of s ]
-      by(fastforce simp add:has_sup_def)
+    have XiXi : "is_sup {xi, xi} xi"
+      by(auto simp add: is_sup_def is_least_def is_ub_def leq_refl)
 
-    then have Xo_sup : "is_sup {LMap l1 f1 s xi, LMap l2 f2 s xi} xo"
-      using bsup_sup[OF Xo' bsup_spec] Xi
+    obtain suprxi_1 where Suprxi_1 :
+      "is_sup { (LUpd_Idem l1 s (LFD l1 f1 s (LOut l1 s xi)) xi),
+                (LUpd_Idem l2 s (LFD l2 f2 s (LOut l2 s xi)) xi) } suprxi_1"
+      using compat_idem[OF XiXi]
+      by(fastforce simp add: has_sup_def)
+  
+    have Bsuprxi_1 :
+      "[^ (LUpd_Idem l1 s (LFD l1 f1 s (LOut l1 s xi)) xi),
+                (LUpd_Idem l2 s (LFD l2 f2 s (LOut l2 s xi)) xi) ^] = suprxi_1"
+      using sup_to_bsup[OF Suprxi_1]
+      by(auto)
+  
+    obtain suprxi_2 where Suprxi_2 :
+      "is_sup { LPost l1 s (LUpd_Idem l1 s (LFD l1 f1 s (LOut l1 s xi)) xi),
+                LPost l2 s (LUpd_Idem l2 s (LFD l2 f2 s (LOut l2 s xi)) xi) } suprxi_2"
+      using compat_post[OF Suprxi_1]
+      by(fastforce simp add: has_sup_def)
+        
+    have Bsuprxi_2 :
+      "[^ LPost l1 s (LUpd_Idem l1 s (LFD l1 f1 s (LOut l1 s xi)) xi),
+                LPost l2 s (LUpd_Idem l2 s (LFD l2 f2 s (LOut l2 s xi)) xi) ^] = suprxi_2"
+      using sup_to_bsup[OF Suprxi_2]
+      by auto
+  
+    have Xi_Out1_1 : "LOut l1 s suprxi_1 = LFD l1 f1 s (LOut l1 s xi)"
+      using compat_idem_get1[OF XiXi Suprxi_1]
+      by auto
+      
+    have Xi_Out1_2: "LOut l1 s suprxi_2 = LFD l1 f1 s (LOut l1 s xi)"
+      using compat_post_get1[OF Suprxi_1 Suprxi_2] Xi_Out1_1
+      by auto
+  
+    have Xi_Out2_1 : "LOut l2 s suprxi_1 = LFD l2 f2 s (LOut l2 s xi)"
+      using compat_idem_get2[OF XiXi Suprxi_1]
+      by auto
+  
+    have Xi_Out2_2 : "LOut l2 s suprxi_2 = LFD l2 f2 s (LOut l2 s xi)"
+      using compat_post_get2[OF Suprxi_1 Suprxi_2] Xi_Out2_1
       by auto
 
-    obtain res' where Res' : "is_sup {LMap l1 f1 s supr, LMap l2 f2 s supr} res'"
-      using compat[of s]
-      by(fastforce simp add: has_sup_def)
+    have Leq1_1 : "LMap_Idem l1 f1 s xi <[ LMap_Idem l1 f1 s supr"
+      using is_supD1[OF Pres1 imageI[OF Xi(1)]]
+      by auto
 
-    have Res_sup : "is_sup {LMap l1 f1 s supr, LMap l2 f2 s supr} [^ LMap l1 f1 s supr, LMap l2 f2 s supr ^]"
-      using bsup_sup[OF Res' bsup_spec] 
+    have Leq1_2 : "LMap_Idem l1 f1 s supr <[ supr1"
+      using is_supD1[OF Supr1]
       by(auto)
 
-    have "xi <[ supr"
-      using is_supD1[OF Supr Xi(1)] by simp
+    then have Leq1_3 : "LMap_Idem l1 f1 s xi <[ supr1"
+      using leq_trans[OF Leq1_1 Leq1_2]
+      by auto
 
-    have Ubx : "is_ub {LMap l1 f1 s xi, LMap l2 f2 s xi} 
-      [^ LMap l1 f1 s supr, LMap l2 f2 s supr ^]"
-    proof(rule is_ubI)
-      fix x
+    have Leq2_1 : "LMap_Idem l2 f2 s xi <[ LMap_Idem l2 f2 s supr"
+      using is_supD1[OF Pres2 imageI[OF Xi(1)]]
+      by auto
 
-      assume X: "x \<in> {LMap l1 f1 s xi, LMap l2 f2 s xi}"
+    have Leq2_2 : "LMap_Idem l2 f2 s supr <[ supr1"
+      using is_supD1[OF Supr1]
+      by(auto)
 
-      then consider (X1) "x = LMap l1 f1 s xi" |
-                    (X2) "x = LMap l2 f2 s xi" by auto
+    then have Leq2_3 : "LMap_Idem l2 f2 s xi <[ supr1"
+      using leq_trans[OF Leq2_1 Leq2_2]
+      by auto
 
-      then show " x <[ [^ LMap l1 f1 s supr, LMap l2 f2 s supr ^]"
-      proof cases
-        case X1
+    have Leq_3_4 :
+      "supr4 <[ supr3"
+      using sup_compare2[OF Supr4 Supr3] Out1_1 Out2_1 Out1_2 Out2_2
+      by (auto simp add: leq_refl)
 
-        have Xi_sup : "is_sup {xi, supr} supr"
-          using is_sup_pair[OF `xi <[ supr`] by simp
+    have Leq_Full : "suprxi_1 <[ supr4"
+      using sup_compare2[OF Suprxi_1 Supr4]
+        Leq1_1[unfolded LMap_Idem_def] Leq2_1[unfolded LMap_Idem_def]
+        Out1_1 Out2_1
+      by(auto)
 
-        have Map_sup : "is_sup (LMap l1 f1 s ` V) (LMap l1 f1 s supr)"
-          using in1.pres[OF Vin Vsub1 Supr Supr_in1, of f1]
-          by simp
+    have Conc' : "suprxi_1 <[ supr3"
+      using leq_trans[OF Leq_Full Leq_3_4]
+      by auto
 
-        have F1_map : "LMap l1 f1 s xi \<in> LMap l1 f1 s ` V "
-          using imageI[OF Xi(1), of "LMap l1 f1 s"] Xi  X1
-          by(auto)
-
-        have Leq1 : "LMap l1 f1 s xi <[ (LMap l1 f1 s supr)" using is_supD1[OF Map_sup F1_map] 
-          by auto
-
-        have Leq2 :"LMap l1 f1 s supr <[ [^ LMap l1 f1 s supr, LMap l2 f2 s supr ^]"
-          using is_supD1[OF Res_sup]
-          by auto
-
-        show ?thesis using leq_trans[OF Leq1 Leq2] X1
-          by auto
-      next
-
-        case X2
-          
-        have Xi_sup : "is_sup {xi, supr} supr"
-          using is_sup_pair[OF `xi <[ supr`] by simp
-
-        have Map_sup : "is_sup (LMap l2 f2 s ` V) (LMap l2 f2 s supr)"
-          using in2.pres[OF Vin Vsub2 Supr Supr_in2, of f2]
-          by simp
-
-        have F2_map : "LMap l2 f2 s xi \<in> LMap l2 f2 s ` V "
-          using imageI[OF Xi(1), of "LMap l2 f2 s"] Xi  X2
-          by(auto)
-
-        have Leq1 : "LMap l2 f2 s xi <[ (LMap l2 f2 s supr)" using is_supD1[OF Map_sup F2_map] 
-          by auto
-
-        have Leq2 :"LMap l2 f2 s supr <[ [^ LMap l1 f1 s supr, LMap l2 f2 s supr ^]"
-          using is_supD1[OF Res_sup]
-          by auto
-
-        show ?thesis using leq_trans[OF Leq1 Leq2] X2
-          by auto
-
-      qed
-    qed
-
-    show "xo <[ LMap (merge_l l1 l2) f s supr" 
-      using is_supD2[OF Xo_sup Ubx] F
-      by(auto simp add: merge_l_def)
+    then show "xo <[ LMap_Idem (merge_l l1 l2) f s supr"
+      using F Xi
+      by(auto simp add: merge_l_def Let_def Xi_Out1_2 Xi_Out2_2 Bsupr1 Bsupr2 Bsupr3
+          Bsuprxi_1 Bsuprxi_2)
   next
 
-    fix x'
+    fix w
 
-    assume X' : "is_ub (LMap (merge_l l1 l2) f s ` V) x'"
+    assume Ub: "is_ub (LMap_Idem (merge_l l1 l2) f s ` V) w"
 
-    obtain res' where Res' : "is_sup {LMap l1 f1 s supr, LMap l2 f2 s supr} res'"
-      using compat[of s]
-      by(fastforce simp add: has_sup_def)
-
-    have Res_sup : "is_sup {LMap l1 f1 s supr, LMap l2 f2 s supr} [^ LMap l1 f1 s supr, LMap l2 f2 s supr ^]"
-      using bsup_sup[OF Res' bsup_spec] 
-      by(auto)
-
-    have Ub: "is_ub {LMap l1 f1 s supr, LMap l2 f2 s supr} x'"
+    have Ub1 : "is_ub (LMap_Idem l1 f1 s ` V) w"
     proof(rule is_ubI)
+      fix k
 
-      fix x
+      assume "k \<in> LMap_Idem l1 f1 s ` V"
 
-      assume "x \<in> {LMap l1 f1 s supr, LMap l2 f2 s supr}"
+      then obtain ko where Ko : "ko \<in> V" "LMap_Idem l1 f1 s ko = k"
+        by auto
 
-      then consider (1) "x = LMap l1 f1 s supr" | 
-                    (2) "x = LMap l2 f2 s supr"
-        by blast
+      then have W_Geq : "LMap_Idem (merge_l l1 l2) f s ko <[ w"
+        using is_ubE[OF Ub imageI[OF Ko(1)]]
+        by auto
 
-      then show "x <[ x'"
-      proof cases
-        case 1
+      have KoKo : "is_sup {ko, ko} ko"
+        by(auto simp add: is_sup_def is_least_def is_ub_def leq_refl)
+  
+      obtain suprko_1 where Suprko_1 :
+        "is_sup { (LUpd_Idem l1 s (LFD l1 f1 s (LOut l1 s ko)) ko),
+                  (LUpd_Idem l2 s (LFD l2 f2 s (LOut l2 s ko)) ko) } suprko_1"
+        using compat_idem[OF KoKo]
+        by(fastforce simp add: has_sup_def)
+    
+      have Bsuprko_1 :
+        "[^ (LUpd_Idem l1 s (LFD l1 f1 s (LOut l1 s ko)) ko),
+                  (LUpd_Idem l2 s (LFD l2 f2 s (LOut l2 s ko)) ko) ^] = suprko_1"
+        using sup_to_bsup[OF Suprko_1]
+        by(auto)
+    
+      obtain suprko_2 where Suprko_2 :
+        "is_sup { LPost l1 s (LUpd_Idem l1 s (LFD l1 f1 s (LOut l1 s ko)) ko),
+                  LPost l2 s (LUpd_Idem l2 s (LFD l2 f2 s (LOut l2 s ko)) ko) } suprko_2"
+        using compat_post[OF Suprko_1]
+        by(fastforce simp add: has_sup_def)
+          
+      have Bsuprko_2 :
+        "[^ LPost l1 s (LUpd_Idem l1 s (LFD l1 f1 s (LOut l1 s ko)) ko),
+                  LPost l2 s (LUpd_Idem l2 s (LFD l2 f2 s (LOut l2 s ko)) ko) ^] = suprko_2"
+        using sup_to_bsup[OF Suprko_2]
+        by auto
+    
+      have Ko_Out1_1 : "LOut l1 s suprko_1 = LFD l1 f1 s (LOut l1 s ko)"
+        using compat_idem_get1[OF KoKo Suprko_1]
+        by auto
+        
+      have Ko_Out1_2: "LOut l1 s suprko_2 = LFD l1 f1 s (LOut l1 s ko)"
+        using compat_post_get1[OF Suprko_1 Suprko_2] Ko_Out1_1
+        by auto
+    
+      have Ko_Out2_1 : "LOut l2 s suprko_1 = LFD l2 f2 s (LOut l2 s ko)"
+        using compat_idem_get2[OF KoKo Suprko_1]
+        by auto
+    
+      have Ko_Out2_2 : "LOut l2 s suprko_2 = LFD l2 f2 s (LOut l2 s ko)"
+        using compat_post_get2[OF Suprko_1 Suprko_2] Ko_Out2_1
+        by auto
+  
+      have Leq1_1 : "LMap_Idem l1 f1 s ko <[ LMap_Idem l1 f1 s supr"
+        using is_supD1[OF Pres1 imageI[OF Ko(1)]]
+        by auto
+  
+      have Leq1_2 : "LMap_Idem l1 f1 s supr <[ supr1"
+        using is_supD1[OF Supr1]
+        by(auto)
+  
+      then have Leq1_3 : "LMap_Idem l1 f1 s ko <[ supr1"
+        using leq_trans[OF Leq1_1 Leq1_2]
+        by auto
+  
+      have Leq2_1 : "LMap_Idem l2 f2 s ko <[ LMap_Idem l2 f2 s supr"
+        using is_supD1[OF Pres2 imageI[OF Ko(1)]]
+        by auto
+  
+      have Leq2_2 : "LMap_Idem l2 f2 s supr <[ supr1"
+        using is_supD1[OF Supr1]
+        by(auto)
+  
+      then have Leq2_3 : "LMap_Idem l2 f2 s ko <[ supr1"
+        using leq_trans[OF Leq2_1 Leq2_2]
+        by auto
 
-        have Map_sup : "is_sup (LMap l1 f1 s ` V) (LMap l1 f1 s supr)"
-          using in1.pres[OF Vin Vsub1 Supr Supr_in1, of f1]
-          by simp
+      have Compare : "LMap_Idem l1 f1 s ko <[ LMap_Idem (merge_l l1 l2) f s ko"
+        using F is_supD1[OF Suprko_1]
+        by(simp add: merge_l_def Let_def Bsuprko_2 Bsuprko_1 Ko_Out1_2 Ko_Out2_2)
 
-        have Ub : "is_ub (LMap l1 f1 s ` V) (x')"
-        proof(rule is_ubI)
-
-          fix w
-
-          assume W: "w \<in> LMap l1 f1 s ` V"
-
-          then obtain w' where W' : "w' \<in> V" "LMap l1 f1 s w' = w"
-            by auto
-
-          obtain res_w where Resw : "is_sup {LMap l1 f1 s w', LMap l2 f2 s w'} res_w"
-            using compat[of s]
-            by(fastforce simp add: has_sup_def)
-
-          have Resw_sup : "is_sup {LMap l1 f1 s w', LMap l2 f2 s w'} [^ LMap l1 f1 s w', LMap l2 f2 s w' ^]"
-            using bsup_sup[OF Resw bsup_spec] 
-            by(auto)
-
-          have Leq1 : "w <[ LMap (merge_l l1 l2) f s w'"
-            using is_supD1[OF Resw_sup, of w] W' F
-            by(auto simp add: merge_l_def)
-
-          have Map_in : "LMap (merge_l l1 l2) f s w' \<in> LMap (merge_l l1 l2) f s ` V"
-            using imageI[OF W'(1)] by auto
-
-          have Leq2 : "LMap (merge_l l1 l2) f s w' <[ x'"
-            using is_ubE[OF X' Map_in] F
-            by(auto simp add: merge_l_def)
-
-          then show "w <[ x'"
-            using leq_trans[OF Leq1 Leq2]
-            by auto
-        qed
-
-        show "x <[ x'"
-          using is_supD2[OF Map_sup Ub] 1
-          by auto
-      next
-
-        case 2
-        have Map_sup : "is_sup (LMap l2 f2 s ` V) (LMap l2 f2 s supr)"
-          using in2.pres[OF Vin Vsub2 Supr Supr_in2, of f2]
-          by simp
-
-        have Ub : "is_ub (LMap l2 f2 s ` V) (x')"
-        proof(rule is_ubI)
-
-          fix w
-
-          assume W: "w \<in> LMap l2 f2 s ` V"
-
-          then obtain w' where W' : "w' \<in> V" "LMap l2 f2 s w' = w"
-            by auto
-
-          obtain res_w where Resw : "is_sup {LMap l1 f1 s w', LMap l2 f2 s w'} res_w"
-            using compat[of s]
-            by(fastforce simp add: has_sup_def)
-
-          have Resw_sup : "is_sup {LMap l1 f1 s w', LMap l2 f2 s w'} [^ LMap l1 f1 s w', LMap l2 f2 s w' ^]"
-            using bsup_sup[OF Resw bsup_spec] 
-            by(auto)
-
-          have Leq1 : "w <[ LMap (merge_l l1 l2) f s w'"
-            using is_supD1[OF Resw_sup, of w] W' F
-            by(auto simp add: merge_l_def)
-
-          have Map_in : "LMap (merge_l l1 l2) f s w' \<in> LMap (merge_l l1 l2) f s ` V"
-            using imageI[OF W'(1)] by auto
-
-          have Leq2 : "LMap (merge_l l1 l2) f s w' <[ x'"
-            using is_ubE[OF X' Map_in] F
-            by(auto simp add: merge_l_def)
-
-          then show "w <[ x'"
-            using leq_trans[OF Leq1 Leq2]
-            by auto
-        qed
-
-        show "x <[ x'"
-          using is_supD2[OF Map_sup Ub] 2
-          by auto
-      qed
+      then show "k <[ w"
+        using leq_trans[OF Compare W_Geq] unfolding Ko
+        by auto
     qed
 
-    show "LMap (merge_l l1 l2) f s supr <[ x'"
-      using is_supD2[OF Res_sup Ub] F
-      by(auto simp add: merge_l_def)
+    have Ub2 : "is_ub (LMap_Idem l2 f2 s ` V) w"
+    proof(rule is_ubI)
+      fix k
+
+      assume "k \<in> LMap_Idem l2 f2 s ` V"
+
+      then obtain ko where Ko : "ko \<in> V" "LMap_Idem l2 f2 s ko = k"
+        by auto
+
+      then have W_Geq : "LMap_Idem (merge_l l1 l2) f s ko <[ w"
+        using is_ubE[OF Ub imageI[OF Ko(1)]]
+        by auto
+
+      have KoKo : "is_sup {ko, ko} ko"
+        by(auto simp add: is_sup_def is_least_def is_ub_def leq_refl)
+  
+      obtain suprko_1 where Suprko_1 :
+        "is_sup { (LUpd_Idem l1 s (LFD l1 f1 s (LOut l1 s ko)) ko),
+                  (LUpd_Idem l2 s (LFD l2 f2 s (LOut l2 s ko)) ko) } suprko_1"
+        using compat_idem[OF KoKo]
+        by(fastforce simp add: has_sup_def)
+    
+      have Bsuprko_1 :
+        "[^ (LUpd_Idem l1 s (LFD l1 f1 s (LOut l1 s ko)) ko),
+                  (LUpd_Idem l2 s (LFD l2 f2 s (LOut l2 s ko)) ko) ^] = suprko_1"
+        using sup_to_bsup[OF Suprko_1]
+        by(auto)
+    
+      obtain suprko_2 where Suprko_2 :
+        "is_sup { LPost l1 s (LUpd_Idem l1 s (LFD l1 f1 s (LOut l1 s ko)) ko),
+                  LPost l2 s (LUpd_Idem l2 s (LFD l2 f2 s (LOut l2 s ko)) ko) } suprko_2"
+        using compat_post[OF Suprko_1]
+        by(fastforce simp add: has_sup_def)
+          
+      have Bsuprko_2 :
+        "[^ LPost l1 s (LUpd_Idem l1 s (LFD l1 f1 s (LOut l1 s ko)) ko),
+                  LPost l2 s (LUpd_Idem l2 s (LFD l2 f2 s (LOut l2 s ko)) ko) ^] = suprko_2"
+        using sup_to_bsup[OF Suprko_2]
+        by auto
+    
+      have Ko_Out1_1 : "LOut l1 s suprko_1 = LFD l1 f1 s (LOut l1 s ko)"
+        using compat_idem_get1[OF KoKo Suprko_1]
+        by auto
+        
+      have Ko_Out1_2: "LOut l1 s suprko_2 = LFD l1 f1 s (LOut l1 s ko)"
+        using compat_post_get1[OF Suprko_1 Suprko_2] Ko_Out1_1
+        by auto
+    
+      have Ko_Out2_1 : "LOut l2 s suprko_1 = LFD l2 f2 s (LOut l2 s ko)"
+        using compat_idem_get2[OF KoKo Suprko_1]
+        by auto
+    
+      have Ko_Out2_2 : "LOut l2 s suprko_2 = LFD l2 f2 s (LOut l2 s ko)"
+        using compat_post_get2[OF Suprko_1 Suprko_2] Ko_Out2_1
+        by auto
+  
+      have Leq1_1 : "LMap_Idem l1 f1 s ko <[ LMap_Idem l1 f1 s supr"
+        using is_supD1[OF Pres1 imageI[OF Ko(1)]]
+        by auto
+  
+      have Leq1_2 : "LMap_Idem l1 f1 s supr <[ supr1"
+        using is_supD1[OF Supr1]
+        by(auto)
+  
+      then have Leq1_3 : "LMap_Idem l1 f1 s ko <[ supr1"
+        using leq_trans[OF Leq1_1 Leq1_2]
+        by auto
+  
+      have Leq2_1 : "LMap_Idem l2 f2 s ko <[ LMap_Idem l2 f2 s supr"
+        using is_supD1[OF Pres2 imageI[OF Ko(1)]]
+        by auto
+  
+      have Leq2_2 : "LMap_Idem l2 f2 s supr <[ supr1"
+        using is_supD1[OF Supr1]
+        by(auto)
+  
+      then have Leq2_3 : "LMap_Idem l2 f2 s ko <[ supr1"
+        using leq_trans[OF Leq2_1 Leq2_2]
+        by auto
+
+      have Compare : "LMap_Idem l2 f2 s ko <[ LMap_Idem (merge_l l1 l2) f s ko"
+        using F is_supD1[OF Suprko_1]
+        by(simp add: merge_l_def Let_def Bsuprko_2 Bsuprko_1 Ko_Out1_2 Ko_Out2_2)
+
+      then show "k <[ w"
+        using leq_trans[OF Compare W_Geq] unfolding Ko
+        by auto
+    qed
+
+    have Ub3 : "is_ub {LMap_Idem l1 f1 s supr, LMap_Idem l2 f2 s supr} w"
+    proof
+      fix k
+
+      assume "k \<in> {LMap_Idem l1 f1 s supr, LMap_Idem l2 f2 s supr}"
+
+      then show "k <[ w" using is_supD2[OF Pres1 Ub1] is_supD2[OF Pres2 Ub2]
+        by auto
+    qed
+
+    have "[^ LMap_Idem l1 f1 s supr, LMap_Idem l2 f2 s supr ^] <[ w"
+      using is_supD2[OF Supr1 Ub3[unfolded LMap_Idem_def]] Bsupr1
+      by auto
+
+    then have Leq_conc_1 : "supr1 <[ w"
+      using Bsupr1 by auto
+
+    have Leq_conc_2 : "supr3 <[ supr1"
+      using sup_compare2[OF Supr3 Supr1] leq_refl
+      by(auto simp add: Out1_2 Out2_2)
+
+    have Leq_conc : "supr3 <[ w"
+      using leq_trans[OF Leq_conc_2 Leq_conc_1]
+      by auto
+
+    then show "LMap_Idem (merge_l l1 l2) f s supr <[ w" using F 
+      by(simp add: merge_l_def Let_def Bsupr1 Bsupr2 Bsupr3)
   qed
-qed
-
-locale merge_l_valid_presonly' = 
-  fixes l1 :: "('x, 'a1, 'b :: Mergeable, 'f1) lifting" 
-  fixes l2 :: "('x, 'a2, 'b :: Mergeable, 'f2) lifting"
-
-locale merge_l_valid_presonly =
-  merge_l_valid_presonly' +
-  l_ortho +
-  in1 : lifting_valid_presonly l1 S1 +
-  in2 : lifting_valid_presonly l2 S2
-
-sublocale merge_l_valid_presonly \<subseteq> out : lifting_valid_presonly "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x"
-proof
-
-(* function component has type d * f  *)
-
+next
   fix v supr :: 'c
   fix V
-  fix f :: "'d * 'f"
   fix s :: 'a
 
   assume Vin : "v \<in> V"
@@ -3134,262 +3354,220 @@ proof
   then have Supr_in1 : "supr \<in> S1 s" and Supr_in2 : "supr \<in> S2 s"
     by auto
 
-  obtain f1 f2 where F: "f = (f1, f2)"
-    by(cases f; auto)
-(*
-maybe we need to restrict f to functions that are already sups_pres?
-*)
+  have Pres1 : "is_sup (LPost l1 s ` V) (LPost l1 s supr)"
+    using in1.pres_post[OF Vin Vsub1 Supr Supr_in1]
+    by auto
 
-  show "is_sup (LMap (merge_l l1 l2) f s ` V) (LMap (merge_l l1 l2) f s supr)"
+  have Pres2 : "is_sup (LPost l2 s ` V) (LPost l2 s supr)"
+    using in2.pres_post[OF Vin Vsub2 Supr Supr_in2]
+    by auto
+
+  have SupSup : "is_sup {supr, supr} supr"
+    by(auto simp add: is_sup_def is_least_def is_ub_def leq_refl)
+
+  obtain supr1 where Supr1 :
+    "is_sup { (LPost l1 s supr),
+              (LPost l2 s supr) } supr1"
+    using compat_post[OF SupSup]
+    by(fastforce simp add: has_sup_def)
+
+  have Bsupr1 :
+    "[^ (LPost l1 s supr),
+              (LPost l2 s supr) ^] = supr1"
+    using sup_to_bsup[OF Supr1]
+    by(auto)
+
+  show "is_sup (LPost (merge_l l1 l2) s ` V) (LPost (merge_l l1 l2) s supr)"
   proof(rule is_supI)
+
     fix xo
 
-    assume Xo: "xo \<in> LMap (merge_l l1 l2) f s ` V"
+    assume Xo : "xo \<in> LPost (merge_l l1 l2) s ` V"
 
-
-    then obtain xi where Xi : "xi \<in> V" 
-     "xo = [^ LMap l1 f1 s xi, LMap l2 f2 s xi^]"
-      using F
-      by(auto simp add: merge_l_def split: prod.splits)
-
-    then obtain xo' where Xo' : "is_sup {LMap l1 f1 s xi, LMap l2 f2 s xi} xo'"
-      using compat[of s ]
-      by(fastforce simp add:has_sup_def)
-
-    then have Xo_sup : "is_sup {LMap l1 f1 s xi, LMap l2 f2 s xi} xo"
-      using bsup_sup[OF Xo' bsup_spec] Xi
+    then obtain xi where Xi : "xi \<in> V" "LPost (merge_l l1 l2) s xi = xo"
       by auto
 
-    obtain res' where Res' : "is_sup {LMap l1 f1 s supr, LMap l2 f2 s supr} res'"
-      using compat[of s]
-      by(fastforce simp add: has_sup_def)
+    have XiXi : "is_sup {xi, xi} xi"
+      by(auto simp add: is_sup_def is_least_def is_ub_def leq_refl)
 
-    have Res_sup : "is_sup {LMap l1 f1 s supr, LMap l2 f2 s supr} [^ LMap l1 f1 s supr, LMap l2 f2 s supr ^]"
-      using bsup_sup[OF Res' bsup_spec] 
+    obtain suprxi_1 where Suprxi_1 :
+      "is_sup { (LPost l1 s xi),
+                (LPost l2 s xi) } suprxi_1"
+      using compat_post[OF XiXi]
+      by(fastforce simp add: has_sup_def)
+  
+    have Bsuprxi_1 :
+      "[^ (LPost l1 s xi),
+                (LPost l2 s xi)  ^] = suprxi_1"
+      using sup_to_bsup[OF Suprxi_1]
+      by(auto)
+  
+    have Xi_Out1_1 : "LOut l1 s suprxi_1 = LOut l1 s xi"
+      using compat_post_get1[OF XiXi Suprxi_1]
+      by auto
+      
+    have Xi_Out2_1 : "LOut l2 s suprxi_1 = (LOut l2 s xi)"
+      using compat_post_get2[OF XiXi Suprxi_1]
+      by auto
+  
+    have Leq1_1 : "LPost l1 s xi <[ LPost l1 s supr"
+      using is_supD1[OF Pres1 imageI[OF Xi(1)]]
+      by auto
+
+    have Leq2_1 : "LPost l2 s xi <[ LPost l2 s supr"
+      using is_supD1[OF Pres2 imageI[OF Xi(1)]]
+      by auto
+
+    have Leq_Full : "suprxi_1 <[ supr1"
+      using sup_compare2[OF Suprxi_1 Supr1]
+        Leq1_1[unfolded LMap_Idem_def] Leq2_1[unfolded LMap_Idem_def]
       by(auto)
 
-    have "xi <[ supr"
-      using is_supD1[OF Supr Xi(1)] by simp
-
-    have Ubx : "is_ub {LMap l1 f1 s xi, LMap l2 f2 s xi} 
-      [^ LMap l1 f1 s supr, LMap l2 f2 s supr ^]"
-    proof(rule is_ubI)
-      fix x
-
-      assume X: "x \<in> {LMap l1 f1 s xi, LMap l2 f2 s xi}"
-
-      then consider (X1) "x = LMap l1 f1 s xi" |
-                    (X2) "x = LMap l2 f2 s xi" by auto
-
-      then show " x <[ [^ LMap l1 f1 s supr, LMap l2 f2 s supr ^]"
-      proof cases
-        case X1
-
-        have Xi_sup : "is_sup {xi, supr} supr"
-          using is_sup_pair[OF `xi <[ supr`] by simp
-
-        have Map_sup : "is_sup (LMap l1 f1 s ` V) (LMap l1 f1 s supr)"
-          using in1.pres[OF Vin Vsub1 Supr Supr_in1, of f1]
-          by simp
-
-        have F1_map : "LMap l1 f1 s xi \<in> LMap l1 f1 s ` V "
-          using imageI[OF Xi(1), of "LMap l1 f1 s"] Xi  X1
-          by(auto)
-
-        have Leq1 : "LMap l1 f1 s xi <[ (LMap l1 f1 s supr)" using is_supD1[OF Map_sup F1_map] 
-          by auto
-
-        have Leq2 :"LMap l1 f1 s supr <[ [^ LMap l1 f1 s supr, LMap l2 f2 s supr ^]"
-          using is_supD1[OF Res_sup]
-          by auto
-
-        show ?thesis using leq_trans[OF Leq1 Leq2] X1
-          by auto
-      next
-
-        case X2
-          
-        have Xi_sup : "is_sup {xi, supr} supr"
-          using is_sup_pair[OF `xi <[ supr`] by simp
-
-        have Map_sup : "is_sup (LMap l2 f2 s ` V) (LMap l2 f2 s supr)"
-          using in2.pres[OF Vin Vsub2 Supr Supr_in2, of f2]
-          by simp
-
-        have F2_map : "LMap l2 f2 s xi \<in> LMap l2 f2 s ` V "
-          using imageI[OF Xi(1), of "LMap l2 f2 s"] Xi  X2
-          by(auto)
-
-        have Leq1 : "LMap l2 f2 s xi <[ (LMap l2 f2 s supr)" using is_supD1[OF Map_sup F2_map] 
-          by auto
-
-        have Leq2 :"LMap l2 f2 s supr <[ [^ LMap l1 f1 s supr, LMap l2 f2 s supr ^]"
-          using is_supD1[OF Res_sup]
-          by auto
-
-        show ?thesis using leq_trans[OF Leq1 Leq2] X2
-          by auto
-
-      qed
-    qed
-
-    show "xo <[ LMap (merge_l l1 l2) f s supr" 
-      using is_supD2[OF Xo_sup Ubx] F
+    show "xo <[ LPost (merge_l l1 l2) s supr"
+      using Leq_Full Bsupr1 Xi Bsuprxi_1
       by(auto simp add: merge_l_def)
   next
+    fix w
 
-    fix x'
+    assume Ub: "is_ub (LPost (merge_l l1 l2) s ` V) w"
 
-    assume X' : "is_ub (LMap (merge_l l1 l2) f s ` V) x'"
-
-    obtain res' where Res' : "is_sup {LMap l1 f1 s supr, LMap l2 f2 s supr} res'"
-      using compat[of s]
-      by(fastforce simp add: has_sup_def)
-
-    have Res_sup : "is_sup {LMap l1 f1 s supr, LMap l2 f2 s supr} [^ LMap l1 f1 s supr, LMap l2 f2 s supr ^]"
-      using bsup_sup[OF Res' bsup_spec] 
-      by(auto)
-
-    have Ub: "is_ub {LMap l1 f1 s supr, LMap l2 f2 s supr} x'"
+    have Ub1 : "is_ub (LPost l1 s ` V) w"
     proof(rule is_ubI)
+      fix k
 
-      fix x
+      assume K : "k \<in> LPost l1 s ` V"
 
-      assume "x \<in> {LMap l1 f1 s supr, LMap l2 f2 s supr}"
+      then obtain ko where Ko : "ko \<in> V" "LPost l1 s ko = k"
+        by auto
 
-      then consider (1) "x = LMap l1 f1 s supr" | 
-                    (2) "x = LMap l2 f2 s supr"
-        by blast
+      then have W_Geq : "LPost (merge_l l1 l2) s ko <[ w"
+        using is_ubE[OF Ub imageI[OF Ko(1)]]
+        by auto
 
-      then show "x <[ x'"
-      proof cases
-        case 1
+      have KoKo : "is_sup {ko, ko} ko"
+        by(auto simp add: is_sup_def is_least_def is_ub_def leq_refl)
+  
+      obtain suprko_1 where Suprko_1 :
+        "is_sup { (LPost l1 s ko),
+                  (LPost l2 s ko) } suprko_1"
+        using compat_post[OF KoKo]
+        by(fastforce simp add: has_sup_def)
+    
+      have Bsuprko_1 :
+        "[^ (LPost l1 s ko),
+                  (LPost l2 s ko) ^] = suprko_1"
+        using sup_to_bsup[OF Suprko_1]
+        by(auto)
+    
+      have Ko_Out1_1 : "LOut l1 s suprko_1 = (LOut l1 s ko)"
+        using compat_post_get1[OF KoKo Suprko_1]
+        by auto
+        
+      have Ko_Out2_1 : "LOut l2 s suprko_1 = (LOut l2 s ko)"
+        using compat_post_get2[OF KoKo Suprko_1]
+        by auto
+    
+      have Leq1_1 : "LPost l1 s ko <[ LPost l1 s supr"
+        using is_supD1[OF Pres1 imageI[OF Ko(1)]]
+        by auto
+  
+      have Leq2_1 : "LPost l2 s ko <[ LPost l2 s supr"
+        using is_supD1[OF Pres2 imageI[OF Ko(1)]]
+        by auto
+  
+      have Compare : "LPost l1 s ko <[ LPost (merge_l l1 l2) s ko"
+        using is_supD1[OF Suprko_1]
+        by(simp add: merge_l_def Let_def Bsuprko_1)
 
-        have Map_sup : "is_sup (LMap l1 f1 s ` V) (LMap l1 f1 s supr)"
-          using in1.pres[OF Vin Vsub1 Supr Supr_in1, of f1]
-          by simp
-
-        have Ub : "is_ub (LMap l1 f1 s ` V) (x')"
-        proof(rule is_ubI)
-
-          fix w
-
-          assume W: "w \<in> LMap l1 f1 s ` V"
-
-          then obtain w' where W' : "w' \<in> V" "LMap l1 f1 s w' = w"
-            by auto
-
-          obtain res_w where Resw : "is_sup {LMap l1 f1 s w', LMap l2 f2 s w'} res_w"
-            using compat[of s]
-            by(fastforce simp add: has_sup_def)
-
-          have Resw_sup : "is_sup {LMap l1 f1 s w', LMap l2 f2 s w'} [^ LMap l1 f1 s w', LMap l2 f2 s w' ^]"
-            using bsup_sup[OF Resw bsup_spec] 
-            by(auto)
-
-          have Leq1 : "w <[ LMap (merge_l l1 l2) f s w'"
-            using is_supD1[OF Resw_sup, of w] W' F
-            by(auto simp add: merge_l_def)
-
-          have Map_in : "LMap (merge_l l1 l2) f s w' \<in> LMap (merge_l l1 l2) f s ` V"
-            using imageI[OF W'(1)] by auto
-
-          have Leq2 : "LMap (merge_l l1 l2) f s w' <[ x'"
-            using is_ubE[OF X' Map_in] F
-            by(auto simp add: merge_l_def)
-
-          then show "w <[ x'"
-            using leq_trans[OF Leq1 Leq2]
-            by auto
-        qed
-
-        show "x <[ x'"
-          using is_supD2[OF Map_sup Ub] 1
-          by auto
-      next
-
-        case 2
-        have Map_sup : "is_sup (LMap l2 f2 s ` V) (LMap l2 f2 s supr)"
-          using in2.pres[OF Vin Vsub2 Supr Supr_in2, of f2]
-          by simp
-
-        have Ub : "is_ub (LMap l2 f2 s ` V) (x')"
-        proof(rule is_ubI)
-
-          fix w
-
-          assume W: "w \<in> LMap l2 f2 s ` V"
-
-          then obtain w' where W' : "w' \<in> V" "LMap l2 f2 s w' = w"
-            by auto
-
-          obtain res_w where Resw : "is_sup {LMap l1 f1 s w', LMap l2 f2 s w'} res_w"
-            using compat[of s]
-            by(fastforce simp add: has_sup_def)
-
-          have Resw_sup : "is_sup {LMap l1 f1 s w', LMap l2 f2 s w'} [^ LMap l1 f1 s w', LMap l2 f2 s w' ^]"
-            using bsup_sup[OF Resw bsup_spec] 
-            by(auto)
-
-          have Leq1 : "w <[ LMap (merge_l l1 l2) f s w'"
-            using is_supD1[OF Resw_sup, of w] W' F
-            by(auto simp add: merge_l_def)
-
-          have Map_in : "LMap (merge_l l1 l2) f s w' \<in> LMap (merge_l l1 l2) f s ` V"
-            using imageI[OF W'(1)] by auto
-
-          have Leq2 : "LMap (merge_l l1 l2) f s w' <[ x'"
-            using is_ubE[OF X' Map_in] F
-            by(auto simp add: merge_l_def)
-
-          then show "w <[ x'"
-            using leq_trans[OF Leq1 Leq2]
-            by auto
-        qed
-
-        show "x <[ x'"
-          using is_supD2[OF Map_sup Ub] 2
-          by auto
-      qed
+      then show "k <[ w"
+        using leq_trans[OF Compare W_Geq] unfolding Ko
+        by auto
     qed
 
-    show "LMap (merge_l l1 l2) f s supr <[ x'"
-      using is_supD2[OF Res_sup Ub] F
-      by(auto simp add: merge_l_def)
+    have Ub2 : "is_ub (LPost l2 s ` V) w"
+    proof(rule is_ubI)
+      fix k
+
+      assume K : "k \<in> LPost l2 s ` V"
+
+      then obtain ko where Ko : "ko \<in> V" "LPost l2 s ko = k"
+        by auto
+
+      then have W_Geq : "LPost (merge_l l1 l2) s ko <[ w"
+        using is_ubE[OF Ub imageI[OF Ko(1)]]
+        by auto
+
+      have KoKo : "is_sup {ko, ko} ko"
+        by(auto simp add: is_sup_def is_least_def is_ub_def leq_refl)
+  
+      obtain suprko_1 where Suprko_1 :
+        "is_sup { (LPost l1 s ko),
+                  (LPost l2 s ko) } suprko_1"
+        using compat_post[OF KoKo]
+        by(fastforce simp add: has_sup_def)
+    
+      have Bsuprko_1 :
+        "[^ (LPost l1 s ko),
+                  (LPost l2 s ko) ^] = suprko_1"
+        using sup_to_bsup[OF Suprko_1]
+        by(auto)
+    
+      have Ko_Out1_1 : "LOut l1 s suprko_1 = (LOut l1 s ko)"
+        using compat_post_get1[OF KoKo Suprko_1]
+        by auto
+        
+      have Ko_Out2_1 : "LOut l2 s suprko_1 = (LOut l2 s ko)"
+        using compat_post_get2[OF KoKo Suprko_1]
+        by auto
+    
+      have Leq1_1 : "LPost l1 s ko <[ LPost l1 s supr"
+        using is_supD1[OF Pres1 imageI[OF Ko(1)]]
+        by auto
+  
+      have Leq2_1 : "LPost l2 s ko <[ LPost l2 s supr"
+        using is_supD1[OF Pres2 imageI[OF Ko(1)]]
+        by auto
+  
+      have Compare : "LPost l2 s ko <[ LPost (merge_l l1 l2) s ko"
+        using is_supD1[OF Suprko_1]
+        by(simp add: merge_l_def Let_def Bsuprko_1)
+
+      then show "k <[ w"
+        using leq_trans[OF Compare W_Geq] unfolding Ko
+        by auto
+    qed
+
+    have Ub3 : "is_ub {LPost l1 s supr, LPost l2 s supr} w"
+    proof
+      fix k
+
+      assume "k \<in> {LPost l1 s supr, LPost l2 s supr}"
+
+      then show "k <[ w" using is_supD2[OF Pres1 Ub1] is_supD2[OF Pres2 Ub2]
+        by auto
+    qed
+
+    have "[^ LPost l1 s supr, LPost l2 s supr ^] <[ w"
+      using is_supD2[OF Supr1 Ub3[unfolded LMap_Idem_def]] Bsupr1
+      by auto
+
+    then show "LPost (merge_l l1 l2) s supr <[ w" 
+      by(simp add: merge_l_def Let_def Bsupr1)
   qed
-next
-  fix s 
-  fix a :: "'b * 'e"
-  fix b
+qed
 
-  obtain a1 a2 where A: "a = (a1, a2)"
-    by(cases a; auto)
+locale merge_l_valid_weak_pres =
+  merge_l_valid_weak +
+  merge_l_valid_presonly
 
-  obtain supr where Supr: "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr"
-    using compat
-    by(fastforce simp add: has_sup_def merge_l_def)
-
-  have Supr' : "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} [^ LUpd l1 s a1 b, LUpd l2 s a2 b ^]"
-    using bsup_sup[OF Supr bsup_spec] by auto
-
-(*
-  show "LUpd (merge_l l1 l2) s a b \<in> S1 s \<inter> S2 s"
-    using compat_S[OF in1.put_S in2.put_S Supr'] A
-    by(auto simp add: merge_l_def)
-*)
-
-  show "LUpd (merge_l l1 l2) s a b \<in> S1 s \<inter> S2 s"
-    using compat_S[OF Supr'] A
-    by(auto simp add: merge_l_def)
-
-
+sublocale merge_l_valid_weak_pres \<subseteq> out : lifting_valid_weak_pres "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x"
+proof
 qed
 
 locale option_l_ortho =
   l_ortho (*+
   in1 : option_l_valid_weak l1 S1 +
   in2 : option_l_valid_weak l2 S2 *)
-
 
 sublocale option_l_ortho \<subseteq> out : l_ortho "option_l l1"  "option_l_S S1" "option_l l2" "option_l_S S2"
 proof
