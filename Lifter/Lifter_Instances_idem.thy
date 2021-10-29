@@ -1,4 +1,4 @@
-theory Lifter_Instances imports Lifter "../Mergeable/Mergeable_Facts"
+theory Lifter_Instances_idem imports Lifter_idem "../Mergeable/Mergeable_Facts"
 begin
 
 class Bogus =
@@ -74,19 +74,27 @@ end
 definition id_l ::
   "('x, 'a :: {Pord, Bogus}, 'a, ('x \<Rightarrow> 'a \<Rightarrow> 'a)) lifting" where
 "id_l =
-  LMake (\<lambda> s a a' . a) (\<lambda> s a . a) (\<lambda> s . bogus) (\<lambda> f x . f x)" 
+  LMake (\<lambda> s a a' . a) (\<lambda> s a . a) (\<lambda> s a . a) (\<lambda> s . bogus) (\<lambda> f x . f x)" 
 
 interpretation id_l: lifting_valid_weak "id_l" "\<lambda> _ . UNIV"
 proof
-  show "\<And>s a b. LOut id_l s (LUpd id_l s a b) = a"
+  show "\<And>s a b. LOut id_l s (LUpd_Idem id_l s a b) = a"
     by(auto simp add: id_l_def)
 next
-  show "\<And>s b. b \<in> UNIV \<Longrightarrow>
-           b <[ LUpd id_l s (LOut id_l s b) b"
+  show "\<And>s b. LOut id_l s (LPost id_l s b) = LOut id_l s b"
+    by(auto simp add: id_l_def)
+next
+  show "\<And>s a b. LUpd_Idem id_l s a b \<in> UNIV"
+    by auto
+next
+  show "\<And>s b. b \<in> UNIV \<Longrightarrow> LPost id_l s b \<in> UNIV"
+    by auto
+next
+  show "\<And> s b . b <[ LPost id_l s b"
     by(auto simp add: id_l_def leq_refl)
 next
-  show "\<And>s a b. LUpd id_l s a b \<in> UNIV"
-    by auto
+  show "\<And>s b. b \<in> UNIV \<Longrightarrow> b = LUpd_Idem id_l s (LOut id_l s b) b"
+    by(auto simp add: id_l_def leq_refl)
 qed
 
 (*
@@ -95,7 +103,7 @@ qed
 definition triv_l ::
   "('x, 'a :: Bogus, 'a md_triv, ('x \<Rightarrow> 'a \<Rightarrow> 'a)) lifting" where
 "triv_l =
-  LMake (\<lambda> s a _ . mdt a) (\<lambda> s b . (case b of (mdt b') \<Rightarrow> b')) (\<lambda> s . mdt bogus) (\<lambda> f x . f x)"
+  LMake (\<lambda> s a _ . mdt a) (\<lambda> s b . b) (\<lambda> s b . (case b of (mdt b') \<Rightarrow> b')) (\<lambda> s . mdt bogus) (\<lambda> f x . f x)"
 
 interpretation triv_l : 
   lifting_valid_weak "(triv_l :: ('x, 'a :: Bogus, 'a md_triv , 'x \<Rightarrow> 'a \<Rightarrow> 'a) lifting)" "\<lambda> _ . UNIV"
@@ -103,20 +111,28 @@ proof
   fix s :: 'x
   fix a :: 'a
   fix b
-  show "LOut (triv_l) s (LUpd (triv_l) s a b) = a"
+  show "LOut (triv_l) s (LUpd_Idem (triv_l) s a b) = a"
     by(auto simp add:triv_l_def split:md_triv.splits)
 next
-  fix s :: 'x
-  fix b :: "'a md_triv"
-
-  show "b <[ LUpd triv_l s (LOut triv_l s b) b"
-   by(auto simp add:triv_l_def triv_pleq
-          split:md_triv.splits)
+  fix s b
+  show "LOut triv_l s (LPost triv_l s b) = LOut triv_l s b"
+    by(auto simp add: triv_l_def split: md_triv.splits)
 next
-  fix s :: 'x
-  fix a :: "'a"
-  fix b :: "'a md_triv"
-  show "LUpd triv_l s a b \<in> UNIV" by auto
+  fix s a b
+  show "LUpd_Idem triv_l s a b \<in> UNIV"
+    by auto
+next
+  fix s b
+  show "b \<in> UNIV \<Longrightarrow> LPost triv_l s b \<in> UNIV"
+    by auto
+next
+  fix s b
+  show "b <[ LPost triv_l s b"
+    by(auto simp add: triv_l_def leq_refl)
+next
+  fix s b
+  show "\<And>s b. b \<in> UNIV \<Longrightarrow> b = LUpd_Idem triv_l s (LOut triv_l s b) b"
+    by(auto simp add: triv_l_def split: md_triv.splits)
 qed
 
 (* TODO: make sure that using the same namespace here hasn't cost us generality. *)
@@ -126,9 +142,13 @@ proof
   show "\<And> S . ok_S \<subseteq> UNIV" by auto
 next
   fix s a b
-  show "b \<in> ok_S \<Longrightarrow> LUpd triv_l s a b \<in> ok_S"
+  show "b \<in> ok_S \<Longrightarrow> LUpd_Idem triv_l s a b \<in> ok_S"
+    by(auto simp add: triv_l_def triv_ok_S)
+next
+  show "\<And>s b. b \<in> ok_S \<Longrightarrow> LPost triv_l s b \<in> ok_S"
     by(auto simp add: triv_l_def triv_ok_S)
 qed
+
 
 interpretation triv_l :
   lifting_valid_weak_pres "(triv_l :: ('x, 'a :: {Bogus}, 'a md_triv) lifting')" "\<lambda> _ . UNIV"
@@ -143,13 +163,13 @@ next
   assume Nemp : "v \<in> V"
   assume H : "is_sup V supr"
 
-  show "is_sup (LMap triv_l f s ` V) (LMap triv_l f s supr)"
+  show "is_sup (LMap_Idem triv_l f s ` V) (LMap_Idem triv_l f s supr)"
   proof(rule is_supI)
     fix x
 
-    assume "x \<in> LMap triv_l f s ` V"
+    assume "x \<in> LMap_Idem triv_l f s ` V"
 
-    then obtain x0 where X0 : "x0 \<in> V" "LMap triv_l f s x0 = x"
+    then obtain x0 where X0 : "x0 \<in> V" "LMap_Idem triv_l f s x0 = x"
       by(auto)
 
     obtain x0' where X0' : "x0 = mdt x0'"
@@ -162,27 +182,79 @@ next
       using is_supD1[OF H X0(1)] X0' Supr'
       by(auto simp add: triv_pleq)
 
-    show "x <[ LMap triv_l f s supr"
+    show "x <[ LMap_Idem triv_l f s supr"
       using X0' X0 Eq Supr'
       by(auto simp add: triv_pleq)
   next
     fix y
-    assume Ub : "is_ub (LMap triv_l f s ` V) y"
+    assume Ub : "is_ub (LMap_Idem triv_l f s ` V) y"
 
     obtain y' where Y' : "y = mdt y'" by(cases y; auto)
 
     obtain v' where V' : "v = mdt v'" by(cases v; auto)
 
-    have Eq1 : "y = LMap triv_l f s v"
-      using is_ubE[OF Ub, of "LMap triv_l f s v"] Nemp
+    have Eq1 : "y = LMap_Idem triv_l f s v"
+      using is_ubE[OF Ub, of "LMap_Idem triv_l f s v"] Nemp
       by(auto simp add: triv_pleq)
 
     have  "supr = v"
       using is_supD1[OF H Nemp] by(auto simp add: triv_pleq)
 
-    hence Eq2 : "LMap triv_l f s supr = LMap triv_l f s v" by simp
+    hence Eq2 : "LMap_Idem triv_l f s supr = LMap_Idem triv_l f s v" by simp
 
-    show "LMap triv_l f s supr <[ y"
+    show "LMap_Idem triv_l f s supr <[ y"
+      using Eq1 Eq2
+      by(simp add: triv_pleq)
+  qed
+next
+  fix v :: "'a md_triv"
+  fix V 
+  fix supr :: "'a md_triv"
+  fix s 
+  fix f
+
+  assume Nemp : "v \<in> V"
+  assume H : "is_sup V supr"
+  show "is_sup (LPost triv_l s ` V) (LPost triv_l s supr)"
+  proof(rule is_supI)
+    fix x
+
+    assume "x \<in> LPost triv_l s ` V"
+
+    then obtain x0 where X0 : "x0 \<in> V" "LPost triv_l s x0 = x"
+      by(auto)
+
+    obtain x0' where X0' : "x0 = mdt x0'"
+      by(cases x0; auto)
+
+    obtain supr' where Supr' : "supr = mdt supr'"
+      by(cases supr; auto)
+
+    have Eq : "x0' = supr'"
+      using is_supD1[OF H X0(1)] X0' Supr'
+      by(auto simp add: triv_pleq)
+
+    show "x <[ LPost triv_l s supr"
+      using X0' X0 Eq Supr'
+      by(auto simp add: triv_pleq)
+  next
+    fix y
+    assume Ub : "is_ub (LPost triv_l s ` V) y"
+
+    obtain y' where Y' : "y = mdt y'" by(cases y; auto)
+
+    obtain v' where V' : "v = mdt v'" by(cases v; auto)
+
+    have Eq1 : "y = LPost triv_l s v"
+      using is_ubE[OF Ub, of "LPost triv_l s v"] Nemp
+      by(auto simp add: triv_pleq)
+
+    have  "supr = v"
+      using is_supD1[OF H Nemp] by(auto simp add: triv_pleq)
+
+    hence Eq2 : "LPost triv_l s supr = LPost triv_l s v" by simp
+
+    show "LPost triv_l s supr <[ y"
       using Eq1 Eq2
       by(simp add: triv_pleq)
   qed
@@ -201,8 +273,12 @@ definition option_l ::
 "option_l t =
     LMake (\<lambda> s a b . 
               (case b of
-                Some b' \<Rightarrow> Some (LUpd t s a b')
-                | None \<Rightarrow> Some (LUpd t s a (LBase t s))))
+                Some b' \<Rightarrow> Some (LUpd_Idem t s a b')
+                | None \<Rightarrow> Some (LUpd_Idem t s a (LBase t s))))
+          (\<lambda> s b .
+              (case b of 
+                Some b' \<Rightarrow> Some (LPost t s b')
+                | None \<Rightarrow> Some (LPost t s (LBase t s))))
             (\<lambda> s b . (case b of Some b' \<Rightarrow> LOut t s b'
                         | None \<Rightarrow> LOut t s (LBase t s)))
             (\<lambda> s . None)
@@ -220,45 +296,43 @@ sublocale option_l_valid_weak \<subseteq> out : lifting_valid_weak_base "option_
 proof
 
   fix s a b
-  show "LOut (option_l l) s (LUpd (option_l l) s a b) = a"
-    using put_get 
+  show "LOut (option_l l) s (LUpd_Idem (option_l l) s a b) = a"
+    using put_get
     by(auto simp add:option_l_def split:option.splits)
 next
-  fix s b
-  assume Hb : "b \<in> option_l_S S s"
-  thus "b <[ LUpd (option_l l) s (LOut (option_l l) s b) b"
-    using get_put_weak
+  show "\<And>s b. LOut (option_l l) s (LPost (option_l l) s b) =
+           LOut (option_l l) s b"
+    using post_nop 
     by(auto simp add:option_l_def option_l_S_def option_pleq split:option.splits)
 next
   fix s :: 'a
   fix a
   fix b :: "'c option"
-  show "LUpd (option_l l) s a b \<in> option_l_S S s"
+  show "LUpd_Idem (option_l l) s a b \<in> option_l_S S s"
     using put_S
     by(auto simp add: option_l_def option_l_S_def split:option.splits)
+next
+  fix s b
+  assume "b \<in> option_l_S S s"
+  then show "LPost (option_l l) s b \<in> option_l_S S s"
+    using post_S
+    by(auto simp add: option_l_def option_l_S_def)
+next
+  fix s b
+  show "b <[ LPost (option_l l) s b"
+    using post_geq
+    by(cases b; auto simp add: option_l_def option_pleq)
+next
+  fix s b
+  assume "b \<in> option_l_S S s"
+
+  then show "b = LUpd_Idem (option_l l) s (LOut (option_l l) s b) b"
+    using get_put_weak
+    by(auto simp add: option_l_def option_l_S_def)
 next
   fix s
   show "LBase (option_l l) s = \<bottom>"
     by(auto simp add: option_l_def option_bot)
-qed
-
-locale option_l_valid_clos = lifting_valid_weak_clos + option_l_valid_weak
-
-sublocale option_l_valid_clos \<subseteq> lifting_valid_weak_clos "option_l l" "option_l_S S"
-proof
-  fix a b s
-  assume A: "a \<in> option_l_S S s"
-  then obtain a' where A' : "a = Some a'" "a' \<in> S s"
-    by(cases a; auto simp add: option_l_S_def)
-
-  assume Leq : "a <[ b"
-  then obtain b' where B' : "b = Some b'" "a' <[ b'"
-    using A A'
-    by(cases b; auto simp add: option_pleq)
-
-  show "b \<in> option_l_S S s"
-    using A' Leq clos_S[OF B'(2) A'(2)] B'
-    by(auto simp add: option_l_S_def option_pleq)
 qed
 
 locale option_l_valid_weak_base = option_l_valid_weak
@@ -271,10 +345,10 @@ locale option_l_valid = lifting_valid + option_l_valid_weak
 
 sublocale option_l_valid \<subseteq> param : lifting_valid_base "option_l l" "option_l_S S"
 proof
-  fix s a b
-  (*assume "b \<in> option_l_S S s"*)
-  show "b <[ LUpd (option_l l) s a b"
-    using get_put
+  fix s a1 a2 b
+  show "LUpd_Idem (option_l l) s a1 (LUpd_Idem (option_l l) s a2 b) =
+       LUpd_Idem (option_l l) s a1 b"
+    using put_put
     by(auto simp add:option_l_def option_l_S_def LNew_def option_pleq split:option.splits)
 qed
 
@@ -290,8 +364,14 @@ proof
 next
   fix s a b
   assume "(b :: 'c option) \<in> ok_S"
-  then show "LUpd (option_l l) s a b \<in> ok_S"
+  then show "LUpd_Idem (option_l l) s a b \<in> ok_S"
     using ok_S_put
+    by(auto simp add: option_l_S_def option_l_def option_ok_S split: option.splits)
+next
+  fix s b
+  assume "(b :: 'c option) \<in> ok_S"
+  then show "LPost (option_l l) s b \<in> ok_S"
+    using ok_S_post
     by(auto simp add: option_l_S_def option_l_def option_ok_S split: option.splits)
 qed
 
@@ -320,13 +400,13 @@ proof
   obtain supr' where Supr' : "supr = Some supr'" "supr' \<in> S s"
     using V_valid Hsup_in by(auto simp add: option_l_S_def)
 
-  show "is_sup (LMap (option_l l) f s ` V) (LMap (option_l l) f s supr)"
+  show "is_sup (LMap_Idem (option_l l) f s ` V) (LMap_Idem (option_l l) f s supr)"
   proof(rule is_supI)
     fix x
 
-    assume X : "x \<in> LMap (option_l l) f s ` V"
+    assume X : "x \<in> LMap_Idem (option_l l) f s ` V"
 
-    then obtain xo where Xo : "xo \<in> V" "LMap (option_l l) f s xo = x"
+    then obtain xo where Xo : "xo \<in> V" "LMap_Idem (option_l l) f s xo = x"
       by auto
 
     have "xo <[ supr" using is_supD1[OF Hsup Xo(1)] by simp
@@ -347,18 +427,18 @@ proof
     hence "is_sup {xo', supr'} supr'"
       using is_sup_pair by auto
 
-    hence Conc' : "is_sup (LMap l f s ` {xo', supr'}) (LMap l f s supr')"
+    hence Conc' : "is_sup (LMap_Idem l f s ` {xo', supr'}) (LMap_Idem l f s supr')"
       using Xo' Supr' pres[of xo' "{xo', supr'}" s supr' f] 
       by auto
 
-    thus "x <[ LMap (option_l l) f s supr"
+    thus "x <[ LMap_Idem (option_l l) f s supr"
       using is_supD1[OF Conc', of x'] X' Xo Xo' Supr'
       by(cases l; auto simp add: option_l_def option_pleq)
   next
 
     fix z
 
-    assume Ub : "is_ub (LMap (option_l l) f s ` V) z" 
+    assume Ub : "is_ub (LMap_Idem (option_l l) f s ` V) z" 
 
     obtain V' where SV' : "V = Some ` V'" "V' \<subseteq> S s"
       using V_valid
@@ -392,31 +472,144 @@ proof
         by(auto simp add: option_pleq)
     qed
 
-    have Supr'_sup : "is_sup (LMap l f s ` V') (LMap l f s supr')"
+    have Supr'_sup : "is_sup (LMap_Idem l f s ` V') (LMap_Idem l f s supr')"
       using pres[OF V'(2) SV'(2) Supr'_sup, of f] Supr'(2)
       by auto
 
-    obtain vr' where Vr' : "LMap (option_l l) f s v = Some vr'"
+    obtain vr' where Vr' : "LMap_Idem (option_l l) f s v = Some vr'"
       using put_get V'
       by(cases l; auto simp add: option_l_def)
 
-    have "LMap (option_l l) f s v <[ z"
-      using is_ubE[OF Ub, of "LMap (option_l l) f s v"] Nemp
+    have "LMap_Idem (option_l l) f s v <[ z"
+      using is_ubE[OF Ub, of "LMap_Idem (option_l l) f s v"] Nemp
       by(auto)
 
     then obtain z' where Z' : "z = Some z'" using Vr'
       by(cases z; auto simp add: option_pleq)
 
-    hence "is_ub (LMap l f s ` V') z'"
+    hence "is_ub (LMap_Idem l f s ` V') z'"
       using Ub SV'
       by(cases l; auto simp add: option_l_def is_ub_def option_pleq)
 
-    hence "LMap l f s supr' <[ z'"
+    hence "LMap_Idem l f s supr' <[ z'"
       using is_supD2[OF Supr'_sup] by auto
 
-    then show "LMap (option_l l) f s supr <[ z" using V' Z' Supr'
+    then show "LMap_Idem (option_l l) f s supr <[ z" using V' Z' Supr'
       by(cases l; auto simp add: option_l_def is_ub_def option_pleq)
   qed
+next
+  fix V
+  fix s 
+  fix v supr :: "'c option"
+
+  assume Nemp : "v \<in> V"
+  assume V_valid : "V \<subseteq> option_l_S S s"
+
+  assume Hsup : "is_sup V supr"
+  assume Hsup_in : "supr \<in> option_l_S S s"
+
+  obtain supr' where Supr' : "supr = Some supr'" "supr' \<in> S s"
+    using V_valid Hsup_in by(auto simp add: option_l_S_def)
+
+  show "is_sup (LPost (option_l l) s ` V) (LPost (option_l l) s supr)"
+  proof(rule is_supI)
+    fix x
+
+    assume X : "x \<in> LPost (option_l l) s ` V"
+
+    then obtain xo where Xo : "xo \<in> V" "LPost (option_l l) s xo = x"
+      by auto
+
+    have "xo <[ supr" using is_supD1[OF Hsup Xo(1)] by simp
+
+    obtain xo' where Xo' : "xo = Some xo'" "xo' \<in> S s" using V_valid Xo
+      by(auto simp add: option_l_S_def)
+
+    have "x \<in> option_l_S S s"
+      using post_S[OF Xo'(2)] Xo Xo'
+      by(auto simp add: option_l_S_def option_l_def split: option.splits)
+
+    then obtain x' where X' : "x = Some x'" "x' \<in> S s"
+      by(auto simp add: option_l_S_def)
+
+
+    have "xo' <[ supr'" using Xo' Supr' `xo <[ supr`
+      by(simp add: option_pleq)
+
+    hence "is_sup {xo', supr'} supr'"
+      using is_sup_pair by auto
+
+    hence Conc' : "is_sup (LPost l s ` {xo', supr'}) (LPost l s supr')"
+      using Xo Xo' Supr' pres_post[of xo' "{xo', supr'}" s supr'] 
+      by auto
+
+    thus "x <[ LPost (option_l l) s supr"
+      using is_supD1[OF Conc', of x'] X' Xo Xo' Supr'
+      by(cases l; auto simp add: option_l_def option_pleq)
+  next
+
+    fix z
+
+    assume Ub : "is_ub (LPost (option_l l) s ` V) z" 
+
+    obtain V' where SV' : "V = Some ` V'" "V' \<subseteq> S s"
+      using V_valid
+      by(auto simp add: option_l_S_def; blast)
+
+    obtain v' where V' : "v = Some v'" "v' \<in> V'"
+      using Nemp SV'
+      by auto
+
+    have Supr'_sup : "is_sup V' supr'"
+    proof(rule is_supI)
+      fix x'
+
+      assume "x' \<in> V'"
+
+      then show "x' <[ supr'"
+        using is_supD1[OF Hsup, of "Some x'"] Supr' SV' V'
+        by(auto simp add: option_pleq)
+    next
+
+      fix z'
+
+      assume "is_ub V' z'"
+
+      then have "is_ub V (Some z')"
+        using V' SV'
+        by(auto simp add: option_pleq is_ub_def)
+
+      then show "supr' <[ z'"
+        using is_supD2[OF Hsup, of "Some z'"] Supr'
+        by(auto simp add: option_pleq)
+    qed
+
+    have Supr'_sup : "is_sup (LPost l s ` V') (LPost l s supr')"
+      using pres_post[OF V'(2) SV'(2) Supr'_sup] Supr'(2)
+      by auto
+
+    obtain vr' where Vr' : "LPost (option_l l) s v = Some vr'"
+      using put_get V'
+      by(cases l; auto simp add: option_l_def)
+
+    have "LPost (option_l l) s v <[ z"
+      using is_ubE[OF Ub, of "LPost (option_l l) s v"] Nemp
+      by(auto)
+
+    then obtain z' where Z' : "z = Some z'" using Vr'
+      by(cases z; auto simp add: option_pleq)
+
+    hence "is_ub (LPost l s ` V') z'"
+      using Ub SV'
+      by(cases l; auto simp add: option_l_def is_ub_def option_pleq)
+
+    hence "LPost l s supr' <[ z'"
+      using is_supD2[OF Supr'_sup] by auto
+
+    then show "LPost (option_l l) s supr <[ z" using V' Z' Supr'
+      by(cases l; auto simp add: option_l_def is_ub_def option_pleq)
+  qed
+
 next
   show "\<And> s . \<bottom> \<notin> option_l_S S s"
     by(auto simp add: option_l_S_def option_bot)
@@ -439,7 +632,9 @@ definition prio_l ::
   ('x, 'a, 'b md_prio, 'f) lifting" where
 "prio_l f0 f1 t =
       LMake (\<lambda> s a b . (case b of
-                             mdp m b' \<Rightarrow> mdp (f1 s m) (LUpd t s a b')))
+                             mdp m b' \<Rightarrow> mdp m (LUpd_Idem t s a b')))
+            (\<lambda> s b . (case b of
+                             mdp m b' \<Rightarrow> mdp (f1 s m) (LPost t s b')))
             (\<lambda> s p . (case p of
                        mdp m b \<Rightarrow> LOut t s b))
             (\<lambda> s . mdp (f0 s) (LBase t s))
@@ -463,41 +658,53 @@ locale prio_l_valid_weak = prio_l_valid_weak' + lifting_valid_weak
 sublocale prio_l_valid_weak \<subseteq> out : lifting_valid_weak "prio_l f0 f1 l" "prio_l_S S"
 proof
   fix s a b
-  show "LOut (prio_l f0 f1 l) s (LUpd (prio_l f0 f1 l) s a b) = a"
+  show "LOut (prio_l f0 f1 l) s (LUpd_Idem (prio_l f0 f1 l) s a b) = a"
     using put_get
     by(auto simp add:prio_l_def LNew_def split:md_prio.splits)
 next
   fix s b
-  assume Hb : "b \<in> prio_l_S S s"
-  show "b <[ LUpd (prio_l f0 f1 l) s (LOut (prio_l f0 f1 l) s b) b"
-    using get_put_weak f1_nondecrease Hb
+  show "LOut (prio_l f0 f1 l) s (LPost (prio_l f0 f1 l) s b) =
+           LOut (prio_l f0 f1 l) s b"
+    using post_nop
     by(auto simp add:prio_l_def prio_l_S_def LNew_def prio_pleq split:md_prio.splits)
 next
   fix s a b
-  show "LUpd (prio_l f0 f1 l) s a b \<in> prio_l_S S s"
+  show "LUpd_Idem (prio_l f0 f1 l) s a b \<in> prio_l_S S s"
     using put_S
-    by(auto simp add: prio_l_def prio_l_S_def LNew_def split:md_prio.splits)
+    by(auto simp add:prio_l_def prio_l_S_def LNew_def prio_pleq split:md_prio.splits)
+next
+  fix s b
+  assume Hb : "b \<in> prio_l_S S s"
+  then show "LPost (prio_l f0 f1 l) s b \<in> prio_l_S S s"
+    using post_S
+    by(auto simp add:prio_l_def prio_l_S_def LNew_def prio_pleq split:md_prio.splits)
+next
+  fix s b
+  show "b <[ LPost (prio_l f0 f1 l) s b"
+    using post_geq f1_nondecrease
+    by(auto simp add:prio_l_def prio_l_S_def LNew_def prio_pleq split:md_prio.splits)
+next
+  fix s b
+  assume "b \<in> prio_l_S S s"
+  then show "b = LUpd_Idem (prio_l f0 f1 l) s (LOut (prio_l f0 f1 l) s b) b"
+    using get_put_weak
+    by(auto simp add:prio_l_def prio_l_S_def LNew_def prio_pleq split:md_prio.splits)
 qed
 
 locale prio_l_valid = prio_l_valid_weak + lifting_valid
 
 sublocale prio_l_valid \<subseteq> out : lifting_valid "prio_l f0 f1 l" "prio_l_S S"
 proof
-  fix s a
+  fix s a1 a2
   fix b :: "'c md_prio"
-(*
-  assume H : "b \<in> prio_l_S S s"
-*)
+
   obtain b' pb'  where B' : "b = mdp pb' b'"
     by(cases b; auto)
 
-(*
-  have H' : "b' \<in> S s"
-    using H B'
-    by(auto simp add: prio_l_S_def)
-*)
-  show "b <[ LUpd (prio_l f0 f1 l) s a b"
-    using get_put B' f1_nondecrease
+  show "LUpd_Idem (prio_l f0 f1 l) s a1
+        (LUpd_Idem (prio_l f0 f1 l) s a2 b) =
+       LUpd_Idem (prio_l f0 f1 l) s a1 b"
+    using put_put B' f1_nondecrease
     by(auto simp add: prio_l_def prio_pleq)
 qed
 
@@ -511,62 +718,6 @@ locale prio_l_valid_strong' =
 locale prio_l_valid_stronger' = prio_l_valid_strong' +
   fixes S' :: "('syn \<Rightarrow> ('b :: Pord_Weak) md_prio set)"
   assumes S' : "\<And> x . prio_l_S S x \<subseteq> S' x"
-
-locale prio_l_valid_strong = prio_l_valid_weak + prio_l_valid_strong'
-sublocale prio_l_valid_strong \<subseteq> out : lifting_valid "prio_l f0 f1 l" "prio_l_S S"
-proof
-  fix s a 
-  fix b :: "'c md_prio"
-(*  assume H: "b \<in> prio_l_S S s"*)
-  obtain x1 p where B : "b = mdp p x1" by(cases b; auto)
-
-  show " b <[ LUpd (prio_l f0 f1 l) s a b"
-    using B f1_increase[of p s]
-    by(auto simp add:prio_l_def LNew_def prio_pleq split:md_prio.splits)
-qed
-
-locale prio_l_valid_stronger = prio_l_valid_strong + prio_l_valid_stronger'
-sublocale prio_l_valid_stronger \<subseteq> out : lifting_valid "prio_l f0 f1 l" "S'"
-proof
-  show "\<And>s b a. LOut (prio_l f0 f1 l) s (LUpd (prio_l f0 f1 l) s a b) = a"
-    using out.put_get by auto
-next
-  fix s a b
-  fix b :: "'c md_prio"
-
-  obtain x1 p where B : "b = mdp p x1" by(cases b; auto)
-
-  show "b <[ LUpd (prio_l f0 f1 l) s (LOut (prio_l f0 f1 l) s b) b"
-    using f1_increase[of p s] B
-    by(auto simp add:prio_l_def LNew_def prio_pleq split:md_prio.splits)
-next
-  fix s a 
-  fix b :: "('c md_prio)"
-
-  obtain x1 x2 where B : "b = mdp x1 x2"
-    by(cases b; auto)
-
-  have Prio_in : "mdp (f1 s x1) (LUpd l s a x2) \<in> prio_l_S S s"
-    using put_S
-    by(auto simp add: prio_l_S_def)
-
-  then have Prod_in' : "mdp (f1 s x1) (LUpd l s a x2) \<in> S' s"
-    using S'[of s] by auto
-
-  then show "LUpd (prio_l f0 f1 l) s a b \<in> S' s" using B
-    by(auto simp add: prio_l_def prio_l_S_def split: md_prio.splits)
-next
-  fix s a 
-  fix b :: "('c md_prio)"
-
-  obtain x1 x2 where B : "b = mdp x1 x2"
-    by(cases b; auto)
-  (*assume In : "b \<in> S' s"*)
-  then show "b <[ LUpd (prio_l f0 f1 l) s a b"
-    using f1_increase[of x1 s] B
-    by(auto simp add:prio_l_def LNew_def prio_pleq split:md_prio.splits)
-qed
-
 
 locale prio_l_valid_base' =
   fixes l :: "('syn, 'a, ('b :: Pord_Weakb), 'f) lifting"
@@ -584,34 +735,7 @@ proof
     by(auto simp add: prio_l_def prio_bot)
 qed
 
-locale prio_l_valid_base = prio_l_valid_weak_base + lifting_valid
-
-sublocale prio_l_valid_base \<subseteq> out : lifting_valid_base "prio_l f0 f1 l" "prio_l_S S"
-proof
-  fix s a
-  fix b :: "'c md_prio"
-  (*assume "b \<in> prio_l_S S s"*)
-  show "b <[ LUpd (prio_l f0 f1 l) s a b"
-    using f1_nondecrease get_put
-    by(auto simp add: prio_l_def prio_pleq prio_l_S_def split: md_prio.splits)
-qed
-
-locale prio_l_valid_strong_base = prio_l_valid_strong + prio_l_valid_base
-
-sublocale prio_l_valid_strong_base \<subseteq> out : lifting_valid_base "prio_l f0 f1 l" "prio_l_S S"
-proof
-qed
-
-locale prio_l_valid_stronger_base = prio_l_valid_stronger + prio_l_valid_base
-
-sublocale prio_l_valid_stronger_base \<subseteq> out :  lifting_valid_base "prio_l f0 f1 l" "S'"
-proof
-  fix s
-  show "LBase (prio_l f0 f1 l) s = \<bottom>"
-    using zero base
-    by(auto simp add: prio_l_def prio_pleq prio_l_S_def prio_bot split: md_prio.splits)
-qed
-
+locale prio_l_valid_base = prio_l_valid + prio_l_valid_weak_base
 
 locale prio_l_valid_weak_ok = prio_l_valid_weak + lifting_valid_weak_ok
 
@@ -633,8 +757,23 @@ next
     using H B'
     by(auto simp add: prio_l_S_def prio_ok_S)
 
-  show "LUpd (prio_l f0 f1 l) s a b \<in> ok_S"
+  show "LUpd_Idem (prio_l f0 f1 l) s a b \<in> ok_S"
     using ok_S_put[OF H'] B'
+    by(auto simp add: prio_l_S_def prio_l_def prio_ok_S)
+next
+  fix s
+  fix b :: "'c md_prio"
+  assume H: "b \<in> ok_S"
+
+  obtain b' pb' where B' : "b = mdp pb' b'"
+    by(cases b; auto)
+
+  have H' : "b' \<in> ok_S"
+    using H B'
+    by(auto simp add: prio_l_S_def prio_ok_S)
+
+  show "LPost (prio_l f0 f1 l) s b \<in> ok_S"
+    using ok_S_post[OF H'] B'
     by(auto simp add: prio_l_S_def prio_l_def prio_ok_S)
 qed
 
@@ -655,48 +794,6 @@ sublocale  prio_l_valid_base_ok \<subseteq> out : lifting_valid_base_ok "(prio_l
 proof
 qed
 
-locale prio_l_valid_strong_ok = prio_l_valid_weak_ok + prio_l_valid_strong
-
-sublocale prio_l_valid_strong_ok \<subseteq> out : lifting_valid_ok "prio_l f0 f1 l" "prio_l_S S"
-proof
-qed
-
-locale prio_l_valid_stronger_ok = prio_l_valid_weak_ok + prio_l_valid_stronger
-
-
-sublocale prio_l_valid_stronger_ok \<subseteq> out : lifting_valid_ok "prio_l f0 f1 l" "S'"
-proof
-  fix s
-  show "ok_S \<subseteq> S' s"
-    using S'[of s] ok_S_valid[of s]
-    by(fastforce simp add: prio_l_S_def prio_ok_S)
-next
-  fix s a
-  fix b :: "'c md_prio"
-  assume H: "b \<in> ok_S"
-
-  obtain b' pb' where B' : "b = mdp pb' b'"
-    by(cases b; auto)
-
-  have H' : "b' \<in> ok_S"
-    using H B'
-    by(auto simp add: prio_l_S_def prio_ok_S)
-
-  show "LUpd (prio_l f0 f1 l) s a b \<in> ok_S"
-    using ok_S_put[OF H'] B'
-    by(auto simp add: prio_l_S_def prio_l_def prio_ok_S)
-qed
-
-locale prio_l_valid_strong_base_ok = prio_l_valid_strong_ok + prio_l_valid_strong_base
-sublocale prio_l_valid_strong_base_ok \<subseteq> lifting_valid_base_ok "prio_l f0 f1 l" "prio_l_S S"
-proof
-qed
-
-locale prio_l_valid_stronger_base_ok = prio_l_valid_stronger_ok + prio_l_valid_stronger_base
-sublocale prio_l_valid_stronger_base_ok \<subseteq> lifting_valid_base_ok "prio_l f0 f1 l" "S'"
-proof
-qed
-
 
 (* finally, facts about pres *)
 
@@ -709,8 +806,12 @@ locale prio_l_valid_weak_ok_pres' =
 
 (* the way we proved this theorem, we actually need base for it to be true.
  * as well as strength. *)
+
+(* TODO: the structure of this theorem is a bit different now. but i'm pretty sure it still holds. *)
 locale prio_l_valid_base_ok_pres = prio_l_valid_weak_ok_pres' + prio_l_valid_base_ok + lifting_valid_base_ok_pres
 sublocale prio_l_valid_base_ok_pres \<subseteq> out : lifting_valid_base_ok_pres "prio_l f0 f1 l" "prio_l_S S"
+  sorry
+(*
 proof
 (* TODO: this proof can almost definitely be drastically simplified. *)
   fix V
@@ -747,16 +848,16 @@ proof
     using V_valid Hsup_in
     by(auto simp add: prio_l_S_def split: md_prio.splits)
 
-  obtain supr_res' psupr_res' where Result : "LMap (prio_l f0 f1 l) f s supr = mdp psupr_res' supr_res'"
-    by(cases "LMap (prio_l f0 f1 l) f s supr"; auto)
+  obtain supr_res' psupr_res' where Result : "LMap_Idem (prio_l f0 f1 l) f s supr = mdp psupr_res' supr_res'"
+    by(cases "LMap_Idem (prio_l f0 f1 l) f s supr"; auto)
 
-  show "is_sup (LMap (prio_l f0 f1 l) f s ` V) (LMap (prio_l f0 f1 l) f s supr)"
+  show "is_sup (LMap_Idem (prio_l f0 f1 l) f s ` V) (LMap_Idem (prio_l f0 f1 l) f s supr)"
   proof(rule is_supI)
     fix x
 
-    assume X : "x \<in> LMap (prio_l f0 f1 l) f s ` V"
+    assume X : "x \<in> LMap_Idem (prio_l f0 f1 l) f s ` V"
 
-    then obtain xo where Xo : "xo \<in> V" "LMap (prio_l f0 f1 l) f s xo = x"
+    then obtain xo where Xo : "xo \<in> V" "LMap_Idem (prio_l f0 f1 l) f s xo = x"
       by auto
 
     have "xo <[ supr" using is_supD1[OF Hsup Xo(1)] by simp
@@ -771,7 +872,7 @@ proof
     obtain xo' pxo' where Xo' : "xo = mdp pxo' xo'" "xo' \<in> S s" using Xo Vsubs
       by(cases xo; auto simp add: prio_l_S_def split: md_prio.splits)
 
-    show "x <[ LMap (prio_l f0 f1 l) f s supr"
+    show "x <[ LMap_Idem (prio_l f0 f1 l) f s supr"
     proof(cases "pxo' = psupr'")
       case True
 
@@ -781,7 +882,7 @@ proof
       hence "is_sup {xo', supr'} supr'"
         using is_sup_pair by auto
   
-      hence Conc' : "is_sup (LMap l f s ` {xo', supr'}) (LMap l f s supr')"
+      hence Conc' : "is_sup (LMap_Idem l f s ` {xo', supr'}) (LMap_Idem l f s supr')"
         using Xo' Supr' pres[of xo' "{xo', supr'}" s supr' f] 
         by auto
 
@@ -807,7 +908,7 @@ proof
 
     fix zo
 
-    assume Ub : "is_ub (LMap (prio_l f0 f1 l) f s ` V) zo" 
+    assume Ub : "is_ub (LMap_Idem (prio_l f0 f1 l) f s ` V) zo" 
 
     obtain zo' pzo' where Z' : "zo = mdp pzo' zo'"
       by(cases zo; auto)
@@ -1006,7 +1107,7 @@ proof
     qed
 
     (* idea: either pm' is equal to supr, or is one less. *)
-    show "LMap (prio_l f0 f1 l) f s supr <[ zo"
+    show "LMap_Idem (prio_l f0 f1 l) f s supr <[ zo"
     proof(cases "has_sup Vmaxv")
       case False
 
@@ -1271,7 +1372,7 @@ proof
         unfolding VSmax VSmaxv
         by auto
 
-      have Supr'_sup_vmax : "is_sup (LMap l f s ` Vmaxv) (LMap l f s supr')"
+      have Supr'_sup_vmax : "is_sup (LMap_Idem l f s ` Vmaxv) (LMap_Idem l f s supr')"
         using pres[OF `m' \<in> Vmaxv` `Vmaxv \<subseteq> S s` 
             `is_sup Vmaxv supr'` Supr'(2)]
         by simp
@@ -1350,14 +1451,14 @@ proof
         | (E) "pzo' = f1 s pm'"
         | (G) "pzo' > f1 s pm'"
         using less_linear by auto
-      then show "LMap (prio_l f0 f1 l) f s supr <[ zo"
+      then show "LMap_Idem (prio_l f0 f1 l) f s supr <[ zo"
       proof cases
         case L
 
         have "m \<in> V"
           using M VSmax by auto
         
-        have Bad : "LMap (prio_l f0 f1 l) f s m \<in> LMap (prio_l f0 f1 l) f s ` V"
+        have Bad : "LMap_Idem (prio_l f0 f1 l) f s m \<in> LMap_Idem (prio_l f0 f1 l) f s ` V"
           using imageI[OF `m \<in> V`, of "LMap (prio_l f0 f1 l) f s"]
           by auto
 
@@ -1420,7 +1521,7 @@ next
   show "\<And>s. \<bottom> \<notin> prio_l_S S s" using bot_bad
     by(auto simp add: prio_bot prio_l_S_def)
 qed
-
+*)
 
 (* NB: "stronger" version of prio_l does not work with pres, because we need to know that
  * we are actually in prio_l_S S, not some superset.
@@ -1460,7 +1561,8 @@ definition fst_l ::
   "('x, 'a, 'b1 :: Pord_Weak, 'f) lifting \<Rightarrow>
    ('x, 'a, 'b1 * ('b2 :: Pord_Weakb), 'f) lifting" where
 "fst_l t =
-  LMake (\<lambda> s a b . (case b of (b1, b2) \<Rightarrow> (LUpd t s a b1, b2)))
+  LMake (\<lambda> s a b . (case b of (b1, b2) \<Rightarrow> (LUpd_Idem t s a b1, b2)))
+            (\<lambda> s b . (case b of (b1, b2) \<Rightarrow> (LPost t s b1, b2)))
             (\<lambda> s x . (LOut t s (fst x)))
             (\<lambda> s . (LBase t s, \<bottom>))
             (LFD t)"
@@ -1472,6 +1574,8 @@ definition fst_l_S :: "('x, 'b1 :: Pord_Weak) valid_set \<Rightarrow> ('x, ('b1 
 locale fst_l_valid_weak = lifting_valid_weak
 
 sublocale fst_l_valid_weak \<subseteq> out : lifting_valid_weak "fst_l l" "fst_l_S S"
+  sorry
+(*
 proof
   fix s a 
   fix b :: "('c :: Pord_Weak) * ('e :: Pord_Weakb)"
@@ -1492,10 +1596,12 @@ next
     using put_S
     by(auto simp add: fst_l_def prod_pleq leq_refl fst_l_S_def split:prod.splits)
 qed
-
+*)
 locale fst_l_valid = fst_l_valid_weak + lifting_valid
 
 sublocale fst_l_valid \<subseteq> out : lifting_valid "fst_l l" "fst_l_S S"
+  sorry
+(*
 proof
   fix s a 
   fix b :: "('c :: Pord_Weak) * ('e :: Pord_Weakb)"
@@ -1504,30 +1610,7 @@ proof
     using get_put
     by(auto simp add: fst_l_def prod_pleq fst_l_S_def leq_refl split:prod.splits)
 qed
-
-locale fst_l_valid_clos = lifting_valid_weak_clos + fst_l_valid_weak
-
-sublocale fst_l_valid_clos \<subseteq> lifting_valid_weak_clos "fst_l l" "fst_l_S S"
-proof
-  fix s
-  fix a b :: "('c * 'e)"
-  assume Leq : "a <[ b"
-  assume Ain : "a \<in> fst_l_S S s"
-
-  then obtain a1 a2 where A' : "a = (a1, a2)" "a1 \<in> S s"
-    by(cases a; auto simp add: fst_l_S_def)
-
-  obtain b1 b2 where B' : "b = (b1, b2)" "a1 <[ b1"
-    using A' Leq
-    by(cases b; auto simp add: prod_pleq)
-
-  then have "b1 \<in> S s"
-    using clos_S[OF B'(2) A'(2)] by auto
-
-  then show "b \<in> fst_l_S S s"
-    unfolding B'
-    by(auto simp add: fst_l_S_def)
-qed
+*)
 
 
 locale fst_l_valid_weak_base = fst_l_valid_weak +   lifting_valid_weak_base
@@ -1545,6 +1628,8 @@ qed
 
 locale fst_l_valid_weak_ok = fst_l_valid_weak + lifting_valid_weak_ok
 sublocale fst_l_valid_weak_ok \<subseteq> out : lifting_valid_weak_ok "fst_l l" "fst_l_S S"
+  sorry
+(*
 proof
   fix s
 
@@ -1557,6 +1642,7 @@ next
   then show "LUpd (fst_l l) s a b \<in> ok_S" using ok_S_put
     by(auto simp add: fst_l_def prod_ok_S)
 qed
+*)
 
 locale fst_l_valid_ok = fst_l_valid + fst_l_valid_weak_ok
 sublocale fst_l_valid_ok \<subseteq> lifting_valid_ok "fst_l l" "fst_l_S S"
@@ -1575,6 +1661,8 @@ qed
 
 locale fst_l_valid_weak_pres = fst_l_valid_weak + lifting_valid_weak_pres
 sublocale fst_l_valid_weak_pres \<subseteq> out : lifting_valid_weak_pres "fst_l l" "fst_l_S S"
+  sorry
+(*
 proof
   fix v supr :: "('c * 'e)"
   fix V f s
@@ -1816,7 +1904,7 @@ proof
       by(cases l; auto simp add: fst_l_def prod_pleq)
   qed
 qed
-
+*)
 locale fst_l_valid_pres = fst_l_valid_weak_pres + fst_l_valid
 sublocale fst_l_valid_pres \<subseteq> out : lifting_valid_pres "fst_l l" "fst_l_S S"
 proof
@@ -1859,7 +1947,8 @@ definition snd_l ::
   "('x, 'a, 'b2 :: Pord_Weak, 'f) lifting \<Rightarrow>
    ('x, 'a, ('b1 :: Pord_Weakb) * 'b2, 'f) lifting" where
 "snd_l t =
-      LMake (\<lambda> s a b . (case b of (b1, b2) \<Rightarrow> (b1, LUpd t s a b2)))
+      LMake (\<lambda> s a b . (case b of (b1, b2) \<Rightarrow> (b1, LUpd_Idem t s a b2)))
+            (\<lambda> s b . (case b of (b1, b2) \<Rightarrow> (b1, LPost t s b2)))
             (\<lambda> s x . (LOut t s (snd x)))
             (\<lambda> s . (\<bottom>, LBase t s))
             (LFD t)"
@@ -1872,6 +1961,8 @@ definition snd_l_S :: "('x, 'b2 :: Pord_Weak) valid_set \<Rightarrow> ('x, ('b1 
 locale snd_l_valid_weak = lifting_valid_weak
 
 sublocale snd_l_valid_weak \<subseteq> out : lifting_valid_weak "snd_l l" "snd_l_S S"
+  sorry
+(*
 proof
   fix s a 
   fix b :: "('e :: Pord_Weakb) * ('c :: Pord_Weak)"
@@ -1892,10 +1983,13 @@ next
     using put_S
     by(auto simp add: snd_l_def prod_pleq leq_refl snd_l_S_def split:prod.splits)
 qed
+*)
 
 locale snd_l_valid = snd_l_valid_weak + lifting_valid
 
 sublocale snd_l_valid \<subseteq> out : lifting_valid "snd_l l" "snd_l_S S"
+  sorry
+(*
 proof
   fix s a 
   fix b :: "('e :: Pord_Weakb) * ('c :: Pord_Weak)"
@@ -1904,31 +1998,7 @@ proof
     using get_put
     by(auto simp add: snd_l_def prod_pleq leq_refl snd_l_S_def split:prod.splits)
 qed
-
-locale snd_l_valid_clos = lifting_valid_weak_clos + snd_l_valid_weak
-
-sublocale snd_l_valid_clos \<subseteq> lifting_valid_weak_clos "snd_l l" "snd_l_S S"
-proof
-  fix s
-  fix a b :: "('e * 'c)"
-  assume Leq : "a <[ b"
-  assume Ain : "a \<in> snd_l_S S s"
-
-  then obtain a1 a2 where A' : "a = (a1, a2)" "a2 \<in> S s"
-    by(cases a; auto simp add: snd_l_S_def)
-
-  obtain b1 b2 where B' : "b = (b1, b2)" "a2 <[ b2"
-    using A' Leq
-    by(cases b; auto simp add: prod_pleq)
-
-  then have "b2 \<in> S s"
-    using clos_S[OF B'(2) A'(2)] by auto
-
-  then show "b \<in> snd_l_S S s"
-    unfolding B'
-    by(auto simp add: snd_l_S_def)
-qed
-
+*)
 
 locale snd_l_valid_weak_base = snd_l_valid_weak +   lifting_valid_weak_base
 sublocale snd_l_valid_weak_base \<subseteq> out : lifting_valid_weak_base "snd_l l" "snd_l_S S"
@@ -1945,6 +2015,8 @@ qed
 
 locale snd_l_valid_weak_ok = snd_l_valid_weak + lifting_valid_weak_ok
 sublocale snd_l_valid_weak_ok \<subseteq> out : lifting_valid_weak_ok "snd_l l" "snd_l_S S"
+  sorry
+(*
 proof
   fix s
 
@@ -1957,6 +2029,7 @@ next
   then show "LUpd (snd_l l) s a b \<in> ok_S" using ok_S_put
     by(auto simp add: prod_ok_S snd_l_S_def snd_l_def)
 qed
+*)
 
 locale snd_l_valid_ok = snd_l_valid + snd_l_valid_weak_ok
 sublocale snd_l_valid_ok \<subseteq> lifting_valid_ok "snd_l l" "snd_l_S S"
@@ -1975,6 +2048,8 @@ qed
 
 locale snd_l_valid_weak_pres = snd_l_valid_weak + lifting_valid_weak_pres
 sublocale snd_l_valid_weak_pres \<subseteq> out : lifting_valid_weak_pres "snd_l l" "snd_l_S S"
+  sorry
+(*
 proof
   fix v supr :: "('e * 'c)"
   fix V f s
@@ -2216,7 +2291,7 @@ proof
       by(auto simp add: snd_l_def prod_pleq)
   qed
 qed
-
+*)
 locale snd_l_valid_pres = snd_l_valid_weak_pres + snd_l_valid
 sublocale snd_l_valid_pres \<subseteq> out : lifting_valid_pres "snd_l l" "snd_l_S S"
 proof
@@ -2255,6 +2330,7 @@ proof qed
 
 (*
  * merge (new ! !)
+ * note that this definition is going to behave weirdly on non-compatible liftings.
  *)
 
 definition merge_l ::
@@ -2265,7 +2341,12 @@ definition merge_l ::
     LMake
       (\<lambda> s a b . 
         (case a of (a1, a2) \<Rightarrow>
-          [^ LUpd t1 s a1 b, LUpd t2 s a2 b ^]))
+          (let supr = [^ LUpd t1 s a1 b, LUpd t2 s a2 b ^] in
+           let o1 = LOut t1 s supr in
+           let o2 = LOut t2 s supr in
+           [^ LUpd_Idem t1 s o1 b, LUpd_Idem t2 s o2 b ^]
+          )))
+      (\<lambda> s b . [^ LPost t1 s b, LPost t2 s b ^])
       (\<lambda> s b . (LOut t1 s b, LOut t2 s b))
       (\<lambda> s . [^ LBase t1 s, LBase t2 s ^] )
       (\<lambda> f1f2 s a1a2 .
@@ -2283,7 +2364,11 @@ locale merge_l_valid_weak =
   in1 : lifting_valid_weak l1 S1 +
   in2 : lifting_valid_weak l2 S2
 
-print_locale merge_l_valid_weak
+lemma sup_to_bsup :
+  assumes H: "is_sup {a, b} c"
+  shows "[^ a, b ^] = c"
+  using is_sup_unique[OF bsup_sup[OF H bsup_spec] H]
+  by auto
 
 sublocale merge_l_valid_weak \<subseteq> out : lifting_valid_weak "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x"
 proof
@@ -2294,118 +2379,343 @@ proof
   obtain a1 a2 where A: "a = (a1, a2)"
     by(cases a; auto)
 
-  have "is_sup {b, b} b"
+  have BB : "is_sup {b, b} b"
     by(auto simp add: is_sup_def is_least_def is_ub_def leq_refl)
 
-  then obtain supr where Supr : "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr"
-    using compat[of s a1 b]
+  hence BB' : "has_sup {b, b}"
     by(auto simp add: has_sup_def)
 
-  have Eq: "[^ LUpd l1 s a1 b, LUpd l2 s a2 b ^] = supr"
-    using is_sup_unique[OF bsup_sup[OF Supr bsup_spec] Supr] by simp
+  obtain supr1 where Supr1 : 
+    "is_sup { LUpd_Idem l1 s a1 b, LUpd_Idem l2 s a2 b } supr1"
+    using compat_idem[OF BB]
+    by(fastforce simp add: has_sup_def)
 
-  show "LOut (merge_l l1 l2) s (LUpd (merge_l l1 l2) s a b) = a" 
-    using compat_get1[OF Supr] compat_get2[OF Supr]
-    using A Eq
-    by(auto simp add: merge_l_def)
-    (* TODO: looks like we need some kind of put2_get1 like rules here. this means our trick
-of combining liftings using merge_l may not work. maybe we just bite the bullet and deal
-with the n^2 blowup? *)
+  have Eq1 : "[^ LUpd_Idem l1 s a1 b, LUpd_Idem l2 s a2 b ^] = supr1"
+    using is_sup_unique[OF bsup_sup[OF Supr1 bsup_spec] Supr1] by simp
+
+  obtain supr2 where Supr2 :
+    "is_sup {LPost l1 s (LUpd_Idem l1 s a1 b), LPost l2 s (LUpd_Idem l2 s a2 b)} supr2"
+    using compat_post[OF Supr1]
+    by(fastforce simp add: has_sup_def)
+
+  have Eq2 : "[^LPost l1 s (LUpd_Idem l1 s a1 b), LPost l2 s (LUpd_Idem l2 s a2 b) ^] = supr2"
+    using is_sup_unique[OF bsup_sup[OF Supr2 bsup_spec] Supr2] by simp
+
+  have GetL1 : "LOut l1 s [^LPost l1 s (LUpd_Idem l1 s a1 b), LPost l2 s (LUpd_Idem l2 s a2 b) ^] = a1"
+    using compat_post_get1[OF Supr1 Supr2] Supr1
+    using compat_idem_get1[OF BB Supr1]
+    unfolding Eq2
+    by(simp)
+
+  have GetL2 : "LOut l2 s [^LPost l1 s (LUpd_Idem l1 s a1 b), LPost l2 s (LUpd_Idem l2 s a2 b) ^] = a2"
+    using compat_post_get2[OF Supr1 Supr2] Supr1
+    using compat_idem_get2[OF BB Supr1]
+    unfolding Eq2
+    by(simp)
+
+  have GetL1' : "LOut l1 s [^ LUpd_Idem l1 s a1 b, LUpd_Idem l2 s a2 b ^] = a1"
+    using compat_idem_get1[OF BB Supr1] unfolding Eq1
+    by auto
+
+  have GetL2' : "LOut l2 s [^ LUpd_Idem l1 s a1 b, LUpd_Idem l2 s a2 b ^] = a2"
+    using compat_idem_get2[OF BB Supr1] unfolding Eq1
+    by auto
+  
+  show "LOut (merge_l l1 l2) s (LUpd_Idem (merge_l l1 l2) s a b) = a" 
+    unfolding A merge_l_def
+    by(simp add: Let_def GetL1 GetL2 GetL1' GetL2')
 next
-  fix s b
 
-  assume B: "b \<in> S1 s \<inter> S2 s"
+  fix s
+  fix b :: 'c
 
-  hence B1 : "b \<in> S1 s" by auto
-
-  have "is_sup {b, b} b"
+  have BB : "is_sup {b, b} b"
     by(auto simp add: is_sup_def is_least_def is_ub_def leq_refl)
 
-  then obtain supr where Supr : "is_sup {LUpd l1 s (LOut l1 s b) b, LUpd l2 s (LOut l2 s b) b} supr"
-(*    using compat[of b b b s "(LOut l1 s b)" "(LOut l2 s b)"] *)
-    using compat[of s "LOut l1 s b" b "LOut l2 s b"]
-    by(auto simp add: has_sup_def)
+  obtain supr1 where Supr1: "is_sup { LPost l1 s b, LPost l2 s b } supr1"
+    using compat_post[OF BB]
+    by(fastforce simp add: has_sup_def)
 
-  have Eq : "[^ LUpd l1 s (LOut l1 s b) b, LUpd l2 s (LOut l2 s b) b ^] = supr"
-    using is_sup_unique[OF bsup_sup[OF Supr bsup_spec] Supr] by simp
+  have Eq1 : "[^ LPost l1 s b, LPost l2 s b ^] = supr1"
+    using sup_to_bsup[OF Supr1]
+    by auto
 
-  have B_leq1 : "b <[ LUpd l1 s (LOut l1 s b) b"
-    using in1.get_put_weak[OF B1] by auto
+  have OutL1 : "LOut l1 s supr1 = LOut l1 s b"
+    using compat_post_get1[OF BB Supr1]
+    by simp
 
-  have Upd_leq1 : "LUpd l1 s (LOut l1 s b) b <[ supr"
-    using is_supD1[OF Supr] by auto
+  have OutL2 : "LOut l2 s supr1 = LOut l2 s b"
+    using compat_post_get2[OF BB Supr1]
+    by simp
 
-  have "b <[ supr" using leq_trans[OF B_leq1 Upd_leq1] by simp
-
-  then show "b <[ LUpd (merge_l l1 l2) s (LOut (merge_l l1 l2) s b) b" using Eq
-    by(auto simp add: merge_l_def)
+  show " LOut (merge_l l1 l2) s (LPost (merge_l l1 l2) s b) = LOut (merge_l l1 l2) s b"
+    using OutL1 OutL2
+    by(simp add: merge_l_def Eq1)
 next
   fix s 
   fix a :: "'b * 'e"
-  fix b :: "'c"
+  fix b :: 'c
 
-  obtain a1 a2 where A: "a = (a1, a2)"
+  obtain a1 a2 where A:
+    "a = (a1, a2)"
     by(cases a; auto)
 
-  have "is_sup {b, b} b"
+  have BB : "is_sup {b, b} b"
     by(auto simp add: is_sup_def is_least_def is_ub_def leq_refl)
 
-  then obtain supr where Supr : "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr"
-    using compat[of  s "a1" b "a2"]
-    by(auto simp add: has_sup_def)
+  obtain sup1 where Sup1 :
+    "is_sup {LUpd_Idem l1 s
+        (LOut l1 s
+          [^ LPost l1 s
+              (LUpd_Idem l1 s a1 b), LPost l2 s (LUpd_Idem l2 s a2 b) ^])
+        b, LUpd_Idem l2 s
+            (LOut l2 s
+              [^ LPost l1 s
+                  (LUpd_Idem l1 s a1 b), LPost l2 s (LUpd_Idem l2 s a2 b) ^])
+            b} sup1"
+    using compat_idem[OF BB]
+    by (fastforce simp add: has_sup_def)
 
-  have Eq : "[^ LUpd l1 s a1 b, LUpd l2 s a2 b ^] = supr"
-    using is_sup_unique[OF bsup_sup[OF Supr bsup_spec] Supr] by simp
-
-  have In1 :"supr \<in> S1 s" and In2 : "supr \<in> S2 s" using compat_S[OF Supr]
+  then have Bsup1 : "[^LUpd_Idem l1 s
+        (LOut l1 s
+          [^ LPost l1 s
+              (LUpd_Idem l1 s a1 b), LPost l2 s (LUpd_Idem l2 s a2 b) ^])
+        b, LUpd_Idem l2 s
+            (LOut l2 s
+              [^ LPost l1 s
+                  (LUpd_Idem l1 s a1 b), LPost l2 s (LUpd_Idem l2 s a2 b) ^])
+            b ^] = sup1"
+    using sup_to_bsup[OF Sup1]
     by auto
+
+  show "LUpd_Idem (merge_l l1 l2) s a b \<in> S1 s \<inter> S2 s" unfolding A
+    using compat_idem_S[OF BB Sup1] Bsup1
+    by(auto simp add: merge_l_def Let_def)
+next
+
+  fix s
+  fix b :: 'c
+
+  assume B_in : "b \<in> S1 s \<inter> S2 s"
+
+  have BB : "is_sup {b, b} b"
+    by(auto simp add: is_sup_def is_least_def is_ub_def leq_refl)
+
+  obtain sup1 where Sup1 : "is_sup { LPost l1 s b, LPost l2 s b } sup1"
+    using compat_post[OF BB]
+    by(fastforce simp add: has_sup_def)
+
+  have Bsup1 : "[^ LPost l1 s b, LPost l2 s b ^] = sup1"
+    using sup_to_bsup[OF Sup1]
+    by simp
+
+  have Sup1_in : "sup1 \<in> S1 s \<inter> S2 s"
+    using compat_post_S[OF BB _ _ Sup1] B_in
+    by auto
+
+  then show "LPost (merge_l l1 l2) s b \<in> S1 s \<inter> S2 s"
+    using Bsup1
+    by(auto simp add: merge_l_def Let_def)
+next
+
+  fix s
+  fix b :: 'c
+
+  have "b <[ LPost l1 s b"
+    using in1.post_geq
+    by auto
+
+  then have "LPost l1 s b <[ [^ LPost l1 s b, LPost l2 s b ^]"
+    using is_bsupD1[OF bsup_spec]
+    by(auto)
+
+  then have "b <[ [^ LPost l1 s b, LPost l2 s b ^]"
+    using leq_trans[OF `b <[ LPost l1 s b`]
+    by auto
+
+  then show "b <[ LPost (merge_l l1 l2) s b"
+    by(auto simp add: merge_l_def Let_def)
+next
+  fix s
+  fix b :: 'c
+
+  assume B_in : "b \<in> S1 s \<inter> S2 s"
+
+  then have B_in1 : "b \<in> S1 s" and B_in2 : "b \<in> S2 s"
+    by auto
+
+  have BB : "is_sup {b, b} b"
+    by(auto simp add: is_sup_def is_least_def is_ub_def leq_refl)
+
+(* [^ LPost l1 s (LUpd_Idem l1 s (LOut l1 s b) b), LPost l2 s (LUpd_Idem l2 s (LOut l2 s b) b) ^] *)
+
+  have Eq1_1 : "LUpd_Idem l1 s (LOut l1 s b) b = b"
+    using in1.get_put_weak[OF B_in1] by auto
+
+  have Eq1_2 : "LUpd_Idem l2 s (LOut l2 s b) b = b"
+    using in2.get_put_weak[OF B_in2] by auto
+
+  obtain sup1 where Sup1 : "is_sup {LPost l1 s b, LPost l2 s b } sup1"
+    using compat_post[OF BB]
+    by(fastforce simp add: has_sup_def)
+
+  have Bsup1 : "[^ LPost l1 s b, LPost l2 s b ^] = sup1"
+    using sup_to_bsup[OF Sup1]
+    by auto
+
+  have Eq2_1 : "LOut l1 s sup1 = LOut l1 s b"
+    using compat_post_get1[OF BB Sup1] by auto
+
+  have Eq2_2 : "LOut l2 s sup1 = LOut l2 s b"
+    using compat_post_get2[OF BB Sup1] by auto
 
 (*
-  have In1 :"supr \<in> S1 s" and In2 : "supr \<in> S2 s" using compat_S[OF in1.put_S in2.put_S Supr]
-    by auto
+  obtain sup1 where Sup1 : "is_sup {LUpd_Idem l1 s (LOut l1 s b) b, LUpd_Idem l2 s (LOut l2 s b) b} sup1"
+    using compat_idem[OF BB]
+    apply(fastforce simp add: has_sup_def)
 *)
-  show "LUpd (merge_l l1 l2) s a b \<in> S1 s \<inter> S2 s" 
-    using In1 In2 A Eq
-    by(auto simp add: merge_l_def)
+
+  have BB_Bsup : "b = [^ b, b ^]"
+    using sup_to_bsup[OF BB]
+    by auto
+
+  have Conc' : "b = [^ LUpd_Idem l1 s (LOut l1 s [^ LPost l1 s b, LPost l2 s b ^]) b, 
+                        LUpd_Idem l2 s (LOut l2 s [^ LPost l1 s b, LPost l2 s b ^]) b ^]"
+    using Bsup1 Eq2_1 Eq2_2 Eq1_1 Eq1_2 BB_Bsup
+    by(auto)
+
+  then show "b = LUpd_Idem (merge_l l1 l2) s (LOut (merge_l l1 l2) s b) b"
+    using Eq1_1 Eq1_2
+    by(auto simp add: merge_l_def Let_def)
 qed
 
 locale merge_l_valid = merge_l_valid_weak +
+  l_ortho_strong +
   in1 : lifting_valid l1 S1 +
   in2 : lifting_valid l2 S2
 
 sublocale merge_l_valid \<subseteq> out : lifting_valid "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x"
 proof
   fix s
-  fix a :: "'b * 'e"
+  fix x y  :: "'b * 'e"
   fix b :: "'c"
 
-  obtain a1 a2 where A: "a = (a1, a2)"
-    by(cases a; auto)
+  obtain x1 x2 where X: "x = (x1, x2)"
+    by(cases x; auto)
 
-(*  assume "b \<in> S1 s \<inter> S2 s"
+  obtain y1 y2 where Y: "y = (y1, y2)"
+    by(cases y; auto)
 
-  hence B1 : "b \<in> S1 s" by auto*)
-
-  have "is_sup {b, b} b"
+  have BB: "is_sup {b, b} b"
     by(auto simp add: is_sup_def is_least_def is_ub_def leq_refl)
 
-  then obtain supr where Supr : "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr"
-    using compat[of s "a1" b "a2"]
-    by(auto simp add: has_sup_def)
+  obtain supy1 where Supy1 : "is_sup {LUpd l1 s y1 b, LUpd l2 s y2 b} supy1"
+    using compat[OF BB]
+    by(fastforce simp add: has_sup_def)
 
-  have Eq : "[^ LUpd l1 s a1 b, LUpd l2 s a2 b ^] = supr"
-    using is_sup_unique[OF bsup_sup[OF Supr bsup_spec] Supr] by simp
+  have Bsupy1 : "[^ LUpd l1 s y1 b, LUpd l2 s y2 b ^] = supy1"
+    using sup_to_bsup[OF Supy1] by auto
 
-  have B_leq1 : "b <[ LUpd l1 s a1 b"
-    using in1.get_put by auto
+  have Out1y1 : "LOut l1 s supy1 = y1"
+    using compat_get1[OF BB Supy1] by auto
 
-  have Upd_leq1 : "LUpd l1 s a1 b <[ supr"
-    using is_supD1[OF Supr] by auto
+  have Out2y1 : "LOut l2 s supy1 = y2"
+    using compat_get2[OF BB Supy1] by auto
 
-  have "b <[ supr" using leq_trans[OF B_leq1 Upd_leq1] by simp
+  obtain supx1 where Supx1 : "is_sup {LUpd l1 s x1 b, LUpd l2 s x2 b} supx1"
+    using compat[OF BB]
+    by(fastforce simp add: has_sup_def)
 
-  then show "b <[ LUpd (merge_l l1 l2) s a b" using A Eq
-    by(auto simp add: merge_l_def)
+  have Bsupx1 : "[^ LUpd l1 s x1 b, LUpd l2 s x2 b ^] = supx1"
+    using sup_to_bsup[OF Supx1]
+    by auto
+
+  have Out1x1 : "LOut l1 s supx1 = x1"
+    using compat_get1[OF BB Supx1]
+    by auto
+
+  have Out2x1 : "LOut l2 s supx1 = x2"
+    using compat_get2[OF BB Supx1]
+    by auto
+
+  obtain supy2 where Supy2 : "is_sup {LUpd_Idem l1 s y1 b, LUpd_Idem l2 s y2 b} supy2"
+    using compat_idem[OF BB]
+    by(fastforce simp add: has_sup_def)
+
+  have Bsupy2 : "[^LUpd_Idem l1 s y1 b, LUpd_Idem l2 s y2 b^] = supy2"
+    using sup_to_bsup[OF Supy2]
+    by auto
+
+  have Out1y2 : "LOut l1 s supy2 = y1"
+    using compat_idem_get1[OF BB Supy2]
+    by auto
+
+  have Out2y2 : "LOut l2 s supy2 = y2"
+    using compat_idem_get2[OF BB Supy2]
+    by auto
+
+  have Y2Y2 : "is_sup {supy2, supy2} supy2"
+    by(auto simp add: is_sup_def is_least_def is_ub_def leq_refl)
+
+  obtain supx1' where Supx1' :
+    "is_sup {LUpd l1 s x1 supy2, LUpd l2 s x2 supy2} supx1'"
+    using compat[OF Y2Y2]
+    by(fastforce simp add: has_sup_def)
+
+  have Bsupx1' :
+    "[^ LUpd l1 s x1 supy2, LUpd l2 s x2 supy2 ^] = supx1'"
+    using sup_to_bsup[OF Supx1']
+    by auto
+
+  have Out1x1' : "LOut l1 s supx1' = x1"
+    using compat_get1[OF Y2Y2 Supx1']
+    by auto
+
+  have Out2x1' : "LOut l2 s supx1' = x2"
+    using compat_get2[OF Y2Y2 Supx1']
+    by auto
+
+  have PutPut_1 : "LUpd_Idem l1 s x1 (LUpd_Idem l1 s y1 b) = LUpd_Idem l1 s x1 b"
+    using in1.put_put by auto
+
+  have PutPut_2 : "LUpd_Idem l2 s x2 (LUpd_Idem l2 s y2 b) = LUpd_Idem l2 s x2 b"
+    using in2.put_put by auto 
+
+  obtain supx1'_idem where Supx1'_Idem :
+    "is_sup {LUpd_Idem l1 s x1 supy2, LUpd_Idem l2 s x2 supy2} supx1'_idem"
+    using compat_idem[OF Y2Y2]
+    by(fastforce simp add: has_sup_def)
+
+  have Bsupx1'_Idem :
+    "[^LUpd_Idem l1 s x1 supy2, LUpd_Idem l2 s x2 supy2^] = supx1'_idem"
+    using sup_to_bsup[OF Supx1'_Idem]
+    by auto
+
+  obtain supx1_idem where Supx1_Idem :
+    "is_sup {LUpd_Idem l1 s x1 b, LUpd_Idem l2 s x2 b} supx1_idem"
+    using compat_idem[OF BB]
+    by(fastforce simp add: has_sup_def)
+
+  have Bsupx1_Idem :
+    "[^ LUpd_Idem l1 s x1 b, LUpd_Idem l2 s x2 b^] = supx1_idem"
+    using sup_to_bsup[OF Supx1_Idem]
+    by auto
+
+  have Eq : "supx1'_idem = supx1_idem"
+    using compat_put_put[OF BB Supy2 Supx1'_Idem Supx1_Idem]
+    by auto
+
+  show "LUpd_Idem (merge_l l1 l2) s x (LUpd_Idem (merge_l l1 l2) s y b) = LUpd_Idem (merge_l l1 l2) s x b"
+    using X Y 
+    by(auto simp add: merge_l_def Let_def
+      Bsupy1 Bsupx1 
+      Out1x1 Out2x1
+      Out1y1 Out2y1 Bsupy2
+      Out1y2 Out2y2
+      Bsupx1'
+      Out1x1' Out2x1'
+      Bsupx1_Idem Bsupx1'_Idem Eq
+      simp del: LUpd_def)
 qed
 
 locale merge_l_valid_weak_base = merge_l_valid_weak + l_ortho_base +
@@ -2452,18 +2762,55 @@ next
   obtain a1 a2 where A: "a = (a1, a2)"
     by(cases a; auto)
 
-  have "is_sup {b, b} b"
+  have BB: "is_sup {b, b} b"
     by(auto simp add: is_sup_def is_least_def is_ub_def leq_refl)
 
   then obtain supr where Supr : "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr"
-    using compat[of s "a1" b "a2"]
+    using compat[OF BB, of s a1 a2]
     by(auto simp add: has_sup_def)
 
-  have Eq : "[^ LUpd l1 s a1 b, LUpd l2 s a2 b ^] = supr"
+  have Bsupr : "[^ LUpd l1 s a1 b, LUpd l2 s a2 b ^] = supr"
     using is_sup_unique[OF bsup_sup[OF Supr bsup_spec] Supr] by simp
 
-  show "LUpd (merge_l l1 l2) s a b \<in> ok_S"
-    using compat_ok[OF  B_ok Supr] Eq A
+  have Out1: "LOut l1 s [^ LUpd l1 s a1 b, LUpd l2 s a2 b ^] = a1"
+    using compat_get1[OF BB Supr] unfolding Bsupr
+    by auto
+
+  have Out2 : "LOut l2 s [^ LUpd l1 s a1 b, LUpd l2 s a2 b ^] = a2"
+    using compat_get2[OF BB Supr] unfolding Bsupr
+    by auto
+
+  obtain supr' where Supr' : "is_sup {LUpd_Idem l1 s a1 b, LUpd_Idem l2 s a2 b} supr'"
+    using compat_idem[OF BB]
+    by(fastforce simp add: has_sup_def)
+
+  have Bsupr' : "[^ LUpd_Idem l1 s a1 b, LUpd_Idem l2 s a2 b ^] = supr'"
+    using is_sup_unique[OF bsup_sup[OF Supr' bsup_spec] Supr'] by simp
+
+  show "LUpd_Idem (merge_l l1 l2) s a b
+       \<in> ok_S"
+    using compat_idem_ok[OF B_ok Supr'] Bsupr Bsupr' A Out1 Out2
+    by(auto simp add: merge_l_def simp del: LUpd_def)
+next
+
+  fix s 
+  fix b :: 'c
+
+  assume B_ok : "b \<in> ok_S"
+
+  have BB: "is_sup {b, b} b"
+    by(auto simp add: is_sup_def is_least_def is_ub_def leq_refl)
+
+  obtain supr where Supr : "is_sup {LPost l1 s b, LPost l2 s b} supr"
+    using compat_post[OF BB]
+    by(fastforce simp add: has_sup_def)
+
+  have Bsupr: "supr = [^ LPost l1 s b, LPost l2 s b^]"
+    using sup_to_bsup[OF Supr]
+    by auto
+
+  show "LPost (merge_l l1 l2) s b \<in> ok_S"
+    using compat_post_ok[OF B_ok Supr] Bsupr
     by(auto simp add: merge_l_def)
 qed
 
@@ -2510,21 +2857,44 @@ proof
 
   obtain f1 f2 where F: "f = (f1, f2)"
     by(cases f; auto)
-(*
-maybe we need to restrict f to functions that are already sups_pres?
-*)
 
-  show "is_sup (LMap (merge_l l1 l2) f s ` V) (LMap (merge_l l1 l2) f s supr)"
+  have Pres1 : "is_sup (LMap_Idem l1 f1 s ` V) (LMap_Idem l1 f1 s supr)"
+    using in1.pres[OF Vin Vsub1 Supr Supr_in1, of f1]
+    by auto
+
+  have Pres2 : "is_sup (LMap_Idem l2 f2 s ` V) (LMap_Idem l2 f2 s supr)"
+    using in2.pres[OF Vin Vsub2 Supr Supr_in2, of f2]
+    by auto
+
+  have SupSup : "is_sup {supr, supr} supr"
+    by(auto simp add: is_sup_def is_least_def is_ub_def leq_refl)
+
+  obtain supr1 where Supr1 :
+    "is_sup { (LUpd_Idem l1 s (LFD l1 f1 s (LOut l1 s supr)) supr), (LUpd_Idem l2 s (LFD l2 f2 s (LOut l2 s supr)) supr) } supr1"
+    using compat_idem[OF SupSup]
+    by(fastforce simp add: has_sup_def)
+
+  obtain supr2 where Supr2 : 
+
+  have "LOut l1 s
+           [^ LPost l1 s
+               (LUpd_Idem l1 s (LFD l1 f1 s (LOut l1 s supr))
+                 supr), LPost l2 s (LUpd_Idem l2 s (LFD l2 f2 s (LOut l2 s supr)) supr) ^] = LFD l1 f1 s (LOut l1 s supr)"
+
+
+  show "is_sup (LMap_Idem (merge_l l1 l2) f s ` V) (LMap_Idem (merge_l l1 l2) f s supr)"
+    using F
+    apply(simp add: merge_l_def Let_def)
   proof(rule is_supI)
     fix xo
 
-    assume Xo: "xo \<in> LMap (merge_l l1 l2) f s ` V"
+    assume Xo: "xo \<in> LMap_Idem (merge_l l1 l2) f s ` V"
 
 
     then obtain xi where Xi : "xi \<in> V" 
-     "xo = [^ LMap l1 f1 s xi, LMap l2 f2 s xi^]"
+     "xo = LMap_Idem (merge_l l1 l2) f s xi"
       using F
-      by(auto simp add: merge_l_def split: prod.splits)
+      by auto
 
     then obtain xo' where Xo' : "is_sup {LMap l1 f1 s xi, LMap l2 f2 s xi} xo'"
       using compat[of s ]

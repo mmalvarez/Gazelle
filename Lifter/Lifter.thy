@@ -223,7 +223,7 @@ that gets us.
  *)
 (* do we need put1_get2/put2_get1? *)
 
-assumes eq_base : "\<And> s . LBase l1 s = LBase l2 s"
+  assumes eq_base : "\<And> s . LBase l1 s = LBase l2 s"
   (*i think we can't have these set membership premises, but not having them creates problems for fst_snd_ortho *)
   assumes compat : "\<And> s a1 a2 . \<comment> \<open> b \<in> S1 s \<Longrightarrow> b \<in> S2 s \<Longrightarrow> \<close> has_sup {LUpd l1 s a1 b, LUpd l2 s a2 b}"
   (* compat_S premise was sup.
@@ -269,15 +269,15 @@ assumes compat'2 :
   "\<And> s a1 a2 b . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} (LUpd l2 s a2 (LUpd l1 s a1 b))"
 *)
 (* TODO: are these compat'1 compat'2 even necessary anymore? *)
-(*
+
 assumes compat'1 :
   "\<And> s a1 a2 supr . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
-    \<exists> b' . LUpd l1 s a1 b' = supr"
+    \<exists> b' . b' \<in> S2 s \<and> LUpd l1 s a1 b' = supr"
 
 assumes compat'2 :
   "\<And> s a1 a2 supr . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
-    \<exists> b' . LUpd l2 s a2 b' = supr"
-*)
+    \<exists> b' . b' \<in> S1 s \<and> LUpd l2 s a2 b' = supr"
+
 locale l_ortho_base' =
   fixes l1 :: "('a, 'b1, 'c :: Pord_Weakb, 'f1) lifting"
   fixes l2 :: "('a, 'b2, 'c, 'f2) lifting"
@@ -397,6 +397,8 @@ next
   have Comm : "{LUpd l2 s a1 b, LUpd l1 s a2 b} = 
                {LUpd l1 s a2 b, LUpd l2 s a1 b}"
     by auto
+
+  
 
   show "supr \<in> S2 s \<inter> S1 s"
     using compat_S[OF Sup[unfolded Comm]]
