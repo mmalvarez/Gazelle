@@ -209,78 +209,39 @@ locale l_ortho' =
 
 locale l_ortho =
   l_ortho' +
-(*
-if we need these validity assumptions we can add them back.
-+
-  in1 : lifting_valid_weak l1 S1 +
-  in2 : lifting_valid_weak l2 S2 +
-*)
-(* TODO: do we need membership hypothesis (s1 \<union> s2)?
-seems like we need:
-if we start in S1, then updating using l2 is still in S1
-and vice versa. might need something stronger but let's see where
-that gets us.
- *)
-(* do we need put1_get2/put2_get1? *)
 
 assumes eq_base : "\<And> s . LBase l1 s = LBase l2 s"
-  (*i think we can't have these set membership premises, but not having them creates problems for fst_snd_ortho *)
-  assumes compat : "\<And> s a1 a2 . \<comment> \<open> b \<in> S1 s \<Longrightarrow> b \<in> S2 s \<Longrightarrow> \<close> has_sup {LUpd l1 s a1 b, LUpd l2 s a2 b}"
-  (* compat_S premise was sup.
-upper bound isn't quite what we want either. nor, i think, do we want the
-more general statement that the sup of anything in S1 and anything in S2
-are in the intersection... we need to take into account the particulars of the
-liftings involved
+  assumes compat : "\<And> s a1 a2 . LUpd l1 s a1 (LUpd l2 s a2 b) = LUpd l2 s a2 (LUpd l1 s a1 b)"
+  assumes put1_get2 : "\<And> s a1 . LOut l2 s (LUpd l1 s a1 b) = LOut l2 s b"
+  assumes put2_get1 : "\<And> s a2 . LOut l1 s (LUpd l2 s a2 b) = LOut l1 s b"
+  assumes put1_S2 : "\<And> s a1 . b \<in> S2 s \<Longrightarrow> LUpd l1 s a1 b \<in> S2 s"
+  assumes put2_S1 : "\<And> s a2 . b \<in> S1 s \<Longrightarrow> LUpd l2 s a2 b \<in> S1 s"
 
-perhaps a "one-sided" version? that is, one of the two needs to explicitly
-be an update, but the other merely needs to be in its valid set
-i don't think this really solves anything
-
-i also am not sure i fully understand the role of valid sets at this point.
-especially in light of having ok_S
- *)
-
-  assumes compat_S : "\<And> s a1 a2 supr . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
-                      supr \<in> (S1 s \<inter> S2 s)"
-
-(*
-  assumes compat_S1 : "\<And> s x1 a2 supr . x1 \<in> S1 s \<Longrightarrow> is_sup {x1, LUpd l2 s a2 b} supr \<Longrightarrow>
-                      supr \<in> (S1 s \<inter> S2 s)"
-  assumes compat_S2 : "\<And> s x2 a1 supr . x2 \<in> S2 s \<Longrightarrow> is_sup {LUpd l1 s a1 b, x2} supr \<Longrightarrow>
-                      supr \<in> (S1 s \<inter> S2 s)"
-*)
-(*
-  assumes compat_S : "\<And> s x1 x2 supr . x1 \<in> S1 s \<Longrightarrow> x2 \<in> S2 s \<Longrightarrow>
-    is_sup {x1, x2} supr \<Longrightarrow> supr \<in> (S1 s \<inter> S2 s)"
-*)
-(* TODO: need these set membership constraints? originally there were some. *)
-  assumes compat_get1 : "\<And> s a1 a2 supr . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
-                      LOut l1 s supr = a1"
-  assumes compat_get2 : "\<And> s a1 a2 supr . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
-                      LOut l2 s supr = a2"
-  (*assumes put1_get2 : "\<And> s a b . b \<in> S2 s \<Longrightarrow> LOut l2 s (LUpd l1 s a b) = LOut l2 s b"
-  assumes put2_get1 : "\<And> s a b . b \<in> S1 s \<Longrightarrow> LOut l1 s (LUpd l2 s a b) = LOut l1 s b"*)
-  assumes put1_S2 : "\<And> s a b . b \<in> S2 s \<Longrightarrow> LUpd l1 s a b \<in> S2 s"
-  assumes put2_S1 : "\<And> s a b . b \<in> S1 s \<Longrightarrow> LUpd l2 s a b \<in> S1 s"
-(*
-assumes compat'1 :
-  "\<And> s a1 a2 b . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} (LUpd l1 s a1 (LUpd l2 s a2 b))"
-assumes compat'2 :
-  "\<And> s a1 a2 b . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} (LUpd l2 s a2 (LUpd l1 s a1 b))"
-*)
-(* TODO: are these compat'1 compat'2 even necessary anymore? *)
-(*
-assumes compat'1 :
-  "\<And> s a1 a2 supr . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
-    \<exists> b' . LUpd l1 s a1 b' = supr"
-
-assumes compat'2 :
-  "\<And> s a1 a2 supr . is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow>
-    \<exists> b' . LUpd l2 s a2 b' = supr"
-*)
 locale l_ortho_base' =
   fixes l1 :: "('a, 'b1, 'c :: Pord_Weakb, 'f1) lifting"
   fixes l2 :: "('a, 'b2, 'c, 'f2) lifting"
+
+
+(* TODO: l_ortho_pres - but we may not need it. *)
+locale l_ortho_pres = l_ortho +
+  assumes compat_pres1 : "\<And> s f1 f2 s1 s2 v V . 
+    v \<in> V \<Longrightarrow>
+         V \<subseteq> S1 s \<Longrightarrow>
+         V \<subseteq> S2 s \<Longrightarrow>
+    is_sup (LMap l1 f1 s ` V) s1 \<Longrightarrow>
+    s1 \<in> S1 s \<inter> S2 s \<Longrightarrow>
+    is_sup (LMap l2 f2 s ` V) s2 \<Longrightarrow>
+    s2 \<in> S1 s \<inter> S2 s \<Longrightarrow>
+    is_sup (LMap l1 f1 s ` (LMap l2 f2 s ` V)) (LMap l1 f1 s s2)"
+(*
+  assumes compat_pres2 : 
+    "    v \<in> V \<Longrightarrow>
+         V \<subseteq> S1 s \<Longrightarrow>
+         V \<subseteq> S2 s \<Longrightarrow>
+    is_sup (LMap l1 f1 s ` V) s1 \<Longrightarrow>
+    is_sup (LMap l2 f2 s ` V) s2 \<Longrightarrow>
+    is_sup (LMap l2 f2 s ` (LMap l1 f1 s ` V)) (LMap l2 f2 s s1)"
+*)
 
 locale l_ortho_base = l_ortho + l_ortho_base' +
   assumes compat_bases : "\<And> s . is_sup {LBase l1 s, LBase l2 s} \<bottom>"
@@ -288,12 +249,6 @@ locale l_ortho_base = l_ortho + l_ortho_base' +
 locale l_ortho_ok' =
   fixes l1 :: "('a, 'b1, 'c :: {Pord_Weakb, Okay}, 'f1) lifting"
   fixes l2 :: "('a, 'b2, 'c, 'f2) lifting"
-
-locale l_ortho_ok = l_ortho + l_ortho_ok' +
-  assumes compat_ok :
-    "\<And> s a1 a2 b supr . b \<in> ok_S \<Longrightarrow> 
-    is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr \<Longrightarrow> supr \<in> ok_S"
-  
 
 (* lift_map_s is LMap plus a syntax translation *)
 definition lift_map_s ::
@@ -317,91 +272,37 @@ next
 
   fix b s a1 a2
 
-  have Comm : "{LUpd l2 s a1 b, LUpd l1 s a2 b} = 
-               {LUpd l1 s a2 b, LUpd l2 s a1 b}"
-    by auto
-
-  show "has_sup
-        {LUpd l2 s a1 b,
-         LUpd l1 s a2 b}"
-    using compat[of s a2 b a1]
-    unfolding Comm
-    by auto
-
-(*
-next
-  fix b s a1 a2 supr
-
-  assume Sup : "is_sup {LUpd l2 s a1 b, LUpd l1 s a2 b} supr"
-
-  have Comm : "{LUpd l2 s a1 b, LUpd l1 s a2 b} = 
-               {LUpd l1 s a2 b, LUpd l2 s a1 b}"
-    by auto
-
-  show "supr \<in> S2 s \<inter> S1 s"
-    using compat_S[OF Sup[unfolded Comm]]
-    by auto
-*)
-next
-
-  fix b s a1 a2 supr
-
-  assume Sup : "is_sup {LUpd l2 s a1 b, LUpd l1 s a2 b} supr"
-
-  have Comm : "{LUpd l2 s a1 b, LUpd l1 s a2 b} = 
-               {LUpd l1 s a2 b, LUpd l2 s a1 b}"
-    by auto
-
-  show "LOut l2 s supr = a1"
-    using compat_get2[OF Sup[unfolded Comm]]
+  show "LUpd l2 s a1 (LUpd l1 s a2 b) = LUpd l1 s a2 (LUpd l2 s a1 b)"
+    using compat 
     by auto
 
 next
 
-  fix b s a1 a2 supr
-
-  assume Sup : "is_sup {LUpd l2 s a1 b, LUpd l1 s a2 b} supr"
-
-  have Comm : "{LUpd l2 s a1 b, LUpd l1 s a2 b} = 
-               {LUpd l1 s a2 b, LUpd l2 s a1 b}"
+  fix b s a1
+  show "LOut l1 s (LUpd l2 s a1 b) = LOut l1 s b"
+    using put2_get1
     by auto
+next
 
-  show "LOut l1 s supr = a2"
-    using compat_get1[OF Sup[unfolded Comm]]
+  fix b s a2
+  show "LOut l2 s (LUpd l1 s a2 b) = LOut l2 s b"
+    using put1_get2
     by auto
 
 next
 
-  fix s a b
+  fix b s a1
+  assume "b \<in> S1 s"
 
-  show "b \<in> S1 s \<Longrightarrow>
-       LUpd l2 s a b \<in> S1 s"
-    using put2_S1[of b s a]
-    by auto
-
+  then show "LUpd l2 s a1 b \<in> S1 s"
+    using put2_S1 by auto
 next
 
-  fix s a b
+  fix b s a2
+  assume "b \<in> S2 s"
 
-  show "b \<in> S2 s \<Longrightarrow>
-       LUpd l1 s a b \<in> S2 s"
-    using put1_S2[of b s a]
-    by auto
-
-next
-
-  fix b s a1 a2 supr
-
-  assume Sup: "is_sup {LUpd l2 s a1 b, LUpd l1 s a2 b} supr"
-
-  have Comm : "{LUpd l2 s a1 b, LUpd l1 s a2 b} = 
-               {LUpd l1 s a2 b, LUpd l2 s a1 b}"
-    by auto
-
-  show "supr \<in> S2 s \<inter> S1 s"
-    using compat_S[OF Sup[unfolded Comm]]
-    by auto
-
+  then show "LUpd l1 s a2 b \<in> S2 s"
+    using put1_S2 by auto
 qed
 (*
 next
@@ -439,20 +340,7 @@ next
     by auto
 qed
 *)
-
-sublocale l_ortho_base \<subseteq> comm :
-  l_ortho_base l2 S2 l1 S1
-proof
-  fix s
-
-  have Comm : "{LBase l2 s, LBase l1 s} = {LBase l1 s, LBase l2 s}"
-    by auto
-
-  show "is_sup {LBase l2 s, LBase l1 s} \<bottom>"
-    using compat_bases unfolding Comm
-    by auto
-qed
-
+(*
 sublocale l_ortho_ok \<subseteq> comm :
   l_ortho_ok l2 S2 l1 S1
 proof
@@ -470,6 +358,7 @@ proof
     using compat_ok[OF Bok Sup[unfolded Comm]]
     by auto
 qed
+*)
 (*
 lemma (in l_ortho) compat'_comm :
   shows "LUpd l1 s a1 (LUpd l2 s a2 b) = LUpd l2 s a2 (LUpd l1 s a1 b)"

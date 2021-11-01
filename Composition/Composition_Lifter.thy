@@ -9,22 +9,6 @@ begin
  * themselves: just the lifting(s) being applied to them.
  *)
 
-(* challenges here:
- - merging
- - arbitrary arities of sets
-   - but, maybe we can capture "mixing in one at a time."
-*)
-
-(*
-hmm, probably we need to finish/fix up LifterX first, since I am guessing we are going to
-be using that
-*)
-
-(* Potential challenge: what if S1 and S2 are not the full set? *)
-(* Relating ortho/valid-sets to OK-sets
-   - they should definitely be a subset of the OK-set
-   - wow this syntax dependence is going to be really annoying...
-*)
 
 lemma l_ortho_sups_pres :
   fixes l1 :: "('x, 'a, 'b :: {Mergeable, Okay}, 'f1) lifting"
