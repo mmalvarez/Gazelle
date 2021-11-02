@@ -2604,11 +2604,12 @@ sublocale option_l_ortho_base \<subseteq> out : l_ortho_base "option_l l1" "opti
 proof
   fix s
 
-  show "is_sup
-          {LBase (option_l l1) s,
-           LBase (option_l l2) s}
-          \<bottom>"
-    using sup_singleton[of "None"]
+  show "LBase (option_l l1) s = \<bottom>"
+    by(auto simp add: option_l_def option_bot)
+next
+
+  fix s
+  show "LBase (option_l l2) s = \<bottom>"
     by(auto simp add: option_l_def option_bot)
 qed
 
@@ -2933,107 +2934,326 @@ proof
       qed
     qed
   qed
+  fix s f1 f2 s1 s2 v V
+
+  assume Sup1 : "is_sup (LMap (option_l l1) f1 s ` V) s1"
+  assume Sup2 : "is_sup (LMap (option_l l2) f2 s ` V) s2"
+  assume Vin : "v \<in> V"
+  assume Vsub1 : "V \<subseteq> option_l_S S1 s"
+  assume Sin1 : "s1 \<in> option_l_S S1 s \<inter> option_l_S S2 s"
+  assume Vsub2 : "V \<subseteq> option_l_S S2 s"
+  assume Sin2 : "s2 \<in> option_l_S S1 s \<inter> option_l_S S2 s"
+
+  obtain V' where SV' : "V' = { x' . Some x' \<in> V}"
+    by auto
+
+  have Vv' : "V = Some ` V'"
+    using Vsub1 SV'
+    by(auto simp add: option_l_S_def)
+
+  have V'sub1 : "V' \<subseteq> S1 s"
+    using Vv' Vsub1
+    by(auto simp add: option_l_S_def)
+
+  have V'sub2 : "V' \<subseteq> S2 s"
+    using Vv' Vsub2
+    by(auto simp add: option_l_S_def)
+
+  obtain v' where V' :
+    "v' \<in> V'" "v = Some v'"
+    using Vin
+    unfolding Vv'
+    by auto
+
+  have Some_map1 : "LMap (option_l l1) f1 s `V = Some ` LMap l1 f1 s ` V'"
+  proof
+    show "LMap (option_l l1) f1 s ` V \<subseteq> Some ` LMap l1 f1 s ` V'"
+      using Vv'
+      by(auto simp add: option_l_def)
+  next
+    show "Some ` LMap l1 f1 s ` V' \<subseteq> LMap (option_l l1) f1 s ` V"
+    proof
+      fix x
+
+      assume X: "x \<in> Some ` LMap l1 f1 s ` V'"
+
+      then obtain xo where Xo : "xo \<in> V'" "x = Some (LMap l1 f1 s xo)"
+        by auto
+
+      then have X_eq : "x = LMap (option_l l1) f1 s (Some xo)"
+        by(auto simp add: option_l_def)
+
+      have Xo_in : "Some xo \<in> V"
+        using Xo Vv' by auto
+
+      then show "x \<in> LMap (option_l l1) f1 s ` V"
+        using imageI[OF Xo_in, of "LMap (option_l l1) f1 s"] Xo
+        by(auto simp add: option_l_def)
+    
+    qed
+  qed
+
+  have Some_map2 : "LMap (option_l l2) f2 s `V = Some ` LMap l2 f2 s ` V'"
+  proof
+    show "LMap (option_l l2) f2 s ` V \<subseteq> Some ` LMap l2 f2 s ` V'"
+      using Vv'
+      by(auto simp add: option_l_def)
+  next
+    show "Some ` LMap l2 f2 s ` V' \<subseteq> LMap (option_l l2) f2 s ` V"
+    proof
+      fix x
+
+      assume X: "x \<in> Some ` LMap l2 f2 s ` V'"
+
+      then obtain xo where Xo : "xo \<in> V'" "x = Some (LMap l2 f2 s xo)"
+        by auto
+
+      then have X_eq : "x = LMap (option_l l2) f2 s (Some xo)"
+        by(auto simp add: option_l_def)
+
+      have Xo_in : "Some xo \<in> V"
+        using Xo Vv' by auto
+
+      then show "x \<in> LMap (option_l l2) f2 s ` V"
+        using imageI[OF Xo_in, of "LMap (option_l l2) f2 s"] Xo
+        by(auto simp add: option_l_def)
+    qed
+  qed
+
+  have Some_map3 : "LMap (option_l l2) f2 s ` Some ` LMap l1 f1 s ` V' = Some ` LMap l2 f2 s ` LMap l1 f1 s ` V'"
+  proof
+    show "LMap (option_l l2) f2 s ` Some ` LMap l1 f1 s ` V' \<subseteq> Some ` LMap l2 f2 s ` LMap l1 f1 s ` V'"
+      using Vv'
+      by(auto simp add: option_l_def)
+  next
+    show "Some ` LMap l2 f2 s ` LMap l1 f1 s ` V' \<subseteq> LMap (option_l l2) f2 s ` Some ` LMap l1 f1 s ` V'"
+    proof
+      fix x
+      assume X: "x \<in> Some ` LMap l2 f2 s ` LMap l1 f1 s ` V'"
+
+      then obtain xo where Xo : "xo \<in> V'" "x = Some (LMap l2 f2 s (LMap l1 f1 s xo))"
+        by auto
+
+      then have X_eq : "x = LMap (option_l l2) f2 s (Some (LMap l1 f1 s xo))"
+        using Vv'
+        by(auto simp add: option_l_def)
+
+      have Xo_in : "Some xo \<in> V"
+        using Xo Vv' by auto
+
+      have Xo_in' : "Some (LMap l1 f1 s xo) \<in> Some ` LMap l1 f1 s ` V'"
+        using Xo
+        by auto
+
+      show "x \<in> LMap (option_l l2) f2 s ` Some ` LMap l1 f1 s ` V'"
+        using imageI[OF Xo_in', of "LMap (option_l l2) f2 s"] X Xo
+        by(auto simp add: option_l_def)
+    qed
+  qed
+
+  show "is_sup (LMap (option_l l2) f2 s ` LMap (option_l l1) f1 s ` V) (LMap (option_l l2) f2 s s1)"
+  proof(cases s1)
+    case None
+    have "LMap (option_l l1) f1 s v <[ s1"
+      using is_supD1[OF Sup1 imageI[OF Vin]]
+      by(auto)
+
+    then have False using None
+      by(cases v; auto simp add: option_l_def option_pleq)
+
+    then show ?thesis by auto
+  next
+    case (Some s1')
+
+    show ?thesis
+    proof(cases s2)
+      case None' : None
+
+      have "LMap (option_l l2) f2 s v <[ s2"
+        using is_supD1[OF Sup2 imageI[OF Vin]]
+        by(auto)
+
+      then have False using None'
+        by(cases v; auto simp add: option_l_def option_pleq)
+
+      then show ?thesis by auto
+    next
+      case Some' : (Some s2')
+
+      have Sup'1 : "is_sup (LMap l1 f1 s ` V') s1'"
+      proof(rule is_supI)
+        fix x
+        assume X : "x \<in> LMap l1 f1 s ` V'"
+
+        then obtain x' where X' : "x' \<in> V'" "LMap l1 f1 s x' = x"
+          by auto
+
+        have "Some x \<in> LMap (option_l l1) f1 s ` V"
+          unfolding Some_map1
+          using imageI[OF X, of Some]
+          by(auto simp add: option_l_def)
+
+        then show "x <[ s1'"
+          using is_supD1[OF Sup1, of "Some x"] Some
+          by(auto simp add: option_pleq)
+      next
+        fix w
+
+        assume Ub : "is_ub (LMap l1 f1 s ` V') w"
+        have Ub' : "is_ub (LMap (option_l l1) f1 s ` V) (Some w)"
+        proof(rule is_ubI)
+          fix z
+          assume Z: "z \<in> LMap (option_l l1) f1 s ` V"
+
+          then have "z \<in> Some ` LMap l1 f1 s ` V'"
+            unfolding Some_map1
+            by auto
+
+          then obtain z' where Z' : "z' \<in> LMap l1 f1 s ` V'" "z = Some z'"
+            by auto
+
+          show "z <[ Some w"
+            using is_ubE[OF Ub Z'(1)] Z'(2)
+            by(auto simp add: option_pleq)
+        qed
+
+        show "s1' <[ w"
+          using is_supD2[OF Sup1 Ub'] Some
+          by(auto simp add: option_pleq)
+      qed
+
+      have Sup'2 : "is_sup (LMap l2 f2 s ` V') s2'"
+      proof(rule is_supI)
+        fix x
+        assume X : "x \<in> LMap l2 f2 s ` V'"
+
+        then obtain x' where X' : "x' \<in> V'" "LMap l2 f2 s x' = x"
+          by auto
+
+        have "Some x \<in> LMap (option_l l2) f2 s ` V"
+          unfolding Some_map2
+          using imageI[OF X, of Some]
+          by(auto simp add: option_l_def)
+
+        then show "x <[ s2'"
+          using is_supD1[OF Sup2, of "Some x"] Some'
+          by(auto simp add: option_pleq)
+      next
+        fix w
+
+        assume Ub : "is_ub (LMap l2 f2 s ` V') w"
+        have Ub' : "is_ub (LMap (option_l l2) f2 s ` V) (Some w)"
+        proof(rule is_ubI)
+          fix z
+          assume Z: "z \<in> LMap (option_l l2) f2 s ` V"
+
+          then have "z \<in> Some ` LMap l2 f2 s ` V'"
+            unfolding Some_map2
+            by auto
+
+          then obtain z' where Z' : "z' \<in> LMap l2 f2 s ` V'" "z = Some z'"
+            by auto
+
+          show "z <[ Some w"
+            using is_ubE[OF Ub Z'(1)] Z'(2)
+            by(auto simp add: option_pleq)
+        qed
+
+        show "s2' <[ w"
+          using is_supD2[OF Sup2 Ub'] Some'
+          by(auto simp add: option_pleq)
+      qed
+
+      have Sin1' : "s1' \<in> S1 s \<inter> S2 s"
+        using Sin1 Some
+        by(auto simp add: option_l_S_def)
+
+      have Sin2' : "s2' \<in> S1 s \<inter> S2 s"
+        using Sin2 Some'
+        by(auto simp add: option_l_S_def)
+
+      have Conc' : "is_sup (LMap l2 f2 s ` LMap l1 f1 s ` V') (LMap l2 f2 s s1')"
+        using compat_pres2[OF V'(1) V'sub1 V'sub2 Sup'1 Sin1' Sup'2 Sin2']
+        by auto
+
+      show "is_sup
+          (LMap (option_l l2) f2 s ` LMap (option_l l1) f1 s ` V)
+          (LMap (option_l l2) f2 s s1)"
+      proof(rule is_supI)
+        fix z
+
+        assume Z: "z \<in> LMap (option_l l2) f2 s `
+             LMap (option_l l1) f1 s ` V "
+
+        then have Z1 : "z \<in> LMap (option_l l2) f2 s `
+             (Some ` LMap l1 f1 s ` V')"
+          using Some_map1
+          by auto
+
+        then obtain z' where Z2 : "z = Some z'" "z' \<in> LMap l2 f2 s ` LMap l1 f1 s ` V'"
+          unfolding Some_map3
+          by auto
+
+        show "z <[ LMap (option_l l2) f2 s s1"
+          using is_supD1[OF Conc' Z2(2)] Some' Z2(1) Some
+          by(auto simp add: option_l_def option_pleq)
+      next
+
+        fix w
+
+        assume Ub : "is_ub (LMap (option_l l2) f2 s ` LMap (option_l l1) f1 s ` V) w"
+
+        then have Ub1 : "is_ub (LMap (option_l l2) f2 s `
+             (Some ` LMap l1 f1 s ` V')) w"
+          using Some_map1
+          by auto
+
+        show "LMap (option_l l2) f2 s s1 <[ w"
+        proof(cases w)
+          case None'' : None
+
+          have In' : "LMap (option_l l2) f2 s (Some (LMap l1 f1 s v')) \<in> LMap (option_l l2) f2 s ` Some ` LMap l1 f1 s ` V' "
+            using imageI[OF V'(1), of "LMap (option_l l2) f2 s o Some o LMap l1 f1 s"]
+            by auto
+
+          have False using is_ubE[OF Ub1 In'] None''
+            by(auto simp add: option_l_def option_pleq)
+
+          then show ?thesis by auto
+        next
+          case Some'' : (Some w')
+          have Ub2 : "is_ub (LMap l2 f2 s ` LMap l1 f1 s ` V') w'"
+          proof(rule is_ubI)
+            fix k
+
+            assume K: "k \<in> LMap l2 f2 s ` LMap l1 f1 s ` V'"
+
+            then have K' : "Some k \<in> Some ` LMap l2 f2 s ` LMap l1 f1 s ` V'"
+              by auto
+
+            show "k <[ w'"
+              using is_ubE[OF Ub1, of "Some k"] Some'' K'
+              unfolding Some_map3
+              by(auto simp add: option_pleq)
+          qed
+          
+          show ?thesis 
+            using is_supD2[OF Conc' Ub2] Some'' Some' Some
+            by(auto simp add: option_l_def option_pleq)
+        qed
+      qed
+    qed
+  qed
 qed
 
-(*
+
 locale option_l_ortho_ok =
   option_l_ortho + l_ortho_ok
 
 sublocale option_l_ortho_ok \<subseteq> out : l_ortho_ok "option_l l1" "option_l_S S1" "option_l l2" "option_l_S S2"
 proof
-
-  fix s a1 a2 b supr
-
-  assume H: "is_sup {LUpd (option_l l1) s a1 b, LUpd (option_l l2) s a2 b} supr"
-
-  assume Bok : "b \<in> ok_S"
-  obtain r1 where R1: "LUpd (option_l l1) s a1 b = Some r1"
-    by(cases b; auto simp add: option_l_def)
-
-  obtain r2 where R2 : "LUpd (option_l l2) s a2 b = Some r2"
-    by(cases b; auto simp add: option_l_def)
-
-  show "supr \<in> ok_S"
-  proof(cases supr)
-    case None
-
-    then have "Some r1 <[ None"
-      using is_supD1[OF H] unfolding R1 None
-      by auto
-
-    then have False by(simp add: option_pleq)
-
-    thus ?thesis ..
-  next
-    case (Some supr')
-
-    have Sup_map : "is_sup (Some ` {r1, r2}) (Some supr')"
-      using H unfolding R1 R2 Some
-      by auto
-
-    hence Sup_inner : "is_sup {r1, r2} supr'"
-      using is_sup_Some'[OF _ Sup_map]
-      by auto
-
-    show ?thesis
-    proof(cases b)
-      case None' : None
-
-      then have False using Bok
-        by(auto simp add:option_ok_S)
-(*
-      have R1' : "LUpd l1 s a1 (LBase l1 s) = r1"
-        using None' R1
-        by(auto simp add: option_l_def)
-
-      have R2' : "LUpd l2 s a2 (LBase l2 s) = r2"
-        using None' R2
-        by(auto simp add: option_l_def)
-
-      have Bases : "LBase l1 s = LBase l2 s"
-        using eq_base by auto
-
-      then have Sup_inner' :
-        "is_sup {LUpd l1 s a1 (LBase l1 s), LUpd l2 s a2 (LBase l1 s)} supr'"
-        using Sup_inner R1' R2'
-        by auto
-      
-      then have "supr' \<in> ok_S"
-        using compat_ok[OF Sup_inner']
-        by auto
-*)
-      then show ?thesis using Some
-        by(auto simp add: option_l_def option_ok_S)
-    next
-      case Some' : (Some b')
-
-      then have B'ok : "b' \<in> ok_S"
-        using Bok
-        by(auto simp add: option_ok_S)
-
-      have R1' : "LUpd l1 s a1 b' = r1"
-        using Some' R1
-        by(auto simp add: option_l_def)
-
-      have R2' : "LUpd l2 s a2 b' = r2"
-        using Some' R2
-        by(auto simp add: option_l_def)
-
-      then have Sup_inner' :
-        "is_sup {LUpd l1 s a1 b', LUpd l2 s a2 b'} supr'"
-        using Sup_inner R1' R2'
-        by auto
-
-      then have "supr' \<in> ok_S"
-        using compat_ok[OF B'ok Sup_inner']
-        by auto
-
-      then show ?thesis using Some
-        by(auto simp add: option_l_def option_ok_S)
-    qed
-  qed
 qed
-*)
+
 (* Prio - let's defer this until later as we may not need it.
  * my guess is it's true, but annoying. *)
 
@@ -4230,7 +4450,83 @@ proof
     using in2.pres[OF V2in V2sub Snd_sup Sin'2]
     by auto
 
-  have "is_sup (LMap l2 f2 s ` snd ` V) (s2_2)"
+  have S1_1_sup : "is_sup (LMap l1 f1 s ` fst ` V) (s1_1)"
+  proof(rule is_supI)
+
+    fix x
+
+    assume X : "x \<in> LMap l1 f1 s ` fst ` V"
+
+    then obtain xo where Xo: "xo \<in> V" "LMap l1 f1 s (fst xo) = x"
+      unfolding image_comp by auto
+
+    obtain xo1 xo2 where Xo12 : "xo = (xo1, xo2)"
+      by(cases xo; auto)
+
+    have In : "LMap (fst_l l1) f1 s xo \<in> LMap (fst_l l1) f1 s ` V"
+      using imageI[OF Xo(1)]
+      by auto
+
+
+    show "x <[ s1_1"
+      using is_supD1[OF Sup1 In] Xo Xo12 S1
+      by(auto simp add: fst_l_def prod_pleq)
+  next
+    fix x'
+    assume Ub : "is_ub (LMap l1 f1 s ` fst ` V) x'"
+
+    have Ub' : "is_ub (LMap (fst_l l1) f1 s ` V) (x', s1_2)"
+    proof(rule is_ubI)
+      fix w
+
+      assume W : "w \<in> LMap (fst_l l1) f1 s ` V"
+
+      then obtain wo where Wo : "wo \<in> V" "LMap (fst_l l1) f1 s wo = w"
+        by auto
+
+      obtain w1 w2 where W12 : "w = (w1, w2)"
+        by(cases w; auto)
+
+      obtain wo1 wo2 where Wo12 : "wo = (wo1, wo2)"
+        by(cases wo; auto)
+
+      have W1' : "w1 = LMap l1 f1 s (fst wo)"
+        using Wo W12 Wo12
+        by(auto simp add: fst_l_def)
+
+      have In1 : "w1 \<in> LMap l1 f1 s ` fst ` V"
+        using imageI[OF Wo(1), of "LMap l1 f1 s o fst"] 
+        unfolding image_comp W1'
+        by auto
+
+      have Conc1 : "w1 <[ x'"
+        using is_ubE[OF Ub In1] by auto
+
+      have W2: "w2 = wo2"
+        using Wo W12 Wo12
+        by(auto simp add: fst_l_def)
+
+      then have In2 : "w2 \<in> snd ` V"
+        using imageI[OF Wo(1), of snd] W12 Wo12
+        by auto
+        
+      have Conc2 : "w2 <[ s1_2"
+        using is_supD1[OF Snd_sup In2] by auto
+
+      show "w <[ (x', s1_2)"
+        using Conc1 Conc2 W12
+        by (auto simp add: prod_pleq)
+    qed
+
+    show "s1_1 <[ x'"
+      using is_supD2[OF Sup1 Ub'] S1
+      by(auto simp add: prod_pleq)
+  qed
+
+  have S1_1_eq : "LMap l1 f1 s s2_1 = s1_1"
+    using is_sup_unique[OF So1_sup S1_1_sup] by auto
+
+  have S2_2_sup : "is_sup (LMap l2 f2 s ` snd ` V) (s2_2)"
   proof(rule is_supI)
 
     fix x
@@ -4258,22 +4554,107 @@ proof
   next
     fix x'
 
-    assume X' : "is_ub (LMap l2 f2 s ` snd ` V) x'"
+    assume Ub : "is_ub (LMap l2 f2 s ` snd ` V) x'"
 
     have Ub' : "is_ub (LMap (snd_l l2) f2 s ` V) (s2_1, x')"
-      sorry
+    proof(rule is_ubI)
+      fix w
+
+      assume W : "w \<in> LMap (snd_l l2) f2 s ` V "
+
+      then obtain wo where Wo : "wo \<in> V" "LMap (snd_l l2) f2 s wo = w"
+        by auto
+
+      obtain w1 w2 where W12 : "w = (w1, w2)"
+        by(cases w; auto)
+
+      obtain wo1 wo2 where Wo12 : "wo = (wo1, wo2)"
+        by(cases wo; auto)
+
+      have W2' : "w2 = LMap l2 f2 s (snd wo)"
+        using Wo W12 Wo12
+        by(auto simp add: snd_l_def)
+
+      have In2 : "w2 \<in> LMap l2 f2 s ` snd ` V"
+        using imageI[OF Wo(1), of "LMap l2 f2 s o snd"] 
+        unfolding image_comp W2'
+        by auto
+
+      have Conc1 : "w2 <[ x'"
+        using is_ubE[OF Ub In2] by auto
+
+      have W1: "w1 = wo1"
+        using Wo W12 Wo12
+        by(auto simp add:snd_l_def)
+
+      then have In1 : "w1 \<in> fst ` V"
+        using imageI[OF Wo(1), of fst] W12 Wo12
+        by auto
+        
+      have Conc2 : "w1 <[ s2_1"
+        using is_supD1[OF Fst_sup In1] by auto
+
+      show "w <[ (s2_1, x')"
+        using Conc1 Conc2 W12
+        by (auto simp add: prod_pleq)
+    qed
 
     show "s2_2 <[ x'"
       using is_supD2[OF Sup2 Ub'] S2
       by(auto simp add: prod_pleq)
   qed
 
-  have Test : "is_sup (LMap l1 f1 s ` fst ` V) (s1_1)"
-    sorry
-
   show "is_sup (LMap (fst_l l1) f1 s ` LMap (snd_l l2) f2 s ` V) (LMap (fst_l l1) f1 s s2)"
   proof(rule is_supI)
+    fix x
 
+    assume X: "x \<in> LMap (fst_l l1) f1 s ` LMap (snd_l l2) f2 s ` V"
+
+    then obtain xo where Xo : "xo \<in> V" "LMap (fst_l l1) f1 s (LMap (snd_l l2) f2 s xo) = x"
+      unfolding image_comp by auto
+
+    obtain xo1 xo2 where Xo12 : "xo = (xo1, xo2)"
+      by(cases xo; auto)
+
+    obtain x1 x2 where X12 : "x = (x1, x2)"
+      by(cases x; auto)
+
+    have Eq1 : "x1 = LMap l1 f1 s xo1"
+      using Xo Xo12 X12
+      by(auto simp add: fst_l_def snd_l_def)
+
+    have Xo1_in : "xo1 \<in> (fst ` V)"
+      using imageI[OF Xo(1), of "fst"] Xo12 by auto
+
+    have In1: "x1 \<in> LMap l1 f1 s ` fst ` V"
+      using imageI[OF Xo1_in, of "LMap l1 f1 s "]
+      unfolding image_comp Eq1
+      by auto
+
+    have Conc1 : "x1 <[ LMap l1 f1 s s2_1"
+      using is_supD1[OF So1_sup In1]
+      by auto
+
+    have Eq2 : "x2 = LMap l2 f2 s xo2"
+      using Xo Xo12 X12
+      by(auto simp add: fst_l_def snd_l_def)
+
+    have Xo2_in : "xo2 \<in> (snd ` V)"
+      using imageI[OF Xo(1), of "snd"] Xo12 by auto
+
+    have In2 : "x2 \<in> LMap l2 f2 s ` snd ` V"
+      using imageI[OF Xo2_in, of "LMap l2 f2 s"]
+      unfolding image_comp Eq2
+      by auto
+
+    have Conc2 : "x2 <[ s2_2"
+      using is_supD1[OF S2_2_sup In2]
+      by auto
+
+    show "x <[ LMap (fst_l l1) f1 s s2" using S2 X12
+      Conc1 Conc2
+      by(auto simp add: fst_l_def prod_pleq)
+  next
     fix x'
 
     assume Ub : "is_ub (LMap (fst_l l1) f1 s ` LMap (snd_l l2) f2 s ` V) x'"
@@ -4281,10 +4662,11 @@ proof
     obtain x'1 x'2 where X'12 : "x' = (x'1, x'2)"
       by(cases x'; auto)
 
-    have "LMap (fst_l l1) f1 s s2 = (s1_1, s2_2)"
-      sorry
+    have Eq: "LMap (fst_l l1) f1 s s2 = (s1_1, s2_2)"
+      using S2 S1_1_eq
+      by(auto simp add: fst_l_def)
 
-    have "is_ub (LMap l1 f1 s ` fst ` V) x'1"
+    have Ub1 : "is_ub (LMap l1 f1 s ` fst ` V) x'1"
     proof(rule is_ubI)
       fix w
       assume W: "w \<in> LMap l1 f1 s ` fst ` V"
@@ -4294,234 +4676,56 @@ proof
 
       obtain wo1 wo2 where Wo12 : "wo = (wo1, wo2)"
         by(cases wo; auto)
-(* YOU ARE HERE *)
 
-    have "s1_1 <[ x'1"
-      using is_supD2[OF Test]
-
-    show "LMap (fst_l l1) f1 s s2 <[ x'"
-
-(*
-  have P1 : "
-*)
-
-(*
-  show "is_sup (LMap (fst_l l1) f1 s ` LMap (snd_l l2) f2 s ` V) (LMap (fst_l l1) f1 s s2)"
-  proof(rule is_supI)
-
-    fix x'
-
-    assume Ub : "is_ub (LMap (fst_l l1) f1 s ` LMap (snd_l l2) f2 s ` V) x'"
-
-    obtain x'1 x'2 where X' : "(x' = (x'1, x'2))"
-      by(cases x'; auto)
-
-    have "LMap (fst_l l1) f1 s s2 = (LMap l1 f1 s s2_1, s2_2)"
-      sorry
-
-    have Ub1 : "
-
-    have Conc1 : "LMap l1 f1 s s2_1 <[ x'1"
-
-    have True using is_supD2[OF So1_sup]
-
-    have "is_ub (LMap (snd_l l2) f2 s ` V) x'"
-      sorry
-
-    have Ub1 : "is_ub (LMap l1 f1 s ` fst ` V) x'1"
-    proof(rule is_ubI)
-      fix z
-
-      assume Z: "z \<in> LMap l1 f1 s ` fst ` V"
-
-      obtain zo where Zo : "zo \<in> V" "LMap l1 f1 s (fst zo) = z"
-        using Z
-        unfolding image_comp
+      have In: "(LMap (fst_l l1) f1 s (LMap (snd_l l2) f2 s wo)) \<in> LMap (fst_l l1) f1 s ` LMap (snd_l l2) f2 s ` V "
+        using imageI[OF Wo(1)] unfolding image_comp
         by auto
 
-      then obtain zo1 zo2 where Zo : "zo = (zo1, zo2)"
-        by(cases zo; auto)
+      have "(LMap (fst_l l1) f1 s (LMap (snd_l l2) f2 s wo)) = (w, LMap l2 f2 s wo2)"
+        using Wo Wo12
+        by(auto simp add: fst_l_def snd_l_def)
 
-
-      then have "
-
-    show "LMap (fst_l l1) f1 s s2 <[ x'"
-  qed
-
-
-(* having trouble with the second part of this proof. *)
-  proof(rule is_supI)
-    fix x
-
-    assume X: "x \<in> LMap (fst_l l1) f1 s ` LMap (snd_l l2) f2 s ` V"
-
-    then obtain xo where Xo : "xo \<in> V" "LMap (fst_l l1) f1 s (LMap (snd_l l2) f2 s xo) = x"
-      by auto
-
-    obtain x1 x2 where X12 : "x = (x1, x2)"
-      by(cases x; auto)
-
-    obtain xo1 xo2 where Xo12 : "xo = (xo1, xo2)"
-      by(cases xo; auto)
-
-    have Xo1_in : "xo1 \<in> (fst ` V)"
-      using imageI[OF Xo(1), of fst] Xo12
-      by auto
-
-    have Xo1_in' : "LMap l1 f1 s xo1 \<in> LMap l1 f1 s ` fst ` V "
-      using imageI[OF Xo1_in, of "LMap l1 f1 s"]
-      by simp
-
-    have Xo2_in : "xo2 \<in> (snd ` V)"
-      using imageI[OF Xo(1), of snd] Xo12
-      by auto
-
-    have Xo2_in' : "LMap l2 f2 s xo2 \<in> LMap l2 f2 s ` snd ` V "
-      using imageI[OF Xo2_in, of "LMap l2 f2 s"]
-      by simp
-
-    have Leq1 : "LMap l1 f1 s xo1 <[ LMap l1 f1 s s2_1" using is_supD1[OF So1_sup Xo1_in'] using Xo12 Xo
-      by auto
-
-    have Leq2 : "LMap l2 f2 s xo2 <[ LMap l2 f2 s s1_2"
-      using is_supD1[OF So2_sup Xo2_in'] using Xo12 Xo
-      by auto
-
-
-    have "xo2 <[ so2" using is_supD1[OF So2_sup imageI, of xo] using Xo12 Xo
-      by auto
-
-    obtain xo_mid where Xo_mid : "xo_mid \<in> LMap (snd_l l2) f2 s ` V" "LMap (fst_l l1) f1 s xo_mid = x"
-      using X by(auto)
-
-    obtain xo_mid1 xo_mid2 where Xo_mid12 : "xo_mid = (xo_mid1, xo_mid2)"
-      by(cases xo_mid; auto)
-
-    have X1_in : "x1 \<in> LMap l1 f1 s ` fst ` V"
-      using imageI[OF X, of fst] X X12 Map_eq_gen1
-      by(auto)
-
-    have Conc1 : "x1 <[ LMap l1 f1 s so1"
-      using is_supD1[OF So1_sup X1_in] S2 X12 So1_eq
-      by(auto simp add: fst_l_def prod_pleq)
-
-    have X2_in : "x2 \<in> LMap l2 f2 s ` snd ` V"
-      using imageI[OF X, of snd] X X12 Map_eq_gen2
-      by(auto)
-
-    have Xo_mid2 : "x2 = xo_mid2"
-      using X12 Xo_mid12 Xo_mid(2)
-      by(auto simp add: fst_l_def)
-
-    have Conc2 : "x2 <[ s2_2"
-      using is_supD1[OF Sup2 Xo_mid(1)] Xo_mid2 S2 Xo_mid12
-      by(auto simp add: prod_pleq)
-
-    show "x <[ LMap (fst_l l1) f1 s s2"
-      using Conc1 Conc2 S2 X12 So1_eq
-      by(auto simp add: fst_l_def prod_pleq)
-  next
-
-    fix w
-
-    assume Ub : "is_ub (LMap (fst_l l1) f1 s ` LMap (snd_l l2) f2 s ` V) w"
-
-    obtain w1 w2 where W12 : "w = (w1, w2)"
-      by(cases w; auto)
-
-    have Ub' : "is_ub ((LMap (fst_l l1) f1 s o LMap (snd_l l2) f2 s) ` V) w"
-      using Ub
-      unfolding image_comp
-      by auto
-
-    have Ub1 : "is_ub (fst ` (LMap (fst_l l1) f1 s ` LMap (snd_l l2) f2 s ` V)) w1"
-      using is_ub_fst'[OF imageI[OF Vin] Ub'[unfolded W12]]
-      unfolding image_comp
-      by(auto)
-
-    have Ub2 : "is_ub (snd ` (LMap (fst_l l1) f1 s ` LMap (snd_l l2) f2 s ` V)) w2"
-      using is_ub_snd'[OF imageI[OF Vin] Ub'[unfolded W12]]
-      unfolding image_comp
-      by auto
-
-    have Conc1 : "LMap l1 f1 s so1 <[ w1"
-      using is_supD2[OF So1_sup Ub1[unfolded Map_eq_gen1]] by auto
-
-    have Conc2 : "LMap l2 f2 s so2 <[ w2"
-      using is_supD2[OF So2_sup Ub2[unfolded Map_eq_gen2]]
-      by(auto simp add: fst_l_def)
-
-    have Huh : "s2_2 \<in> LMap l2 f2 s ` snd ` V"
-      using S2
-
-    show "LMap (fst_l l1) f1 s s2 <[ w"
-      using is_ubE[OF Ub2, of s2_2] unfolding Map_eq_gen2
-      using Huh Conc1 W12 S2 So1_eq
-      by(auto simp add:fst_l_def prod_pleq)
-
-(*
-    have "LMap (fst_l l1) f1 s s2 \<in> LMap l2 f2 s ` snd ` V"
-*)
-
-    have "is_sup (LMap l2 f2 s ` snd ` V) (s2_2)"
-    proof(rule is_supI)
-      fix k
-      assume K: "k \<in> LMap l2 f2 s ` snd ` V"
-
-      then obtain ko where Ko : "ko \<in> V" "LMap l2 f2 s (snd ko) = k"
-        unfolding image_comp
+      then have "(w, LMap l2 f2 s wo2) <[ x'"
+        using is_ubE[OF Ub In]
         by auto
 
-      obtain ko1 ko2 where Ko12 : "ko = (ko1, ko2)"
-        by(cases ko; auto)
-
-      have "LMap (snd_l l2) f2 s ko = (ko1, k)"
-        using Ko Ko12
-        by(auto simp add: snd_l_def)
-
-      then have Ko' :  "(ko1, k) \<in> LMap (snd_l l2) f2 s ` V"
-        using imageI[OF Ko(1), of "LMap (snd_l l2) f2 s "] unfolding Ko12
-        by(auto)
-
-      show "k <[ s2_2"
-        using is_supD1[OF Sup2 Ko'] Ko S2
+      then show "w <[ x'1" using X'12
         by(auto simp add: prod_pleq)
-    next
-
-      fix l
-
-      assume Ubl : "is_ub (LMap l2 f2 s ` snd ` V) l"
-
-      show "s2_2 <[ l"
-        using is_supD2[OF So2_sup Ubl]
-
-      have "is_ub (LMap (snd_l l2) f2 s ` V) (s2_1, l)"
-      proof(rule is_ubI)
-        fix z
-
-        assume Z: "z \<in> (LMap (snd_l l2) f2 s ` V)"
-
-        show "z <[ (s2_1, l)"
-          using is_supD2[OF So2_sup Ubl]
-          using is_ubE[OF Ubl] unfolding
-      then show "s2_2 <[ l"
-
     qed
 
-    have Conc2' : "s2_2 = LMap l2 f2 s so2"
-      using Map_eq
+    have Ub2 : "is_ub (LMap l2 f2 s ` snd ` V) x'2"
+    proof(rule is_ubI)
+      fix w
+      assume W: "w \<in> LMap l2 f2 s ` snd ` V"
 
-      using is_supD1[OF So2_sup, of s2_2]
-(*
-    have Conc2' : "s2_2 <[ w2"
-      using S2 So2_eq So2 W12
-      apply(auto)
-*)
-    show "LMap (fst_l l1) f1 s s2 <[ w"
-      using Map_eq Conc1 Conc2 W12
-      apply(auto simp add: prod_pleq)
+      then obtain wo where Wo : "wo \<in> V" "LMap l2 f2 s (snd wo) = w"
+        unfolding image_comp by auto
 
-    have X2 :  "LMap l2 f2 s xo2 = x2"
+      obtain wo1 wo2 where Wo12 : "wo = (wo1, wo2)"
+        by(cases wo; auto)
+
+      have In: "(LMap (fst_l l1) f1 s (LMap (snd_l l2) f2 s wo)) \<in> LMap (fst_l l1) f1 s ` LMap (snd_l l2) f2 s ` V "
+        using imageI[OF Wo(1)] unfolding image_comp
+        by auto
+
+      have "(LMap (fst_l l1) f1 s (LMap (snd_l l2) f2 s wo)) = (LMap l1 f1 s wo1, w)"
+        using Wo Wo12
+        by(auto simp add: fst_l_def snd_l_def)
+
+      then have "(LMap l1 f1 s wo1, w) <[ x'"
+        using is_ubE[OF Ub In]
+        by auto
+
+      then show "w <[ x'2" using X'12
+        by(auto simp add: prod_pleq)
+    qed
+
+    show "LMap (fst_l l1) f1 s s2 <[ x'"
+      unfolding Eq X'12
+      using is_supD2[OF S1_1_sup Ub1] is_supD2[OF S2_2_sup Ub2]
+      by(auto simp add: prod_pleq)
+  qed
+qed
 
 
 locale merge_l_ortho' =
@@ -4532,11 +4736,14 @@ locale merge_l_ortho' =
   fixes l3 :: "('a, 'b3, 'c, 'f3) lifting"
   fixes S3 :: "'a \<Rightarrow> 'c3 set"
 
+(* YOU ARE HERE *)
+
 locale merge_l_ortho = merge_l_ortho' +
   orth1_2 : l_ortho l1 S1 l2 S2 + 
   orth1_3 : l_ortho l1 S1 l3 S3 +
   orth2_3 : l_ortho l2 S2 l3 S3 
   (* + valid3 : lifting_valid_weak_pres l3 S3*)
+(* TODO may need more validity assumptions. *)
 
 sublocale merge_l_ortho \<subseteq> out : l_ortho "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x" l3 S3
 proof
@@ -4567,83 +4774,84 @@ next
   obtain a1 a2 where A1_2 : "a1_2 = (a1, a2)"
     by(cases a1_2; auto)
 
-  obtain supr12 where Sup12 : "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr12"
-    using orth1_2.compat
-    by(fastforce simp add: has_sup_def)
+  show "LUpd (merge_l l1 l2) s a1_2 (LUpd l3 s a3 b) = LUpd l3 s a3 (LUpd (merge_l l1 l2) s a1_2 b)" using A1_2
+    by(auto simp add: merge_l_def orth1_3.compat orth2_3.compat)
 
-  then have Bsup12 : "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} [^ LUpd l1 s a1 b, LUpd l2 s a2 b ^]"
-    using bsup_sup[OF Sup12 bsup_spec]
-    by auto
-
-  have Eq12 : "[^ LUpd l1 s a1 b, LUpd l2 s a2 b ^] = supr12"
-    using is_sup_unique[OF Sup12 Bsup12]
-    by auto
-
-  obtain sup_full where Full1 :
-    "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b, LUpd l3 s a3 b} sup_full"
-    using pairwise_sup[OF orth1_2.compat orth2_3.compat orth1_3.compat, of s a1 b a2 a3]
-    by(auto simp add: has_sup_def)
-
-  have Un : "({LUpd l1 s a1 b, LUpd l2 s a2 b} \<union> {LUpd l3 s a3 b}) = {LUpd l1 s a1 b, LUpd l2 s a2 b, LUpd l3 s a3 b}"
-    by blast
-
-  have "is_sup {[^ LUpd l1 s a1 b, LUpd l2 s a2 b^], LUpd l3 s a3 b} sup_full"
-    using sup_union2[OF Bsup12 sup_singleton[of "LUpd l3 s a3 b"], of sup_full] Full1
-    unfolding Un
-    by(auto)
-    
-  then show "has_sup {LUpd (merge_l l1 l2) s a1_2 b, LUpd l3 s a3 b}"
-    using A1_2
-    by(auto simp add: merge_l_def has_sup_def)
 next
-  fix b supr :: 'c
+  fix b :: 'c
   fix a1_2 :: "'b * 'e"
   fix a3 :: 'g
   fix s
 
-  assume Supr : 
-    "is_sup {LUpd (merge_l l1 l2) s a1_2 b, LUpd l3 s a3 b} supr"
+  obtain a1 a2 where A1_2 : "a1_2 = (a1, a2)"
+    by(cases a1_2; auto)
+
+  show "LOut l3 s (LUpd (merge_l l1 l2) s a1_2 b) = LOut l3 s b" using A1_2
+    by(auto simp add: merge_l_def orth1_3.put1_get2 orth2_3.put1_get2)
+next
+
+  fix b :: 'c
+  fix a1_2 :: "'b * 'e"
+  fix a3 :: 'g
+  fix s
 
   obtain a1 a2 where A1_2 : "a1_2 = (a1, a2)"
     by(cases a1_2; auto)
 
-  obtain supr12 where Sup12 : "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr12"
-    using orth1_2.compat
-    by(fastforce simp add: has_sup_def)
+  show "LOut (merge_l l1 l2) s (LUpd l3 s a3 b) = LOut (merge_l l1 l2) s b" using A1_2
+    by(auto simp add: merge_l_def orth1_3.put2_get1 orth2_3.put2_get1)
+next
 
-  have "supr12 \<in> (S1 s \<inter> S2 s)"
-    using orth1_2.compat_S[OF Sup12]
+  fix b s
+  fix a1_2 :: "'b * 'e"
+  assume B: "b \<in> S3 s"
+
+  obtain a1 a2 where A1_2 : "a1_2 = (a1, a2)"
+    by(cases a1_2; auto)
+
+  have Up2 : "(LUpd l2 s a2 b) \<in> S3 s"
+    using orth2_3.put1_S2[OF B] by auto
+
+  have Up1 : "(LUpd l1 s a1 (LUpd l2 s a2 b)) \<in> S3 s"
+    using orth1_3.put1_S2[OF Up2]
     by auto
 
-  obtain supr13 where Sup13 : "is_sup {LUpd l1 s a1 b, LUpd l3 s a3 b} supr13"
-    using orth1_3.compat
-    by(fastforce simp add: has_sup_def)
+  then show "LUpd (merge_l l1 l2) s a1_2 b \<in> S3 s" using A1_2
+    by(auto simp add: merge_l_def)
+next
 
-  have "supr13 \<in> (S1 s \<inter> S3 s)"
-    using orth1_3.compat_S[OF Sup13]
+  fix b s
+  fix a3 :: 'g
+
+  assume B: "b \<in> S1 s \<inter> S2 s"
+
+  then have B1 : "b \<in> S1 s" and B2 : "b \<in> S2 s"
     by auto
 
-  obtain supr23 where Sup23 : "is_sup {LUpd l2 s a2 b, LUpd l3 s a3 b} supr23"
-    using orth2_3.compat
-    by(fastforce simp add: has_sup_def)
+  have Conc1 : "LUpd l3 s a3 b \<in> S1 s"
+    using orth1_3.put2_S1[OF B1] by auto
 
-  have "supr23 \<in> (S2 s \<inter> S3 s)"
-    using orth2_3.compat_S[OF Sup23]
+  have Conc2 : "LUpd l3 s a3 b \<in> S2 s"
+    using orth2_3.put2_S1[OF B2] by auto
+
+  show "LUpd l3 s a3 b \<in> S1 s \<inter> S2 s"
+    using Conc1 Conc2
     by auto
+qed
 
-  have "has_sup {LUpd l1 s a1 b, LUpd l2 s a2 b, LUpd l3 s a3 b}"
-    using pairwise_sup[OF orth1_2.compat orth2_3.compat orth1_3.compat]
-    by fastforce
+locale merge_l_ortho_base = merge_l_ortho +
+  orth1_2 : l_ortho_base l1 S1 l2 S2 + 
+  orth1_3 : l_ortho_base l1 S1 l3 S3 +
+  orth2_3 : l_ortho_base l2 S2 l3 S3 
 
-  then obtain supr' where Supr' : "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b, LUpd l3 s a3 b} supr'"
-    by(auto simp add: has_sup_def)
+sublocale merge_l_ortho_base \<subseteq> l_ortho_base "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x" l3 S3
+proof
+  fix s
 
-  
+  have "LBase l3 s = \<bottom>"
+    using orth1_3.compat_bases[of s]
 
-  show "supr \<in> S1 s \<inter> S2 s \<inter> S3 s"
-    using pairwise_sup
-    using Supr orth1_2.compat_S
-    unfolding A1_2
-    apply(simp add: merge_l_def)
-*)
+
+  have "LBase
+
 end

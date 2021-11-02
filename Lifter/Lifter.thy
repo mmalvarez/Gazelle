@@ -233,6 +233,15 @@ locale l_ortho_pres = l_ortho +
     is_sup (LMap l2 f2 s ` V) s2 \<Longrightarrow>
     s2 \<in> S1 s \<inter> S2 s \<Longrightarrow>
     is_sup (LMap l1 f1 s ` (LMap l2 f2 s ` V)) (LMap l1 f1 s s2)"
+  assumes compat_pres2 : "\<And> s f1 f2 s1 s2 v V . 
+    v \<in> V \<Longrightarrow>
+         V \<subseteq> S1 s \<Longrightarrow>
+         V \<subseteq> S2 s \<Longrightarrow>
+    is_sup (LMap l1 f1 s ` V) s1 \<Longrightarrow>
+    s1 \<in> S1 s \<inter> S2 s \<Longrightarrow>
+    is_sup (LMap l2 f2 s ` V) s2 \<Longrightarrow>
+    s2 \<in> S1 s \<inter> S2 s \<Longrightarrow>
+    is_sup (LMap l2 f2 s ` (LMap l1 f1 s ` V)) (LMap l2 f2 s s1)"
 (*
   assumes compat_pres2 : 
     "    v \<in> V \<Longrightarrow>
@@ -244,11 +253,17 @@ locale l_ortho_pres = l_ortho +
 *)
 
 locale l_ortho_base = l_ortho + l_ortho_base' +
-  assumes compat_bases : "\<And> s . is_sup {LBase l1 s, LBase l2 s} \<bottom>"
+  assumes compat_base1 : "\<And> s . LBase l1 s = \<bottom>"
+  assumes compat_base2 : "\<And> s . LBase l2 s = \<bottom>"
 
 locale l_ortho_ok' =
   fixes l1 :: "('a, 'b1, 'c :: {Pord_Weakb, Okay}, 'f1) lifting"
   fixes l2 :: "('a, 'b2, 'c, 'f2) lifting"
+
+(* l_ortho_ok? i think we actually don't need any further properties!
+*)
+
+locale l_ortho_ok = l_ortho + l_ortho_ok'
 
 (* lift_map_s is LMap plus a syntax translation *)
 definition lift_map_s ::
@@ -304,65 +319,56 @@ next
   then show "LUpd l1 s a2 b \<in> S2 s"
     using put1_S2 by auto
 qed
-(*
-next
 
-  fix s a1 a2 b supr
+sublocale l_ortho_base \<subseteq> comm :
+  l_ortho l2 S2 l1 S1
+proof qed
 
-  assume Sup : "is_sup
-        {LUpd l2 s a1 b, LUpd l1 s a2 b}
-        supr"
-
-  have Comm : "{LUpd l2 s a1 b, LUpd l1 s a2 b} = 
-               {LUpd l1 s a2 b, LUpd l2 s a1 b}"
-    by auto
-
-  show "\<exists>b'. LUpd l2 s a1 b' = supr" using Sup
-    unfolding Comm
-    using compat'2[of s a2 b a1, unfolded Comm]
-    by auto
-
-next
-  fix s a1 a2 b supr
-
-  assume Sup : "is_sup
-        {LUpd l2 s a1 b, LUpd l1 s a2 b}
-        supr"
-
-
-  have Comm : "{LUpd l2 s a1 b, LUpd l1 s a2 b} = 
-               {LUpd l1 s a2 b, LUpd l2 s a1 b}"
-    by auto
-
-  show "\<exists>b'. LUpd l1 s a2 b' = supr" using Sup
-    unfolding Comm
-    using compat'1[of s a2 b a1, unfolded Comm]
-    by auto
-qed
-*)
-(*
-sublocale l_ortho_ok \<subseteq> comm :
-  l_ortho_ok l2 S2 l1 S1
+sublocale l_ortho_pres \<subseteq> comm :
+  l_ortho_pres l2 S2 l1 S1
 proof
-  fix s a1 a2 b supr
+  fix s f1 f2 
+  fix s1 s2 v :: 'c
+  fix V :: "'c set"
 
-  assume Sup : "is_sup {LUpd l2 s a1 b, LUpd l1 s a2 b} supr"
+  assume Vin : "v \<in> V"
+  assume Vsub2 : "V \<subseteq> S2 s"
+  assume Vsub1 : "V \<subseteq> S1 s"
+  assume Sup1 : "is_sup (LMap l2 f1 s ` V) s1"
+  assume Sup1_in : "s1 \<in> S2 s \<inter> S1 s"
+  assume Sup2 : "is_sup (LMap l1 f2 s ` V) s2"
+  assume Sup2_in : "s2 \<in> S2 s \<inter> S1 s"
 
-  assume Bok : "b \<in> ok_S"
+  have Sup1_in' : "s1 \<in> S1 s \<inter> S2 s"
+    using Sup1_in by auto
 
-  have Comm : "{LUpd l2 s a1 b, LUpd l1 s a2 b} = 
-               {LUpd l1 s a2 b, LUpd l2 s a1 b}"
+  have Sup2_in' : "s2 \<in> S1 s \<inter> S2 s"
+    using Sup2_in by auto
+
+  show "is_sup (LMap l2 f1 s ` LMap l1 f2 s ` V) (LMap l2 f1 s s2)"
+    using compat_pres2[OF Vin Vsub1 Vsub2 Sup2 Sup2_in' Sup1 Sup1_in']
     by auto
+next
+  fix s f1 f2 
+  fix s1 s2 v :: 'c
+  fix V :: "'c set"
 
-  show "supr \<in> ok_S"
-    using compat_ok[OF Bok Sup[unfolded Comm]]
+  assume Vin : "v \<in> V"
+  assume Vsub2 : "V \<subseteq> S2 s"
+  assume Vsub1 : "V \<subseteq> S1 s"
+  assume Sup1 : "is_sup (LMap l2 f1 s ` V) s1"
+  assume Sup1_in : "s1 \<in> S2 s \<inter> S1 s"
+  assume Sup2 : "is_sup (LMap l1 f2 s ` V) s2"
+  assume Sup2_in : "s2 \<in> S2 s \<inter> S1 s"
+
+  have Sup1_in' : "s1 \<in> S1 s \<inter> S2 s"
+    using Sup1_in by auto
+
+  have Sup2_in' : "s2 \<in> S1 s \<inter> S2 s"
+    using Sup2_in by auto
+
+  show "is_sup (LMap l1 f2 s ` LMap l2 f1 s ` V) (LMap l1 f2 s s1)"
+    using compat_pres1[OF Vin Vsub1 Vsub2 Sup2 Sup2_in' Sup1 Sup1_in']
     by auto
 qed
-*)
-(*
-lemma (in l_ortho) compat'_comm :
-  shows "LUpd l1 s a1 (LUpd l2 s a2 b) = LUpd l2 s a2 (LUpd l1 s a1 b)"
-  using is_sup_unique[OF compat'1 compat'2]
-  by auto
-*)
 end

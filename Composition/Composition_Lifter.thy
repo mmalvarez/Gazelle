@@ -211,6 +211,11 @@ proof
   next
 
     case L1_2
+(* YOU ARE HERE 
+looks like maybe we need some kind of idem thing... otherwise we aren't going to
+be able to show set membership.*)
+    have "is_ub {(lift_map_s id l1 f1 syn sup1), (lift_map_s id l2 f2 syn sup1)}
+          (lift_map_s id l1 f1 syn (lift_map_s id l2 f2 syn sup1))"
 
     obtain res_sup where Res_sup :
       "is_sup {(lift_map_s id l1 f1 syn sup1), (lift_map_s id l2 f2 syn sup1)} res_sup"
