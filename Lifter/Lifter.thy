@@ -242,6 +242,9 @@ locale l_ortho_pres = l_ortho +
     is_sup (LMap l2 f2 s ` V) s2 \<Longrightarrow>
     s2 \<in> S1 s \<inter> S2 s \<Longrightarrow>
     is_sup (LMap l2 f2 s ` (LMap l1 f1 s ` V)) (LMap l2 f2 s s1)"
+  (* TODO: this third one may be all that's needed. *)
+  assumes compat_pres_sup :
+  "\<And> a1 a2 s x . is_sup {LUpd l1 s a1 x, LUpd l2 s a2 x} (LUpd l1 s a1 (LUpd l2 s a2 x))"
 (*
   assumes compat_pres2 : 
     "    v \<in> V \<Longrightarrow>
@@ -369,6 +372,20 @@ next
 
   show "is_sup (LMap l1 f2 s ` LMap l2 f1 s ` V) (LMap l1 f2 s s1)"
     using compat_pres1[OF Vin Vsub1 Vsub2 Sup2 Sup2_in' Sup1 Sup1_in']
+    by auto
+next
+  fix a1 a2 s x
+
+  have Comm1 : "{LUpd l2 s a1 x, LUpd l1 s a2 x} = {LUpd l1 s a2 x, LUpd l2 s a1 x}"
+    by auto
+
+  have Conc' : "is_sup {LUpd l1 s a2 x, LUpd l2 s a1 x} (LUpd l1 s a2 (LUpd l2 s a1 x))"
+    using compat_pres_sup
+    by auto
+
+  then show "is_sup {LUpd l2 s a1 x, LUpd l1 s a2 x} (LUpd l2 s a1 (LUpd l1 s a2 x))"
+    unfolding Comm1
+    using compat
     by auto
 qed
 end

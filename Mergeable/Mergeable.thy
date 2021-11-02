@@ -154,9 +154,9 @@ class Mergeableb = Mergeable +
   Pordbc
 
 class Mergeableps = Mergeable +
-  Pordps
+  Pordpsc
 
 class Mergeablebps = Mergeableb +
-  Pordps
+  Pordpsc
 
 end
