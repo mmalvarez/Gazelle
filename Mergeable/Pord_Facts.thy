@@ -1,5 +1,5 @@
 theory Pord_Facts
-  imports Pord
+  imports Pord Mergeable_Instances
 begin
 
 (* Pord_Facts
@@ -241,3 +241,31 @@ next
     by(auto simp add: prod_pleq)
 qed
 
+lemma pairwise_sup_ok3 :
+  fixes a b c s :: "'a :: Pordpsok"
+  assumes A : "a \<in> ok_S"
+  assumes B: "b \<in>  ok_S"
+  assumes C: "c \<in> ok_S"
+  assumes Ab_sup : "has_sup {a, b}"
+  assumes Bc_sup : "has_sup {b, c}"
+  assumes Ac_sup : "has_sup {a, c}"
+  assumes Abc_sup : "is_sup {a, b, c} s"
+  shows "s \<in> ok_S"
+proof-
+  obtain sup_ab where Sup_ab : "is_sup {a, b} sup_ab"
+    using Ab_sup
+    by(auto simp add: has_sup_def)
+
+  have Sup_ab_in : "sup_ab \<in> ok_S"
+    using pairwise_sup_ok[OF A B Sup_ab] by auto
+
+  have Un : "({a, b} \<union> {c}) = {a, b, c}"
+    by auto
+
+  have Abc_sup' : "is_sup {sup_ab, c} s"
+    using sup_union2[OF Sup_ab sup_singleton[of c ], of s] Abc_sup 
+    unfolding Un
+    by auto
+
+  show "s \<in> ok_S" using pairwise_sup_ok[OF Sup_ab_in C Abc_sup'] by auto
+qed

@@ -13,6 +13,102 @@ begin
  * ordering (see, for instance Mergeable_AList.thy)
  *)
 
+(* Instances of bogus typeclass *)
+instantiation nat :: Bogus begin
+definition nat_bogus : "bogus = (0 :: nat)"
+instance proof qed
+end
+
+instantiation bool :: Bogus begin
+definition bool_bogus : "bogus = True"
+instance proof qed
+end
+
+instantiation int :: Bogus begin
+definition int_bogus : "bogus = (0 :: int)"
+instance proof qed
+end
+
+instantiation unit :: Bogus begin
+definition unit_bogus : "bogus = ()"
+instance proof qed
+end
+
+instantiation prod :: (Bogus, Bogus) Bogus begin
+definition prod_bogus : "bogus = (bogus, bogus)"
+instance proof qed
+end
+
+instantiation sum :: (Bogus, _) Bogus begin
+definition sum_bogus : "bogus = Inl bogus"
+instance proof qed
+end
+
+instantiation option :: (Bogus) Bogus begin
+definition option_bogus : "bogus = Some bogus"
+instance proof qed
+end
+
+
+
+(* TODO: why not [bogus]? *)
+instantiation list :: (_) Bogus begin
+definition list_bogus : "bogus = []"
+instance proof qed
+end
+
+instantiation String.literal :: Bogus begin
+definition string_literal_bogus :
+"bogus = STR ''''"
+instance proof qed
+end
+
+instantiation md_triv :: (Bogus) Bogus begin
+definition md_triv_bogus : "bogus = mdt bogus"
+instance proof qed
+end
+instantiation md_prio :: (Bogus) Bogus begin
+definition md_prio_bogus : "bogus = mdp 0 bogus"
+instance proof qed
+end
+
+
+
+(* Instances of ok typeclass *)
+instantiation option :: (Okay) Okay
+begin
+definition option_ok_S : "(ok_S :: 'a option set) = (Some ` ok_S)"
+instance proof qed
+end
+
+instantiation prod :: (Okay, Okay) Okay
+begin
+definition prod_ok_S : "(ok_S :: ('a * 'b) set) = { x :: 'a * 'b . \<exists> a' b' . x = (a', b') \<and> a' \<in> ok_S \<and> b' \<in> ok_S}"
+instance proof qed
+end
+
+instantiation unit :: Okay
+begin
+definition unit_ok_S :
+  "(ok_S :: unit set) = UNIV"
+instance proof qed
+end
+
+instantiation md_triv :: (_) Okay
+begin
+definition triv_ok_S : "(ok_S :: 'a md_triv set) = UNIV"
+instance proof
+qed
+end
+
+instantiation md_prio :: (Okay) Okay
+begin
+definition prio_ok_S : "(ok_S :: 'a md_prio set) = ({x . \<exists> px vx . x = mdp vx px \<and> px \<in> ok_S})"
+instance proof qed
+end
+
+
+
 (* Trivial ordering: (x <[ x \<leftrightarrow> x = x)
  * md_triv is complete, but lacks a least element.
  *)
@@ -78,6 +174,15 @@ instance proof
 qed
 end
 
+instantiation md_triv :: (_) Pordpsok
+begin
+instance proof
+  fix a b supr :: "'a md_triv"
+  show "supr \<in> ok_S"
+    by(auto simp add: triv_ok_S)
+qed
+end
+  
 instantiation md_triv :: (_) Mergeable 
 begin
 
@@ -475,6 +580,49 @@ instance proof
           by(auto simp add: has_sup_def)
       qed
     qed
+  qed
+qed
+end
+
+instantiation option :: (Pordpsok) Pordpsok
+begin
+instance proof
+  fix a b supr :: "'a option"
+  assume Aok : "a \<in> ok_S"
+  assume Bok : "b \<in> ok_S"
+  assume Sup : "is_sup {a, b} supr"
+
+  obtain a' where A' : "a = Some a'" "a' \<in> ok_S" using Aok
+    by(cases a; auto simp add: option_ok_S)
+
+  obtain b' where B' : "b = Some b'" "b' \<in> ok_S" using Bok
+    by(cases b; auto simp add: option_ok_S)
+
+  show "supr \<in> ok_S"
+  proof(cases supr)
+    case None
+
+    then have "a <[ None"
+      using is_supD1[OF Sup, of a]
+      by auto
+
+    then have False using A'
+      by(auto simp add: option_pleq)
+
+    then show ?thesis by auto
+  next
+    case (Some supr')
+
+    have Supr' : "is_sup {a', b'} (supr')"
+      using is_sup_Some'[of "a'" "{a', b'}" supr'] using Sup
+      unfolding A' B' Some
+      by auto
+
+    then have "supr' \<in> ok_S"
+      using pairwise_sup_ok[OF A'(2) B'(2) Supr'] by auto
+
+    then show ?thesis using Some
+      by(auto simp add: option_ok_S)
   qed
 qed
 end
@@ -1312,6 +1460,48 @@ instance proof
     by(auto simp add: has_sup_def)
 qed
 end
+
+instantiation prod :: (Pordpsok, Pordpsok) Pordpsok
+begin
+instance proof
+  fix a b supr :: "('a * 'b)"
+  assume Aok : "a \<in> ok_S"
+  assume Bok : "b \<in> ok_S"
+  assume Sup : "is_sup {a, b} supr"
+
+  obtain a1 a2 where A : "a = (a1, a2)" "a1 \<in> ok_S" "a2 \<in> ok_S"
+    using Aok
+    by(cases a; auto simp add: prod_ok_S)
+
+  obtain b1 b2 where B : "b = (b1, b2)" "b1 \<in> ok_S" "b2 \<in> ok_S"
+    using Bok
+    by(cases b; auto simp add: prod_ok_S)
+
+  obtain supr1 supr2 where Supr12 : "supr = (supr1, supr2)"
+    by(cases supr; auto)
+
+  have Supr_fst : "is_sup {a1, b1} supr1"
+    using is_sup_fst'[of a "{a, b}" supr1 supr2] Sup
+    unfolding A B Supr12
+    by auto
+
+  then have Supr_fst_ok : "supr1 \<in> ok_S"
+    using pairwise_sup_ok[OF A(2) B(2) Supr_fst] by auto
+
+  have Supr_snd : "is_sup {a2, b2} supr2"
+    using is_sup_snd'[of a "{a, b}" supr1 supr2] Sup
+    unfolding A B Supr12
+    by auto
+
+  then have Supr_snd_ok : "supr2 \<in> ok_S"
+    using pairwise_sup_ok[OF A(3) B(3) Supr_snd] by auto
+
+  then show "supr \<in> ok_S"
+    using Supr_fst_ok Supr_snd_ok Supr12
+    by(auto simp add: prod_ok_S)
+qed
+end
+
 
 instantiation prod :: (Pord_Weakb, Pord_Weakb) Pord_Weakb
 begin
@@ -2510,7 +2700,29 @@ instance proof
     by auto
 qed
 end
+(*
+instantiation md_prio :: ("{Pordbc, Pordps, Okay}") Pordpsok
+begin
+instance proof
+  fix a b supr :: "'a md_prio"
 
+  assume A_ok : "a \<in> ok_S"
+  assume B_ok : "b \<in> ok_S"
+  assume Supr : "is_sup {a, b} supr"
+
+  obtain pa' a' where A: "a = mdp pa' a'" "a' \<in> ok_S"
+    using A_ok
+    by(cases a; auto simp add: prio_ok_S)
+
+  obtain pb' b' where B: "b = mdp pb' b'" "b' \<in> ok_S"
+    using B_ok
+    by(cases b; auto simp add: prio_ok_S)
+
+  obtain psupr' supr' where Supr' : "supr = mdp psupr' supr'"
+    by(cases supr; auto)
+
+  obtain 
+*)
 instantiation md_prio :: (Mergeableb) Mergeableb
 begin
 

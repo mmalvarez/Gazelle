@@ -1120,6 +1120,15 @@ next
             unfolding Fs'_scross
             by(auto)
 
+          (*
+            ok, so what can we say about valid-sets? 
+            everything but prio: closed under increasing information content
+            maybe we can extend pairwise-sups to pairwise-ok?
+            if inner data inside prio has sups, then prio has pairwise ok sups
+            then maybe we can use this to use prio here, since ok_S \<subseteq> S s
+            
+          *)
+
           have True using sup_union2[OF F_fs'_sup(1) G_fs'_sup(1)] (* , of "(\<lambda> f . f syn supr)"] *)
 
           have Gs_fs_sup1 : "is_sup {f_fs'_sup', g_fs'_sup'} sup1"

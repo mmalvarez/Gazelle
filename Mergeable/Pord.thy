@@ -7,6 +7,18 @@ begin
  * TODO: these proofs could be cleaned up and ISAR-ified
  *)
 
+class Bogus =
+  fixes bogus :: "'a"
+
+
+
+
+(* Okay typeclass - attaches a set of "valid" values to a type
+ * (useful in specifying liftings.
+ *)
+class Okay =
+  fixes ok_S :: "('a) set"
+
 (* Comparison function for orderings, not currently used *)
 definition ord_leq :: "('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> bool"
   where
@@ -337,6 +349,12 @@ class Pordps =
   assumes pairwise_sup :
     "has_sup {a, b} \<Longrightarrow> has_sup {b, c} \<Longrightarrow> has_sup {a, c} \<Longrightarrow>
      has_sup {a, b, c}"
+
+class Pordok = Pord + Okay
+
+class Pordpsok = Pordok + Pordps +
+  assumes pairwise_sup_ok :
+  "\<And> a b supr :: ('a :: {Pord, Okay}). a \<in> ok_S \<Longrightarrow> b \<in> ok_S \<Longrightarrow> is_sup {a, b} supr \<Longrightarrow> supr \<in> ok_S"
 
 
 (* Pordc = "PORD + Completness" 

@@ -57,50 +57,11 @@ type_synonym ('syn, 'b) valid_set =
    which depend on others.
 *)
 
-(* TODO: for inference purposes we are probably going to
- * still have to use something like our current formulation. *)
-
-class Okay =
-  fixes ok_S :: "('a) set"
-
-
-instantiation md_triv :: (_) Okay
-begin
-definition triv_ok_S : "(ok_S :: 'a md_triv set) = UNIV"
-instance proof
-qed
-end
-
-instantiation md_prio :: (Okay) Okay
-begin
-definition prio_ok_S : "(ok_S :: 'a md_prio set) = ({x . \<exists> px vx . x = mdp vx px \<and> px \<in> ok_S})"
-instance proof qed
-end
-
-instantiation option :: (Okay) Okay
-begin
-definition option_ok_S : "(ok_S :: 'a option set) = (Some ` ok_S)"
-instance proof qed
-end
-
-instantiation prod :: (Okay, Okay) Okay
-begin
-definition prod_ok_S : "(ok_S :: ('a * 'b) set) = { x :: 'a * 'b . \<exists> a' b' . x = (a', b') \<and> a' \<in> ok_S \<and> b' \<in> ok_S}"
-instance proof qed
-end
-
 instantiation oalist :: (linorder, Okay) Okay
 begin
 
 definition oalist_ok_S :
   "(ok_S :: ('a, 'b) oalist set) = { x  :: ('a, 'b) oalist . oalist_all_val (\<lambda> y . y \<in> ok_S) x }"
-instance proof qed
-end
-
-instantiation unit :: Okay
-begin
-definition unit_ok_S :
-  "(ok_S :: unit set) = UNIV"
 instance proof qed
 end
 
