@@ -211,9 +211,6 @@ proof
   next
 
     case L1_2
-(* YOU ARE HERE 
-looks like maybe we need some kind of idem thing... otherwise we aren't going to
-be able to show set membership.*)
 
     have Res_sup :
       "is_sup {(lift_map_s id l1 f1 syn sup1), (lift_map_s id l2 f2 syn sup1)} (LMap l1 f1 syn (LMap l2 f2 syn sup1))"
@@ -456,10 +453,17 @@ qed
 
 lemma nwise_sup :
   fixes x :: "'a :: Pordpsc"
+  fixes S :: "'b \<Rightarrow> 'a set"
+  fixes syn :: 'b
   assumes Fin : "finite Xs"
+  assumes X_in : "x \<in> S s"
+  assumes Xs_sub : "Xs \<subseteq> S syn"
+(*  assumes Xs_nemp : "v \<in> Xs"*)
   assumes Sup_Xs : "is_sup Xs y"
-  assumes Nwise : "\<And> z . z \<in> Xs \<Longrightarrow> has_sup {x, z}"
-  shows "has_sup (Xs \<union> {x})"
+  assumes Y_in : "y \<in> S s"
+  assumes PL : "lifting_pairwise S"
+  assumes Nwise : "\<And> z . z \<in> Xs  \<Longrightarrow> (\<exists> supr . is_sup {x, z} supr \<and> supr \<in> S s)"
+  shows "\<exists> supr . is_sup (Xs \<union> {x}) supr \<and> supr \<in> S s"
 proof-
   obtain l where L: "set l = Xs"
     using finite_list[OF Fin]
@@ -468,12 +472,21 @@ proof-
   then have Sup_Xs' : "is_sup (set l) y"
     using Sup_Xs by auto
 
-  have Nwise' : "\<And> z . z \<in> set l \<Longrightarrow> has_sup {x, z}"
+  have Xs_sub' : "set l \<subseteq> S syn"
+    using Xs_sub L
+    by auto
+
+(*
+  have Xs_nemp' : "v \<in> set l"
+    using Xs_nemp L
+    by auto
+*)
+  have Nwise' : "\<And> z . z \<in> set l \<Longrightarrow> (\<exists> supr . is_sup {x, z} supr \<and> supr \<in> S s)"
     using L Nwise
     by auto
 
-  have Conc' : "has_sup (set(x#l))"
-    using Sup_Xs' Nwise' 
+  have Conc' : "\<exists> supr . is_sup (set(x#l)) supr \<and> supr \<in> S s"
+    using Sup_Xs' Nwise' Xs_sub' X_in Y_in
   proof(induction l arbitrary: x y)
     case Nil
     then show ?case 
@@ -503,8 +516,10 @@ proof-
       obtain sl' where Sup_l' : "is_sup (set l') sl'"
         using has_sup_subset[OF _ Cons.prems(1), of "set l'" w'] Cons' Sub3
         by(auto simp add: has_sup_def)
+(* YOU ARE HERE
+ * need a generalized lemma about lifting pairwise in finite settings *)
 
-      have Nwise'' : "(\<And>z. z \<in> set l' \<Longrightarrow> has_sup {x, z})"
+      have Nwise'' : "(\<And>z. z \<in> set l' \<Longrightarrow> \<exists> supr . is_sup {x, z} supr \<and> supr \<in> S s)"
         using Cons.prems(2)
         by auto
 
@@ -514,14 +529,17 @@ proof-
       have Sup_w : "is_sup {w} w"
         using sup_singleton by auto
 
-      obtain sxl' where Sup_x_l' : "is_sup (set (x # l')) sxl'"
-        using Cons.IH[OF Sup_l' Nwise'']
+      have L_sub' : "set (l') \<subseteq> S syn"
+        using Cons.prems by auto
+
+      obtain sxl' where Sup_x_l' : "is_sup (set (x # l')) sxl'" "sxl' \<in> S s"
+        using Cons.IH[OF Sup_l' Nwise'' L_sub'] Cons.prems
         by( auto simp add: has_sup_def)
 
       then have Sup_x_l'_alt : "is_sup ( {x} \<union> set l') sxl'"
         by auto
 
-      obtain swl' where Sup_w_l' : "is_sup (set (w#l')) swl'"
+      obtain swl' where Sup_w_l' : "is_sup (set (w#l')) swl'" "swl' \<in> S s"
         using Cons.prems by auto
 
       then have Sup_w_l'_alt : "is_sup ( {w} \<union> set l') swl'"
@@ -703,7 +721,11 @@ lemma sups_pres_insert :
   fixes S :: "'syn \<Rightarrow> ('x :: Mergeableps) set"
   assumes Hf : "sups_pres {f} S"
   assumes HFs : "sups_pres (set fs) S"
+  assumes Pairwise_S : "lifting_pairwise S"
   assumes Pairwise : "\<And> g . g \<in> set fs \<Longrightarrow> sups_pres {g, f} S"
+(*  assumes Pairwise2 : "\<And> "
+
+*)
   shows "sups_pres (set (f#fs) ) S"
   using Hf HFs Pairwise
 proof(induction fs arbitrary: f)
@@ -712,6 +734,10 @@ proof(induction fs arbitrary: f)
     by auto
 next
   case (Cons g fs')
+
+  interpret PW : lifting_pairwise S
+    using Pairwise_S
+    by auto
 
   show ?case
   proof(cases fs')
@@ -1128,6 +1154,11 @@ next
             then maybe we can use this to use prio here, since ok_S \<subseteq> S s
             
           *)
+
+(* using pairwise here. we know:
+- sup of 
+*)
+
 
           have True using sup_union2[OF F_fs'_sup(1) G_fs'_sup(1)] (* , of "(\<lambda> f . f syn supr)"] *)
 

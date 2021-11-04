@@ -370,6 +370,84 @@ sublocale option_l_valid_base_ok_pres \<subseteq> out : lifting_valid_base_ok_pr
 proof
 qed
 
+locale option_l_pairwise = 
+  lifting_pairwise
+
+sublocale option_l_pairwise \<subseteq> out : lifting_pairwise "option_l_S S"
+proof
+  fix s
+  fix x1 x2 x3 s12 s13 s23 s123 :: "'b option"
+  assume X1 : "x1 \<in> option_l_S S s"
+  assume X2 :"x2 \<in> option_l_S S s"
+  assume X3 : "x3 \<in> option_l_S S s"
+  assume S12 :"is_sup {x1, x2} s12"
+  assume S12_in :"s12 \<in> option_l_S S s"
+  assume S23 :"is_sup {x2, x3} s23"
+  assume S23_in :"s23 \<in> option_l_S S s"
+  assume S13 :"is_sup {x1, x3} s13" 
+  assume S13_in :"s13 \<in> option_l_S S s"  
+  assume S123 :"is_sup {x1, x2, x3} s123"
+
+  obtain x1' where X1' : "x1 = Some x1'" "x1' \<in> S s"
+    using X1
+    by(auto simp add: option_l_S_def)
+
+  obtain x2' where X2' : "x2 = Some x2'" "x2' \<in> S s"
+    using X2
+    by(auto simp add: option_l_S_def)
+
+  obtain x3' where X3' : "x3 = Some x3'" "x3' \<in> S s"
+    using X3
+    by(auto simp add: option_l_S_def)
+
+  obtain s12' where S12' : "s12 = Some s12'"  "s12' \<in> S s"
+    using S12_in
+    by(auto simp add: option_l_S_def)
+
+  obtain s13' where S13' : "s13 = Some s13'" "s13' \<in> S s"
+    using S13_in
+    by(auto simp add: option_l_S_def)
+
+  obtain s23' where S23' : "s23 = Some s23'" "s23' \<in> S s"
+    using S23_in
+    by(auto simp add: option_l_S_def)
+
+  have S12'_sup : "is_sup {x1', x2'} s12'"
+    using is_sup_Some'[of x1' "{x1', x2'}" s12'] S12
+    unfolding S12' X1' X2'
+    by auto
+
+  have S13'_sup : "is_sup {x1', x3'} s13'"
+    using is_sup_Some'[of x1' "{x1', x3'}" s13'] S13
+    unfolding S13' X1' X3'
+    by auto
+
+  have S23'_sup : "is_sup {x2', x3'} s23'"
+    using is_sup_Some'[of x2' "{x2', x3'}" s23'] S23
+    unfolding S23' X2' X3'
+    by auto
+
+  obtain s123' where S123' : "s123 = Some s123'"
+    using is_supD1[OF S123, of x1]
+    unfolding X1'
+    by(cases s123; auto simp add: option_pleq)
+
+  have S123'_sup : "is_sup {x1', x2', x3'} s123'"
+    using is_sup_Some'[of x1' "{x1', x2', x3'}" s123'] S123
+    unfolding X1' X2' X3' S123'
+    by auto
+
+  have "s123' \<in> S s"
+    using pairwise_S[OF X1'(2) X2'(2) X3'(2) S12'_sup S12'(2) S23'_sup S23'(2) S13'_sup S13'(2) S123'_sup ]
+    by auto
+
+  then show " s123 \<in> option_l_S S s"
+    using S123'
+    by(auto simp add: option_l_S_def)
+qed
+  
+  
+
 (*
  * prio
  *)
@@ -1360,6 +1438,63 @@ proof
 next
   show "\<And>s. \<bottom> \<notin> prio_l_S S s" using bot_bad
     by(auto simp add: prio_bot prio_l_S_def)
+qed
+
+locale prio_l_pairwise' = 
+  fixes S :: "('syn, 'b :: {Pordbc, Pordps}) valid_set"
+
+locale prio_l_pairwise = prio_l_pairwise' +
+  lifting_pairwise
+
+sublocale prio_l_pairwise \<subseteq> out : lifting_pairwise "prio_l_S S"
+proof
+
+  fix s
+  fix x1 x2 x3 s12 s13 s23 s123 :: "'b md_prio"
+  assume X1 : "x1 \<in> prio_l_S S s"
+  assume X2 :"x2 \<in> prio_l_S S s"
+  assume X3 : "x3 \<in> prio_l_S S s"
+  assume S12 :"is_sup {x1, x2} s12"
+  assume S12_in :"s12 \<in> prio_l_S S s"
+  assume S23 :"is_sup {x2, x3} s23"
+  assume S23_in :"s23 \<in> prio_l_S S s"
+  assume S13 :"is_sup {x1, x3} s13" 
+  assume S13_in :"s13 \<in> prio_l_S S s"  
+  assume S123 :"is_sup {x1, x2, x3} s123"
+
+  obtain px1' x1' where X1' : "x1 = mdp px1' x1'" "x1' \<in> S s"
+    using X1
+    by(cases x1; auto simp add: prio_l_S_def)
+
+  obtain px2' x2' where X2' : "x2 = mdp px2' x2'" "x2' \<in> S s"
+    using X2
+    by(cases x2; auto simp add: prio_l_S_def)
+
+  obtain px3' x3' where X3' : "x3 = mdp px3' x3'" "x3' \<in> S s"
+    using X3
+    by(cases x3; auto simp add: prio_l_S_def)
+
+  obtain ps12' s12' where S12' : "s12 = mdp ps12' s12'"  "s12' \<in> S s"
+    using S12_in
+    by(cases s12; auto simp add: prio_l_S_def)
+
+  obtain ps13' s13' where S13' : "s13 = mdp ps13' s13'" "s13' \<in> S s"
+    using S13_in
+    by(cases s13; auto simp add: prio_l_S_def)
+
+  obtain ps23' s23' where S23' : "s23 = mdp ps23' s23'" "s23' \<in> S s"
+    using S23_in
+    by(cases s23; auto simp add: prio_l_S_def)
+
+  obtain ps123' s123' where S123' : "s123 = mdp ps123' s123'"
+    by(cases s123; auto)
+
+(* 2 cases. either
+1. we incremented the priority but still get a valid value
+2. we didn't increment the priority. *)
+(* TODO: this should be provable but first let's make sure that this works *)
+  show "s123 \<in> prio_l_S S s"
+    sorry
 qed
 
 
