@@ -370,6 +370,7 @@ sublocale option_l_valid_base_ok_pres \<subseteq> out : lifting_valid_base_ok_pr
 proof
 qed
 
+(*
 locale option_l_pairwise = 
   lifting_pairwise
 
@@ -445,7 +446,7 @@ proof
     using S123'
     by(auto simp add: option_l_S_def)
 qed
-  
+*)
   
 
 (*
@@ -1440,6 +1441,7 @@ next
     by(auto simp add: prio_bot prio_l_S_def)
 qed
 
+(*
 locale prio_l_pairwise' = 
   fixes S :: "('syn, 'b :: {Pordbc, Pordps}) valid_set"
 
@@ -1496,7 +1498,7 @@ proof
   show "s123 \<in> prio_l_S S s"
     sorry
 qed
-
+*)
 
 (* NB: "stronger" version of prio_l does not work with pres, because we need to know that
  * we are actually in prio_l_S S, not some superset.

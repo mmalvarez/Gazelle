@@ -58,7 +58,7 @@ proof
   then show
     "\<exists>sup'.
           is_sup ((\<lambda>f. f syn sup1) ` Fs') sup' \<and>
-          is_sup (scross ((\<lambda>f. f syn) ` Fs') Xs) sup' \<and> sup' \<in> S1 syn \<inter> S2 syn"
+          is_sup (scross ((\<lambda>f. f syn) ` Fs') Xs) sup'"
   proof cases
   case Emp
     then show ?thesis using Hnemp_Fs' by auto
@@ -446,24 +446,19 @@ proof(rule sups_presI)
 
   show "\<exists>sup'.
           is_sup ((\<lambda>f. f syn supr) ` Fs') sup' \<and>
-          is_sup (scross ((\<lambda>f. f syn) ` Fs') Xs) sup' \<and> sup' \<in> S syn"
+          is_sup (scross ((\<lambda>f. f syn) ` Fs') Xs) sup'"
     using Conc1 Conc2 Conc3
     by auto
 qed
 
 lemma nwise_sup :
   fixes x :: "'a :: Pordpsc"
-  fixes S :: "'b \<Rightarrow> 'a set"
   fixes syn :: 'b
   assumes Fin : "finite Xs"
-  assumes X_in : "x \<in> S s"
-  assumes Xs_sub : "Xs \<subseteq> S syn"
 (*  assumes Xs_nemp : "v \<in> Xs"*)
   assumes Sup_Xs : "is_sup Xs y"
-  assumes Y_in : "y \<in> S s"
-  assumes PL : "lifting_pairwise S"
-  assumes Nwise : "\<And> z . z \<in> Xs  \<Longrightarrow> (\<exists> supr . is_sup {x, z} supr \<and> supr \<in> S s)"
-  shows "\<exists> supr . is_sup (Xs \<union> {x}) supr \<and> supr \<in> S s"
+  assumes Nwise : "\<And> z . z \<in> Xs  \<Longrightarrow> has_sup {x, z}"
+  shows "has_sup (Xs \<union> {x})"
 proof-
   obtain l where L: "set l = Xs"
     using finite_list[OF Fin]
@@ -472,21 +467,16 @@ proof-
   then have Sup_Xs' : "is_sup (set l) y"
     using Sup_Xs by auto
 
-  have Xs_sub' : "set l \<subseteq> S syn"
-    using Xs_sub L
-    by auto
-
 (*
   have Xs_nemp' : "v \<in> set l"
     using Xs_nemp L
     by auto
 *)
-  have Nwise' : "\<And> z . z \<in> set l \<Longrightarrow> (\<exists> supr . is_sup {x, z} supr \<and> supr \<in> S s)"
+  have Nwise' : "\<And> z . z \<in> set l \<Longrightarrow> (has_sup {x, z})"
     using L Nwise
     by auto
-
-  have Conc' : "\<exists> supr . is_sup (set(x#l)) supr \<and> supr \<in> S s"
-    using Sup_Xs' Nwise' Xs_sub' X_in Y_in
+  have Conc' : "\<exists> supr . is_sup (set(x#l)) supr"
+    using Sup_Xs' Nwise' 
   proof(induction l arbitrary: x y)
     case Nil
     then show ?case 
@@ -499,7 +489,7 @@ proof-
     proof(cases l')
       case Nil' : Nil
       then show ?thesis using Cons.prems(2)[of w]
-        by auto
+        by(auto simp add: has_sup_def)
     next
       case Cons' : (Cons w' l'')
 
@@ -519,7 +509,7 @@ proof-
 (* YOU ARE HERE
  * need a generalized lemma about lifting pairwise in finite settings *)
 
-      have Nwise'' : "(\<And>z. z \<in> set l' \<Longrightarrow> \<exists> supr . is_sup {x, z} supr \<and> supr \<in> S s)"
+      have Nwise'' : "(\<And>z. z \<in> set l' \<Longrightarrow> has_sup {x, z} )"
         using Cons.prems(2)
         by auto
 
@@ -529,17 +519,15 @@ proof-
       have Sup_w : "is_sup {w} w"
         using sup_singleton by auto
 
-      have L_sub' : "set (l') \<subseteq> S syn"
-        using Cons.prems by auto
 
-      obtain sxl' where Sup_x_l' : "is_sup (set (x # l')) sxl'" "sxl' \<in> S s"
-        using Cons.IH[OF Sup_l' Nwise'' L_sub'] Cons.prems
+      obtain sxl' where Sup_x_l' : "is_sup (set (x # l')) sxl'"
+        using Cons.IH[OF Sup_l' Nwise''] Cons.prems
         by( auto simp add: has_sup_def)
 
       then have Sup_x_l'_alt : "is_sup ( {x} \<union> set l') sxl'"
         by auto
 
-      obtain swl' where Sup_w_l' : "is_sup (set (w#l')) swl'" "swl' \<in> S s"
+      obtain swl' where Sup_w_l' : "is_sup (set (w#l')) swl'" 
         using Cons.prems by auto
 
       then have Sup_w_l'_alt : "is_sup ( {w} \<union> set l') swl'"
@@ -582,7 +570,7 @@ proof-
   qed
 
   then show "has_sup (Xs \<union> {x})" using L
-    by(auto)
+    by(auto simp add: has_sup_def)
 qed
 
 lemma nwise_sups :
@@ -782,7 +770,6 @@ next
       obtain fs'_sup where Fs'_sup :
         "is_sup ((\<lambda>f. f syn supr) ` set (fs')) fs'_sup"
         "is_sup (scross ((\<lambda>f. f syn) ` set (fs')) Xs) fs'_sup"
-        "fs'_sup \<in> S syn"
         using sups_presD[OF Pres_fs' Xin Xsub Fin_Xs Supr Supr_in _, of "set fs'" g'] Cons'
         by auto
 
@@ -815,7 +802,6 @@ next
       obtain f_fs'_sup where F_fs'_sup:
         "is_sup ((\<lambda>f. f syn supr) ` set (f # fs')) f_fs'_sup"
         "is_sup (scross ((\<lambda>f. f syn) ` set (f # fs')) Xs) f_fs'_sup"
-        "f_fs'_sup \<in> S syn"
         using sups_presD[OF Pres_f_fs' Xin Xsub Fin_Xs Supr Supr_in F_fs_arg1 F_fs_arg2]
         by auto
 
@@ -828,7 +814,6 @@ next
       obtain g_fs'_sup where G_fs'_sup :
         "is_sup ((\<lambda> f . f syn supr) ` set (g#fs')) g_fs'_sup"
         "is_sup (scross ((\<lambda> f . f syn) ` set (g # fs')) Xs) g_fs'_sup"
-        "g_fs'_sup \<in> S syn"
         using sups_presD[OF Pres_g_fs' Xin Xsub Fin_Xs Supr Supr_in G_fs_arg1 G_fs_arg2]
         by auto
 
@@ -844,7 +829,6 @@ next
       obtain f_g_sup where F_g_sup :
         "is_sup ((\<lambda> f . f syn supr) ` set ([f, g])) f_g_sup" 
         "is_sup (scross ((\<lambda> f . f syn) ` set ([f, g])) Xs) f_g_sup"
-        "f_g_sup \<in> S syn"
         using sups_presD[OF Pres_f_g Xin Xsub Fin_Xs Supr Supr_in, of "{f, g}" f]
         by auto
 
@@ -855,7 +839,7 @@ next
         by auto
       then show "\<exists>sup'.
             is_sup ((\<lambda>f. f syn supr) ` Fs') sup' \<and>
-            is_sup (scross ((\<lambda>f. f syn) ` Fs') Xs) sup' \<and> sup' \<in> S syn"
+            is_sup (scross ((\<lambda>f. f syn) ` Fs') Xs) sup'"
       proof cases
         case No_f_no_g
 
@@ -898,7 +882,6 @@ next
           obtain f_fs'_sup where F_fs'_sup:
             "is_sup ((\<lambda>f. f syn supr) ` Fs') f_fs'_sup"
             "is_sup (scross ((\<lambda>f. f syn) ` Fs') Xs) f_fs'_sup"
-            "f_fs'_sup \<in> S syn"
             using sups_presD[OF Pres_f_fs' Xin Xsub Fin_Xs Supr Supr_in Fs'_sub' F_g(1)]
             by auto
 
@@ -924,14 +907,12 @@ next
           obtain f_fs'_sup' where F_fs'_sup':
             "is_sup ((\<lambda>f. f syn supr) ` (Fs' - {g})) f_fs'_sup'"
             "is_sup (scross ((\<lambda>f. f syn) ` (Fs' - {g})) Xs) f_fs'_sup'"
-            "f_fs'_sup' \<in> S syn"
             using sups_presD[OF Pres_f_fs' Xin Xsub Fin_Xs Supr Supr_in F_fs_arg1 F_remain]
             by auto
 
           obtain g_fs'_sup' where G_fs'_sup' :
             "is_sup ((\<lambda> f . f syn supr) ` (Fs' - {f})) g_fs'_sup'"
             "is_sup (scross ((\<lambda> f . f syn) ` (Fs' - {f})) Xs) g_fs'_sup'"
-            "g_fs'_sup' \<in> S syn"
             using sups_presD[OF Pres_g_fs' Xin Xsub Fin_Xs Supr Supr_in G_fs_arg1 G_remain ]
             by auto
 
@@ -1146,22 +1127,6 @@ next
             unfolding Fs'_scross
             by(auto)
 
-          (*
-            ok, so what can we say about valid-sets? 
-            everything but prio: closed under increasing information content
-            maybe we can extend pairwise-sups to pairwise-ok?
-            if inner data inside prio has sups, then prio has pairwise ok sups
-            then maybe we can use this to use prio here, since ok_S \<subseteq> S s
-            
-          *)
-
-(* using pairwise here. we know:
-- sup of 
-*)
-
-
-          have True using sup_union2[OF F_fs'_sup(1) G_fs'_sup(1)] (* , of "(\<lambda> f . f syn supr)"] *)
-
           have Gs_fs_sup1 : "is_sup {f_fs'_sup', g_fs'_sup'} sup1"
             using sup_union2[OF F_fs'_sup'(1) G_fs'_sup'(1) Conc1]
             by auto
@@ -1176,25 +1141,16 @@ next
 
 (* YOU ARE HERE *)
 (* all that remains is to deal with this pesky set membership predicate... *)
-          have True using F_fs'_sup
-          have Conc3 : "sup1 \<in> S syn"
-            using F_fs'_sup'(3) sups_pres
           
 
           show ?thesis
             using Conc1' Conc2' unfolding Eq 
-
-(* now, we should be able to show these all are equal by using sup_union *)
-          
-
-        then show ?thesis using nwise_sups[OF _ _ F_fs'_sup(1) G_fs'_sup(1)]
-nwise_sups[OF _ _ F_fs'_sup(2) G_fs'_sup(2)]
+            by auto
+        qed
       qed
-  
-    then show ?case 
-
+    qed
+  qed
 qed
-
 
 (* next: want to show that, if for each lifting in a set of lifted functions,
  * a new lifted function is ortho. to all of them,

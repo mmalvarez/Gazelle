@@ -46,9 +46,10 @@ lemma dominantE [elim] :
  *)
 
 lemma dominant_pcomps :
-  assumes Hpres : "sups_pres (set l)"
+  assumes Hpres : "sups_pres (set l) S"
   assumes Hne : "z \<in> set l"
   assumes H : "(f \<downharpoonleft> (set l) x)"
+  assumes Bin : "b \<in> S x"
   shows "pcomps l x b = f x b"
 proof-
 
@@ -56,7 +57,7 @@ proof-
     using sup_singleton by auto
 
   have Sup1 : "is_sup (scross ((\<lambda>f. f x) ` set l) {b}) (pcomps l x b)"
-    using sups_pres_pcomps_gen[OF Hpres Hne, of "{b}" b b x] B
+    using sups_pres_pcomps_gen'[OF Hpres Hne, of "{b}" b x b] Bin B
     by auto
 
   have Rewrite1 : "(\<lambda>f. f b) ` (\<lambda>f. f x) ` set l = (\<lambda> f . f x b) ` set l"
@@ -75,10 +76,11 @@ proof-
 qed
 
 lemma dominant_pcomps_set :
-  assumes Hpres : "sups_pres S"
-  assumes Hne : "z \<in> S"
-  assumes H : "(f \<downharpoonleft> S x)"
-  assumes L : "set l = S"
+  assumes Hpres : "sups_pres Fs S"
+  assumes Hne : "z \<in> Fs"
+  assumes H : "(f \<downharpoonleft> Fs x)"
+  assumes L : "set l = Fs"
+  assumes Bin : "b \<in> S x"
   shows "pcomps l x b = f x b"
   using dominant_pcomps assms unfolding sym[OF L] by auto
 
