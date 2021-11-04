@@ -43,8 +43,8 @@ lemmas schem_lift_defs =
 
   schem_lift_option_recR_def
   schem_lift_prio_recR_def
-  schem_lift_oalist_recR_def
-  schem_lift_fan_recR_def
+  (*schem_lift_oalist_recR_def*)
+  (*schem_lift_fan_recR_def*)
 
   schem_lift_prod_recR_A_left_def
   schem_lift_prod_recR_A_right_def

@@ -95,6 +95,10 @@ end
 
 #end
 
+instantiation nX :: schem begin
+instance proof qed
+end
+
 instantiation sprod :: (schem, schem) schem begin
 instance proof qed
 end
