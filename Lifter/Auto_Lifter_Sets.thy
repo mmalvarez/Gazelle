@@ -2,81 +2,110 @@ theory Auto_Lifter_Sets
   imports Auto_Lifter
 begin
 
+
+
+(* Automation for constructing valid-sets for liftings specified through schema
+ * See Auto_Lifter.thy for details on how this works.
+ *)
+
 type_synonym ('s1, 's2, 'x, 'b) schem_lift_S =
 "('s1 \<Rightarrow> 's2 \<Rightarrow> ('x, 'b) valid_set)"
 
 consts schem_lift_S ::
   "('s1 :: schem, 's2 :: schem, 'x, 'b) schem_lift_S"
 
-(*
-definition schem_lift_S_base_trivA :: "('n :: n_A, 'n, 'x, 'a md_triv) schem_lift_S" where
+
+(* TODO: this was originally commented *)
+definition schem_lift_S_base_trivA ::
+  "('n :: n_A, 'ls, 'x, 'a md_triv) schem_lift_S" where
 "schem_lift_S_base_trivA _ _ _ =
   UNIV"
-definition schem_lift_S_base_trivB :: "('n :: n_B, 'n, 'x, 'a md_triv) schem_lift_S" where
+definition schem_lift_S_base_trivB ::
+  "('n :: n_B, 'ls, 'x, 'a md_triv) schem_lift_S" where
 "schem_lift_S_base_trivB _ _ _ =
   UNIV"
-definition schem_lift_S_base_trivC :: "('n :: n_C, 'n, 'x, 'a md_triv) schem_lift_S" where
+definition schem_lift_S_base_trivC ::
+  "('n :: n_C, 'ls, 'x, 'a md_triv) schem_lift_S" where
 "schem_lift_S_base_trivC _ _ _ =
   UNIV"
-definition schem_lift_S_base_trivD :: "('n :: n_D, 'n, 'x, 'a md_triv) schem_lift_S" where
+definition schem_lift_S_base_trivD ::
+  "('n :: n_D, 'ls, 'x, 'a md_triv) schem_lift_S" where
 "schem_lift_S_base_trivD _ _ _ =
   UNIV"
-definition schem_lift_S_base_trivE :: "('n :: n_E, 'n, 'x, 'a md_triv) schem_lift_S" where
+definition schem_lift_S_base_trivE ::
+  "('n :: n_E, 'ls, 'x, 'a md_triv) schem_lift_S" where
 "schem_lift_S_base_trivE _ _ _ =
   UNIV"
-definition schem_lift_S_base_trivF :: "('n :: n_F, 'n, 'x, 'a md_triv) schem_lift_S" where
+definition schem_lift_S_base_trivF ::
+  "('n :: n_F, 'ls, 'x, 'a md_triv) schem_lift_S" where
 "schem_lift_S_base_trivF _ _ _ =
   UNIV"
-definition schem_lift_S_base_trivG :: "('n :: n_G, 'n, 'x, 'a md_triv) schem_lift_S" where
+definition schem_lift_S_base_trivG ::
+  "('n :: n_G, 'ls, 'x, 'a md_triv) schem_lift_S" where
 "schem_lift_S_base_trivG _ _ _ =
   UNIV"
-definition schem_lift_S_base_trivH :: "('n :: n_H, 'n, 'x, 'a md_triv) schem_lift_S" where
+definition schem_lift_S_base_trivH ::
+  "('n :: n_H, 'ls, 'x, 'a md_triv) schem_lift_S" where
 "schem_lift_S_base_trivH _ _ _ =
   UNIV"
-definition schem_lift_S_base_trivI :: "('n :: n_I, 'n, 'x, 'a md_triv) schem_lift_S" where
+definition schem_lift_S_base_trivI ::
+  "('n :: n_I, 'ls, 'x, 'a md_triv) schem_lift_S" where
 "schem_lift_S_base_trivI _ _ _ =
   UNIV"
-definition schem_lift_S_base_trivJ :: "('n :: n_J, 'n, 'x, 'a md_triv) schem_lift_S" where
+definition schem_lift_S_base_trivJ ::
+  "('n :: n_J, 'ls, 'x, 'a md_triv) schem_lift_S" where
 "schem_lift_S_base_trivJ _ _ _ =
   UNIV"
-definition schem_lift_S_base_trivK :: "('n :: n_K, 'n, 'x, 'a md_triv) schem_lift_S" where
+definition schem_lift_S_base_trivK ::
+  "('n :: n_K, 'ls, 'x, 'a md_triv) schem_lift_S" where
 "schem_lift_S_base_trivK _ _ _ =
   UNIV"
-*)
 
-definition schem_lift_S_base_idA :: "('n :: n_A, 'n, 'x, 'a) schem_lift_S" where
+definition schem_lift_S_base_idA ::
+  "('n :: n_A, 'n, 'x, 'a) schem_lift_S" where
 "schem_lift_S_base_idA _ _ _ =
   UNIV"
-definition schem_lift_S_base_idB :: "('n :: n_B, 'n, 'x, 'a) schem_lift_S" where
+definition schem_lift_S_base_idB ::
+  "('n :: n_B, 'n, 'x, 'a) schem_lift_S" where
 "schem_lift_S_base_idB _ _ _ =
   UNIV"
-definition schem_lift_S_base_idC :: "('n :: n_C, 'n, 'x, 'a) schem_lift_S" where
+definition schem_lift_S_base_idC ::
+  "('n :: n_C, 'n, 'x, 'a) schem_lift_S" where
 "schem_lift_S_base_idC _ _ _ =
   UNIV"
-definition schem_lift_S_base_idD :: "('n :: n_D, 'n, 'x, 'a) schem_lift_S" where
+definition schem_lift_S_base_idD ::
+  "('n :: n_D, 'n, 'x, 'a) schem_lift_S" where
 "schem_lift_S_base_idD _ _ _ =
   UNIV"
-definition schem_lift_S_base_idE :: "('n :: n_E, 'n, 'x, 'a) schem_lift_S" where
+definition schem_lift_S_base_idE ::
+  "('n :: n_E, 'n, 'x, 'a) schem_lift_S" where
 "schem_lift_S_base_idE _ _ _ =
   UNIV"
-definition schem_lift_S_base_idF :: "('n :: n_F, 'n, 'x, 'a) schem_lift_S" where
+definition schem_lift_S_base_idF ::
+  "('n :: n_F, 'n, 'x, 'a) schem_lift_S" where
 "schem_lift_S_base_idF _ _ _ =
   UNIV"
-definition schem_lift_S_base_idG :: "('n :: n_G, 'n, 'x, 'a) schem_lift_S" where
+definition schem_lift_S_base_idG ::
+  "('n :: n_G, 'n, 'x, 'a) schem_lift_S" where
 "schem_lift_S_base_idG _ _ _ =
   UNIV"
-definition schem_lift_S_base_idH :: "('n :: n_H, 'n, 'x, 'a) schem_lift_S" where
+definition schem_lift_S_base_idH ::
+  "('n :: n_H, 'n, 'x, 'a) schem_lift_S" where
 "schem_lift_S_base_idH _ _ _ =
   UNIV"
-definition schem_lift_S_base_idI :: "('n :: n_I, 'n, 'x, 'a) schem_lift_S" where
+definition schem_lift_S_base_idI ::
+  "('n :: n_I, 'n, 'x, 'a) schem_lift_S" where
 "schem_lift_S_base_idI _ _ _ =
   UNIV"
-definition schem_lift_S_base_idJ :: "('n :: n_J, 'n, 'x, 'a) schem_lift_S" where
+definition schem_lift_S_base_idJ ::
+  "('n :: n_J, 'n, 'x, 'a) schem_lift_S" where
 "schem_lift_S_base_idJ _ _ _ =
   UNIV"
-definition schem_lift_S_base_idK :: "('n :: n_K, 'n, 'x, 'a) schem_lift_S" where
+definition schem_lift_S_base_idK ::
+  "('n :: n_K, 'n, 'x, 'a) schem_lift_S" where
 "schem_lift_S_base_idK _ _ _ =
   UNIV"
+
 
 (* right-side recursion (prio) *)
 definition schem_lift_S_prio_recR ::
@@ -96,6 +125,7 @@ definition schem_lift_S_option_recR ::
     SO s' \<Rightarrow>
       option_l_S (rec n s'))"
 
+(*
 (* right-side recursion (oalist) *)
 definition schem_lift_S_oalist_recR ::
   "('n, 'ls, 'x, 'b2 :: Pord) schem_lift_S \<Rightarrow>
@@ -104,7 +134,9 @@ definition schem_lift_S_oalist_recR ::
   (case s of
     SL f1 s' \<Rightarrow>
       oalist_l_S f1 (rec n s'))"
+*)
 
+(*
 (* right-side recursion (roalist) *)
 (* NB we don't allow lifting into the "inr" data of the roalist.
    a separate lifting could allow this. *)
@@ -115,11 +147,7 @@ definition schem_lift_S_roalist_recR ::
   (case s of
     SRL f1 s' \<Rightarrow>
       roalist_l_S f1 (rec n s'))"
-
-(* Prod and Merge *)
-(* TODO: we are going to have some interesting issues with
- * correctness of merge lifting, in that we are going to force some sets to be equal
- * maybe this is OK though? *)
+*)
 
 definition schem_lift_S_prod_recR_A_left ::
   "('n, 'ls, 'x, 'b2 :: Pord) schem_lift_S =>
@@ -474,9 +502,11 @@ definition schem_lift_S_merge_recR_K_right ::
     SM ls rs =>
       (rec n rs))"
 
+
 (* left-side recursion (merge)
  * Here we have baked in the assumption that the two
  * valid-sets to be merged are equal (so, WLOG, we choose the left one)
+ * TODO: make sure this is a valid assumption
  *)
 definition schem_lift_S_recL ::
   "('s1l, 's2, 'x, 'b2) schem_lift_S \<Rightarrow>
@@ -487,8 +517,10 @@ definition schem_lift_S_recL ::
     SP s1l s1r \<Rightarrow> (\<lambda> syn . (recl s1l s2) syn \<inter> (recr s1r s2) syn))"
 (*(\<lambda> syn . (recl s1l s2) syn \<inter> (recr s1r s2) syn)*)
 
+
 adhoc_overloading schem_lift_S
-(*
+
+(* the triv instances were commented out *)
 "schem_lift_S_base_trivA"
 "schem_lift_S_base_trivB"
 "schem_lift_S_base_trivC"
@@ -500,7 +532,7 @@ adhoc_overloading schem_lift_S
 "schem_lift_S_base_trivI"
 "schem_lift_S_base_trivJ"
 "schem_lift_S_base_trivK"
-*)
+
 "schem_lift_S_base_idA"
 "schem_lift_S_base_idB"
 "schem_lift_S_base_idC"
@@ -515,8 +547,9 @@ adhoc_overloading schem_lift_S
 
 "schem_lift_S_option_recR schem_lift_S"
 "schem_lift_S_prio_recR schem_lift_S"
-"schem_lift_S_oalist_recR schem_lift_S"
-"schem_lift_S_roalist_recR schem_lift_S"
+(*"schem_lift_S_oalist_recR schem_lift_S"*)
+(*"schem_lift_S_roalist_recR schem_lift_S"*)
+
 
 "schem_lift_S_prod_recR_A_left schem_lift_S"
 "schem_lift_S_prod_recR_A_right schem_lift_S"
@@ -565,25 +598,5 @@ adhoc_overloading schem_lift_S
 "schem_lift_S_merge_recR_K_right schem_lift_S"
 
 "schem_lift_S_recL schem_lift_S schem_lift_S"
-
-term "schem_lift_S (NA) (SO (SPRK NA))"
-term "schem_lift_S (SP NA NB) (SP (SPRK (SO NA)) (SPRK (SO NB)))"
-
-term "schem_lift (SP NA NB) (SP (SPRK (SO NA)) (SPRK (SO NB)))"
-
-(* TODO: need to add valid set to injector *)
-
-(*
-definition schem_lift_S_inject ::
-  " ('n, ('x, 'a, 'b, 'n) sinject, 'x, 'a, 'b ) schem_lift" where
-"schem_lift_S_inject n s =
-  (case s of
-    SINJ l ls \<Rightarrow> l)"
-*)
-
-(*
-TODO: how do we do merges?
-do we just take one of the two?
-*)
 
 end
