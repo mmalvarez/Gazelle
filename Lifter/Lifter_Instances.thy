@@ -2335,10 +2335,17 @@ proof qed
  * merge (new ! !)
  *)
 
+term "LFD (option_l ((fst_l id_l)))"
+term "option_l (fst_l id_l)"
+(* idea
+
+*)
+
+(*
 definition merge_l ::
-  "('x, 'a1, 'b :: Mergeable, 'f1) lifting \<Rightarrow>
-   ('x, 'a2, 'b :: Mergeable, 'f2) lifting \<Rightarrow>
-   ('x, 'a1 * 'a2, 'b, 'f1 * 'f2) lifting" where
+  "('x, 'a1, 'b :: Mergeable, 'x \<Rightarrow> 'a1 \<Rightarrow> 'a1) lifting \<Rightarrow>
+   ('x, 'a2, 'b :: Mergeable, 'x \<Rightarrow> 'a2 \<Rightarrow> 'a2) lifting \<Rightarrow>
+   ('x, 'a1 * 'a2, 'b, 'x \<Rightarrow> ('a1 * 'a2) \<Rightarrow> 'a1 * 'a2) lifting" where
 "merge_l t1 t2 =
     LMake
       (\<lambda> s a b . 
@@ -2346,14 +2353,31 @@ definition merge_l ::
           LUpd t1 s a1 (LUpd t2 s a2 b )))
       (\<lambda> s b . (LOut t1 s b, LOut t2 s b))
       (\<lambda> s . LBase t1 s)
-      (\<lambda> f1f2 s a1a2 .
-          case f1f2 of (f1, f2) \<Rightarrow>
-          (case a1a2 of (a1, a2) \<Rightarrow>
-            (LFD t1 f1 s a1, LFD t2 f2 s a2)))"
+      (\<lambda> f s a1a2 . 
+        let res = ((f s a1a2) :: 'a1 * 'a2) in
+        (LFD t1 (fst res) s, LFD t2 (snd res) s))"
+*)
+
+definition merge_l ::
+  "('x, 'a1, 'b :: Mergeable, 'x \<Rightarrow> 'a1 \<Rightarrow> 'a1) lifting \<Rightarrow>
+   ('x, 'a2, 'b :: Mergeable, 'x \<Rightarrow> 'a2 \<Rightarrow> 'a2) lifting \<Rightarrow>
+   ('x, 'a1 * 'a2, 'b, 'x \<Rightarrow> ('a1 * 'a2) \<Rightarrow> 'a1 * 'a2) lifting" where
+"merge_l t1 t2 =
+    LMake
+      (\<lambda> s a b . 
+        (case a of (a1, a2) \<Rightarrow>
+          LUpd t1 s a1 (LUpd t2 s a2 b )))
+      (\<lambda> s b . (LOut t1 s b, LOut t2 s b))
+      (\<lambda> s . LBase t1 s)
+      (\<lambda> f s a1a2 . 
+        (LFD t1 (\<lambda> x a1 . (fst (f s a1a2))) s (fst a1a2), LFD t2 (\<lambda> x a2 . (snd (f s a1a2))) s (snd a1a2)))"
+
+
+term "merge_l (fst_l id_l) (snd_l id_l)"
 
 locale merge_l_valid_weak' = 
-  fixes l1 :: "('x, 'a1, 'b :: Mergeable, 'f1) lifting" 
-  fixes l2 :: "('x, 'a2, 'b :: Mergeable, 'f2) lifting"
+  fixes l1 :: "('x, 'a1, 'b :: Mergeable, 'x \<Rightarrow> 'a1 \<Rightarrow> 'a1) lifting" 
+  fixes l2 :: "('x, 'a2, 'b :: Mergeable, 'x \<Rightarrow> 'a2 \<Rightarrow> 'a2) lifting"
 
 locale merge_l_valid_weak =
   merge_l_valid_weak' +
@@ -2364,7 +2388,7 @@ locale merge_l_valid_weak =
 sublocale merge_l_valid_weak \<subseteq> out : lifting_valid_weak "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x"
 proof
   fix s
-  fix a :: "'b * 'e"
+  fix a :: "'b * 'd"
   fix b :: "'c"
 
   obtain a1 a2 where A: "a = (a1, a2)"
@@ -2380,7 +2404,7 @@ proof
 
 next
   fix s b
-  fix a :: "'b * 'e"
+  fix a :: "'b * 'd"
 
   obtain a1 a2 where A: "a = (a1, a2)"
     by(cases a; auto)
@@ -2430,7 +2454,7 @@ locale merge_l_valid = merge_l_valid_weak +
 sublocale merge_l_valid \<subseteq> out : lifting_valid "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x"
 proof
   fix s
-  fix a :: "'b * 'e"
+  fix a :: "'b * 'd"
   fix b :: "'c"
 
   obtain a1 a2 where A: "a = (a1, a2)"
@@ -2526,13 +2550,10 @@ locale merge_l_valid_weak_pres = merge_l_valid_weak +
 sublocale merge_l_valid_weak_pres \<subseteq> out: lifting_valid_weak_pres "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x"
 proof
 
-(* function component has type d * f  *)
-
   fix v supr :: 'c
   fix V
-  fix f :: "'d * 'f"
+  fix f :: "'a \<Rightarrow> 'b * 'd \<Rightarrow> 'b * 'd"
   fix s :: 'a
-
   assume Vin : "v \<in> V"
   assume Vsub : "V \<subseteq> S1 s \<inter> S2 s"
   then have Vsub1 : "V \<subseteq> S1 s" and Vsub2 : "V \<subseteq> S2 s"
@@ -2543,13 +2564,28 @@ proof
 
   then have Supr_in1 : "supr \<in> S1 s" and Supr_in2 : "supr \<in> S2 s"
     by auto
-
+(*
   obtain f1 f2 where F: "f = (f1, f2)"
     by(cases f; auto)
+*)
+(*
+  show "is_sup (LMap (merge_l l1 l2) f s ` V)
+        (LMap (merge_l l1 l2) f s supr)"
+    apply(simp add: merge_l_def)
+*)
+(* YOU ARE HERE
+ * need to see what happens if we go back to the old approach
+ * (i.e. not assuming the function shape at all
+ *
+ * perhaps with the other changes that have been made, the reification
+ * we were doing isn't any longer necessary *)
 
+  term "LOut l1 s supr"
 
-  have Pres1 : "is_sup (LMap l1 f1 s ` V) (LMap l1 f1 s supr)"
-    using in1.pres[OF Vin Vsub1 Supr Supr_in1, of f1]
+  have True using in1.pres[OF Vin Vsub1 Supr Supr_in1] compat_pres1
+
+  have Pres1 : "is_sup (LMap l1 f s ` (LOut l1 f s ` fst ` V)) (LMap l1 f s supr)"
+    using in1.pres[OF Vin Vsub1 Supr Supr_in1]
     by(auto)
 
   have In1 : "LMap l1 f1 s supr \<in> S1 s \<inter> S2 s"

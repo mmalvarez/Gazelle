@@ -24,8 +24,8 @@ definition no_control_lifting :: "('a, 'b :: {Bogus, Pord}, ('x, 'b) control) li
 "no_control_lifting =
   schem_lift NC (SP NX (SP NX (SID NC)))"
 *)
-definition no_control_lifting :: "('a, 'b1, 'b2 :: {Bogus, Pord}) lifting \<Rightarrow>
-  ('a, 'b1 , ('x, 'b2) control) lifting" where
+definition no_control_lifting :: "('a, 'b1, 'b2 :: {Bogus, Pord}, 'f) lifting \<Rightarrow>
+  ('a, 'b1 , ('x, 'b2) control, 'f) lifting" where
 "no_control_lifting l =
   schem_lift NC (SP NX (SP NX (SINJ l NC)))"
 
