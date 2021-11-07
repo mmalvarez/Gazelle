@@ -43,13 +43,13 @@ type_synonym 's cstate = "('s, unit option) state"
  * of terrible error messages making it hard to see what's going on) *)
 
 (* TODO: is this the correct priority calculation? *)
-definition seq_sem_lifting_gen :: "(syn, 'x state', ('x, 'a :: Pordb) control) lifting"
+definition seq_sem_lifting_gen :: "(syn, 'x state', ('x, 'a :: Pordb) control, _) lifting"
   where
 "seq_sem_lifting_gen = schem_lift
     NC (SP (SPRI (SO NC)) NX) "
 
 (* alternate definition that doesn't rely on auto lifter *)
-definition seq_sem_lifting' :: "(syn, 'x state', 'x state' md_triv option md_prio) lifting"
+definition seq_sem_lifting' :: "(syn, 'x state', 'x state' md_triv option md_prio, _) lifting"
   where
 "seq_sem_lifting' =
   (prio_l (\<lambda> _ . 0) (\<lambda> _ z . 1 + z) (option_l (triv_l)))"

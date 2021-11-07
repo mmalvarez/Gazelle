@@ -1,5 +1,5 @@
 theory Composition
-imports Composition_Core "../Lifter/Lifter"
+imports Composition_Core "../Mergeable/Mergeable"
 begin
 
 (* This file extends the definitions in Composition_Core.thy to a fully general implementation
@@ -56,7 +56,7 @@ definition sups_pres ::
 *)
 
 definition sups_pres ::
-  "('a \<Rightarrow> ('b :: Mergeable) \<Rightarrow> 'b) set \<Rightarrow> ('a \<Rightarrow> ('b :: Mergeable) set) \<Rightarrow> bool" where
+  "('a \<Rightarrow> ('b :: Pord) \<Rightarrow> 'b) set \<Rightarrow> ('a \<Rightarrow> 'b  set) \<Rightarrow> bool" where
 "sups_pres Fs S =
   (\<forall> x sup syn Xs Fs' f .
     x \<in> Xs \<longrightarrow>

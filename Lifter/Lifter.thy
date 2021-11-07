@@ -1,5 +1,6 @@
 theory Lifter
- imports  "../Mergeable/Mergeable_Instances" "../Mergeable/Mergeable_Oalist" "../Mergeable/Mergeable_Roalist" "../Mergeable/Mono"
+  imports  "../Mergeable/Mergeable_Instances" "../Mergeable/Mergeable_Oalist" "../Mergeable/Mergeable_Roalist" "../Mergeable/Mono"
+"../Composition/Composition"
 begin
 
 (* When we lift syntaxes we reverse the function arrow *)
@@ -20,14 +21,13 @@ datatype ('syn, 'a, 'b) lifting =
 
 *)
 
-datatype ('syn, 'a, 'b, 'f) lifting =
+datatype ('syn, 'a, 'b) lifting =
   LMake  (LUpd : "('syn \<Rightarrow> 'a \<Rightarrow> 'b \<Rightarrow> 'b)")
          (LOut : "('syn \<Rightarrow> 'b \<Rightarrow> 'a)")
          (LBase : "('syn \<Rightarrow> 'b)")
-         (LFD : "'f \<Rightarrow> 'syn \<Rightarrow> 'a \<Rightarrow> 'a")
 
 type_synonym ('syn, 'a, 'b) lifting' =
-  "('syn, 'a, 'b, 'syn \<Rightarrow> 'a \<Rightarrow> 'a) lifting"
+  "('syn, 'a, 'b) lifting"
 
 (*
 definition LUpd ::
@@ -36,14 +36,12 @@ definition LUpd ::
   LMap l (\<lambda> _ _ . a ) s b"
 *)
 
-
-definition LMap ::
-  "('x, 'a, 'b, 'f) lifting \<Rightarrow> 'f \<Rightarrow> ('x \<Rightarrow> 'b \<Rightarrow> 'b)" where
+definition LMap :: "('syn, 'a, 'b) lifting \<Rightarrow> ('syn \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow> ('syn \<Rightarrow> 'b \<Rightarrow> 'b)"
+  where
 "LMap l f s b =
-  LUpd l s (LFD l f s (LOut l s b)) b"
+  LUpd l s (f s (LOut l s b)) b"
 
-
-definition LNew :: "('syn, 'a, 'b, 'f) lifting \<Rightarrow> 'syn \<Rightarrow> 'a \<Rightarrow> 'b"  where
+definition LNew :: "('syn, 'a, 'b) lifting \<Rightarrow> 'syn \<Rightarrow> 'a \<Rightarrow> 'b"  where
 "LNew l s a = LUpd l s a (LBase l s)"
 
 (* TODO: make sure this is a good idea. *)
@@ -66,12 +64,12 @@ instance proof qed
 end
 
 locale lifting_putonly =
-  fixes l :: "('syn, 'a, 'b :: Pord_Weak, 'f) lifting"
+  fixes l :: "('syn, 'a, 'b :: Pord_Weak) lifting"
   fixes S :: "('syn, 'b) valid_set"
   assumes put_S : "\<And> s a b . LUpd l s a b \<in> S s"
 
 locale lifting_presonly =
-  fixes l :: "('syn, 'a, 'b :: Pord_Weak, 'f) lifting"
+  fixes l :: "('syn, 'a, 'b :: Pord_Weak) lifting"
   fixes S :: "('syn, 'b) valid_set"
   assumes pres :
     "\<And> v V supr f s . 
@@ -266,9 +264,9 @@ these were originally pord_weak, but this was
 the strengthening to pord shouldn't be an issue though.
 *)
 locale l_ortho' =
-  fixes l1 :: "('a, 'b1, 'c :: Pord, 'f1) lifting"
+  fixes l1 :: "('a, 'b1, 'c :: Pord) lifting"
   fixes S1 :: "'a \<Rightarrow> 'c set"
-  fixes l2 :: "('a, 'b2, 'c :: Pord, 'f2) lifting"
+  fixes l2 :: "('a, 'b2, 'c :: Pord) lifting"
   fixes S2 :: "'a \<Rightarrow> 'c set"
 
 locale l_ortho =
@@ -282,8 +280,8 @@ assumes eq_base : "\<And> s . LBase l1 s = LBase l2 s"
   assumes put2_S1 : "\<And> s a2 . b \<in> S1 s \<Longrightarrow> LUpd l2 s a2 b \<in> S1 s"
 
 locale l_ortho_base' =
-  fixes l1 :: "('a, 'b1, 'c :: Pord_Weakb, 'f1) lifting"
-  fixes l2 :: "('a, 'b2, 'c, 'f2) lifting"
+  fixes l1 :: "('a, 'b1, 'c :: Pord_Weakb) lifting"
+  fixes l2 :: "('a, 'b2, 'c) lifting"
 
 
 (* TODO: l_ortho_pres - but we may not need it. *)
@@ -324,8 +322,8 @@ locale l_ortho_base = l_ortho + l_ortho_base' +
   assumes compat_base2 : "\<And> s . LBase l2 s = \<bottom>"
 
 locale l_ortho_ok' =
-  fixes l1 :: "('a, 'b1, 'c :: {Pord_Weakb, Okay}, 'f1) lifting"
-  fixes l2 :: "('a, 'b2, 'c, 'f2) lifting"
+  fixes l1 :: "('a, 'b1, 'c :: {Pord_Weakb, Okay}) lifting"
+  fixes l2 :: "('a, 'b2, 'c) lifting"
 
 (* l_ortho_ok? i think we actually don't need any further properties!
 *)
@@ -335,8 +333,8 @@ locale l_ortho_ok = l_ortho + l_ortho_ok'
 (* lift_map_s is LMap plus a syntax translation *)
 definition lift_map_s ::
   "('b1 \<Rightarrow> 'a1) \<Rightarrow>
-   ('a1, 'a2, 'b2 :: Pord, 'f) lifting \<Rightarrow>
-   'f \<Rightarrow>
+   ('a1, 'a2, 'b2 :: Pord) lifting \<Rightarrow>
+   ('a1 \<Rightarrow> 'a2 \<Rightarrow> 'a2) \<Rightarrow>
    ('b1 \<Rightarrow> 'b2 \<Rightarrow> 'b2)" where
 "lift_map_s l' l sem syn st =
   LMap l sem (l' syn) st"
