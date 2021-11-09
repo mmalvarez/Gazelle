@@ -151,6 +151,29 @@ locale lifting_valid_weak_strict = lifting_valid_weak +
 locale lifting_valid_weak_strict_pres =
 lifting_valid_weak_strict + lifting_valid_weak_pres
 
+(* problem: "x1 \<noteq> x2" version fails to hold for products.
+*)
+locale lifting_valid_weak_grade = lifting_valid_weak +
+(*
+  assumes graded : "\<And> a b  x1 x2 s .
+x1 \<in> S s \<Longrightarrow>
+  x2 \<in> S s \<Longrightarrow>
+    x1 <[ x2 \<Longrightarrow>
+    LOut l s x1 = LOut l s x2 \<Longrightarrow>
+    x1 \<noteq> x2 \<Longrightarrow>
+    LUpd l s a x1 <[ LUpd l s b x2"
+*)
+
+  assumes graded : "\<And> a b  x1 x2 s .
+x1 \<in> S s \<Longrightarrow>
+  x2 \<in> S s \<Longrightarrow>
+    x1 <[ x2 \<Longrightarrow>
+    LOut l s x1 = LOut l s x2 \<Longrightarrow>
+    LUpd l s a x1 <[ LUpd l s a x2 \<Longrightarrow>
+    LUpd l s b x1 <[ LUpd l s b x2 \<Longrightarrow>
+    LUpd l s a x1 <[ LUpd l s b x2"
+
+
 (*
 lemma (in lifting_pairwise) pairwise_finite_S :
   fixes Vs :: "'b set"
@@ -337,9 +360,9 @@ locale l_ortho_pres = l_ortho +
 
 (* do we need both components of V to be subset of both sets? *)
 locale l_ortho_pres2' = 
-  fixes l1 :: "('a, 'b1, 'c :: Pord) lifting"
+  fixes l1 :: "('a, 'b1, 'c :: Pordb) lifting"
   fixes S1 :: "'a \<Rightarrow> 'c set"
-  fixes l2 :: "('a, 'b2, 'c :: Pord) lifting"
+  fixes l2 :: "('a, 'b2, 'c :: Pordb) lifting"
   fixes S2 :: "'a \<Rightarrow> 'c set"
 
   assumes compat_pres_pair :
