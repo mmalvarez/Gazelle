@@ -76,7 +76,21 @@ locale lifting_presonly =
          v \<in> V \<Longrightarrow>
          V \<subseteq> S s \<Longrightarrow>
          is_sup V supr \<Longrightarrow> supr \<in> S s \<Longrightarrow> is_sup (LMap l f s ` V) (LMap l f s supr)"
-    
+
+(*
+locale lifting_presonly2 =
+  fixes l :: "('syn, 'a, 'b :: Pord_Weak) lifting"
+  fixes S :: "('syn, 'b) valid_set"
+  assumes pres :
+    "\<And> v1 v2 V1 V2 supr1 supr2 f s . 
+         v1 \<in> V1 \<Longrightarrow>
+         V1 \<subseteq> S s \<Longrightarrow>
+         v2 \<in> V2 \<Longrightarrow>
+         V2 \<subseteq> S s \<Longrightarrow>
+         is_sup V1 supr1 \<Longrightarrow> supr1 \<in> S s \<Longrightarrow>
+         is_sup V2 supr2 \<Longrightarrow> supr2 \<in> S s \<Longrightarrow>
+        \<Longrightarrow> is_sup (LMap l f s ` V) (LMap l f s supr)"
+    *)
 
 (* reduced version of lifting-valid, for use with
  * improper merges (when using merge_l as a tool for combining
@@ -286,6 +300,7 @@ locale l_ortho_base' =
 
 (* TODO: l_ortho_pres - but we may not need it. *)
 locale l_ortho_pres = l_ortho +
+  (* TODO: no longer need compat_pres1, compat_pres2 *)
   assumes compat_pres1 : "\<And> s f1 f2 s1 s2 v V . 
     v \<in> V \<Longrightarrow>
          V \<subseteq> S1 s \<Longrightarrow>
@@ -307,6 +322,35 @@ locale l_ortho_pres = l_ortho +
   (* TODO: this third one may be all that's needed. *)
   assumes compat_pres_sup :
   "\<And> a1 a2 s x . is_sup {LUpd l1 s a1 x, LUpd l2 s a2 x} (LUpd l1 s a1 (LUpd l2 s a2 x))"
+
+(* do we need both components of V to be subset of both sets? *)
+locale l_ortho_pres2' = 
+  fixes l1 :: "('a, 'b1, 'c :: Pord) lifting"
+  fixes S1 :: "'a \<Rightarrow> 'c set"
+  fixes l2 :: "('a, 'b2, 'c :: Pord) lifting"
+  fixes S2 :: "'a \<Rightarrow> 'c set"
+
+  assumes compat_pres_pair :
+    "\<And> supr s v (V :: 'c set). 
+     \<And> f :: ('a \<Rightarrow> 'b1 * 'b2 \<Rightarrow> 'b1 * 'b2) .
+      v \<in> V \<Longrightarrow>
+      V \<subseteq> S1 s \<Longrightarrow>
+      V \<subseteq> S2 s \<Longrightarrow>
+      is_sup V supr \<Longrightarrow>
+      supr \<in> S1 s \<inter> S2 s \<Longrightarrow>
+      is_sup ((\<lambda> x . case (f s (LOut l1 s x, LOut l2 s x)) of
+                     (r1, r2) \<Rightarrow> LUpd l1 s r1 (LUpd l2 s r2 x)) ` V) 
+              (case (f s (LOut l1 s supr, LOut l2 s supr)) of (r1, r2) \<Rightarrow> LUpd l1 s r1 (LUpd l2 s r2 supr))"
+  assumes compat_pres_sup :
+  "\<And> a1 a2 s x . is_sup {LUpd l1 s a1 x, LUpd l2 s a2 x} (LUpd l1 s a1 (LUpd l2 s a2 x))"
+
+locale l_ortho_pres2 = l_ortho + l_ortho_pres2'
+   
+
+(* can we specify this without using LMap?
+*)
+
+
 (*
   assumes compat_pres2 : 
     "    v \<in> V \<Longrightarrow>

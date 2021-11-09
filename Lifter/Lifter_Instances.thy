@@ -2356,8 +2356,8 @@ definition merge_l ::
 *)
 
 definition merge_l ::
-  "('x, 'a1, 'b :: Mergeable) lifting \<Rightarrow>
-   ('x, 'a2, 'b :: Mergeable) lifting \<Rightarrow>
+  "('x, 'a1, 'b) lifting \<Rightarrow>
+   ('x, 'a2, 'b) lifting \<Rightarrow>
    ('x, 'a1 * 'a2, 'b) lifting" where
 "merge_l t1 t2 =
     LMake
@@ -2368,8 +2368,8 @@ definition merge_l ::
       (\<lambda> s . LBase t1 s)"
 
 locale merge_l_valid_weak' = 
-  fixes l1 :: "('x, 'a1, 'b :: Mergeable) lifting" 
-  fixes l2 :: "('x, 'a2, 'b :: Mergeable) lifting"
+  fixes l1 :: "('x, 'a1, 'b) lifting" 
+  fixes l2 :: "('x, 'a2, 'b) lifting"
 
 locale merge_l_valid_weak =
   merge_l_valid_weak' +
@@ -2377,12 +2377,13 @@ locale merge_l_valid_weak =
   in1 : lifting_valid_weak l1 S1 +
   in2 : lifting_valid_weak l2 S2
 
+print_locale merge_l_valid_weak
+
 sublocale merge_l_valid_weak \<subseteq> out : lifting_valid_weak "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x"
 proof
   fix s
   fix a :: "'b * 'd"
   fix b :: "'c"
-
   obtain a1 a2 where A: "a = (a1, a2)"
     by(cases a; auto)
 
@@ -2535,14 +2536,13 @@ qed
 *)
 
 locale merge_l_valid_weak_pres = merge_l_valid_weak +
-  l_ortho_pres +
+  l_ortho_pres2 +
   in1 : lifting_valid_weak_pres l1 S1 +
   in2 : lifting_valid_weak_pres l2 S2
 
 sublocale merge_l_valid_weak_pres \<subseteq> out: lifting_valid_weak_pres "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x"
 proof
-
-  fix v supr :: 'c
+  fix v supr :: "'c"
   fix V
   fix f :: "'a \<Rightarrow> 'b * 'd \<Rightarrow> 'b * 'd"
   fix s :: 'a
@@ -2573,139 +2573,9 @@ proof
     using compat_pres_sup
     by auto
 
-(*
-  have Idea : "LMap (merge_l l1 l2) f s = (\<lambda> x . 
-    case (f s (LOut l1 s x, LOut l2 s x)) of
-    (x1, x2) \<Rightarrow>  LUpd l1 s x1 (LUpd l2 s x2 x))"
-    sorry
-*)
-
   show "is_sup (LMap (merge_l l1 l2) f s ` V) (LMap (merge_l l1 l2) f s supr)"
-    unfolding (*Idea*) X12
-  proof(rule is_supI)
-    fix x
-    assume X : "x \<in> (\<lambda>x. case f s (LOut l1 s x, LOut l2 s x) of (x1, x2) \<Rightarrow> LUpd l1 s x1 (LUpd l2 s x2 x)) ` V"
-
-    then obtain xo where Xo : "xo \<in> V" "(\<lambda>x. case f s (LOut l1 s x, LOut l2 s x) of (x1, x2) \<Rightarrow> LUpd l1 s x1 (LUpd l2 s x2 x)) xo = x"
-      by auto
-
-    obtain xr1 xr2 where Xr : "(xr1, xr2) = f s (LOut l1 s xo, LOut l2 s xo)"
-      using Xo by( auto split: prod.splits)
-(* YOU ARE HERE
-*)
-    have "(LUpd l2 s xr2 xo) <[ (LUpd l2 s x2 supr)"
-      using in2.pres[OF Xo(1) Vsub2 Supr Supr_in2, of]
-
-    have "x <[ LUpd l1 s x1 (LUpd l2 s x2 supr)"
-      using Xo Xr
-      apply(auto split: prod.splits)
-
-    then show "x <[ (case (x1, x2) of (x1, x2) \<Rightarrow> LUpd l1 s x1 (LUpd l2 s x2 supr))"
-      by(simp)
-(*
-  show "is_sup (LMap (merge_l l1 l2) f s ` V)
-        (LMap (merge_l l1 l2) f s supr)"
-    apply(simp add: merge_l_def split: prod.splits)
-*)
-(* YOU ARE HERE
- * need to see what happens if we go back to the old approach
- * (i.e. not assuming the function shape at all
- *
- * perhaps with the other changes that have been made, the reification
- * we were doing isn't any longer necessary *)
-
-(* need to find a way to possibly strengthen orthogonality,
- * right now we don't have a correct way of comparing these two functions. *)
-  term "LMap l1"
-  have Pres1 : "is_sup (LMap l1 (\<lambda> s c . fst (f s (c, LOut l2 s supr))) s ` V) (LMap l1 (\<lambda> s c . fst (f s (c, LOut l2 s supr))) s supr)"
-    using in1.pres[OF Vin Vsub1 Supr Supr_in1]
-    by(auto)
-
-  have In1 : "LMap l1 (\<lambda> s c . fst (f s (c, LOut l2 s supr)))s supr \<in> S1 s \<inter> S2 s"
-    using in1.put_S put1_S2[OF Supr_in2]
-    by auto
-
-  have Pres2 : "is_sup (LMap l2 (\<lambda> s c . snd (f s (LOut l1 s supr, c))) s ` V) (LMap l2 (\<lambda> s c . snd (f s (LOut l1 s supr, c))) s supr)"
-    using in2.pres[OF Vin Vsub2 Supr Supr_in2]
-    by(auto)
-
-  have In2 : "LMap l2 (\<lambda> s c . snd (f s (LOut l1 s supr, c))) s supr \<in> S1 s \<inter> S2 s"
-    using in2.put_S put2_S1[OF Supr_in1]
-    by auto
-
-  have PresFull_1 : "is_sup
-   (LMap l1 (\<lambda>s c. fst (f s (c, LOut l2 s supr))) s `
-    LMap l2 (\<lambda>s c. snd (f s (LOut l1 s supr, c))) s ` V)
-   (LMap l1 (\<lambda>s c. fst (f s (c, LOut l2 s supr))) s
-     (LMap l2 (\<lambda>s c. snd (f s (LOut l1 s supr, c))) s supr))"
-    using compat_pres1[OF Vin Vsub1 Vsub2 Pres1 In1 Pres2 In2] by auto
-
-  have Merge_Eq1 : "LMap (merge_l l1 l2) f s supr = (LMap l1 (\<lambda> s c . fst (f s (c, LOut l2 s supr))) s (LMap l2 (\<lambda> s c . snd (f s (LOut l1 s supr, c))) s supr))"
-    using X12
-    by(auto simp add: merge_l_def put1_get2 put2_get1)
-
-  have Merge_Eq2 : "LMap (merge_l l1 l2) f s supr = (LMap l2 (\<lambda> s c . snd (f s (LOut l1 s supr, c)))  s (LMap l1 (\<lambda> s c . fst (f s (c, LOut l2 s supr)))  s supr))"
-    using X12
-    by(auto simp add: merge_l_def put1_get2 put2_get1 compat)
-
-  have PresFull' : "is_sup (LMap l1 (\<lambda>s c. fst (f s (c, LOut l2 s supr))) s `
-    LMap l2 (\<lambda>s c. snd (f s (LOut l1 s supr, c))) s ` V) (LMap (merge_l l1 l2) f s supr)"
-    unfolding Merge_Eq1
-    using PresFull_1
-    by auto
-    
-
-(* problem here seems to be that we can't rule out data change in the first part having
-an effect on the second part. maybe we need some kind of
-sups_pres assumption? maybe on f? *)
-  have Eq : "(LMap l1 (\<lambda> s c . fst (f s (c, LOut l2 s supr))) s ` (LMap l2 (\<lambda> s c . snd (f s (LOut l1 s supr, c)))  s ` V)) = (LMap (merge_l l1 l2) f s ` V)"
-    using X12
-    unfolding image_image
-    apply(auto simp add: merge_l_def put1_get2 put2_get1 split: prod.splits)
-    sorry
-
-(*
-  have Eq2 : "(LMap (merge_l l1 l2) f s supr) = LMap l1 f1 s (LMap l2 f2 s supr)"
-    using F
-    by(auto simp add: merge_l_def put1_get2 put2_get1)
-*)
-  show " is_sup
-        (LMap (merge_l l1 l2) f s ` V)
-        (LMap (merge_l l1 l2) f s supr)"
-  proof(rule is_supI)
-    fix x
-    assume "x \<in> LMap (merge_l l1 l2) f s ` V"
-
-    then obtain xo where Xo : "xo \<in> V" "x = LMap (merge_l l1 l2) f s xo"
-      by auto
-
-    have
-      Xo_in' :
-     "LMap l1 (\<lambda> s c . fst (f s (c, LOut l2 s supr))) s (
-          LMap l2 (\<lambda>s c. snd (f s (LOut l1 s supr, c))) s (xo)) \<in>
-      (LMap l1 (\<lambda>s c. fst (f s (c, LOut l2 s supr))) s `
-      LMap l2 (\<lambda>s c. snd (f s (LOut l1 s supr, c))) s ` V)"
-      unfolding image_image
-      using imageI[OF Xo(1)]
-      by auto
-
-    have Leq1 : "LMap l1 (\<lambda> s c . fst (f s (c, LOut l2 s supr))) s (
-        LMap l2 (\<lambda>s c. snd (f s (LOut l1 s supr, c))) s (xo)) <[ LMap (merge_l l1 l2) f s supr"
-      using is_supD1[OF PresFull_1 Xo_in']
-      unfolding Merge_Eq1
-      by auto
-
-    have Leq2 : "LMap (merge_l l1 l2) f s xo <[ LMap l1 (\<lambda> s c . fst (f s (c, LOut l2 s supr))) s (
-        LMap l2 (\<lambda>s c. snd (f s (LOut l1 s supr, c))) s (xo))"
-      apply(simp add: merge_l_def put1_get2 put2_get1 split: prod.splits)
-
-    show "x <[ LMap (merge_l l1 l2) f s supr"
-      using is_supD1[OF PresFull_1]
-(*
-    using PresFull_1
-    unfolding Merge_Eq1
-    unfolding Eq
-    by simp*)
+    using compat_pres_pair[OF Vin Vsub1 Vsub2 Supr Supr_in, of f]
+    by(auto simp add: merge_l_def)
 qed
 
 locale option_l_ortho =
@@ -2723,7 +2593,7 @@ next
 
   fix b s 
   fix a1 :: 'b
-  fix a2 :: 'e
+  fix a2 :: 'd
 
   have Base: "LBase l1 s = LBase l2 s"
     using eq_base by auto
@@ -3519,14 +3389,13 @@ proof
     by(auto simp add: fst_l_def)
 next
 
-  fix b :: "('c * 'g)"
+  fix b :: "'c * 'e"
   fix s
   fix a1 :: 'b
-  fix a2 :: 'e
+  fix a2 :: 'd
 
   obtain b1 b2 where B: "b = (b1, b2)"
     by(cases b; auto)
-
   have Compat1 : "LUpd l1 s a1 (LUpd l2 s a2 b1) = LUpd l2 s a2 (LUpd l1 s a1 b1)"
     using compat[of s a1 a2 b1]
     by(auto)
@@ -3537,7 +3406,7 @@ next
     by(auto simp add: fst_l_def)
 next
 
-  fix b :: "('c * 'g)"
+  fix b :: "('c * 'e)"
   fix a1 
   fix s
 
@@ -3552,7 +3421,7 @@ next
     using B
     by (auto simp add: fst_l_def)
 next
-  fix b :: "('c * 'g)"
+  fix b :: "('c * 'e)"
   fix s a2
 
   obtain b1 b2 where B: "b = (b1, b2)"
@@ -3568,7 +3437,7 @@ next
     using B
     by(auto simp add: fst_l_def)
 next
-  fix b :: "'c * 'g"
+  fix b :: "'c * 'e"
   fix s a1
 
   assume B_in : "b \<in> fst_l_S S2 s"
@@ -3583,7 +3452,7 @@ next
     using B
     by(auto simp add: fst_l_def fst_l_S_def)
 next
-  fix b :: "'c * 'g"
+  fix b :: "'c * 'e"
   fix s a2
 
   assume B_in : "b \<in> fst_l_S S1 s"
@@ -3618,7 +3487,7 @@ locale fst_l_ortho_pres = fst_l_ortho + l_ortho_pres
 sublocale fst_l_ortho_pres \<subseteq> l_ortho_pres "fst_l l1" "fst_l_S S1" "fst_l l2" "fst_l_S S2"
 proof
   fix s f1 f2 s1 s2 v 
-  fix V :: "('c * 'g) set"
+  fix V :: "('c * 'e) set"
 
   assume Sup1 : "is_sup (LMap (fst_l l1) f1 s ` V) s1"
   assume Sup2 : "is_sup (LMap (fst_l l2) f2 s ` V) s2"
@@ -3934,7 +3803,7 @@ proof
   qed
 next
   fix s f1 f2 s1 s2 v 
-  fix V :: "('c * 'g) set"
+  fix V :: "('c * 'e) set"
 
   assume Sup1 : "is_sup (LMap (fst_l l1) f1 s ` V) s1"
   assume Sup2 : "is_sup (LMap (fst_l l2) f2 s ` V) s2"
@@ -4251,7 +4120,284 @@ next
   qed
 next
   fix a1 a2 s 
-  fix x :: "('c * 'g)"
+  fix x :: "('c * 'e)"
+
+  obtain x1 x2 where X : "x = (x1, x2)"
+    by(cases x; auto)
+
+  have Sup : 
+    "is_sup {LUpd (l1) s a1 x1, LUpd (l2) s a2 x1}
+        (LUpd (l1) s a1 (LUpd (l2) s a2 x1))"
+    using compat_pres_sup
+    by auto
+
+  have Conc' :
+    "is_sup ((\<lambda>w. (w, x2)) ` {LUpd l1 s a1 x1, LUpd l2 s a2 x1}) (LUpd l1 s a1 (LUpd l2 s a2 x1), x2)"
+    using is_sup_fst[OF _ Sup]
+    by auto
+
+  then show "is_sup {LUpd (fst_l l1) s a1 x, LUpd (fst_l l2) s a2 x}
+        (LUpd (fst_l l1) s a1 (LUpd (fst_l l2) s a2 x))"
+    using X
+    by(auto simp add: fst_l_def)
+qed
+
+locale fst_l_ortho_pres2 = fst_l_ortho + l_ortho_pres2
+
+sublocale fst_l_ortho_pres2 \<subseteq> l_ortho_pres2 "fst_l l1" "fst_l_S S1" "fst_l l2" "fst_l_S S2"
+proof
+  fix supr v :: "'c * 'e"
+  fix V :: "('c * 'e) set"
+  fix s f
+
+  assume Vin : "v \<in> V"
+  assume Vsub1 : "V \<subseteq> fst_l_S S1 s"
+  assume Vsub2 : "V \<subseteq> fst_l_S S2 s"
+  assume Vsupr : "is_sup V supr"
+  assume Supr_in : "supr \<in> fst_l_S S1 s \<inter> fst_l_S S2 s"
+
+  obtain V' where SV' : "V' = { x1 . \<exists> x2 . (x1, x2) \<in> V}"
+    by auto
+
+  have SV'2 : "V' = fst ` V"
+  proof
+    show "V' \<subseteq> fst ` V"
+    proof
+      fix w
+      assume W: "w \<in> V'"
+
+      then obtain w2 where W2: "(w, w2) \<in> V"
+        using SV' by auto
+
+      show "w \<in> fst ` V"
+        using imageI[OF W2, of fst]
+        by(auto)
+    qed
+  next
+    show "fst ` V \<subseteq> V'"
+    proof
+      fix w
+
+      assume W: "w \<in> fst ` V"
+      show "w \<in> V'"
+        unfolding SV'
+        using W
+        by(auto)
+    qed
+  qed
+
+  have V'sub1 : "V' \<subseteq> S1 s"
+    using SV' Vsub1
+    by(auto simp add: fst_l_S_def)
+
+  have V'sub2 : "V' \<subseteq> S2 s"
+    using SV' Vsub2
+    by(auto simp add: fst_l_S_def)
+
+  obtain v1 v2 where V' :
+    "v1 \<in> V'" "v = (v1, v2)"
+    using Vin
+    unfolding SV'
+    by (cases v; auto)
+
+  obtain supr1 supr2 where Supr1_2 : "supr = (supr1, supr2)"
+    by(cases supr; auto)
+
+  have V'supr : "is_sup V' supr1"
+    using is_sup_fst'[OF Vin, of supr1 supr2] Vsupr Supr1_2 
+    unfolding SV'2
+    by(auto)
+
+  have Snd_v_supr2 :
+    "is_sup (snd ` V) supr2"
+    using is_sup_snd'[OF Vin, of supr1 supr2] Vsupr Supr1_2
+    by auto
+
+  have Supr1_in : "supr1 \<in> S1 s \<inter> S2 s"
+    using Supr_in Supr1_2
+    by(auto simp add:fst_l_S_def)
+
+  show "is_sup
+        ((\<lambda>x. case f s (LOut (fst_l l1) s x, LOut (fst_l l2) s x) of
+               (r1, r2) \<Rightarrow> LUpd (fst_l l1) s r1 (LUpd (fst_l l2) s r2 x)) `
+         V)
+        (case f s (LOut (fst_l l1) s supr, LOut (fst_l l2) s supr) of
+         (r1, r2) \<Rightarrow> LUpd (fst_l l1) s r1 (LUpd (fst_l l2) s r2 supr))"
+  proof(rule is_supI)
+    fix x
+
+    assume X: "x \<in> (\<lambda>x. case f s (LOut (fst_l l1) s x, LOut (fst_l l2) s x) of
+                  (r1, r2) \<Rightarrow> LUpd (fst_l l1) s r1 (LUpd (fst_l l2) s r2 x)) `
+             V"
+
+    then obtain xo where Xo : "xo \<in> V" "(\<lambda>x. case f s (LOut (fst_l l1) s x, LOut (fst_l l2) s x) of
+                  (r1, r2) \<Rightarrow> LUpd (fst_l l1) s r1 (LUpd (fst_l l2) s r2 x)) xo = x"
+      by auto
+
+    obtain xo1 xo2 where Xo1_2 : "xo = (xo1, xo2)"
+      by(cases xo; auto)
+
+    have Xo1_in : "xo1 \<in> V'"
+      using SV'2 imageI[OF Xo(1), of fst] Xo1_2
+      by auto
+
+    have Xo_alt : "(case f s (LOut l1 s xo1, LOut l2 s xo1) of
+     (r1, r2) \<Rightarrow> (LUpd l1 s r1 (LUpd l2 s r2 xo1), xo2)) = x"
+      using Xo Xo1_2
+      by(auto simp add: fst_l_def)
+
+    have Sup1 : "is_sup
+     ((\<lambda>x. case f s (LOut l1 s x, LOut l2 s x) of
+            (r1, r2) \<Rightarrow> LUpd l1 s r1 (LUpd l2 s r2 x)) `
+      V')
+     (case f s (LOut l1 s supr1, LOut l2 s supr1) of
+      (r1, r2) \<Rightarrow> LUpd l1 s r1 (LUpd l2 s r2 supr1))"
+      using compat_pres_pair[OF V'(1) V'sub1 V'sub2 V'supr Supr1_in, of f]
+      by auto
+
+    obtain xr1 xr2 where Xr : "f s (LOut l1 s xo1, LOut l2 s xo1) = (xr1, xr2)"
+      by(fastforce)
+
+    obtain suprr1 suprr2 where Suprr : "f s (LOut l1 s supr1, LOut l2 s supr1) = (suprr1, suprr2)"
+      by fastforce
+
+    have Conc2 : "xo2 <[ supr2"
+      using is_supD1[OF Vsupr Xo(1)] Xo1_2 Supr1_2
+      by(auto simp add: prod_pleq)
+
+    have Conc' : "(case f s (LOut l1 s xo1, LOut l2 s xo1) of
+       (r1, r2) \<Rightarrow> LUpd l1 s r1 (LUpd l2 s r2 xo1)) <[
+      (case f s (LOut l1 s supr1, LOut l2 s supr1) of
+       (r1, r2) \<Rightarrow> LUpd l1 s r1 (LUpd l2 s r2 supr1))"
+      using is_supD1[OF Sup1 imageI[OF Xo1_in]]
+      by auto
+
+    then show "x <[
+         (case f s (LOut (fst_l l1) s supr, LOut (fst_l l2) s supr) of
+          (r1, r2) \<Rightarrow> LUpd (fst_l l1) s r1 (LUpd (fst_l l2) s r2 supr))"
+      using Xo_alt Supr1_2 Xr Suprr Conc2
+      by(auto simp add: fst_l_def prod_pleq split: prod.splits)
+  next
+
+    fix z
+
+    assume Ub : "is_ub
+           ((\<lambda>x. case f s (LOut (fst_l l1) s x, LOut (fst_l l2) s x) of
+                  (r1, r2) \<Rightarrow> LUpd (fst_l l1) s r1 (LUpd (fst_l l2) s r2 x)) `
+            V) z"
+
+    obtain z1 z2 where Z1_2 : "z = (z1, z2)"
+      by(cases z; auto)
+
+    have Ub1: "is_ub (fst ` ((\<lambda>x. case f s (LOut (fst_l l1) s x, LOut (fst_l l2) s x) of
+                  (r1, r2) \<Rightarrow> LUpd (fst_l l1) s r1 (LUpd (fst_l l2) s r2 x)) `
+            V)) z1"
+      using is_ub_fst'[OF imageI[OF Vin] Ub[unfolded Z1_2]]
+      by auto
+
+    have Ub2 :  "is_ub (snd ` ((\<lambda>x. case f s (LOut (fst_l l1) s x, LOut (fst_l l2) s x) of
+                  (r1, r2) \<Rightarrow> LUpd (fst_l l1) s r1 (LUpd (fst_l l2) s r2 x)) `
+            V)) z2"
+      using is_ub_snd'[OF imageI[OF Vin] Ub[unfolded Z1_2]]
+      by auto
+
+    have Ub2_eq : "(snd o ((\<lambda>x. case f s (LOut (fst_l l1) s x, LOut (fst_l l2) s x) of
+                  (r1, r2) \<Rightarrow> LUpd (fst_l l1) s r1 (LUpd (fst_l l2) s r2 x)))) = snd"
+    proof(rule ext)
+      fix x
+
+      show "(snd \<circ>
+          (\<lambda>x. case f s (LOut (fst_l l1) s x,
+                          LOut (fst_l l2) s x) of
+                (r1, r2) \<Rightarrow>
+                  LUpd (fst_l l1) s r1
+                   (LUpd (fst_l l2) s r2 x)))
+          x =
+         snd x"
+        by(auto simp add: fst_l_def split: prod.splits)
+    qed
+
+    have Ub2' : "is_ub (snd ` V) z2"
+      using Ub2
+      unfolding image_comp Ub2_eq
+      by auto
+
+    have Conc2 : "supr2 <[ z2"
+      using is_supD2[OF Snd_v_supr2 Ub2'] by auto
+      
+    obtain suprr1 suprr2 where Suprr : "f s (LOut l1 s supr1, LOut l2 s supr1) = (suprr1, suprr2)"
+      by fastforce
+
+    have Sup1 : "is_sup
+     ((\<lambda>x. case f s (LOut l1 s x, LOut l2 s x) of
+            (r1, r2) \<Rightarrow> LUpd l1 s r1 (LUpd l2 s r2 x)) `
+      V')
+     (case f s (LOut l1 s supr1, LOut l2 s supr1) of
+      (r1, r2) \<Rightarrow> LUpd l1 s r1 (LUpd l2 s r2 supr1))"
+      using compat_pres_pair[OF V'(1) V'sub1 V'sub2 V'supr Supr1_in, of f]
+      by auto
+
+
+    have Ub1_eq :
+     "((\<lambda>x. case f s (LOut l1 s x, LOut l2 s x) of
+                (r1, r2) \<Rightarrow> LUpd l1 s r1 (LUpd l2 s r2 x))) o fst = 
+    fst o (\<lambda>x. case f s (LOut (fst_l l1) s x,
+                          LOut (fst_l l2) s x) of
+                (r1, r2) \<Rightarrow>
+                  LUpd (fst_l l1) s r1 (LUpd (fst_l l2) s r2 x))"
+    proof(rule ext)
+      fix x
+      show "((\<lambda>x. case f s (LOut l1 s x, LOut l2 s x) of
+               (r1, r2) \<Rightarrow> LUpd l1 s r1 (LUpd l2 s r2 x)) \<circ>
+          fst)
+          x =
+         (fst \<circ>
+          (\<lambda>x. case f s (LOut (fst_l l1) s x,
+                          LOut (fst_l l2) s x) of
+                (r1, r2) \<Rightarrow>
+                  LUpd (fst_l l1) s r1
+                   (LUpd (fst_l l2) s r2 x)))
+          x"
+        by(auto simp add: fst_l_def split: prod.splits)
+    qed
+(*
+(fst `
+      (\<lambda>x. case f s (LOut (fst_l l1) s x,
+                      LOut (fst_l l2) s x) of
+            (r1, r2) \<Rightarrow>
+              LUpd (fst_l l1) s r1 (LUpd (fst_l l2) s r2 x))
+*)
+
+    have Ub1' : "is_ub
+     (((\<lambda>x. case f s (LOut l1 s x, LOut l2 s x) of
+             (r1, r2) \<Rightarrow> LUpd l1 s r1 (LUpd l2 s r2 x)) \<circ>
+       fst) `
+      V)
+     z1"
+      using Ub1 unfolding image_comp sym[OF Ub1_eq]
+      by auto
+
+    then have Ub1'' :  "is_ub
+     (((\<lambda>x. case f s (LOut l1 s x, LOut l2 s x) of
+             (r1, r2) \<Rightarrow> LUpd l1 s r1 (LUpd l2 s r2 x))) `
+      V')
+     z1"
+      unfolding SV'2 image_comp
+      by auto
+
+    have Conc1 : "(LUpd l1 s suprr1 (LUpd l2 s suprr2 supr1)) <[ (z1)"
+      using is_supD2[OF Sup1 Ub1''] Suprr
+      by(auto split: prod.splits)
+
+    show "(case f s (LOut (fst_l l1) s supr, LOut (fst_l l2) s supr) of
+           (r1, r2) \<Rightarrow> LUpd (fst_l l1) s r1 (LUpd (fst_l l2) s r2 supr)) <[
+          z"
+      using Z1_2 Suprr Supr1_2 Conc1 Conc2
+      by(auto simp add: fst_l_def prod_pleq)
+  qed
+next
+  fix a1 a2 s 
+  fix x :: "('c * 'e)"
 
   obtain x1 x2 where X : "x = (x1, x2)"
     by(cases x; auto)
@@ -5107,11 +5253,10 @@ proof
     using in1.base in2.base
     by(auto simp add: fst_l_def snd_l_def)
 next
-
-  fix b :: "'c * 'f"
+  fix b :: "'c * 'e"
   fix s :: 'a
   fix a1 :: 'b
-  fix a2 :: 'e
+  fix a2 :: 'd
 
   obtain b1 b2 where B: "b = (b1, b2)"
     by(cases b; auto)
@@ -5121,7 +5266,7 @@ next
 
 next
 
-  fix b :: "'c * 'f"
+  fix b :: "'c * 'e"
   fix s :: 'a
   fix a1
 
@@ -5132,9 +5277,9 @@ next
     by(auto simp add: fst_l_def snd_l_def)
 next
 
-  fix b :: "'c * 'f"
+  fix b :: "'c * 'e"
   fix s :: 'a
-  fix a2 :: 'e
+  fix a2 :: 'd
 
 
   obtain b1 b2 where B: "b = (b1, b2)"
@@ -5145,7 +5290,7 @@ next
 
 
 next
-  fix b :: "'c * 'f"
+  fix b :: "'c * 'e"
   fix s :: 'a
   fix a1 :: 'b
 
@@ -5157,9 +5302,9 @@ next
   then show " LUpd (fst_l l1) s a1 b \<in> snd_l_S S2 s" using Bin
     by(auto simp add: fst_l_def snd_l_S_def)
 next
-  fix b :: "'c * 'f"
+  fix b :: "'c * 'e"
   fix s :: 'a
-  fix a2 :: 'e
+  fix a2 :: 'd
 
   assume Bin: "b \<in> fst_l_S S1 s"
   obtain b1 b2 where B: "b = (b1, b2)"
@@ -5258,6 +5403,309 @@ next
     using in2.base
     by(auto simp add: snd_l_def prod_bot)
 qed
+
+locale fst_l_snd_l_ortho_pres2 =
+  fst_l_snd_l_ortho +
+  in1 : lifting_valid_pres l1 S1 +
+  in2 : lifting_valid_pres l2 S2
+
+sublocale fst_l_snd_l_ortho_pres2 \<subseteq> out : l_ortho_pres2 "fst_l l1" "fst_l_S S1" "snd_l l2" "snd_l_S S2"
+proof
+  fix s 
+  fix f :: "'a \<Rightarrow> ('b * 'd) \<Rightarrow> ('b * 'd)"
+  fix supr v :: "'c * 'e"
+  fix V :: "('c * 'e) set"
+  assume Vin : "v \<in> V"
+
+  assume Vsub1 : "V \<subseteq> fst_l_S S1 s"
+  assume Vsub2 : "V \<subseteq> snd_l_S S2 s"
+
+  assume Vsupr : "is_sup V supr"
+
+  assume Vsupr_in : "supr \<in> fst_l_S S1 s \<inter> snd_l_S S2 s"
+
+  obtain supr1 supr2 where Supr1_2 : "supr = (supr1, supr2)"
+    by fastforce
+
+  obtain V'1 where SV'1 : "V'1 = { x1 . \<exists> x2 . (x1, x2) \<in> V}"
+    by auto
+
+  have SV'1 : "V'1 = fst ` V"
+  proof
+    show "V'1 \<subseteq> fst ` V"
+    proof
+      fix w
+      assume W: "w \<in> V'1"
+
+      then obtain w2 where W2: "(w, w2) \<in> V"
+        using SV'1 by auto
+
+      show "w \<in> fst ` V"
+        using imageI[OF W2, of fst]
+        by(auto)
+    qed
+  next
+    show "fst ` V \<subseteq> V'1"
+    proof
+      fix w
+
+      assume W: "w \<in> fst ` V"
+      show "w \<in> V'1"
+        unfolding SV'1
+        using W
+        by(auto)
+    qed
+  qed
+
+  obtain V'2 where SV'2 : "V'2 = { x2 . \<exists> x1 . (x1, x2) \<in> V}"
+    by auto
+
+  have SV'2 : "V'2 = snd ` V"
+  proof
+    show "V'2 \<subseteq> snd ` V"
+    proof
+      fix w
+      assume W: "w \<in> V'2"
+
+      then obtain w1 where W2: "(w1, w) \<in> V"
+        using SV'2 by auto
+
+      show "w \<in> snd ` V"
+        using imageI[OF W2, of snd]
+        by(auto)
+    qed
+  next
+    show "snd ` V \<subseteq> V'2"
+    proof
+      fix w
+
+      assume W: "w \<in> snd ` V"
+      show "w \<in> V'2"
+        unfolding SV'2
+        using W
+        by(auto)
+    qed
+  qed
+
+  have V'sub1 : "V'1 \<subseteq> S1 s"
+    using SV'1 Vsub1
+    by(auto simp add: fst_l_S_def)
+
+  have V'sub2 : "V'2 \<subseteq> S2 s"
+    using SV'2 Vsub2
+    by(auto simp add: snd_l_S_def)
+
+  obtain v1 v2 where V' :
+    "v1 \<in> V'1" "v2 \<in> V'2" "v = (v1, v2)"
+    using Vin
+    unfolding SV'1 SV'2
+    by(cases v; fastforce)
+
+
+  have V'supr1 : "is_sup V'1 supr1"
+    using is_sup_fst'[OF Vin, of supr1 supr2] Vsupr Supr1_2 
+    unfolding SV'1
+    by(auto)
+
+  have V'supr2 : "is_sup V'2 supr2"
+    using is_sup_snd'[OF Vin, of supr1 supr2] Vsupr Supr1_2 
+    unfolding SV'2
+    by(auto)
+
+  have Supr1_in : "supr1 \<in> S1 s"
+    using Vsupr_in Supr1_2
+    by(auto simp add:fst_l_S_def)
+
+  have Supr2_in : "supr2 \<in> S2 s"
+    using Vsupr_in Supr1_2
+    by(auto simp add: snd_l_S_def)
+
+  obtain suprr1 suprr2 
+    where Suprr : "f s (LOut (fst_l l1) s supr, LOut (snd_l l2) s supr) = (suprr1, suprr2)"
+    by fastforce
+
+  show "is_sup
+        ((\<lambda>x. case f s (LOut (fst_l l1) s x, LOut (snd_l l2) s x) of
+               (r1, r2) \<Rightarrow> LUpd (fst_l l1) s r1 (LUpd (snd_l l2) s r2 x)) `
+         V)
+        (case f s (LOut (fst_l l1) s supr, LOut (snd_l l2) s supr) of
+         (r1, r2) \<Rightarrow> LUpd (fst_l l1) s r1 (LUpd (snd_l l2) s r2 supr))"
+  proof(rule is_supI)
+    fix x
+
+    assume X: "x \<in> (\<lambda>x. case f s (LOut (fst_l l1) s x, LOut (snd_l l2) s x) of
+                  (r1, r2) \<Rightarrow> LUpd (fst_l l1) s r1 (LUpd (snd_l l2) s r2 x)) `
+             V"
+
+    then obtain xo where Xo :
+      "xo \<in> V" "(\<lambda>x. case f s (LOut (fst_l l1) s x, LOut (snd_l l2) s x) of
+                  (r1, r2) \<Rightarrow> LUpd (fst_l l1) s r1 (LUpd (snd_l l2) s r2 x)) xo = x"
+      by auto
+
+    obtain xo1 xo2 where Xo1_2 :
+      "xo = (xo1, xo2)"
+      by(cases xo; auto)
+
+    obtain xor1 xor2 where Xor :
+      "f s (LOut l1 s xo1, LOut l2 s xo2) = (xor1, xor2)"
+      by fastforce
+
+    have Xo1_in : "xo1 \<in> V'1"
+      using SV'1 imageI[OF Xo(1), of fst]
+        Xo1_2
+      by auto
+
+    have Xo2_in : "xo2 \<in> V'2"
+      using SV'2 imageI[OF Xo(1), of snd]
+        Xo1_2
+      by auto
+
+    have Xo1_leq : "xo1 <[ supr1"
+      using is_supD1[OF V'supr1 Xo1_in]
+      by auto
+
+(*
+    have "LUpd l1 s xor1 xo1 <[ LUpd l1 s suprr1 supr1"
+      (*using in1.pres[OF Xo1_in V'sub1 V'supr1 Supr1_in]*)
+
+      using
+Xor Suprr Supr1_2 Xo Xo1_2 Xo1_leq
+(*
+        is_supD1[OF in1.pres[OF Xo1_in V'sub1 V'supr1 Supr1_in,
+of "\<lambda> s x . (if x = LOut l1 s supr1 then suprr1 else xor1)"] imageI[OF Xo1_in]]
+
+is_supD1[OF in2.pres[OF Xo2_in V'sub2 V'supr2 Supr2_in ,
+of "\<lambda> s x . (if x = LOut l2 s supr2 then suprr2 else xor2)"] imageI[OF Xo2_in]]
+*)
+(*
+        is_supD1[OF in1.pres[OF Xo1_in V'sub1 V'supr1 Supr1_in,
+of "\<lambda> s x . (if LUpd l1 s x xo1  = LUpd l1 s suprr1 supr1 then suprr1 else xor1)"] imageI[OF Xo1_in]]
+*)
+        is_supD1[OF in1.pres[OF Xo1_in V'sub1 V'supr1 Supr1_in,
+of "\<lambda> s x . (if x = LOut l1 s supr1 then suprr1 else xor1)"] imageI[OF Xo1_in]]
+(*
+is_supD1[OF in2.pres[OF Xo2_in V'sub2 V'supr2 Supr2_in ,
+of "\<lambda> s x . (if x = LOut l2 s supr2 then suprr2 else xor2)"] imageI[OF Xo2_in]]
+*)
+
+(* problem case: what if LOut l1 s xo1 = LOut l1 s supr1? *)
+      apply(auto simp add: fst_l_def snd_l_def in1.get_put in1.put_get split: if_splits)
+
+(*
+LOut l1 s supr1 = LOut l1 s xo1 
+LUpd l1 s xor1 xo1 <[ LUpd l1 s xor1 supr1 
+*)
+
+(*
+  
+*)
+*)
+      
+(*
+    show "x <[
+         (case f s (LOut (fst_l l1) s supr, LOut (snd_l l2) s supr) of
+          (r1, r2) \<Rightarrow> LUpd (fst_l l1) s r1 (LUpd (snd_l l2) s r2 supr))"
+      using sym[OF Xo(2)] Suprr Supr1_2 Xo Xo1_2 Xor
+        is_supD1[OF in1.pres[OF Xo1_in V'sub1 V'supr1 Supr1_in,
+of "\<lambda> s x . (if x = LOut l1 s supr1 then suprr1 else xor1)"]
+ imageI[OF Xo1_in]]
+is_supD1[OF in2.pres[OF Xo2_in V'sub2 V'supr2 Supr2_in ,
+of "\<lambda> s x . (if x = LOut l2 s supr2 then suprr2 else xor2)"] imageI[OF Xo2_in]]
+      apply(auto simp add: fst_l_def snd_l_def prod_pleq split:if_splits)
+*)
+
+    show "x <[
+         (case f s (LOut (fst_l l1) s supr, LOut (snd_l l2) s supr) of
+          (r1, r2) \<Rightarrow> LUpd (fst_l l1) s r1 (LUpd (snd_l l2) s r2 supr))"
+      using sym[OF Xo(2)] Suprr Supr1_2 Xo Xo1_2 Xor
+        is_supD1[OF in1.pres[OF Xo1_in V'sub1 V'supr1 Supr1_in,
+of "\<lambda> s x . (if x = LOut l1 s supr1 then suprr1 else xor1)"]
+ imageI[OF Xo1_in]]
+is_supD1[OF in2.pres[OF Xo2_in V'sub2 V'supr2 Supr2_in ,
+of "\<lambda> s x . (if x = LOut l2 s supr2 then suprr2 else xor2)"] imageI[OF Xo2_in]]
+      apply(auto simp add: fst_l_def snd_l_def prod_pleq split:if_splits)
+
+
+  obtain s1_1 s1_2 where S1 : "s1 = (s1_1, s1_2)"
+    by(cases s1; auto)
+
+  obtain s2_1 s2_2 where S2 : "s2 = (s2_1, s2_2)"
+    by(cases s2; auto)
+
+  obtain v1 v2 where V: "v = (v1, v2)"
+    by(cases v; auto)
+
+  have V1in : "v1 \<in> (fst ` V)"
+    using imageI[OF Vin, of fst] V
+    by auto
+
+  have V1sub : "fst ` V \<subseteq> S1 s"
+    using V1in Vsub1
+    by(auto simp add: fst_l_S_def)
+
+  have V2in : "v2 \<in> snd ` V"
+    using imageI[OF Vin, of snd] V
+    by auto
+
+  have V2sub : "snd ` V \<subseteq> S2 s"
+    using V2in Vsub2
+    by(auto simp add: snd_l_S_def)
+
+  have "\<And> x . fst (LMap (snd_l l2) f2 s x) = fst x"
+  proof-
+    fix x
+    show "fst (LMap (snd_l l2) f2 s x) = fst x"
+      by(cases x; auto simp add: snd_l_def)
+  qed
+
+  then have Fst_eq : "(fst \<circ> LMap (snd_l l2) f2 s) = fst"
+    using HOL.ext
+    by(fastforce)
+
+  then have Fst_v_eq : "fst ` LMap (snd_l l2) f2 s ` V = fst ` V" 
+    unfolding image_comp Fst_eq
+    by simp
+
+  have "\<And> x . snd (LMap (fst_l l1) f1 s x) = snd x"
+  proof-
+    fix x
+    show "snd (LMap (fst_l l1) f1 s x) = snd x"
+      by(cases x; auto simp add: fst_l_def)
+  qed
+
+  then have Snd_eq : "(snd \<circ> LMap (fst_l l1) f1 s) = snd"
+    using HOL.ext
+    by(fastforce)
+
+  then have Snd_v_eq : "snd ` LMap (fst_l l1) f1 s ` V = snd ` V" 
+    unfolding image_comp Snd_eq
+    by simp
+
+  have Fst_sup : "is_sup (fst ` V) s2_1"
+    using is_sup_fst'[OF imageI[OF Vin] Sup2[unfolded S2]] unfolding Fst_v_eq
+    by simp
+
+  have Snd_sup : "is_sup (snd ` V) s1_2"
+    using is_sup_snd'[OF imageI[OF Vin] Sup1[unfolded S1]] unfolding Snd_v_eq
+    by simp
+
+  have Sin'1 : "s2_1 \<in> S1 s"
+    using Sin2 S2 
+    by(auto simp add: fst_l_S_def)
+
+  have So1_sup : "is_sup (LMap l1 f1 s ` fst ` V) (LMap l1 f1 s s2_1)"
+    using in1.pres[OF V1in V1sub Fst_sup Sin'1]
+    by auto
+
+  have Sin'2 : "s1_2 \<in> S2 s"
+    using Sin1 S1
+    by(auto simp add: snd_l_S_def)
+
+  have So2_sup : "is_sup (LMap l2 f2 s ` snd ` V) (LMap l2 f2 s s1_2)"
+    using in2.pres[OF V2in V2sub Snd_sup Sin'2]
+    by auto
+
+  
 
 (* TODO: this was originally lifting_valid_weak_pres, but i think we actually need strength
  * to make this work *)
