@@ -142,6 +142,15 @@ locale lifting_pairwise =
       s13 \<in> S s \<Longrightarrow>
       is_sup {x1, x2, x3} s123 \<Longrightarrow>
       s123 \<in> S s"
+
+locale lifting_valid_weak_strict = lifting_valid_weak +
+  assumes strict :
+    "\<And> s x1 x2 a1 a2 . x1 <[ x2 \<Longrightarrow> x1 \<noteq> x2 \<Longrightarrow>
+      LUpd l s a1 x1 <[ LUpd l s a2 x2"
+
+locale lifting_valid_weak_strict_pres =
+lifting_valid_weak_strict + lifting_valid_weak_pres
+
 (*
 lemma (in lifting_pairwise) pairwise_finite_S :
   fixes Vs :: "'b set"
@@ -253,6 +262,9 @@ qed
 *)
 
 locale lifting_valid_pres = lifting_valid + lifting_valid_weak_pres
+
+locale lifting_valid_strict_pres =
+  lifting_valid_weak_strict + lifting_valid_pres
 
 locale lifting_valid_weak_base_pres = lifting_valid_weak_pres + lifting_valid_weak_base +
   assumes bot_bad : "\<And> s . \<bottom> \<notin> S s"

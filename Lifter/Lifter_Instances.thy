@@ -5406,8 +5406,8 @@ qed
 
 locale fst_l_snd_l_ortho_pres2 =
   fst_l_snd_l_ortho +
-  in1 : lifting_valid_pres l1 S1 +
-  in2 : lifting_valid_pres l2 S2
+  in1 : lifting_valid_strict_pres l1 S1 +
+  in2 : lifting_valid_strict_pres l2 S2
 
 sublocale fst_l_snd_l_ortho_pres2 \<subseteq> out : l_ortho_pres2 "fst_l l1" "fst_l_S S1" "snd_l l2" "snd_l_S S2"
 proof
@@ -5618,11 +5618,6 @@ of "\<lambda> s x . (if x = LOut l2 s supr2 then suprr2 else xor2)"] imageI[OF X
          (case f s (LOut (fst_l l1) s supr, LOut (snd_l l2) s supr) of
           (r1, r2) \<Rightarrow> LUpd (fst_l l1) s r1 (LUpd (snd_l l2) s r2 supr))"
       using sym[OF Xo(2)] Suprr Supr1_2 Xo Xo1_2 Xor
-        is_supD1[OF in1.pres[OF Xo1_in V'sub1 V'supr1 Supr1_in,
-of "\<lambda> s x . (if x = LOut l1 s supr1 then suprr1 else xor1)"]
- imageI[OF Xo1_in]]
-is_supD1[OF in2.pres[OF Xo2_in V'sub2 V'supr2 Supr2_in ,
-of "\<lambda> s x . (if x = LOut l2 s supr2 then suprr2 else xor2)"] imageI[OF Xo2_in]]
       apply(auto simp add: fst_l_def snd_l_def prod_pleq split:if_splits)
 
 
