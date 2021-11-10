@@ -1,6 +1,6 @@
 theory Lifter
   imports  "../Mergeable/Mergeable_Instances" "../Mergeable/Mergeable_Oalist" "../Mergeable/Mergeable_Roalist" "../Mergeable/Mono"
-"../Composition/Composition"
+"../Composition/Composition_Weak"
 begin
 
 (* When we lift syntaxes we reverse the function arrow *)

@@ -5555,6 +5555,7 @@ locale fst_l_snd_l_ortho_base =
   in1 : lifting_valid_weak_base l1 S1 +
   in2 : lifting_valid_weak_base l2 S2
 
+
 sublocale fst_l_snd_l_ortho_base \<subseteq> out : l_ortho_base "fst_l l1" "fst_l_S S1" "snd_l l2" "snd_l_S S2"
 proof
   fix s
@@ -5567,6 +5568,241 @@ next
     using in2.base
     by(auto simp add: snd_l_def prod_bot)
 qed
+
+locale merge_l_test' = 
+  fixes l1 :: "('a, 'b1, 'c1 :: Pord_Weakb) lifting"
+  fixes l2 :: "('a, 'b2, 'c2 :: Pord_Weakb) lifting"
+  fixes S1 :: "'a \<Rightarrow> 'c1 set"
+  fixes S2 :: "'a \<Rightarrow> 'c2 set"
+
+locale merge_l_test = merge_l_test' +
+  in1 : lifting_valid_strict_pres "l1" "S1" +
+  in2 : lifting_valid_strict_pres "l2" "S2"
+
+sublocale merge_l_test \<subseteq> out : lifting_valid_pres "merge_l (fst_l l1) (snd_l l2)" "\<lambda> s . S1 s \<times> S2 s"
+proof
+  term "l2"
+  fix v supr :: "'c * 'e"
+  fix V :: "('c * 'e) set"
+  fix f s
+
+  assume Vin : "v \<in> V"
+
+  assume Vsub : "V \<subseteq> S1 s \<times> S2 s"
+
+  assume Vsupr : "is_sup V supr"
+
+  assume Vsupr_in : "supr \<in> S1 s \<times>  S2 s"
+
+  obtain supr1 supr2 where Supr1_2 : "supr = (supr1, supr2)"
+    by fastforce
+
+  obtain V'1 where SV'1 : "V'1 = { x1 . \<exists> x2 . (x1, x2) \<in> V}"
+    by auto
+
+  have SV'1 : "V'1 = fst ` V"
+  proof
+    show "V'1 \<subseteq> fst ` V"
+    proof
+      fix w
+      assume W: "w \<in> V'1"
+
+      then obtain w2 where W2: "(w, w2) \<in> V"
+        using SV'1 by auto
+
+      show "w \<in> fst ` V"
+        using imageI[OF W2, of fst]
+        by(auto)
+    qed
+  next
+    show "fst ` V \<subseteq> V'1"
+    proof
+      fix w
+
+      assume W: "w \<in> fst ` V"
+      show "w \<in> V'1"
+        unfolding SV'1
+        using W
+        by(auto)
+    qed
+  qed
+
+  obtain V'2 where SV'2 : "V'2 = { x2 . \<exists> x1 . (x1, x2) \<in> V}"
+    by auto
+
+  have SV'2 : "V'2 = snd ` V"
+  proof
+    show "V'2 \<subseteq> snd ` V"
+    proof
+      fix w
+      assume W: "w \<in> V'2"
+
+      then obtain w1 where W2: "(w1, w) \<in> V"
+        using SV'2 by auto
+
+      show "w \<in> snd ` V"
+        using imageI[OF W2, of snd]
+        by(auto)
+    qed
+  next
+    show "snd ` V \<subseteq> V'2"
+    proof
+      fix w
+
+      assume W: "w \<in> snd ` V"
+      show "w \<in> V'2"
+        unfolding SV'2
+        using W
+        by(auto)
+    qed
+  qed
+
+  have V'sub1 : "V'1 \<subseteq> S1 s"
+    using SV'1 Vsub
+    by(auto simp add: fst_l_S_def)
+
+  have V'sub2 : "V'2 \<subseteq> S2 s"
+    using SV'2 Vsub
+    by(auto simp add: snd_l_S_def)
+
+  obtain v1 v2 where V' :
+    "v1 \<in> V'1" "v2 \<in> V'2" "v = (v1, v2)"
+    using Vin
+    unfolding SV'1 SV'2
+    by(cases v; fastforce)
+
+
+  have V'supr1 : "is_sup V'1 supr1"
+    using is_sup_fst'[OF Vin, of supr1 supr2] Vsupr Supr1_2 
+    unfolding SV'1
+    by(auto)
+
+  have V'supr2 : "is_sup V'2 supr2"
+    using is_sup_snd'[OF Vin, of supr1 supr2] Vsupr Supr1_2 
+    unfolding SV'2
+    by(auto)
+
+  have Supr1_in : "supr1 \<in> S1 s"
+    using Vsupr_in Supr1_2
+    by(auto simp add:fst_l_S_def)
+
+  have Supr2_in : "supr2 \<in> S2 s"
+    using Vsupr_in Supr1_2
+    by(auto simp add: snd_l_S_def)
+
+  show "is_sup (LMap (merge_l (fst_l l1) (snd_l l2)) f s ` V)
+        (LMap (merge_l (fst_l l1) (snd_l l2)) f s supr)"
+  proof(rule is_supI)
+    fix x
+
+    obtain suprr1 suprr2 
+      where Suprr : "f s (LOut (fst_l l1) s supr, LOut (snd_l l2) s supr) = (suprr1, suprr2)"
+      by fastforce
+
+    assume X: "x \<in> LMap (merge_l (fst_l l1) (snd_l l2)) f s ` V"
+
+    then obtain xo where Xo :
+      "xo \<in> V" "LMap (merge_l (fst_l l1) (snd_l l2)) f s xo = x"
+      by auto
+
+    obtain xo1 xo2 where Xo1_2 :
+      "xo = (xo1, xo2)"
+      by(cases xo; auto)
+
+    obtain xor1 xor2 where Xor :
+      "f s (LOut l1 s xo1, LOut l2 s xo2) = (xor1, xor2)"
+      by fastforce
+
+    have Xo1_in : "xo1 \<in> V'1"
+      using SV'1 imageI[OF Xo(1), of fst]
+        Xo1_2
+      by auto
+
+    have Xo2_in : "xo2 \<in> V'2"
+      using SV'2 imageI[OF Xo(1), of snd]
+        Xo1_2
+      by auto
+
+    have Xo1_leq : "xo1 <[ supr1"
+      using is_supD1[OF V'supr1 Xo1_in]
+      by auto
+
+    have Xo2_leq : "xo2 <[ supr2"
+      using is_supD1[OF V'supr2 Xo2_in]
+      by auto
+
+    have Xo1_in_sing : "xo1 \<in> {xo1}"
+      by auto
+
+    have Xo1_sub1 : "{xo1} \<subseteq> S1 s"
+      using Xo1_in V'sub1
+      by(auto)
+
+    have Xo1_supr : "is_sup {xo1} xo1"
+      using sup_singleton
+      by auto
+
+    have Xo1_in_S1 : "xo1 \<in> S1 s"
+      using Xo1_sub1
+      by auto
+
+    have Xo2_in_sing : "xo2 \<in> {xo2}"
+      by auto
+
+    have Xo2_sub2 : "{xo2} \<subseteq> S2 s"
+      using Xo2_in V'sub2
+      by(auto)
+    have Xo2_supr : "is_sup {xo2} xo2"
+      using sup_singleton
+      by auto
+
+    have Xo2_in_S2 : "xo2 \<in> S2 s"
+      using Xo2_sub2
+      by auto
+
+    obtain Xconj1 where SXconj1 :
+     "Xconj1 = {y . (xo1, y) \<in> V}"
+      by auto
+
+    have Xo2_in_SXconj1 : "xo2 \<in> Xconj1"
+      using SXconj1 Xo1_2 
+        Xo
+      by(auto)
+
+    have SXconj1_sub2 : "Xconj1 \<subseteq> S2 s"
+      using SXconj1 V'sub2 SV'2
+      by(auto)
+
+(* one idea.
+can we see if there exists an x0 where the output isn't equal to that of the sup?
+i think this is a dead end, it just looks promising.
+*)
+    show "x <[ LMap (merge_l (fst_l l1) (snd_l l2)) f s supr"
+
+      using Suprr Supr1_2 Xor unfolding sym[OF Xo(2)] Xo1_2
+      unfolding merge_l_def
+      using in1.pres[OF Xo1_in V'sub1 V'supr1 Supr1_in]
+(* need to constrain either V or f.
+probably f.
+what would a pathological f look like that would break this?
+*)
+      using
+        is_supD1[OF in1.pres[OF Xo1_in V'sub1 V'supr1 Supr1_in,
+of "\<lambda> s x . (if x = LOut l1 s supr1 then xor1 else suprr1)"] imageI[OF Xo1_in]]
+        is_supD1[OF in1.pres[OF Xo1_in V'sub1 V'supr1 Supr1_in,
+of "\<lambda> s x . (if x = LOut l1 s supr1 then suprr1 else xor1)"] imageI[OF Xo1_in]]
+        is_supD1[OF in1.pres[OF Xo1_in V'sub1 V'supr1 Supr1_in,
+of "\<lambda> s x . (xor1)"] imageI[OF Xo1_in]]
+is_supD1[OF in2.pres[OF Xo2_in V'sub2 V'supr2 Supr2_in ,
+of "\<lambda> s x . (if x = LOut l2 s supr2 then suprr2 else xor2)"] imageI[OF Xo2_in]]
+is_supD1[OF in2.pres[OF Xo2_in V'sub2 V'supr2 Supr2_in ,
+of "\<lambda> s x . (if x = LOut l2 s supr2 then xor2 else suprr2)"] imageI[OF Xo2_in]]
+
+      apply(auto simp add: merge_l_def fst_l_def snd_l_def prod_pleq split:if_splits)
+(* constraint on V?
+"lockstep": if one component's Out equals the sup, then so does the other's,and vice versa.
+*)
+
 
 locale fst_l_snd_l_ortho_pres2 =
   fst_l_snd_l_ortho +
@@ -5819,6 +6055,10 @@ Xor Suprr Supr1_2
     have "LUpd l1 s xor1 xo1 <[ LUpd l1 s suprr1 supr1"
       using
 *)
+*)
+
+(* i think i figured out the pathological case
+ * we have two
 *)
 
     show "x <[

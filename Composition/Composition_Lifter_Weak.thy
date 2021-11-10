@@ -1,5 +1,5 @@
-theory Composition_Lifter
-imports Composition "../Lifter/Lifter" "../Lifter/Lifter_Instances"
+theory Composition_Lifter_Weak
+imports Composition_Weak "../Lifter/Lifter" "../Lifter/Lifter_Instances"
 
 begin
 
