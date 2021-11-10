@@ -336,6 +336,7 @@ locale l_ortho_base' =
 (* TODO: l_ortho_pres - but we may not need it. *)
 locale l_ortho_pres = l_ortho +
   (* TODO: no longer need compat_pres1, compat_pres2 *)
+(*
   assumes compat_pres1 : "\<And> s f1 f2 s1 s2 v V . 
     v \<in> V \<Longrightarrow>
          V \<subseteq> S1 s \<Longrightarrow>
@@ -355,6 +356,7 @@ locale l_ortho_pres = l_ortho +
     s2 \<in> S1 s \<inter> S2 s \<Longrightarrow>
     is_sup (LMap l2 f2 s ` (LMap l1 f1 s ` V)) (LMap l2 f2 s s1)"
   (* TODO: this third one may be all that's needed. *)
+*)
   assumes compat_pres_sup :
   "\<And> a1 a2 s x . is_sup {LUpd l1 s a1 x, LUpd l2 s a2 x} (LUpd l1 s a1 (LUpd l2 s a2 x))"
 

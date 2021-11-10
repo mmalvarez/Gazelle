@@ -9,27 +9,26 @@ begin
  * themselves: just the lifting(s) being applied to them.
  *)
 
+(* YOU ARE HERE *)
+(* looks like we can eliminate a lot of pres.
+we just need put/get facts, and ability to commute (in ortho) *)
+
 
 lemma l_ortho_sups_pres :
   fixes l1 :: "('x, 'a, 'b :: {Mergeable, Okay}) lifting"
   fixes l2 :: "('x, 'a2, 'b) lifting"
   assumes H : "l_ortho_pres l1 S1 l2 S2"
-  assumes H1 : "lifting_valid_weak_pres l1 S1"
-  assumes H2 : "lifting_valid_weak_pres l2 S2"
+  assumes H1 : "lifting_valid_weak l1 S1"
+  assumes H2 : "lifting_valid_weak l2 S2"
   shows "sups_pres {lift_map_s id l1 f1, lift_map_s id l2 f2} (\<lambda> x . S1 x \<inter> S2 x)"
 
 proof
   fix el :: "'b"
   fix sup1 :: "'b"
   fix syn 
-  fix Xs :: "'b set"
   fix Fs' :: "('x \<Rightarrow> 'b \<Rightarrow> 'b) set"
   fix f
 
-  assume Hnemp_Xs : "el \<in> Xs"
-  assume Subs : "Xs \<subseteq> S1 syn \<inter> S2 syn"
-  assume Hfin_Xs : "finite Xs"
-  assume H' : "is_sup Xs sup1"
   assume H'' : "sup1 \<in> S1 syn \<inter> S2 syn"
   assume Fs' : "Fs' \<subseteq> {lift_map_s id l1 f1, lift_map_s id l2 f2}"
   assume Hnemp_Fs' : "f \<in> Fs'"
@@ -37,13 +36,10 @@ proof
   have In1 : "sup1 \<in> S1 syn" and In2 : "sup1 \<in> S2 syn"
     using H'' by auto
 
-  have Sub1 : "Xs \<subseteq> S1 syn" and Sub2 : "Xs \<subseteq> S2 syn"
-    using Subs by auto
-
-  interpret LV1: lifting_valid_weak_pres l1 S1
+  interpret LV1: lifting_valid_weak l1 S1
     using H1 .
 
-  interpret LV2: lifting_valid_weak_pres l2 S2
+  interpret LV2: lifting_valid_weak l2 S2
     using H2 .
 
   interpret Ortho: l_ortho_pres l1 S1 l2 S2
@@ -55,10 +51,9 @@ proof
            (L2) "Fs' = {lift_map_s id l2 f2}" |
            (L1_2) "Fs' = {lift_map_s id l1 f1, lift_map_s id l2 f2}"
     using Fs' by blast
-  then show
+  then have Conc' : 
     "\<exists>sup'.
-          is_sup ((\<lambda>f. f syn sup1) ` Fs') sup' \<and>
-          is_sup (scross ((\<lambda>f. f syn) ` Fs') Xs) sup'"
+          is_sup ((\<lambda>f. f syn sup1) ` Fs') sup'"
   proof cases
   case Emp
     then show ?thesis using Hnemp_Fs' by auto
@@ -68,73 +63,8 @@ proof
     have Conc1 : "is_sup ((\<lambda>f. f syn sup1) ` Fs') (lift_map_s id l1 f1 syn sup1)"
       using L1 sup_singleton
       by auto
+    then show ?thesis by auto
 
-    have L1' : "(scross ((\<lambda>f. f syn) ` Fs') Xs) = lift_map_s id l1 f1 syn ` Xs"
-      unfolding L1 
-      by(auto simp add: scross_def scross_singleton1)
-
-(* TODO: syn version of l_ortho *)
-    have Conc2 : "is_sup (lift_map_s id l1 f1 syn ` Xs) (lift_map_s id l1 f1 syn sup1)"
-    proof(rule is_supI)
-      fix y
-      assume "y \<in> lift_map_s id l1 f1 syn ` Xs"
-
-      then obtain x where Xin : "x \<in> Xs" and Xy : "lift_map_s id l1 f1 syn x = y"
-        by blast
-
-      have Xin' : "x \<in> S1 syn" using Subs Xin by auto
-
-      have Sin' : "sup1 \<in> S1 syn" using H'' by auto
-
-      have Leq1 : "x <[ sup1" using is_supD1[OF H' Xin] by simp
-
-      have Pres : "is_sup (LMap l1 f1 syn ` Xs) (LMap l1 f1 syn sup1)"
-        using LV1.pres[OF Xin _ H', of syn f1] H'' Subs
-        by auto
- 
-      show "y <[ lift_map_s id l1 f1 syn sup1"
-        unfolding sym[OF Xy]
-        using is_supD1[OF Pres, of "lift_map_s id l1 f1 syn x"] Xin
-        by(auto simp add: lift_map_s_def)
-    next
-      fix x'
-      assume Ub : "is_ub (lift_map_s id l1 f1 syn ` Xs) x'"
-
-      have Ub' : "is_ub ((\<lambda>f. f syn sup1) ` Fs') x'"
-      proof(rule is_ubI)
-        fix z
-        assume Z : "z \<in> (\<lambda>f. f syn sup1) ` Fs'"
-
-        then have Z' : "z = lift_map_s id l1 f1 syn sup1"
-          using L1
-          by auto
-
-        have Pres : "is_sup (LMap l1 f1 syn ` Xs) (LMap l1 f1 syn sup1)"
-          using  LV1.pres[OF Hnemp_Xs _ H', of syn f1] H'' Subs 
-          by auto
- 
-        show "z <[ x'" using is_supD2[of _ z x', OF _ Ub] Pres unfolding lift_map_s_def Z'
-          by auto
-      qed
-
-      show "lift_map_s id l1 f1 syn sup1 <[ x'"
-        using is_supD2[OF Conc1, of x'] Ub'
-        by(auto simp add: lift_map_s_def)
-    qed
-
-    have Result_S1 : "(lift_map_s id l1 f1 syn sup1) \<in> S1 syn"
-      unfolding lift_map_s_def LMap_def
-      apply(auto) (* NB: editing here *)
-      using LV1.put_S by auto
-
-    have Result_S2 : "(lift_map_s id l1 f1 syn sup1) \<in> S2 syn"
-      unfolding lift_map_s_def LMap_def
-      using Ortho.put1_S2[OF In2]
-      by(auto)
-
-    show ?thesis using Conc1 Conc2 Result_S1 Result_S2 unfolding L1 scross_singleton1 lift_map_s_def LMap_def
-      using H''
-      by(auto simp add:scross_singleton1)
   next
 
     case L2
@@ -142,72 +72,8 @@ proof
     have Conc1 : "is_sup ((\<lambda>f. f syn sup1) ` Fs') (lift_map_s id l2 f2 syn sup1)"
       using L2 sup_singleton
       by auto
+    then show ?thesis by auto
 
-    have L2' : "(scross ((\<lambda>f. f syn) ` Fs') Xs) = lift_map_s id l2 f2 syn ` Xs"
-      unfolding L2
-      by(auto simp add: scross_def scross_singleton1)
-
-(* TODO: syn version of l_ortho *)
-    have Conc2 : "is_sup (lift_map_s id l2 f2 syn ` Xs) (lift_map_s id l2 f2 syn sup1)"
-    proof(rule is_supI)
-      fix y
-      assume "y \<in> lift_map_s id l2 f2 syn ` Xs"
-
-      then obtain x where Xin : "x \<in> Xs" and Xy : "lift_map_s id l2 f2 syn x = y"
-        by blast
-
-      have Xin' : "x \<in> S2 syn" using Subs Xin by auto
-
-      have Sin' : "sup1 \<in> S2 syn" using H'' by auto
-
-      have Leq1 : "x <[ sup1" using is_supD1[OF H' Xin] by simp
-
-      have Pres : "is_sup (LMap l2 f2 syn ` Xs) (LMap l2 f2 syn sup1)"
-        using LV2.pres[OF Xin _ H', of syn f2] H'' Subs
-        by auto
- 
-      show "y <[ lift_map_s id l2 f2 syn sup1"
-        unfolding sym[OF Xy]
-        using is_supD1[OF Pres, of "lift_map_s id l2 f2 syn x"] Xin
-        by(auto simp add: lift_map_s_def)
-    next
-      fix x'
-      assume Ub : "is_ub (lift_map_s id l2 f2 syn ` Xs) x'"
-
-      have Ub' : "is_ub ((\<lambda>f. f syn sup1) ` Fs') x'"
-      proof(rule is_ubI)
-        fix z
-        assume Z : "z \<in> (\<lambda>f. f syn sup1) ` Fs'"
-
-        then have Z' : "z = lift_map_s id l2 f2 syn sup1"
-          using L2
-          by auto
-
-        have Pres : "is_sup (LMap l2 f2 syn ` Xs) (LMap l2 f2 syn sup1)"
-          using  LV2.pres[OF Hnemp_Xs _ H', of syn f2] H'' Subs 
-          by auto
- 
-        show "z <[ x'" using is_supD2[of _ z x', OF _ Ub] Pres unfolding lift_map_s_def Z'
-          by auto
-      qed
-
-      show "lift_map_s id l2 f2 syn sup1 <[ x'"
-        using is_supD2[OF Conc1, of x'] Ub'
-        by(auto simp add: lift_map_s_def)
-    qed
-
-    have Result_S1 : "(lift_map_s id l2 f2 syn sup1) \<in> S2 syn"
-      unfolding lift_map_s_def LMap_def
-      using LV2.put_S by auto
-
-    have Result_S2 : "(lift_map_s id l2 f2 syn sup1) \<in> S1 syn"
-      unfolding lift_map_s_def LMap_def
-      using Ortho.put2_S1[OF In1]
-      by(auto)
-
-    show ?thesis using Conc1 Conc2 Result_S1 Result_S2 unfolding L2 scross_singleton1 lift_map_s_def LMap_def
-      using H''
-      by(auto simp add:scross_singleton1)
   next
 
     case L1_2
@@ -220,123 +86,6 @@ proof
     hence Conc1 : "is_sup {(lift_map_s id l1 f1 syn sup1), (lift_map_s id l2 f2 syn sup1)}
       [^ (lift_map_s id l1 f1 syn sup1), (lift_map_s id l2 f2 syn sup1)^]"
       using bsup_sup[OF Res_sup bsup_spec] by auto
-
-    have Conc2 : "is_sup (scross ((\<lambda>f. f syn) ` Fs') Xs)
-        [^ (lift_map_s id l1 f1 syn sup1), (lift_map_s id l2 f2 syn sup1)^]"
-    proof(rule is_supI)
-
-      fix x
-
-      assume "x \<in> scross ((\<lambda>f. f syn) ` Fs') Xs"
-
-      then have "x \<in> ((lift_map_s id l1 f1 syn) ` Xs) \<union> ((lift_map_s id l2 f2 syn) ` Xs)"
-        unfolding L1_2 scross_def
-        by(auto)
-
-      then consider (Xin_1) xo where "xo \<in> Xs" "x = lift_map_s id l1 f1 syn xo" |
-                    (Xin_2) xo where "xo \<in> Xs" "x = lift_map_s id l2 f2 syn xo"
-        by blast
-
-      then show "x <[ [^ lift_map_s id l1 f1 syn sup1, lift_map_s id l2 f2 syn sup1 ^]"
-      proof cases
-
-        case Xin_1
-
-        have Map_sup : "is_sup (LMap l1 f1 syn ` Xs) (LMap l1 f1 syn sup1)"
-          using LV1.pres[OF Hnemp_Xs Sub1 H' In1] by auto
-
-        have Leq1 : "x <[ lift_map_s id l1 f1 syn sup1"
-          using is_supD1[OF Map_sup, of x] Xin_1
-          unfolding lift_map_s_def
-          by(auto)
-
-        have Leq2 : "lift_map_s id l1 f1 syn sup1 <[ [^ lift_map_s id l1 f1 syn sup1, lift_map_s id l2 f2 syn sup1 ^]"
-          using is_supD1[OF Conc1, of "lift_map_s id l1 f1 syn sup1"] 
-          by auto
-
-        show ?thesis
-          using leq_trans[OF Leq1 Leq2]
-          by auto
-      next
-        case Xin_2
-
-        have Map_sup : "is_sup (LMap l2 f2 syn ` Xs) (LMap l2 f2 syn sup1)"
-          using LV2.pres[OF Hnemp_Xs Sub2 H' In2] by auto
-
-        have Leq1 : "x <[ lift_map_s id l2 f2 syn sup1"
-          using is_supD1[OF Map_sup, of x] Xin_2
-          unfolding lift_map_s_def
-          by(auto)
-
-        have Leq2 : "lift_map_s id l2 f2 syn sup1 <[ [^ lift_map_s id l1 f1 syn sup1, lift_map_s id l2 f2 syn sup1 ^]"
-          using is_supD1[OF Conc1, of "lift_map_s id l2 f2 syn sup1"] 
-          by auto
-
-        show ?thesis
-          using leq_trans[OF Leq1 Leq2]
-          by auto
-      qed
-    next
-
-      fix x'
-
-      assume Ub: "is_ub (scross ((\<lambda>f. f syn) ` Fs') Xs) x'"
-
-      
-      have Ub': "is_ub {(lift_map_s id l1 f1 syn sup1), (lift_map_s id l2 f2 syn sup1)} x'"
-      proof(rule is_ubI)
-
-        fix w
-
-        assume W: "w \<in> {lift_map_s id l1 f1 syn sup1, lift_map_s id l2 f2 syn sup1}"
-
-        then consider (W1) "w = lift_map_s id l1 f1 syn sup1" |
-                      (W2) "w = lift_map_s id l2 f2 syn sup1" by auto
-
-        then show "w <[ x'"
-        proof cases
-
-          case W1
-
-          have Pres : "is_sup (LMap l1 f1 syn ` Xs) (LMap l1 f1 syn sup1)"
-            using LV1.pres[OF Hnemp_Xs _ H', of syn f1] H'' Subs
-            by auto
-
-          have Sub : "(LMap l1 f1 syn ` Xs) \<subseteq> (scross ((\<lambda>f. f syn) ` Fs') Xs)"
-            unfolding scross_def L1_2 lift_map_s_def
-            by(fastforce)
-
-          have Ub_W1 : "is_ub (LMap l1 f1 syn ` Xs) x'"
-            using ub_subset[OF Ub Sub] by simp
-
-          show ?thesis
-            using is_supD2[OF Pres Ub_W1] W1
-            unfolding lift_map_s_def
-            by auto
-        next
-          case W2
-
-          have Pres : "is_sup (LMap l2 f2 syn ` Xs) (LMap l2 f2 syn sup1)"
-            using LV2.pres[OF Hnemp_Xs _ H', of syn f2] H'' Subs
-            by auto
-
-          have Sub : "(LMap l2 f2 syn ` Xs) \<subseteq> (scross ((\<lambda>f. f syn) ` Fs') Xs)"
-            unfolding scross_def L1_2 lift_map_s_def
-            by(fastforce)
-
-          have Ub_W2 : "is_ub (LMap l2 f2 syn ` Xs) x'"
-            using ub_subset[OF Ub Sub] by simp
-
-          show ?thesis
-            using is_supD2[OF Pres Ub_W2] W2
-            unfolding lift_map_s_def
-            by auto
-        qed
-      qed
-
-      show "[^ lift_map_s id l1 f1 syn sup1, lift_map_s id l2 f2 syn sup1 ^] <[ x'"
-        using is_supD2[OF Conc1 Ub'] by auto
-    qed
 
     have Sups_eq : "[^ lift_map_s id l1 f1 syn sup1, lift_map_s id l2 f2 syn sup1 ^] = LMap l1 f1 syn (LMap l2 f2 syn sup1)"
       using is_sup_unique[OF Res_sup Conc1]
@@ -363,10 +112,13 @@ proof
       unfolding Sups_eq using Sup1_in_alt
       by(auto)
 
-    show ?thesis using Conc1 Conc2 Result_In unfolding L1_2 lift_map_s_def LMap_def
+    show ?thesis using Conc1 Result_In unfolding L1_2 lift_map_s_def LMap_def
       using H''
       by(auto simp add:scross_def)
   qed
+
+  then show "has_sup ((\<lambda>f. f syn sup1) ` Fs')"
+    by(auto simp add: has_sup_def)
 qed
 
 (*
@@ -399,32 +151,23 @@ qed
  * for our lifted functions?
  *)
 lemma lifting_pres :
-  assumes H : "lifting_valid_weak_pres l S"
+  assumes H : "lifting_valid_weak l S"
   shows "sups_pres {LMap l f} S"
 proof(rule sups_presI)
-  fix x supr :: 'c
-  fix Xs :: "'c set"
+  fix supr :: 'c
   fix Fs'
   fix syn
   fix g
 
-  assume Xin : "x \<in> Xs"
-  assume Xsub : "Xs \<subseteq> S syn"
-  assume Fin_Xs : "finite Xs"
-  assume Supr : "is_sup Xs supr"
   assume Supr_in : "supr \<in> S syn"
   assume Fs'_sub : "Fs' \<subseteq> {LMap l f}"
   assume G: "g \<in> Fs'"
 
-  interpret LV : lifting_valid_weak_pres l S
+  interpret LV : lifting_valid_weak l S
     using H.
 
   have Fs' : "Fs' = {LMap l f}"
     using Fs'_sub G
-    by auto
-
-  have Suprf : "is_sup (LMap l f syn ` Xs) (LMap l f syn supr)"
-    using LV.pres[OF Xin Xsub Supr Supr_in]
     by auto
 
   have Conc1 : "is_sup ((\<lambda>f. f syn supr) ` Fs') (LMap l f syn supr)"
@@ -432,24 +175,10 @@ proof(rule sups_presI)
     using sup_singleton[of "(LMap l f syn supr)"]
     by auto
 
-  have Cross : "(scross ((\<lambda>f. f syn) ` Fs') Xs) = LMap l f syn ` Xs"
-    unfolding Fs'
-    by(auto simp add: scross_def)
 
-  have Conc2 : "is_sup (scross ((\<lambda>f. f syn) ` Fs') Xs) (LMap l f syn supr)"
-    unfolding Cross 
-    using Suprf
-    by auto
-
-  have Conc3 : "LMap l f syn supr \<in> S syn"
-    using LV.put_S
-    by auto
-
-  show "\<exists>sup'.
-          is_sup ((\<lambda>f. f syn supr) ` Fs') sup' \<and>
-          is_sup (scross ((\<lambda>f. f syn) ` Fs') Xs) sup'"
-    using Conc1 Conc2 Conc3
-    by auto
+  show "has_sup ((\<lambda>f. f syn supr) ` Fs')"
+    using Conc1
+    by (auto simp add: has_sup_def)
 qed
 
 lemma nwise_sup :
@@ -750,16 +479,10 @@ next
     case Cons' : (Cons g' fs'')
     show ?thesis 
     proof(rule sups_presI)
-      fix x supr :: 'x
-      fix Xs :: "'x set"
+      fix supr :: 'x
       fix Fs'
       fix syn
       fix h
-      assume "x \<in> Xs"
-      assume Xin : "x \<in> Xs"
-      assume Xsub : "Xs \<subseteq> S syn"
-      assume Fin_Xs : "finite Xs"
-      assume Supr : "is_sup Xs supr"
       assume Supr_in : "supr \<in> S syn"
       assume Fs'_sub : "Fs' \<subseteq> set (f # g # fs')"
       assume G: "h \<in> Fs'"
@@ -771,9 +494,8 @@ next
 
       obtain fs'_sup where Fs'_sup :
         "is_sup ((\<lambda>f. f syn supr) ` set (fs')) fs'_sup"
-        "is_sup (scross ((\<lambda>f. f syn) ` set (fs')) Xs) fs'_sup"
-        using sups_presD[OF Pres_fs' Xin Xsub Fin_Xs Supr Supr_in _, of "set fs'" g'] Cons'
-        by auto
+        using sups_presD[OF Pres_fs' Supr_in, of "set fs'" g'] Cons'
+        by (auto simp add:has_sup_def)
 
       have Nwise : "(\<And>k. k \<in> set fs' \<Longrightarrow> sups_pres {k, f} S)"
       proof-
@@ -803,9 +525,8 @@ next
 
       obtain f_fs'_sup where F_fs'_sup:
         "is_sup ((\<lambda>f. f syn supr) ` set (f # fs')) f_fs'_sup"
-        "is_sup (scross ((\<lambda>f. f syn) ` set (f # fs')) Xs) f_fs'_sup"
-        using sups_presD[OF Pres_f_fs' Xin Xsub Fin_Xs Supr Supr_in F_fs_arg1 F_fs_arg2]
-        by auto
+        using sups_presD[OF Pres_f_fs' Supr_in F_fs_arg1 F_fs_arg2]
+        by(auto simp add: has_sup_def)
 
       have G_fs_arg1 : "set (g # fs') \<subseteq> set (g # fs')"
         by auto
@@ -815,9 +536,8 @@ next
 
       obtain g_fs'_sup where G_fs'_sup :
         "is_sup ((\<lambda> f . f syn supr) ` set (g#fs')) g_fs'_sup"
-        "is_sup (scross ((\<lambda> f . f syn) ` set (g # fs')) Xs) g_fs'_sup"
-        using sups_presD[OF Pres_g_fs' Xin Xsub Fin_Xs Supr Supr_in G_fs_arg1 G_fs_arg2]
-        by auto
+        using sups_presD[OF Pres_g_fs' Supr_in G_fs_arg1 G_fs_arg2]
+        by (auto simp add: has_sup_def)
 
       have Comm : "{g, f} = {f, g}"
         by auto
@@ -830,18 +550,15 @@ next
 
       obtain f_g_sup where F_g_sup :
         "is_sup ((\<lambda> f . f syn supr) ` set ([f, g])) f_g_sup" 
-        "is_sup (scross ((\<lambda> f . f syn) ` set ([f, g])) Xs) f_g_sup"
-        using sups_presD[OF Pres_f_g Xin Xsub Fin_Xs Supr Supr_in, of "{f, g}" f]
-        by auto
+        using sups_presD[OF Pres_f_g Supr_in, of "{f, g}" f]
+        by (auto simp add: has_sup_def)
 
       consider (No_f_no_g) "f \<notin> Fs'" "g \<notin> Fs'" |
                (F_no_g) "f \<in> Fs'" "g \<notin> Fs'" |
                (No_f_g) "f \<notin> Fs'" "g \<in> Fs'" |
                (F_g) "f \<in> Fs'" "g \<in> Fs'"
         by auto
-      then show "\<exists>sup'.
-            is_sup ((\<lambda>f. f syn supr) ` Fs') sup' \<and>
-            is_sup (scross ((\<lambda>f. f syn) ` Fs') Xs) sup'"
+      then show "has_sup ((\<lambda>f. f syn supr) ` Fs')"
       proof cases
         case No_f_no_g
 
@@ -853,7 +570,7 @@ next
           by auto
 
         then show ?thesis
-          using sups_presD[OF Conc' Xin Xsub Fin_Xs Supr Supr_in _ G]
+          using sups_presD[OF Conc' Supr_in _ G]
           by auto
       next
         case F_no_g
@@ -861,7 +578,7 @@ next
           using Fs'_sub by auto
 
         then show ?thesis
-          using sups_presD[OF Pres_f_fs' Xin Xsub Fin_Xs Supr Supr_in _ G]
+          using sups_presD[OF Pres_f_fs'  Supr_in _ G]
           by auto
       next
         case No_f_g
@@ -869,7 +586,7 @@ next
           using Fs'_sub by auto
 
         then show ?thesis
-          using sups_presD[OF Pres_g_fs' Xin Xsub Fin_Xs Supr Supr_in _ G]
+          using sups_presD[OF Pres_g_fs' Supr_in _ G]
           by auto
       next
         case F_g 
@@ -883,12 +600,11 @@ next
 
           obtain f_fs'_sup where F_fs'_sup:
             "is_sup ((\<lambda>f. f syn supr) ` Fs') f_fs'_sup"
-            "is_sup (scross ((\<lambda>f. f syn) ` Fs') Xs) f_fs'_sup"
-            using sups_presD[OF Pres_f_fs' Xin Xsub Fin_Xs Supr Supr_in Fs'_sub' F_g(1)]
-            by auto
+            using sups_presD[OF Pres_f_fs' Supr_in Fs'_sub' F_g(1)]
+            by (auto simp add: has_sup_def)
 
           then show ?thesis
-            by auto
+            by (auto simp add: has_sup_def)
         next
           case False
 
@@ -908,15 +624,13 @@ next
 
           obtain f_fs'_sup' where F_fs'_sup':
             "is_sup ((\<lambda>f. f syn supr) ` (Fs' - {g})) f_fs'_sup'"
-            "is_sup (scross ((\<lambda>f. f syn) ` (Fs' - {g})) Xs) f_fs'_sup'"
-            using sups_presD[OF Pres_f_fs' Xin Xsub Fin_Xs Supr Supr_in F_fs_arg1 F_remain]
-            by auto
+            using sups_presD[OF Pres_f_fs' Supr_in F_fs_arg1 F_remain]
+            by (auto simp add: has_sup_def)
 
           obtain g_fs'_sup' where G_fs'_sup' :
             "is_sup ((\<lambda> f . f syn supr) ` (Fs' - {f})) g_fs'_sup'"
-            "is_sup (scross ((\<lambda> f . f syn) ` (Fs' - {f})) Xs) g_fs'_sup'"
-            using sups_presD[OF Pres_g_fs' Xin Xsub Fin_Xs Supr Supr_in G_fs_arg1 G_remain ]
-            by auto
+            using sups_presD[OF Pres_g_fs' Supr_in G_fs_arg1 G_remain ]
+            by (auto simp add: has_sup_def)
 
           have Fs'_fin : "finite Fs'"
             using finite_subset[OF Fs'_sub]
@@ -993,98 +707,6 @@ next
             qed
           qed
   
-          have Nwise2 : "(\<And>z1 z2.
-                          z1 \<in> scross ((\<lambda>f. f syn) ` (Fs' - {g})) Xs \<Longrightarrow>
-                          z2 \<in> scross ((\<lambda>f. f syn) ` (Fs' - {f})) Xs \<Longrightarrow>
-                          has_sup {z1, z2})"
-          proof-
-            fix z1 z2
-            assume Z1 : "z1 \<in> scross ((\<lambda>f. f syn) ` (Fs' - {g})) Xs"
-            assume Z2 : "z2 \<in> scross ((\<lambda>f. f syn) ` (Fs' - {f})) Xs"
-
-            consider (Z1_f) x1 where "x1 \<in> Xs" "z1 = f syn x1" |
-                     (Z1_fs) x1 f'1 where "x1 \<in> Xs" "f'1 \<in> Fs'" "z1 = f'1 syn x1" "f'1 \<noteq> f" "f'1 \<noteq> g"
-              using Z1 False
-              by(auto simp add: scross_def)
-  
-            then show "has_sup {z1, z2}"
-            proof cases
-              case Z1_f
-  
-              consider (Z2_g) x2 where "x2 \<in> Xs" "z2 = g syn x2" | 
-                       (Z2_fs) x2 f'2 where "x2 \<in> Xs" "f'2 \<in> Fs'" "z2 = f'2 syn x2" "f'2 \<noteq> f" "f'2 \<noteq> g"
-                using Z2 False
-              by(auto simp add: scross_def)
-  
-              then show ?thesis
-              proof cases
-                case Z2_g
-  
-  
-                have Sub: "{z1, z2} \<subseteq> (scross ((\<lambda>f. f syn) ` set [f, g]) Xs)"
-                  using Z1_f Z2_g
-                  by(auto simp add: scross_def)
-  
-                have Fin: "finite (scross ((\<lambda>f. f syn) ` set [f, g]) Xs)"
-                  using scross_finite[OF _ Fin_Xs, of "((\<lambda>f. f syn) ` set [f, g])"]
-                  by auto
-  
-                show ?thesis using Z1_f Z2_g
-                  using has_sup_subset[OF Fin F_g_sup(2) Sub, of z1]
-                  by(auto)
-              next
-                case Z2_fs
-  
-                have Sub : "{z1, z2} \<subseteq> (scross ((\<lambda>f. f syn) ` (Fs' - {g})) Xs)"
-                  using Z1_f Z2_fs F_g False
-                  by(auto simp add: scross_def)
-                  
-                have Fin : "finite (scross ((\<lambda>f. f syn) ` (Fs' - {g})) Xs)"
-                  using scross_finite[OF _ Fin_Xs, of "((\<lambda>f. f syn) ` (Fs' - {g}))"] Fs'_fin
-                  by auto
-  
-                then show ?thesis using has_sup_subset[OF _ F_fs'_sup'(2) Sub]
-                  by auto
-              qed
-            next
-              case Z1_fs
-              consider (Z2_g) x2 where "x2 \<in> Xs" "z2 = g syn x2" | 
-                       (Z2_fs) x2 f'2 where "x2 \<in> Xs" "f'2 \<in> Fs'" "z2 = f'2 syn x2" "f'2 \<noteq> f" "f'2 \<noteq> g"
-                using Z2 False
-              by(auto simp add: scross_def)
-  
-              then show ?thesis
-              proof cases
-                case Z2_g
-  
-                have Sub : "{z1, z2} \<subseteq> (scross ((\<lambda>f. f syn) ` (Fs' - {f})) Xs)"
-                  using Z1_fs Z2_g F_g False
-                  by (auto simp add: scross_def)
-  
-                have Fin : "finite (scross ((\<lambda> f . f syn) ` (Fs' - {f})) Xs)"
-                  using scross_finite[OF _ Fin_Xs, of "(\<lambda> f . f syn) ` (Fs' - {f})"] Fs'_fin
-                  by auto
-  
-                then show ?thesis using has_sup_subset[OF _ G_fs'_sup'(2) Sub]
-                  by(auto simp add: has_sup_def)
-              next
-                case Z2_fs
-  
-                have Sub : "{z1, z2} \<subseteq> (scross ((\<lambda>f. f syn) ` (Fs' - {g})) Xs)"
-                  using Z1_fs Z2_fs F_g False
-                  by (auto simp add: scross_def)
-  
-                have Fin : "finite (scross ((\<lambda>f. f syn) ` (Fs' - {g})) Xs)"
-                  using scross_finite[OF _ Fin_Xs, of "(\<lambda>f. f syn) ` (Fs' - {g})"] Fs'_fin
-                  by auto
-
-                then show ?thesis using has_sup_subset[OF _ F_fs'_sup'(2) Sub, of "z1"] Fs'_fin
-                  by auto
-
-              qed
-            qed
-          qed
-
           have Diff_combine : "((Fs' - {g}) \<union> (Fs' - {f})) = Fs'"
             using False
             by(auto)
@@ -1102,52 +724,10 @@ next
 
           then have Conc1' : "is_sup ((\<lambda> f . f syn supr) ` Fs') sup1"
             unfolding Fs'_combine
-            by(auto)          
-
-          have Scross_union :
-            "\<And> F1 F2 B . scross F1 B \<union> scross F2 B = scross (F1 \<union> F2) (B)"
-            by(auto simp add: scross_def)
-
-          have Fs'_scross : "(scross ((\<lambda>f. f syn) ` (Fs' - {g})) Xs \<union> scross ((\<lambda>f. f syn) ` (Fs' - {f})) Xs) 
-            = scross ((\<lambda> f . f syn) ` Fs') Xs"
-            unfolding Scross_union sym[OF image_Un] Diff_combine
-            by(auto simp add: scross_def)
-  
-          have Fin1 : "finite (scross ((\<lambda>f. f syn) ` (Fs' - {g})) Xs)"
-            using scross_finite[OF _ Fin_Xs, of "((\<lambda>f. f syn) ` (Fs' - {g}))"] Fs'_fin
-            by auto
-  
-          have Fin2 : "finite (scross ((\<lambda>f. f syn) ` (Fs' - {f})) Xs)"
-            using scross_finite[OF _ Fin_Xs, of "((\<lambda>f. f syn) ` (Fs' - {f}))"] Fs'_fin
-            by auto
-   
-          obtain sup2 where Conc2 : "is_sup ((scross ((\<lambda>f. f syn) ` (Fs' - {g})) Xs) \<union> (scross ((\<lambda>f. f syn) ` (Fs' - {f})) Xs)) sup2"
-            using nwise_sups[OF Fin1 Fin2 F_fs'_sup'(2) G_fs'_sup'(2) Nwise2]
-            by(auto simp add: has_sup_def)
-  
-          then have Conc2' : "is_sup (scross ((\<lambda>f. f syn) ` Fs') Xs) sup2"
-            unfolding Fs'_scross
             by(auto)
 
-          have Gs_fs_sup1 : "is_sup {f_fs'_sup', g_fs'_sup'} sup1"
-            using sup_union2[OF F_fs'_sup'(1) G_fs'_sup'(1) Conc1]
-            by auto
-  
-          have Gs_fs_sup2 : "is_sup {f_fs'_sup', g_fs'_sup'} sup2"
-            using sup_union2[OF F_fs'_sup'(2) G_fs'_sup'(2) Conc2]
-            by auto
-  
-          have Eq :"sup1 = sup2"
-            using is_sup_unique[OF Gs_fs_sup1 Gs_fs_sup2]
-            by auto
-
-(* YOU ARE HERE *)
-(* all that remains is to deal with this pesky set membership predicate... *)
-          
-
-          show ?thesis
-            using Conc1' Conc2' unfolding Eq 
-            by auto
+          then show ?thesis
+            by(auto simp add: has_sup_def)
         qed
       qed
     qed
