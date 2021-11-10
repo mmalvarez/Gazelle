@@ -257,7 +257,7 @@ instantiation sfan :: (_, _, _, schem) schem begin
 instance proof qed
 end
 
-instantiation sinject :: (_ , _, _, _, schem) schem
+instantiation sinject :: (_ , _, _, schem) schem
 begin
 instance proof qed
 end
@@ -716,37 +716,37 @@ instantiation sfan :: (_, _, _, hasntK) hasntK begin
 instance proof qed
 end
 
-instantiation sinject :: (_, _, _, _, hasntA) hasntA begin
+instantiation sinject :: (_, _, _, hasntA) hasntA begin
 instance proof qed
 end
-instantiation sinject :: (_, _, _, _, hasntB) hasntB begin
+instantiation sinject :: (_, _, _, hasntB) hasntB begin
 instance proof qed
 end
-instantiation sinject :: (_, _, _, _, hasntC) hasntC begin
+instantiation sinject :: (_, _, _, hasntC) hasntC begin
 instance proof qed
 end
-instantiation sinject :: (_, _, _, _, hasntD) hasntD begin
+instantiation sinject :: (_, _, _, hasntD) hasntD begin
 instance proof qed
 end
-instantiation sinject :: (_, _, _, _, hasntE) hasntE begin
+instantiation sinject :: (_, _, _, hasntE) hasntE begin
 instance proof qed
 end
-instantiation sinject :: (_, _, _, _, hasntF) hasntF begin
+instantiation sinject :: (_, _, _, hasntF) hasntF begin
 instance proof qed
 end
-instantiation sinject :: (_, _, _, _, hasntG) hasntG begin
+instantiation sinject :: (_, _, _, hasntG) hasntG begin
 instance proof qed
 end
-instantiation sinject :: (_, _, _, _, hasntH) hasntH begin
+instantiation sinject :: (_, _, _, hasntH) hasntH begin
 instance proof qed
 end
-instantiation sinject :: (_, _, _, _, hasntI) hasntI begin
+instantiation sinject :: (_, _, _, hasntI) hasntI begin
 instance proof qed
 end
-instantiation sinject :: (_, _, _, _, hasntJ) hasntJ begin
+instantiation sinject :: (_, _, _, hasntJ) hasntJ begin
 instance proof qed
 end
-instantiation sinject :: (_, _, _, _, hasntK) hasntK begin
+instantiation sinject :: (_, _, _, hasntK) hasntK begin
 instance proof qed
 end
 
@@ -818,82 +818,82 @@ end
  * of the right-hand side (of type 's2) so that we can construct the appropriate
  * lifting.
  *)
-type_synonym ('s1, 's2, 'x, 'a, 'b, 'f) schem_lift =
-"('s1 \<Rightarrow> 's2 \<Rightarrow> ('x, 'a, 'b, 'f) lifting)"
+type_synonym ('s1, 's2, 'x, 'a, 'b) schem_lift =
+"('s1 \<Rightarrow> 's2 \<Rightarrow> ('x, 'a, 'b) lifting)"
 
 consts schem_lift ::
-  "('s1 :: schem, 's2 :: schem, 'x, 'a, 'b, 'f) schem_lift"
+  "('s1 :: schem, 's2 :: schem, 'x, 'a, 'b) schem_lift"
 
 
 (* TODO: we could probably reduce these by using the basename typeclass.
    not doing this for now in case it is causing a bug. *)
 
 
-definition schem_lift_base_trivA ::  "('n :: n_A, 'n, 'x, 'a :: Bogus, 'a md_triv, 'x => 'a => 'a) schem_lift" where
+definition schem_lift_base_trivA ::  "('n :: n_A, 'n, 'x, 'a :: Bogus, 'a md_triv) schem_lift" where
 "schem_lift_base_trivA _ _ =
   triv_l"
-definition schem_lift_base_trivB ::  "('n :: n_B, 'n, 'x, 'a :: Bogus, 'a md_triv, 'x => 'a => 'a) schem_lift" where
+definition schem_lift_base_trivB ::  "('n :: n_B, 'n, 'x, 'a :: Bogus, 'a md_triv) schem_lift" where
 "schem_lift_base_trivB _ _ =
   triv_l"
-definition schem_lift_base_trivC ::  "('n :: n_C, 'n, 'x, 'a :: Bogus, 'a md_triv, 'x => 'a => 'a) schem_lift" where
+definition schem_lift_base_trivC ::  "('n :: n_C, 'n, 'x, 'a :: Bogus, 'a md_triv) schem_lift" where
 "schem_lift_base_trivC _ _ =
   triv_l"
-definition schem_lift_base_trivD ::  "('n :: n_D, 'n, 'x, 'a :: Bogus, 'a md_triv, 'x => 'a => 'a) schem_lift" where
+definition schem_lift_base_trivD ::  "('n :: n_D, 'n, 'x, 'a :: Bogus, 'a md_triv) schem_lift" where
 "schem_lift_base_trivD _ _ =
   triv_l"
-definition schem_lift_base_trivE ::  "('n :: n_E, 'n, 'x, 'a :: Bogus, 'a md_triv, 'x => 'a => 'a) schem_lift" where
+definition schem_lift_base_trivE ::  "('n :: n_E, 'n, 'x, 'a :: Bogus, 'a md_triv) schem_lift" where
 "schem_lift_base_trivE _ _ =
   triv_l"
-definition schem_lift_base_trivF ::  "('n :: n_F, 'n, 'x, 'a :: Bogus, 'a md_triv, 'x => 'a => 'a) schem_lift" where
+definition schem_lift_base_trivF ::  "('n :: n_F, 'n, 'x, 'a :: Bogus, 'a md_triv) schem_lift" where
 "schem_lift_base_trivF _ _ =
   triv_l"
-definition schem_lift_base_trivG ::  "('n :: n_G, 'n, 'x, 'a :: Bogus, 'a md_triv, 'x => 'a => 'a) schem_lift" where
+definition schem_lift_base_trivG ::  "('n :: n_G, 'n, 'x, 'a :: Bogus, 'a md_triv) schem_lift" where
 "schem_lift_base_trivG _ _ =
   triv_l"
-definition schem_lift_base_trivH ::  "('n :: n_H, 'n, 'x, 'a :: Bogus, 'a md_triv, 'x => 'a => 'a) schem_lift" where
+definition schem_lift_base_trivH ::  "('n :: n_H, 'n, 'x, 'a :: Bogus, 'a md_triv) schem_lift" where
 "schem_lift_base_trivH _ _ =
   triv_l"
-definition schem_lift_base_trivI ::  "('n :: n_I, 'n, 'x, 'a :: Bogus, 'a md_triv, 'x => 'a => 'a) schem_lift" where
+definition schem_lift_base_trivI ::  "('n :: n_I, 'n, 'x, 'a :: Bogus, 'a md_triv) schem_lift" where
 "schem_lift_base_trivI _ _ =
   triv_l"
-definition schem_lift_base_trivJ ::  "('n :: n_J, 'n, 'x, 'a :: Bogus, 'a md_triv, 'x => 'a => 'a) schem_lift" where
+definition schem_lift_base_trivJ ::  "('n :: n_J, 'n, 'x, 'a :: Bogus, 'a md_triv) schem_lift" where
 "schem_lift_base_trivJ _ _ =
   triv_l"
-definition schem_lift_base_trivK ::  "('n :: n_K, 'n, 'x, 'a :: Bogus, 'a md_triv, 'x => 'a => 'a) schem_lift" where
+definition schem_lift_base_trivK ::  "('n :: n_K, 'n, 'x, 'a :: Bogus, 'a md_triv) schem_lift" where
 "schem_lift_base_trivK _ _ =
   triv_l"
 
-definition schem_lift_base_idA ::  "('n :: n_A, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a, 'x => 'a => 'a) schem_lift" where
+definition schem_lift_base_idA ::  "('n :: n_A, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a) schem_lift" where
 "schem_lift_base_idA _ _ =
   id_l"
-definition schem_lift_base_idB ::  "('n :: n_B, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a, 'x => 'a => 'a) schem_lift" where
+definition schem_lift_base_idB ::  "('n :: n_B, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a) schem_lift" where
 "schem_lift_base_idB _ _ =
   id_l"
-definition schem_lift_base_idC ::  "('n :: n_C, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a, 'x => 'a => 'a) schem_lift" where
+definition schem_lift_base_idC ::  "('n :: n_C, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a) schem_lift" where
 "schem_lift_base_idC _ _ =
   id_l"
-definition schem_lift_base_idD ::  "('n :: n_D, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a, 'x => 'a => 'a) schem_lift" where
+definition schem_lift_base_idD ::  "('n :: n_D, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a) schem_lift" where
 "schem_lift_base_idD _ _ =
   id_l"
-definition schem_lift_base_idE ::  "('n :: n_E, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a, 'x => 'a => 'a) schem_lift" where
+definition schem_lift_base_idE ::  "('n :: n_E, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a) schem_lift" where
 "schem_lift_base_idE _ _ =
   id_l"
-definition schem_lift_base_idF ::  "('n :: n_F, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a, 'x => 'a => 'a) schem_lift" where
+definition schem_lift_base_idF ::  "('n :: n_F, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a) schem_lift" where
 "schem_lift_base_idF _ _ =
   id_l"
-definition schem_lift_base_idG ::  "('n :: n_G, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a, 'x => 'a => 'a) schem_lift" where
+definition schem_lift_base_idG ::  "('n :: n_G, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a) schem_lift" where
 "schem_lift_base_idG _ _ =
   id_l"
-definition schem_lift_base_idH ::  "('n :: n_H, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a, 'x => 'a => 'a) schem_lift" where
+definition schem_lift_base_idH ::  "('n :: n_H, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a) schem_lift" where
 "schem_lift_base_idH _ _ =
   id_l"
-definition schem_lift_base_idI ::  "('n :: n_I, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a, 'x => 'a => 'a) schem_lift" where
+definition schem_lift_base_idI ::  "('n :: n_I, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a) schem_lift" where
 "schem_lift_base_idI _ _ =
   id_l"
-definition schem_lift_base_idJ ::  "('n :: n_J, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a, 'x => 'a => 'a) schem_lift" where
+definition schem_lift_base_idJ ::  "('n :: n_J, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a) schem_lift" where
 "schem_lift_base_idJ _ _ =
   id_l"
-definition schem_lift_base_idK ::  "('n :: n_K, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a, 'x => 'a => 'a) schem_lift" where
+definition schem_lift_base_idK ::  "('n :: n_K, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a) schem_lift" where
 "schem_lift_base_idK _ _ =
   id_l"
 
@@ -907,8 +907,8 @@ definition schem_lift_base_idK ::  "('n :: n_K, 'n sid, 'x, 'a :: {Bogus, Pord},
 
 (* right-side recursion (prio) *)
 definition schem_lift_prio_recR ::
-  "('n, 'ls, 'x, 'a, 'b2 :: Pord, 'f) schem_lift \<Rightarrow>
-   ('n, ('x, 'ls) sprio, 'x, 'a, 'b2 md_prio, 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift \<Rightarrow>
+   ('n, ('x, 'ls) sprio, 'x, 'a, 'b2 md_prio) schem_lift" where
 "schem_lift_prio_recR rec n s =
   (case s of
     SPR f1 f2 s' \<Rightarrow>
@@ -916,8 +916,8 @@ definition schem_lift_prio_recR ::
 
 (* right-side recursion (option) *)
 definition schem_lift_option_recR ::
-  "('n, 'ls, 'x, 'a, 'b2 :: Pord, 'f) schem_lift \<Rightarrow>
-   ('n, 'ls soption, 'x, 'a, 'b2 option, 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift \<Rightarrow>
+   ('n, 'ls soption, 'x, 'a, 'b2 option) schem_lift" where
 "schem_lift_option_recR rec n s =
   (case s of
     SO s' \<Rightarrow>
@@ -927,8 +927,8 @@ definition schem_lift_option_recR ::
 (*
 (* right-side recursion (oalist) *)
 definition schem_lift_oalist_recR ::
-  "('n, 'ls, 'x, 'a, 'b2 :: Pord, 'f) schem_lift \<Rightarrow>
-   ('n, ('x, 'k :: linorder, 'ls) soalist, 'x, 'a, ('k, 'b2) oalist, 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift \<Rightarrow>
+   ('n, ('x, 'k :: linorder, 'ls) soalist, 'x, 'a, ('k, 'b2) oalist) schem_lift" where
 "schem_lift_oalist_recR rec n s =
   (case s of
     SL f1 s' \<Rightarrow>
@@ -941,8 +941,8 @@ definition schem_lift_oalist_recR ::
 (* NB we don't allow lifting into the "inr" data of the roalist.
    a separate lifting could allow this. *)
 definition schem_lift_roalist_recR ::
-  "('n, 'ls, 'x, 'a, 'b2 :: Pord, 'f) schem_lift \<Rightarrow>
-   ('n, ('x, 'k :: linorder, 'ls) sroalist, 'x, 'a, ('k, 'b2, 'z :: Pord) roalist, 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift \<Rightarrow>
+   ('n, ('x, 'k :: linorder, 'ls) sroalist, 'x, 'a, ('k, 'b2, 'z :: Pord) roalist) schem_lift" where
 "schem_lift_roalist_recR rec n s =
   (case s of
     SRL f1 s' \<Rightarrow>
@@ -966,176 +966,176 @@ definition schem_lift_roalist_recR ::
 
 
 definition schem_lift_prod_recR_A_left ::
-  "('n, 'ls, 'x, 'a, 'b2 :: Pord, 'f) schem_lift =>
-   ('n :: n_A, ('ls, 'rs :: hasntA) sprod, 'x, 'a, 'b2 * ('rest :: Pordb), 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_A, ('ls, 'rs :: hasntA) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
 "schem_lift_prod_recR_A_left rec n s =
   (case s of
     SP ls rs =>
       fst_l (rec n ls))"
 
 definition schem_lift_prod_recR_A_right ::
-  "('n, 'rs, 'x, 'a, 'b2 :: Pord, 'f) schem_lift =>
-   ('n :: n_A, ('ls :: hasntA, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2), 'f) schem_lift" where
+  "('n, 'rs, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_A, ('ls :: hasntA, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
 "schem_lift_prod_recR_A_right rec n s =
   (case s of
     SP ls rs =>
       snd_l (rec n rs))"
 
 definition schem_lift_prod_recR_B_left ::
-  "('n, 'ls, 'x, 'a, 'b2 :: Pord, 'f) schem_lift =>
-   ('n :: n_B, ('ls, 'rs :: hasntB) sprod, 'x, 'a, 'b2 * ('rest :: Pordb), 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_B, ('ls, 'rs :: hasntB) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
 "schem_lift_prod_recR_B_left rec n s =
   (case s of
     SP ls rs =>
       fst_l (rec n ls))"
 
 definition schem_lift_prod_recR_B_right ::
-  "('n, 'rs, 'x, 'a, 'b2 :: Pord, 'f) schem_lift =>
-   ('n :: n_B, ('ls :: hasntB, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2), 'f) schem_lift" where
+  "('n, 'rs, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_B, ('ls :: hasntB, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
 "schem_lift_prod_recR_B_right rec n s =
   (case s of
     SP ls rs =>
       snd_l (rec n rs))"
 
 definition schem_lift_prod_recR_C_left ::
-  "('n, 'ls, 'x, 'a, 'b2 :: Pord, 'f) schem_lift =>
-   ('n :: n_C, ('ls, 'rs :: hasntC) sprod, 'x, 'a, 'b2 * ('rest :: Pordb), 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_C, ('ls, 'rs :: hasntC) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
 "schem_lift_prod_recR_C_left rec n s =
   (case s of
     SP ls rs =>
       fst_l (rec n ls))"
 
 definition schem_lift_prod_recR_C_right ::
-  "('n, 'rs, 'x, 'a, 'b2 :: Pord, 'f) schem_lift =>
-   ('n :: n_C, ('ls :: hasntC, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2), 'f) schem_lift" where
+  "('n, 'rs, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_C, ('ls :: hasntC, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
 "schem_lift_prod_recR_C_right rec n s =
   (case s of
     SP ls rs =>
       snd_l (rec n rs))"
 
 definition schem_lift_prod_recR_D_left ::
-  "('n, 'ls, 'x, 'a, 'b2 :: Pord, 'f) schem_lift =>
-   ('n :: n_D, ('ls, 'rs :: hasntD) sprod, 'x, 'a, 'b2 * ('rest :: Pordb), 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_D, ('ls, 'rs :: hasntD) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
 "schem_lift_prod_recR_D_left rec n s =
   (case s of
     SP ls rs =>
       fst_l (rec n ls))"
 
 definition schem_lift_prod_recR_D_right ::
-  "('n, 'rs, 'x, 'a, 'b2 :: Pord, 'f) schem_lift =>
-   ('n :: n_D, ('ls :: hasntD, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2), 'f) schem_lift" where
+  "('n, 'rs, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_D, ('ls :: hasntD, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
 "schem_lift_prod_recR_D_right rec n s =
   (case s of
     SP ls rs =>
       snd_l (rec n rs))"
 
 definition schem_lift_prod_recR_E_left ::
-  "('n, 'ls, 'x, 'a, 'b2 :: Pord, 'f) schem_lift =>
-   ('n :: n_E, ('ls, 'rs :: hasntE) sprod, 'x, 'a, 'b2 * ('rest :: Pordb), 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_E, ('ls, 'rs :: hasntE) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
 "schem_lift_prod_recR_E_left rec n s =
   (case s of
     SP ls rs =>
       fst_l (rec n ls))"
 
 definition schem_lift_prod_recR_E_right ::
-  "('n, 'rs, 'x, 'a, 'b2 :: Pord, 'f) schem_lift =>
-   ('n :: n_E, ('ls :: hasntE, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2), 'f) schem_lift" where
+  "('n, 'rs, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_E, ('ls :: hasntE, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
 "schem_lift_prod_recR_E_right rec n s =
   (case s of
     SP ls rs =>
       snd_l (rec n rs))"
 
 definition schem_lift_prod_recR_F_left ::
-  "('n, 'ls, 'x, 'a, 'b2 :: Pord, 'f) schem_lift =>
-   ('n :: n_F, ('ls, 'rs :: hasntF) sprod, 'x, 'a, 'b2 * ('rest :: Pordb), 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_F, ('ls, 'rs :: hasntF) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
 "schem_lift_prod_recR_F_left rec n s =
   (case s of
     SP ls rs =>
       fst_l (rec n ls))"
 
 definition schem_lift_prod_recR_F_right ::
-  "('n, 'rs, 'x, 'a, 'b2 :: Pord, 'f) schem_lift =>
-   ('n :: n_F, ('ls :: hasntF, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2), 'f) schem_lift" where
+  "('n, 'rs, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_F, ('ls :: hasntF, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
 "schem_lift_prod_recR_F_right rec n s =
   (case s of
     SP ls rs =>
       snd_l (rec n rs))"
 
 definition schem_lift_prod_recR_G_left ::
-  "('n, 'ls, 'x, 'a, 'b2 :: Pord, 'f) schem_lift =>
-   ('n :: n_G, ('ls, 'rs :: hasntG) sprod, 'x, 'a, 'b2 * ('rest :: Pordb), 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_G, ('ls, 'rs :: hasntG) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
 "schem_lift_prod_recR_G_left rec n s =
   (case s of
     SP ls rs =>
       fst_l (rec n ls))"
 
 definition schem_lift_prod_recR_G_right ::
-  "('n, 'rs, 'x, 'a, 'b2 :: Pord, 'f) schem_lift =>
-   ('n :: n_G, ('ls :: hasntG, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2), 'f) schem_lift" where
+  "('n, 'rs, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_G, ('ls :: hasntG, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
 "schem_lift_prod_recR_G_right rec n s =
   (case s of
     SP ls rs =>
       snd_l (rec n rs))"
 
 definition schem_lift_prod_recR_H_left ::
-  "('n, 'ls, 'x, 'a, 'b2 :: Pord, 'f) schem_lift =>
-   ('n :: n_H, ('ls, 'rs :: hasntH) sprod, 'x, 'a, 'b2 * ('rest :: Pordb), 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_H, ('ls, 'rs :: hasntH) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
 "schem_lift_prod_recR_H_left rec n s =
   (case s of
     SP ls rs =>
       fst_l (rec n ls))"
 
 definition schem_lift_prod_recR_H_right ::
-  "('n, 'rs, 'x, 'a, 'b2 :: Pord, 'f) schem_lift =>
-   ('n :: n_H, ('ls :: hasntH, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2), 'f) schem_lift" where
+  "('n, 'rs, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_H, ('ls :: hasntH, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
 "schem_lift_prod_recR_H_right rec n s =
   (case s of
     SP ls rs =>
       snd_l (rec n rs))"
 
 definition schem_lift_prod_recR_I_left ::
-  "('n, 'ls, 'x, 'a, 'b2 :: Pord, 'f) schem_lift =>
-   ('n :: n_I, ('ls, 'rs :: hasntI) sprod, 'x, 'a, 'b2 * ('rest :: Pordb), 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_I, ('ls, 'rs :: hasntI) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
 "schem_lift_prod_recR_I_left rec n s =
   (case s of
     SP ls rs =>
       fst_l (rec n ls))"
 
 definition schem_lift_prod_recR_I_right ::
-  "('n, 'rs, 'x, 'a, 'b2 :: Pord, 'f) schem_lift =>
-   ('n :: n_I, ('ls :: hasntI, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2), 'f) schem_lift" where
+  "('n, 'rs, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_I, ('ls :: hasntI, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
 "schem_lift_prod_recR_I_right rec n s =
   (case s of
     SP ls rs =>
       snd_l (rec n rs))"
 
 definition schem_lift_prod_recR_J_left ::
-  "('n, 'ls, 'x, 'a, 'b2 :: Pord, 'f) schem_lift =>
-   ('n :: n_J, ('ls, 'rs :: hasntJ) sprod, 'x, 'a, 'b2 * ('rest :: Pordb), 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_J, ('ls, 'rs :: hasntJ) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
 "schem_lift_prod_recR_J_left rec n s =
   (case s of
     SP ls rs =>
       fst_l (rec n ls))"
 
 definition schem_lift_prod_recR_J_right ::
-  "('n, 'rs, 'x, 'a, 'b2 :: Pord, 'f) schem_lift =>
-   ('n :: n_J, ('ls :: hasntJ, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2), 'f) schem_lift" where
+  "('n, 'rs, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_J, ('ls :: hasntJ, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
 "schem_lift_prod_recR_J_right rec n s =
   (case s of
     SP ls rs =>
       snd_l (rec n rs))"
 
 definition schem_lift_prod_recR_K_left ::
-  "('n, 'ls, 'x, 'a, 'b2 :: Pord, 'f) schem_lift =>
-   ('n :: n_K, ('ls, 'rs :: hasntK) sprod, 'x, 'a, 'b2 * ('rest :: Pordb), 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_K, ('ls, 'rs :: hasntK) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
 "schem_lift_prod_recR_K_left rec n s =
   (case s of
     SP ls rs =>
       fst_l (rec n ls))"
 
 definition schem_lift_prod_recR_K_right ::
-  "('n, 'rs, 'x, 'a, 'b2 :: Pord, 'f) schem_lift =>
-   ('n :: n_K, ('ls :: hasntK, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2), 'f) schem_lift" where
+  "('n, 'rs, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_K, ('ls :: hasntK, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
 "schem_lift_prod_recR_K_right rec n s =
   (case s of
     SP ls rs =>
@@ -1143,176 +1143,176 @@ definition schem_lift_prod_recR_K_right ::
 
 
 definition schem_lift_merge_recR_A_left ::
-  "('n, 'ls, 'x, 'a, 'b2, 'f) schem_lift =>
-   ('n :: n_A, ('ls, 'rs :: hasntA) smerge, 'x, 'a, 'b2, 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_A, ('ls, 'rs :: hasntA) smerge, 'x, 'a, 'b2) schem_lift" where
 "schem_lift_merge_recR_A_left rec n s =
   (case s of
     SM ls rs =>
       (rec n ls))"
 
 definition schem_lift_merge_recR_A_right ::
-  "('n, 'rs, 'x, 'a, 'b2, 'f) schem_lift =>
-   ('n :: n_A, ('ls :: hasntA, 'rs) smerge, 'x, 'a, 'b2, 'f) schem_lift" where
+  "('n, 'rs, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_A, ('ls :: hasntA, 'rs) smerge, 'x, 'a, 'b2) schem_lift" where
 "schem_lift_merge_recR_A_right rec n s =
   (case s of
     SM ls rs =>
       (rec n rs))"
 
 definition schem_lift_merge_recR_B_left ::
-  "('n, 'ls, 'x, 'a, 'b2, 'f) schem_lift =>
-   ('n :: n_B, ('ls, 'rs :: hasntB) smerge, 'x, 'a, 'b2, 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_B, ('ls, 'rs :: hasntB) smerge, 'x, 'a, 'b2) schem_lift" where
 "schem_lift_merge_recR_B_left rec n s =
   (case s of
     SM ls rs =>
       (rec n ls))"
 
 definition schem_lift_merge_recR_B_right ::
-  "('n, 'rs, 'x, 'a, 'b2, 'f) schem_lift =>
-   ('n :: n_B, ('ls :: hasntB, 'rs) smerge, 'x, 'a, 'b2, 'f) schem_lift" where
+  "('n, 'rs, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_B, ('ls :: hasntB, 'rs) smerge, 'x, 'a, 'b2) schem_lift" where
 "schem_lift_merge_recR_B_right rec n s =
   (case s of
     SM ls rs =>
       (rec n rs))"
 
 definition schem_lift_merge_recR_C_left ::
-  "('n, 'ls, 'x, 'a, 'b2, 'f) schem_lift =>
-   ('n :: n_C, ('ls, 'rs :: hasntC) smerge, 'x, 'a, 'b2, 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_C, ('ls, 'rs :: hasntC) smerge, 'x, 'a, 'b2) schem_lift" where
 "schem_lift_merge_recR_C_left rec n s =
   (case s of
     SM ls rs =>
       (rec n ls))"
 
 definition schem_lift_merge_recR_C_right ::
-  "('n, 'rs, 'x, 'a, 'b2, 'f) schem_lift =>
-   ('n :: n_C, ('ls :: hasntC, 'rs) smerge, 'x, 'a, 'b2, 'f) schem_lift" where
+  "('n, 'rs, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_C, ('ls :: hasntC, 'rs) smerge, 'x, 'a, 'b2) schem_lift" where
 "schem_lift_merge_recR_C_right rec n s =
   (case s of
     SM ls rs =>
       (rec n rs))"
 
 definition schem_lift_merge_recR_D_left ::
-  "('n, 'ls, 'x, 'a, 'b2, 'f) schem_lift =>
-   ('n :: n_D, ('ls, 'rs :: hasntD) smerge, 'x, 'a, 'b2, 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_D, ('ls, 'rs :: hasntD) smerge, 'x, 'a, 'b2) schem_lift" where
 "schem_lift_merge_recR_D_left rec n s =
   (case s of
     SM ls rs =>
       (rec n ls))"
 
 definition schem_lift_merge_recR_D_right ::
-  "('n, 'rs, 'x, 'a, 'b2, 'f) schem_lift =>
-   ('n :: n_D, ('ls :: hasntD, 'rs) smerge, 'x, 'a, 'b2, 'f) schem_lift" where
+  "('n, 'rs, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_D, ('ls :: hasntD, 'rs) smerge, 'x, 'a, 'b2) schem_lift" where
 "schem_lift_merge_recR_D_right rec n s =
   (case s of
     SM ls rs =>
       (rec n rs))"
 
 definition schem_lift_merge_recR_E_left ::
-  "('n, 'ls, 'x, 'a, 'b2, 'f) schem_lift =>
-   ('n :: n_E, ('ls, 'rs :: hasntE) smerge, 'x, 'a, 'b2, 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_E, ('ls, 'rs :: hasntE) smerge, 'x, 'a, 'b2) schem_lift" where
 "schem_lift_merge_recR_E_left rec n s =
   (case s of
     SM ls rs =>
       (rec n ls))"
 
 definition schem_lift_merge_recR_E_right ::
-  "('n, 'rs, 'x, 'a, 'b2, 'f) schem_lift =>
-   ('n :: n_E, ('ls :: hasntE, 'rs) smerge, 'x, 'a, 'b2, 'f) schem_lift" where
+  "('n, 'rs, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_E, ('ls :: hasntE, 'rs) smerge, 'x, 'a, 'b2) schem_lift" where
 "schem_lift_merge_recR_E_right rec n s =
   (case s of
     SM ls rs =>
       (rec n rs))"
 
 definition schem_lift_merge_recR_F_left ::
-  "('n, 'ls, 'x, 'a, 'b2, 'f) schem_lift =>
-   ('n :: n_F, ('ls, 'rs :: hasntF) smerge, 'x, 'a, 'b2, 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_F, ('ls, 'rs :: hasntF) smerge, 'x, 'a, 'b2) schem_lift" where
 "schem_lift_merge_recR_F_left rec n s =
   (case s of
     SM ls rs =>
       (rec n ls))"
 
 definition schem_lift_merge_recR_F_right ::
-  "('n, 'rs, 'x, 'a, 'b2, 'f) schem_lift =>
-   ('n :: n_F, ('ls :: hasntF, 'rs) smerge, 'x, 'a, 'b2, 'f) schem_lift" where
+  "('n, 'rs, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_F, ('ls :: hasntF, 'rs) smerge, 'x, 'a, 'b2) schem_lift" where
 "schem_lift_merge_recR_F_right rec n s =
   (case s of
     SM ls rs =>
       (rec n rs))"
 
 definition schem_lift_merge_recR_G_left ::
-  "('n, 'ls, 'x, 'a, 'b2, 'f) schem_lift =>
-   ('n :: n_G, ('ls, 'rs :: hasntG) smerge, 'x, 'a, 'b2, 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_G, ('ls, 'rs :: hasntG) smerge, 'x, 'a, 'b2) schem_lift" where
 "schem_lift_merge_recR_G_left rec n s =
   (case s of
     SM ls rs =>
       (rec n ls))"
 
 definition schem_lift_merge_recR_G_right ::
-  "('n, 'rs, 'x, 'a, 'b2, 'f) schem_lift =>
-   ('n :: n_G, ('ls :: hasntG, 'rs) smerge, 'x, 'a, 'b2, 'f) schem_lift" where
+  "('n, 'rs, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_G, ('ls :: hasntG, 'rs) smerge, 'x, 'a, 'b2) schem_lift" where
 "schem_lift_merge_recR_G_right rec n s =
   (case s of
     SM ls rs =>
       (rec n rs))"
 
 definition schem_lift_merge_recR_H_left ::
-  "('n, 'ls, 'x, 'a, 'b2, 'f) schem_lift =>
-   ('n :: n_H, ('ls, 'rs :: hasntH) smerge, 'x, 'a, 'b2, 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_H, ('ls, 'rs :: hasntH) smerge, 'x, 'a, 'b2) schem_lift" where
 "schem_lift_merge_recR_H_left rec n s =
   (case s of
     SM ls rs =>
       (rec n ls))"
 
 definition schem_lift_merge_recR_H_right ::
-  "('n, 'rs, 'x, 'a, 'b2, 'f) schem_lift =>
-   ('n :: n_H, ('ls :: hasntH, 'rs) smerge, 'x, 'a, 'b2, 'f) schem_lift" where
+  "('n, 'rs, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_H, ('ls :: hasntH, 'rs) smerge, 'x, 'a, 'b2) schem_lift" where
 "schem_lift_merge_recR_H_right rec n s =
   (case s of
     SM ls rs =>
       (rec n rs))"
 
 definition schem_lift_merge_recR_I_left ::
-  "('n, 'ls, 'x, 'a, 'b2, 'f) schem_lift =>
-   ('n :: n_I, ('ls, 'rs :: hasntI) smerge, 'x, 'a, 'b2, 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_I, ('ls, 'rs :: hasntI) smerge, 'x, 'a, 'b2) schem_lift" where
 "schem_lift_merge_recR_I_left rec n s =
   (case s of
     SM ls rs =>
       (rec n ls))"
 
 definition schem_lift_merge_recR_I_right ::
-  "('n, 'rs, 'x, 'a, 'b2, 'f) schem_lift =>
-   ('n :: n_I, ('ls :: hasntI, 'rs) smerge, 'x, 'a, 'b2, 'f) schem_lift" where
+  "('n, 'rs, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_I, ('ls :: hasntI, 'rs) smerge, 'x, 'a, 'b2) schem_lift" where
 "schem_lift_merge_recR_I_right rec n s =
   (case s of
     SM ls rs =>
       (rec n rs))"
 
 definition schem_lift_merge_recR_J_left ::
-  "('n, 'ls, 'x, 'a, 'b2, 'f) schem_lift =>
-   ('n :: n_J, ('ls, 'rs :: hasntJ) smerge, 'x, 'a, 'b2, 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_J, ('ls, 'rs :: hasntJ) smerge, 'x, 'a, 'b2) schem_lift" where
 "schem_lift_merge_recR_J_left rec n s =
   (case s of
     SM ls rs =>
       (rec n ls))"
 
 definition schem_lift_merge_recR_J_right ::
-  "('n, 'rs, 'x, 'a, 'b2, 'f) schem_lift =>
-   ('n :: n_J, ('ls :: hasntJ, 'rs) smerge, 'x, 'a, 'b2, 'f) schem_lift" where
+  "('n, 'rs, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_J, ('ls :: hasntJ, 'rs) smerge, 'x, 'a, 'b2) schem_lift" where
 "schem_lift_merge_recR_J_right rec n s =
   (case s of
     SM ls rs =>
       (rec n rs))"
 
 definition schem_lift_merge_recR_K_left ::
-  "('n, 'ls, 'x, 'a, 'b2, 'f) schem_lift =>
-   ('n :: n_K, ('ls, 'rs :: hasntK) smerge, 'x, 'a, 'b2, 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_K, ('ls, 'rs :: hasntK) smerge, 'x, 'a, 'b2) schem_lift" where
 "schem_lift_merge_recR_K_left rec n s =
   (case s of
     SM ls rs =>
       (rec n ls))"
 
 definition schem_lift_merge_recR_K_right ::
-  "('n, 'rs, 'x, 'a, 'b2, 'f) schem_lift =>
-   ('n :: n_K, ('ls :: hasntK, 'rs) smerge, 'x, 'a, 'b2, 'f) schem_lift" where
+  "('n, 'rs, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_K, ('ls :: hasntK, 'rs) smerge, 'x, 'a, 'b2) schem_lift" where
 "schem_lift_merge_recR_K_right rec n s =
   (case s of
     SM ls rs =>
@@ -1322,8 +1322,8 @@ definition schem_lift_merge_recR_K_right ::
 (* currently not using fan liftings *)
 (*
 definition schem_lift_fan_recR ::
-  "('n, 'ls, 'x, 'a, 'b2 :: Pord, 'f) schem_lift \<Rightarrow>
-   ('n, ('x, 'a, 'c :: Pord, 'ls) sfan, 'x, 'a, ('c * 'b2), 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift \<Rightarrow>
+   ('n, ('x, 'a, 'c :: Pord, 'ls) sfan, 'x, 'a, ('c * 'b2)) schem_lift" where
 "schem_lift_fan_recR rec n s =
   (case s of
     SFAN f ls \<Rightarrow>
@@ -1331,7 +1331,7 @@ definition schem_lift_fan_recR ::
 *)
 
 definition schem_lift_inject ::
-  " ('n, ('x, 'a, 'b, 'f, 'n) sinject, 'x, 'a, 'b , 'f) schem_lift" where
+  " ('n, ('x, 'a, 'b, 'n) sinject, 'x, 'a, 'b) schem_lift" where
 "schem_lift_inject n s =
   (case s of
     SINJ l ls \<Rightarrow> l)"
@@ -1344,10 +1344,10 @@ definition schem_lift_inject ::
  *)
 (* left-side recursion (merge) *)
 definition schem_lift_recL ::
-  "('s1l, 's2, 'x, 'a1l, 'b2, 'f1) schem_lift \<Rightarrow>
-   ('s1r, 's2, 'x, 'a1r, 'b2, 'f2) schem_lift \<Rightarrow>
+  "('s1l, 's2, 'x, 'a1l, 'b2) schem_lift \<Rightarrow>
+   ('s1r, 's2, 'x, 'a1r, 'b2) schem_lift \<Rightarrow>
    (('s1l :: schem, 's1r :: schem) sprod, 's2 :: schem, 'x, 
-   (('a1l :: Bogus) * ('a1r :: Bogus)), 'b2 :: Mergeable, 'f1 * 'f2) schem_lift" where
+   (('a1l :: Bogus) * ('a1r :: Bogus)), 'b2 :: Mergeable) schem_lift" where
 "schem_lift_recL recl recr s1 s2 =
   (case s1 of
     SP s1l s1r \<Rightarrow>

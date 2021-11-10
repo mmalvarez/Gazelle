@@ -127,7 +127,7 @@ instantiation sfan :: (_, _, _, schem) schem begin
 instance proof qed
 end
 
-instantiation sinject :: (_ , _, _, _, schem) schem
+instantiation sinject :: (_ , _, _, schem) schem
 begin
 instance proof qed
 end
@@ -211,7 +211,7 @@ end
 #end
 
 #foreach ($n in $names)
-instantiation sinject :: (_, _, _, _, hasnt${n}) hasnt${n} begin
+instantiation sinject :: (_, _, _, hasnt${n}) hasnt${n} begin
 instance proof qed
 end
 #end
@@ -256,11 +256,11 @@ end
  * of the right-hand side (of type 's2) so that we can construct the appropriate
  * lifting.
  *)
-type_synonym ('s1, 's2, 'x, 'a, 'b, 'f) schem_lift =
-"('s1 \<Rightarrow> 's2 \<Rightarrow> ('x, 'a, 'b, 'f) lifting)"
+type_synonym ('s1, 's2, 'x, 'a, 'b) schem_lift =
+"('s1 \<Rightarrow> 's2 \<Rightarrow> ('x, 'a, 'b) lifting)"
 
 consts schem_lift ::
-  "('s1 :: schem, 's2 :: schem, 'x, 'a, 'b, 'f) schem_lift"
+  "('s1 :: schem, 's2 :: schem, 'x, 'a, 'b) schem_lift"
 
 
 (* TODO: we could probably reduce these by using the basename typeclass.
@@ -268,13 +268,13 @@ consts schem_lift ::
 
 
 #foreach ($n in $names)
-definition schem_lift_base_triv${n} ::  "('n :: n_${n}, 'n, 'x, 'a :: Bogus, 'a md_triv, 'x => 'a => 'a) schem_lift" where
+definition schem_lift_base_triv${n} ::  "('n :: n_${n}, 'n, 'x, 'a :: Bogus, 'a md_triv) schem_lift" where
 "schem_lift_base_triv${n} _ _ =
   triv_l"
 #end
 
 #foreach ($n in $names)
-definition schem_lift_base_id${n} ::  "('n :: n_${n}, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a, 'x => 'a => 'a) schem_lift" where
+definition schem_lift_base_id${n} ::  "('n :: n_${n}, 'n sid, 'x, 'a :: {Bogus, Pord}, 'a) schem_lift" where
 "schem_lift_base_id${n} _ _ =
   id_l"
 #end
@@ -289,8 +289,8 @@ definition schem_lift_base_id${n} ::  "('n :: n_${n}, 'n sid, 'x, 'a :: {Bogus, 
 
 (* right-side recursion (prio) *)
 definition schem_lift_prio_recR ::
-  "('n, 'ls, 'x, 'a, 'b2 :: Pord, 'f) schem_lift \<Rightarrow>
-   ('n, ('x, 'ls) sprio, 'x, 'a, 'b2 md_prio, 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift \<Rightarrow>
+   ('n, ('x, 'ls) sprio, 'x, 'a, 'b2 md_prio) schem_lift" where
 "schem_lift_prio_recR rec n s =
   (case s of
     SPR f1 f2 s' \<Rightarrow>
@@ -298,8 +298,8 @@ definition schem_lift_prio_recR ::
 
 (* right-side recursion (option) *)
 definition schem_lift_option_recR ::
-  "('n, 'ls, 'x, 'a, 'b2 :: Pord, 'f) schem_lift \<Rightarrow>
-   ('n, 'ls soption, 'x, 'a, 'b2 option, 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift \<Rightarrow>
+   ('n, 'ls soption, 'x, 'a, 'b2 option) schem_lift" where
 "schem_lift_option_recR rec n s =
   (case s of
     SO s' \<Rightarrow>
@@ -309,8 +309,8 @@ definition schem_lift_option_recR ::
 (*
 (* right-side recursion (oalist) *)
 definition schem_lift_oalist_recR ::
-  "('n, 'ls, 'x, 'a, 'b2 :: Pord, 'f) schem_lift \<Rightarrow>
-   ('n, ('x, 'k :: linorder, 'ls) soalist, 'x, 'a, ('k, 'b2) oalist, 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift \<Rightarrow>
+   ('n, ('x, 'k :: linorder, 'ls) soalist, 'x, 'a, ('k, 'b2) oalist) schem_lift" where
 "schem_lift_oalist_recR rec n s =
   (case s of
     SL f1 s' \<Rightarrow>
@@ -323,8 +323,8 @@ definition schem_lift_oalist_recR ::
 (* NB we don't allow lifting into the "inr" data of the roalist.
    a separate lifting could allow this. *)
 definition schem_lift_roalist_recR ::
-  "('n, 'ls, 'x, 'a, 'b2 :: Pord, 'f) schem_lift \<Rightarrow>
-   ('n, ('x, 'k :: linorder, 'ls) sroalist, 'x, 'a, ('k, 'b2, 'z :: Pord) roalist, 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift \<Rightarrow>
+   ('n, ('x, 'k :: linorder, 'ls) sroalist, 'x, 'a, ('k, 'b2, 'z :: Pord) roalist) schem_lift" where
 "schem_lift_roalist_recR rec n s =
   (case s of
     SRL f1 s' \<Rightarrow>
@@ -349,16 +349,16 @@ definition schem_lift_roalist_recR ::
 
 #foreach ($n in $names)
 definition schem_lift_prod_recR_${n}_left ::
-  "('n, 'ls, 'x, 'a, 'b2 :: Pord, 'f) schem_lift =>
-   ('n :: n_${n}, ('ls, 'rs :: hasnt${n}) sprod, 'x, 'a, 'b2 * ('rest :: Pordb), 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_${n}, ('ls, 'rs :: hasnt${n}) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
 "schem_lift_prod_recR_${n}_left rec n s =
   (case s of
     SP ls rs =>
       fst_l (rec n ls))"
 
 definition schem_lift_prod_recR_${n}_right ::
-  "('n, 'rs, 'x, 'a, 'b2 :: Pord, 'f) schem_lift =>
-   ('n :: n_${n}, ('ls :: hasnt${n}, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2), 'f) schem_lift" where
+  "('n, 'rs, 'x, 'a, 'b2 :: Pord) schem_lift =>
+   ('n :: n_${n}, ('ls :: hasnt${n}, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
 "schem_lift_prod_recR_${n}_right rec n s =
   (case s of
     SP ls rs =>
@@ -368,16 +368,16 @@ definition schem_lift_prod_recR_${n}_right ::
 
 #foreach ($n in $names)
 definition schem_lift_merge_recR_${n}_left ::
-  "('n, 'ls, 'x, 'a, 'b2, 'f) schem_lift =>
-   ('n :: n_${n}, ('ls, 'rs :: hasnt${n}) smerge, 'x, 'a, 'b2, 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_${n}, ('ls, 'rs :: hasnt${n}) smerge, 'x, 'a, 'b2) schem_lift" where
 "schem_lift_merge_recR_${n}_left rec n s =
   (case s of
     SM ls rs =>
       (rec n ls))"
 
 definition schem_lift_merge_recR_${n}_right ::
-  "('n, 'rs, 'x, 'a, 'b2, 'f) schem_lift =>
-   ('n :: n_${n}, ('ls :: hasnt${n}, 'rs) smerge, 'x, 'a, 'b2, 'f) schem_lift" where
+  "('n, 'rs, 'x, 'a, 'b2) schem_lift =>
+   ('n :: n_${n}, ('ls :: hasnt${n}, 'rs) smerge, 'x, 'a, 'b2) schem_lift" where
 "schem_lift_merge_recR_${n}_right rec n s =
   (case s of
     SM ls rs =>
@@ -388,8 +388,8 @@ definition schem_lift_merge_recR_${n}_right ::
 (* currently not using fan liftings *)
 (*
 definition schem_lift_fan_recR ::
-  "('n, 'ls, 'x, 'a, 'b2 :: Pord, 'f) schem_lift \<Rightarrow>
-   ('n, ('x, 'a, 'c :: Pord, 'ls) sfan, 'x, 'a, ('c * 'b2), 'f) schem_lift" where
+  "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift \<Rightarrow>
+   ('n, ('x, 'a, 'c :: Pord, 'ls) sfan, 'x, 'a, ('c * 'b2)) schem_lift" where
 "schem_lift_fan_recR rec n s =
   (case s of
     SFAN f ls \<Rightarrow>
@@ -397,7 +397,7 @@ definition schem_lift_fan_recR ::
 *)
 
 definition schem_lift_inject ::
-  " ('n, ('x, 'a, 'b, 'f, 'n) sinject, 'x, 'a, 'b , 'f) schem_lift" where
+  " ('n, ('x, 'a, 'b, 'n) sinject, 'x, 'a, 'b) schem_lift" where
 "schem_lift_inject n s =
   (case s of
     SINJ l ls \<Rightarrow> l)"
@@ -410,10 +410,10 @@ definition schem_lift_inject ::
  *)
 (* left-side recursion (merge) *)
 definition schem_lift_recL ::
-  "('s1l, 's2, 'x, 'a1l, 'b2, 'f1) schem_lift \<Rightarrow>
-   ('s1r, 's2, 'x, 'a1r, 'b2, 'f2) schem_lift \<Rightarrow>
+  "('s1l, 's2, 'x, 'a1l, 'b2) schem_lift \<Rightarrow>
+   ('s1r, 's2, 'x, 'a1r, 'b2) schem_lift \<Rightarrow>
    (('s1l :: schem, 's1r :: schem) sprod, 's2 :: schem, 'x, 
-   (('a1l :: Bogus) * ('a1r :: Bogus)), 'b2 :: Mergeable, 'f1 * 'f2) schem_lift" where
+   (('a1l :: Bogus) * ('a1r :: Bogus)), 'b2 :: Mergeable) schem_lift" where
 "schem_lift_recL recl recr s1 s2 =
   (case s1 of
     SP s1l s1r \<Rightarrow>
