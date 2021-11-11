@@ -68,6 +68,7 @@ locale lifting_putonly =
   fixes S :: "('syn, 'b) valid_set"
   assumes put_S : "\<And> s a b . LUpd l s a b \<in> S s"
 
+(* TODO: we are basically phasing this out. *)
 locale lifting_presonly =
   fixes l :: "('syn, 'a, 'b :: Pord_Weak) lifting"
   fixes S :: "('syn, 'b) valid_set"
@@ -77,20 +78,6 @@ locale lifting_presonly =
          V \<subseteq> S s \<Longrightarrow>
          is_sup V supr \<Longrightarrow> supr \<in> S s \<Longrightarrow> is_sup (LMap l f s ` V) (LMap l f s supr)"
 
-(*
-locale lifting_presonly2 =
-  fixes l :: "('syn, 'a, 'b :: Pord_Weak) lifting"
-  fixes S :: "('syn, 'b) valid_set"
-  assumes pres :
-    "\<And> v1 v2 V1 V2 supr1 supr2 f s . 
-         v1 \<in> V1 \<Longrightarrow>
-         V1 \<subseteq> S s \<Longrightarrow>
-         v2 \<in> V2 \<Longrightarrow>
-         V2 \<subseteq> S s \<Longrightarrow>
-         is_sup V1 supr1 \<Longrightarrow> supr1 \<in> S s \<Longrightarrow>
-         is_sup V2 supr2 \<Longrightarrow> supr2 \<in> S s \<Longrightarrow>
-        \<Longrightarrow> is_sup (LMap l f s ` V) (LMap l f s supr)"
-    *)
 
 (* reduced version of lifting-valid, for use with
  * improper merges (when using merge_l as a tool for combining
@@ -307,11 +294,6 @@ locale lifting_valid_base_ok_pres =
   lifting_valid_base_pres + lifting_valid_base_ok
 
 (* orthogonality, used to define merge correctness *)
-(*
-these were originally pord_weak, but this was
-(i think) insufficient to prove fst_l_ortho;
-the strengthening to pord shouldn't be an issue though.
-*)
 locale l_ortho' =
   fixes l1 :: "('a, 'b1, 'c :: Pord) lifting"
   fixes S1 :: "'a \<Rightarrow> 'c set"
@@ -333,40 +315,13 @@ locale l_ortho_base' =
   fixes l2 :: "('a, 'b2, 'c) lifting"
 
 
-(* TODO: l_ortho_pres - but we may not need it. *)
-locale l_ortho_pres = l_ortho +
-  (* TODO: no longer need compat_pres1, compat_pres2 *)
-(*
-  assumes compat_pres1 : "\<And> s f1 f2 s1 s2 v V . 
-    v \<in> V \<Longrightarrow>
-         V \<subseteq> S1 s \<Longrightarrow>
-         V \<subseteq> S2 s \<Longrightarrow>
-    is_sup (LMap l1 f1 s ` V) s1 \<Longrightarrow>
-    s1 \<in> S1 s \<inter> S2 s \<Longrightarrow>
-    is_sup (LMap l2 f2 s ` V) s2 \<Longrightarrow>
-    s2 \<in> S1 s \<inter> S2 s \<Longrightarrow>
-    is_sup (LMap l1 f1 s ` (LMap l2 f2 s ` V)) (LMap l1 f1 s s2)"
-  assumes compat_pres2 : "\<And> s f1 f2 s1 s2 v V . 
-    v \<in> V \<Longrightarrow>
-         V \<subseteq> S1 s \<Longrightarrow>
-         V \<subseteq> S2 s \<Longrightarrow>
-    is_sup (LMap l1 f1 s ` V) s1 \<Longrightarrow>
-    s1 \<in> S1 s \<inter> S2 s \<Longrightarrow>
-    is_sup (LMap l2 f2 s ` V) s2 \<Longrightarrow>
-    s2 \<in> S1 s \<inter> S2 s \<Longrightarrow>
-    is_sup (LMap l2 f2 s ` (LMap l1 f1 s ` V)) (LMap l2 f2 s s1)"
-  (* TODO: this third one may be all that's needed. *)
-*)
-  assumes compat_pres_sup :
-  "\<And> a1 a2 s x . is_sup {LUpd l1 s a1 x, LUpd l2 s a2 x} (LUpd l1 s a1 (LUpd l2 s a2 x))"
-
 (* do we need both components of V to be subset of both sets? *)
-locale l_ortho_pres2' = 
+locale l_ortho_pres' = 
   fixes l1 :: "('a, 'b1, 'c :: Pordb) lifting"
   fixes S1 :: "'a \<Rightarrow> 'c set"
   fixes l2 :: "('a, 'b2, 'c :: Pordb) lifting"
   fixes S2 :: "'a \<Rightarrow> 'c set"
-
+(*
   assumes compat_pres_pair :
     "\<And> supr s v (V :: 'c set). 
      \<And> f :: ('a \<Rightarrow> 'b1 * 'b2 \<Rightarrow> 'b1 * 'b2) .
@@ -378,25 +333,11 @@ locale l_ortho_pres2' =
       is_sup ((\<lambda> x . case (f s (LOut l1 s x, LOut l2 s x)) of
                      (r1, r2) \<Rightarrow> LUpd l1 s r1 (LUpd l2 s r2 x)) ` V) 
               (case (f s (LOut l1 s supr, LOut l2 s supr)) of (r1, r2) \<Rightarrow> LUpd l1 s r1 (LUpd l2 s r2 supr))"
+*)
+
+locale l_ortho_pres = l_ortho_pres' + l_ortho +
   assumes compat_pres_sup :
   "\<And> a1 a2 s x . is_sup {LUpd l1 s a1 x, LUpd l2 s a2 x} (LUpd l1 s a1 (LUpd l2 s a2 x))"
-
-locale l_ortho_pres2 = l_ortho + l_ortho_pres2'
-   
-
-(* can we specify this without using LMap?
-*)
-
-
-(*
-  assumes compat_pres2 : 
-    "    v \<in> V \<Longrightarrow>
-         V \<subseteq> S1 s \<Longrightarrow>
-         V \<subseteq> S2 s \<Longrightarrow>
-    is_sup (LMap l1 f1 s ` V) s1 \<Longrightarrow>
-    is_sup (LMap l2 f2 s ` V) s2 \<Longrightarrow>
-    is_sup (LMap l2 f2 s ` (LMap l1 f1 s ` V)) (LMap l2 f2 s s1)"
-*)
 
 locale l_ortho_base = l_ortho + l_ortho_base' +
   assumes compat_base1 : "\<And> s . LBase l1 s = \<bottom>"
@@ -473,50 +414,6 @@ proof qed
 sublocale l_ortho_pres \<subseteq> comm :
   l_ortho_pres l2 S2 l1 S1
 proof
-  fix s f1 f2 
-  fix s1 s2 v :: 'c
-  fix V :: "'c set"
-
-  assume Vin : "v \<in> V"
-  assume Vsub2 : "V \<subseteq> S2 s"
-  assume Vsub1 : "V \<subseteq> S1 s"
-  assume Sup1 : "is_sup (LMap l2 f1 s ` V) s1"
-  assume Sup1_in : "s1 \<in> S2 s \<inter> S1 s"
-  assume Sup2 : "is_sup (LMap l1 f2 s ` V) s2"
-  assume Sup2_in : "s2 \<in> S2 s \<inter> S1 s"
-
-  have Sup1_in' : "s1 \<in> S1 s \<inter> S2 s"
-    using Sup1_in by auto
-
-  have Sup2_in' : "s2 \<in> S1 s \<inter> S2 s"
-    using Sup2_in by auto
-
-  show "is_sup (LMap l2 f1 s ` LMap l1 f2 s ` V) (LMap l2 f1 s s2)"
-    using compat_pres2[OF Vin Vsub1 Vsub2 Sup2 Sup2_in' Sup1 Sup1_in']
-    by auto
-next
-  fix s f1 f2 
-  fix s1 s2 v :: 'c
-  fix V :: "'c set"
-
-  assume Vin : "v \<in> V"
-  assume Vsub2 : "V \<subseteq> S2 s"
-  assume Vsub1 : "V \<subseteq> S1 s"
-  assume Sup1 : "is_sup (LMap l2 f1 s ` V) s1"
-  assume Sup1_in : "s1 \<in> S2 s \<inter> S1 s"
-  assume Sup2 : "is_sup (LMap l1 f2 s ` V) s2"
-  assume Sup2_in : "s2 \<in> S2 s \<inter> S1 s"
-
-  have Sup1_in' : "s1 \<in> S1 s \<inter> S2 s"
-    using Sup1_in by auto
-
-  have Sup2_in' : "s2 \<in> S1 s \<inter> S2 s"
-    using Sup2_in by auto
-
-  show "is_sup (LMap l1 f2 s ` LMap l2 f1 s ` V) (LMap l1 f2 s s1)"
-    using compat_pres1[OF Vin Vsub1 Vsub2 Sup2 Sup2_in' Sup1 Sup1_in']
-    by auto
-next
   fix a1 a2 s x
 
   have Comm1 : "{LUpd l2 s a1 x, LUpd l1 s a2 x} = {LUpd l1 s a2 x, LUpd l2 s a1 x}"
@@ -529,6 +426,30 @@ next
   then show "is_sup {LUpd l2 s a1 x, LUpd l1 s a2 x} (LUpd l2 s a1 (LUpd l1 s a2 x))"
     unfolding Comm1
     using compat
-    by auto
+    by fastforce
 qed
+
+locale vsg' =
+  fixes S' :: "'a \<Rightarrow> ('b :: Pord_Weak) set"
+  fixes l :: "('a, 'b, 'c) lifting"
+  fixes lift_S :: "('a \<Rightarrow> 'b set) \<Rightarrow> ('a \<Rightarrow> 'c set)"
+
+locale lifting_valid_weak_vsg =
+  lifting_valid_weak +
+  vsg' +
+  assumes S'_S : "S' = lift_S S"
+
+(*
+  option_l_valid_weak + vsg' +
+  assumes S'_S : "S' = option_l_S S"
+*)
+
+(* Some helpful lemmas for automation. *)
+(* TODO: can we use lemma (in) instead?
+ * or, can we create some kind of locale extending lifting_valid? *)
+(*
+lemma option_l_valid_weak_vsg :
+  assumes H: "lifting_valid_weak"
+*)
+
 end

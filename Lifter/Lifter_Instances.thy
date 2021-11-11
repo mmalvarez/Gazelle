@@ -2578,10 +2578,11 @@ qed
 *)
 
 locale merge_l_valid_weak_pres = merge_l_valid_weak +
-  l_ortho_pres2 +
+  l_ortho_pres +
   in1 : lifting_valid_weak_pres l1 S1 +
   in2 : lifting_valid_weak_pres l2 S2
 
+(*
 sublocale merge_l_valid_weak_pres \<subseteq> out: lifting_valid_weak_pres "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x"
 proof
   fix v supr :: "'c"
@@ -2615,10 +2616,27 @@ proof
     using compat_pres_sup
     by auto
 
+
   show "is_sup (LMap (merge_l l1 l2) f s ` V) (LMap (merge_l l1 l2) f s supr)"
+(*
     using compat_pres_pair[OF Vin Vsub1 Vsub2 Supr Supr_in, of f]
     by(auto simp add: merge_l_def)
+*)
+  proof(rule is_supI)
+    fix x
+
+    assume X: "x \<in> LMap (merge_l l1 l2) f s ` V"
+
+    then obtain xo where Xo : "xo \<in> V" "LMap (merge_l l1 l2) f s xo = x"
+      by auto
+
+    show "x <[ LMap (merge_l l1 l2) f s supr"
+      using Xo
+      apply(auto simp add: merge_l_def split: prod.splits)
+
+
 qed
+*)
 
 locale option_l_ortho =
   l_ortho (*+
@@ -3192,6 +3210,10 @@ proof
         (LUpd (fst_l l1) s a1 (LUpd (fst_l l2) s a2 x))"
     using X
     by(auto simp add: fst_l_def)
+
+(* YOU ARE HERE
+we need to figure out whether we really fixed this problem.
+*)
 qed
 
 (* snd (copy-paste-change from fst) *)
