@@ -1,4 +1,4 @@
-theory Dominant imports Composition
+theory Dominant imports Composition_Weak
 begin
 
 (*
@@ -56,8 +56,12 @@ proof-
   have B : "is_sup {b} b"
     using sup_singleton by auto
 
-  have Sup1 : "is_sup (scross ((\<lambda>f. f x) ` set l) {b}) (pcomps l x b)"
-    using sups_pres_pcomps_gen'[OF Hpres Hne, of "{b}" b x b] Bin B
+  have Hne' : "l \<noteq> []"
+    using Hne by auto
+
+
+  have Sup1 : "is_sup (((\<lambda>f. f x b) ` set l)) (pcomps l x b)"
+    using sups_pres_pcomps_sup'[OF Hpres Hne'] Bin B
     by auto
 
   have Rewrite1 : "(\<lambda>f. f b) ` (\<lambda>f. f x) ` set l = (\<lambda> f . f x b) ` set l"
