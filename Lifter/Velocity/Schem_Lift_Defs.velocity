@@ -1,0 +1,21 @@
+theory Schem_Lift_Defs
+  imports Auto_Lifter Auto_Lifter_Sets
+begin
+
+#set( $names =
+  [ "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"])
+
+lemmas schem_lift_defs =
+#foreach ($n in $names)
+  schem_lift_base_triv${n}_def
+#end
+#foreach ($n in $names)
+  schem_lift_prod_recR_${n}_left_def
+  schem_lift_prod_recR_${n}_right_def
+#end
+#foreach ($n in $names)
+  schem_lift_merge_recR_${n}_left_def
+  schem_lift_merge_recR_${n}_right_def
+#end
+
+end

@@ -1,0 +1,63 @@
+theory Schem_Lift_Defs
+  imports Auto_Lifter Auto_Lifter_Sets
+begin
+
+
+lemmas schem_lift_defs =
+  schem_lift_base_trivA_def
+  schem_lift_base_trivB_def
+  schem_lift_base_trivC_def
+  schem_lift_base_trivD_def
+  schem_lift_base_trivE_def
+  schem_lift_base_trivF_def
+  schem_lift_base_trivG_def
+  schem_lift_base_trivH_def
+  schem_lift_base_trivI_def
+  schem_lift_base_trivJ_def
+  schem_lift_base_trivK_def
+  schem_lift_prod_recR_A_left_def
+  schem_lift_prod_recR_A_right_def
+  schem_lift_prod_recR_B_left_def
+  schem_lift_prod_recR_B_right_def
+  schem_lift_prod_recR_C_left_def
+  schem_lift_prod_recR_C_right_def
+  schem_lift_prod_recR_D_left_def
+  schem_lift_prod_recR_D_right_def
+  schem_lift_prod_recR_E_left_def
+  schem_lift_prod_recR_E_right_def
+  schem_lift_prod_recR_F_left_def
+  schem_lift_prod_recR_F_right_def
+  schem_lift_prod_recR_G_left_def
+  schem_lift_prod_recR_G_right_def
+  schem_lift_prod_recR_H_left_def
+  schem_lift_prod_recR_H_right_def
+  schem_lift_prod_recR_I_left_def
+  schem_lift_prod_recR_I_right_def
+  schem_lift_prod_recR_J_left_def
+  schem_lift_prod_recR_J_right_def
+  schem_lift_prod_recR_K_left_def
+  schem_lift_prod_recR_K_right_def
+  schem_lift_merge_recR_A_left_def
+  schem_lift_merge_recR_A_right_def
+  schem_lift_merge_recR_B_left_def
+  schem_lift_merge_recR_B_right_def
+  schem_lift_merge_recR_C_left_def
+  schem_lift_merge_recR_C_right_def
+  schem_lift_merge_recR_D_left_def
+  schem_lift_merge_recR_D_right_def
+  schem_lift_merge_recR_E_left_def
+  schem_lift_merge_recR_E_right_def
+  schem_lift_merge_recR_F_left_def
+  schem_lift_merge_recR_F_right_def
+  schem_lift_merge_recR_G_left_def
+  schem_lift_merge_recR_G_right_def
+  schem_lift_merge_recR_H_left_def
+  schem_lift_merge_recR_H_right_def
+  schem_lift_merge_recR_I_left_def
+  schem_lift_merge_recR_I_right_def
+  schem_lift_merge_recR_J_left_def
+  schem_lift_merge_recR_J_right_def
+  schem_lift_merge_recR_K_left_def
+  schem_lift_merge_recR_K_right_def
+
+end

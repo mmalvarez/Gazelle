@@ -13,9 +13,9 @@ begin
 (* looks like we can eliminate a lot of pres.
 we just need put/get facts, and ability to commute (in ortho) *)
 
-
+(* TODO: need Mergeableb here? Or does Mergeable suffice? *)
 lemma l_ortho_sups_pres :
-  fixes l1 :: "('x, 'a, 'b :: {Mergeable, Okay}) lifting"
+  fixes l1 :: "('x, 'a, 'b :: {Mergeableb, Okay}) lifting"
   fixes l2 :: "('x, 'a2, 'b) lifting"
   assumes H : "l_ortho_pres l1 S1 l2 S2"
   assumes H1 : "lifting_valid_weak l1 S1"

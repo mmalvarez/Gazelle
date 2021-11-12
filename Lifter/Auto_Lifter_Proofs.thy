@@ -1,5 +1,5 @@
 theory Auto_Lifter_Proofs
-imports Lifter Lifter_Instances Auto_Lifter
+imports Lifter Lifter_Instances Auto_Lifter Schem_Lift_Defs
 begin
 
 (* 
@@ -208,8 +208,7 @@ merge_l_valid_gen_vsg'
 lemmas lifting_valid_set_defs =
   option_l_S_def
   prio_l_S_def
-  inl_l_S_def
-  inr_l_S_def
+
   fst_l_S_def
   snd_l_S_def
 

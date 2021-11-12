@@ -1,7 +1,7 @@
 theory Composition
 imports Composition_Core "../Mergeable/Mergeable"
 begin
-
+(*
 (* This file extends the definitions in Composition_Core.thy to a fully general implementation
  * of composition of language semantics. In particular, it does so while requiring
  * a weaker condition than Composition_Simple.thy does on the semantics being composed.
@@ -1710,4 +1710,5 @@ next
     qed
   qed
 qed
+*)
 end

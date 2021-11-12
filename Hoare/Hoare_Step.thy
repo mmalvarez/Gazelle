@@ -33,7 +33,6 @@ lemma zztest :
   obtains ntest :: nat where True
   by auto
 
-term "ntest"
 
 (* something is weird with the pord constraint here. *)
 definition no_control_l :: "
