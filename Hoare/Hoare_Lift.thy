@@ -1,6 +1,5 @@
 theory Hoare_Lift imports Hoare_Indexed Hoare_Indexed_Sound Hoare_Direct
   "../Lifter/Lifter" "../Composition/Composition" "../Composition/Dominant"
-"../Lifter/LifterX"
 begin
 
 (* TODO rename this file to Hoare_Direct_Lift (or Hoare_Step_Lift...) *)
@@ -17,91 +16,98 @@ begin
  * the "dominant" style of reasoning used in Imp_Ctl and Seq is a special case of this.)
  *)
 
-definition lift_pred_s ::
+(* This version does not take a valid set. It is usually not what we want. *)
+definition lift_pred_noS_s ::
   "('a1, 'b1) syn_lifting \<Rightarrow>
-   ('a1, 'a2, 'b2 :: Pord, 'z) lifting_scheme \<Rightarrow>
+   ('a1, 'a2, 'b2 :: Pord) lifting \<Rightarrow>
    'b1 \<Rightarrow>
    ('a2 \<Rightarrow> bool) \<Rightarrow>
    ('b2 \<Rightarrow> bool)"
   where
-"lift_pred_s l' l syn P st =
+"lift_pred_noS_s l' l syn P st =
  P (LOut l (l' syn) st)"
 
-definition lift_pred_validv_s ::
+definition lift_pred_s ::
   "('a1, 'b1) syn_lifting \<Rightarrow>
-   ('a1, 'a2, 'b2 :: Pord, 'z) liftingv_scheme \<Rightarrow>
+   ('a1, 'a2, 'b2 :: Pord) lifting \<Rightarrow>
+   ('a1 \<Rightarrow> 'b2 set) \<Rightarrow>
    'b1 \<Rightarrow>
    ('a2 \<Rightarrow> bool) \<Rightarrow>
    ('b2 \<Rightarrow> bool)"
   where
-"lift_pred_validv_s l' l syn P st =
-  (lift_pred_s l' l syn P st \<and> st \<in> LOutS l (l' syn))"
+"lift_pred_s l' l S syn P st =
+  (lift_pred_noS_s l' l syn P st \<and> st \<in> S (l' syn))"
 
 (* When we lift a function on which a certain Hoare triple holds,
  * we know that an analogous Hoare triple holds on the lifted function and
  * lifted predicates.
  *)
 lemma Vlift :
-  assumes Valid : "lifting_valid l v" 
+  assumes Valid : "lifting_valid_weak l S" 
   assumes V: "(sem) % {{P}} x {{Q}}"
   assumes Syn : "l' x' = x"
-  shows "(lift_map_s l' l sem) % {{lift_pred_s l' l x' P}} x' {{lift_pred_s l' l x' Q}}"
+  shows "(lift_map_s l' l sem) % {{lift_pred_noS_s l' l x' P}} x' {{lift_pred_noS_s l' l x' Q}}"
+proof-
+
+  interpret Valid : lifting_valid_weak l S
+    using Valid.
+
+  show " lift_map_s l' l
+     sem % {{lift_pred_noS_s l' l x'
+              P}} x' {{lift_pred_noS_s l' l x' Q}}"
  using V Syn
-  unfolding HTS_def HT_def lift_pred_s_def lift_map_s_def 
-  by(auto simp add: lifting_validDO[OF Valid])
+  unfolding HTS_def HT_def lift_pred_noS_s_def lift_map_s_def 
+  by(auto simp add: Valid.put_get)
+qed
 
 (* not especially useful - better to separate out the valid-set *)
 lemma Vlift_valid :
-  assumes Valid : "lifting_valid l (LOutS l)" 
+  assumes Valid : "lifting_valid_weak l S" 
   assumes V: "(sem) % {{P}} x {{Q}}"
   assumes Syn : "l' x' = x"
-  shows "(lift_map_s l' l sem) % {{lift_pred_validv_s l' l x' P}} x' {{lift_pred_validv_s l' l x' Q}}"
- using V Syn
-  unfolding HTS_def HT_def lift_pred_s_def lift_map_s_def lift_pred_validv_s_def
-  using lifting_validDP[OF Valid]
-  by(auto simp add: lifting_validDO[OF Valid])
+  shows "(lift_map_s l' l sem) % {{lift_pred_s l' l S x' P}} x' {{lift_pred_s l' l S x' Q}}"
+proof-
+  interpret Valid : lifting_valid_weak l S
+    using Valid.
 
-definition lift_pred_valid_s ::
-  "('a1, 'b1) syn_lifting \<Rightarrow>
-   ('a1, 'a2, 'b2 :: Pord, 'z) lifting_scheme \<Rightarrow>
-   ('a1 \<Rightarrow> 'b2 set) \<Rightarrow>
-   'b1 \<Rightarrow>
-   ('a2 \<Rightarrow> bool) \<Rightarrow>
-   ('b2 \<Rightarrow> bool)"
-  where
-"lift_pred_valid_s l' l S syn P st =
-  (lift_pred_s l' l syn P st \<and> st \<in> S (l' syn))"
+  show " lift_map_s l' l
+     sem % {{lift_pred_s l' l S x'
+              P}} x' {{lift_pred_s l' l S x' Q}}"
+ using V Syn
+  unfolding HTS_def HT_def lift_pred_s_def lift_map_s_def lift_pred_noS_s_def
+  using Valid.put_S
+  by(auto simp add: Valid.put_get)
+qed
 
 (* Now, some stuff from Hoare_Lift. *)
-definition lift_pred_validx_s ::
+definition lift_pred_valid_ok_s ::
   "('a1, 'b1) syn_lifting \<Rightarrow>
-   ('a1, 'a2, 'b2 :: {Pord, Okay}, 'z) lifting_scheme \<Rightarrow>
+   ('a1, 'a2, 'b2 :: {Pord, Okay}) lifting \<Rightarrow>
    'b1 \<Rightarrow>
    ('a2 \<Rightarrow> bool) \<Rightarrow>
    ('b2 \<Rightarrow> bool)"
   where
-"lift_pred_validx_s l' l syn P st =
-  (lift_pred_s l' l syn P st \<and> st \<in> ok_S)" 
+"lift_pred_valid_ok_s l' l syn P st =
+  (lift_pred_noS_s l' l syn P st \<and> st \<in> ok_S)" 
 
-lemma Vlift_valid' :
-  assumes Valid : "lifting_valid l S" 
+lemma Vlift_valid_ok :
+  assumes Valid : "lifting_valid_weak_ok l S" 
   assumes V: "(sem) % {{P}} x {{Q}}"
   assumes Syn : "l' x' = x"
-  shows "(lift_map_s l' l sem) % {{lift_pred_valid_s l' l S x' P}} x' {{lift_pred_valid_s l' l S x' Q}}"
- using V Syn
-  unfolding HTS_def HT_def lift_pred_s_def lift_map_s_def lift_pred_valid_s_def
-  using lifting_validDP[OF Valid]
-  by(auto simp add: lifting_validDO[OF Valid])
+  shows "(lift_map_s l' l sem) % {{lift_pred_valid_ok_s l' l x' P}} x' {{lift_pred_valid_ok_s l' l  x' Q}}"
+proof-
 
-lemma Vlift_validx' :
-  assumes Validx : "lifting_validx l S" 
-  assumes V: "(sem) % {{P}} x {{Q}}"
-  assumes Syn : "l' x' = x"
-  shows "(lift_map_s l' l sem) % {{lift_pred_validx_s l' l x' P}} x' {{lift_pred_validx_s l' l  x' Q}}"
+  interpret Valid : lifting_valid_weak_ok l S
+    using Valid.
+
+  show ?thesis
+
  using V Syn
-  unfolding HTS_def HT_def lift_pred_s_def lift_map_s_def lift_pred_valid_s_def lift_pred_validx_s_def
-  using lifting_validDP[OF lifting_validxDV[OF Validx]] lifting_validxDP'[OF Validx]
-  by(auto simp add: lifting_validDO[OF lifting_validxDV[OF Validx]])
+  unfolding HTS_def HT_def lift_pred_s_def lift_map_s_def lift_pred_s_def lift_pred_valid_ok_s_def
+    lift_pred_noS_s_def
+  using Valid.put_S Valid.ok_S_put
+  by(auto simp add: Valid.put_get)
+qed
 
 
 (*
@@ -112,8 +118,9 @@ lemma Vlift_validx' :
  * a lesser (in the information-ordering sense) state on which the triple does hold.
  *)
 lemma Vmerge :
-  assumes Pres : "sups_pres (set l)"
+  assumes Pres : "sups_pres (set l) S"
   assumes Sem : "f \<in> set l"
+  assumes P_S : "\<And> st . P st \<Longrightarrow> st \<in> S x"
   assumes V : "(f) % {{P}} x {{Q}}"
   shows "(pcomps l) % 
          {{P}}
@@ -133,7 +140,7 @@ proof(rule HTSI)
   have Nemp : "l \<noteq> []" using Sem by (cases l; auto)
 
   have Conc' : "f x a <[ pcomps l x a"
-    using is_supD1[OF sups_pres_pcomps_sup[OF Pres Nemp] Elem]
+    using is_supD1[OF sups_pres_pcomps_sup'[OF Pres Nemp] Elem] P_S[OF HP]
     by auto
 
   show "\<exists>st_sub. Q st_sub \<and> st_sub <[ pcomps l x a"
@@ -144,9 +151,10 @@ qed
 (* Another way of looking a vmerge: if we know the conclusion is monotonic,
  * then we know that a triple with that conclusion still holds after a merge *)
 lemma Vmerge_mono :
-  assumes Pres : "sups_pres (set l)"
+  assumes Pres : "sups_pres (set l) S"
   assumes Sem : "f \<in> set l"
   assumes Mono : "Pord.is_monop1 Q"
+  assumes P_S : "\<And> st . P st \<Longrightarrow> st \<in> S x"
   assumes V : "(f) % {{P}} x {{Q}}"
   shows "(pcomps l) % 
          {{P}}
@@ -154,7 +162,7 @@ lemma Vmerge_mono :
          {{Q}}"
 proof(-)
   have PC : "(pcomps l) % {{P}} x {{(\<lambda>st. \<exists>st_sub. Q st_sub \<and> st_sub <[ st)}}"
-    using Vmerge[OF Pres Sem V]
+    using Vmerge[OF Pres Sem P_S V]
     by auto
 
   show "(pcomps l) % {{P}} x {{Q}}"
@@ -179,6 +187,7 @@ qed
    that arbitrary lifted functions preserve sups at runtime *)
 (* this and the following definitions may not be particularly useful anymore
  * (TODO - decide if they are worth keeping *)
+(*
 definition l_ortho_run ::
   "('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme \<Rightarrow>
    ('x, 'a2, 'b, 'z2) lifting_scheme \<Rightarrow>
@@ -199,6 +208,7 @@ next
   then show "x2 <[ x'"
     by(auto simp add: is_ub_def)
 qed
+*)
 
 (* 
  * When dealing with single-step languages, we have an important special case - that is,

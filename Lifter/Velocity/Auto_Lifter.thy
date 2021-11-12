@@ -1,5 +1,5 @@
 theory Auto_Lifter
-    imports Main Auto_Lifter_Datatypes "../Mergeable/Mergeable" Lifter_Instances Auto_Lifter_Datatypes
+    imports Main "../Auto_Lifter_Datatypes" "../../Mergeable/Mergeable" "../Lifter_Instances" 
       "HOL-Library.Adhoc_Overloading"
 begin
 

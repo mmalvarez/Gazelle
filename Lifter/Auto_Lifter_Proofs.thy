@@ -1,5 +1,5 @@
 theory Auto_Lifter_Proofs
-imports Lifter Lifter_Instances Auto_Lifter Schem_Lift_Defs
+imports Lifter Lifter_Instances Auto_Lifter
 begin
 
 (* 
