@@ -29,13 +29,6 @@ datatype ('syn, 'a, 'b) lifting =
 type_synonym ('syn, 'a, 'b) lifting' =
   "('syn, 'a, 'b) lifting"
 
-(*
-definition LUpd ::
-  "('syn, 'a, 'b) lifting \<Rightarrow> 'syn \<Rightarrow> 'a \<Rightarrow> 'b \<Rightarrow> 'b" where
-"LUpd l s a b =
-  LMap l (\<lambda> _ _ . a ) s b"
-*)
-
 definition LMap :: "('syn, 'a, 'b) lifting \<Rightarrow> ('syn \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow> ('syn \<Rightarrow> 'b \<Rightarrow> 'b)"
   where
 "LMap l f s b =
@@ -54,7 +47,6 @@ type_synonym ('syn, 'b) valid_set =
 (* liftings can have several kinds of validity properties, only some of
    which depend on others.
 *)
-
 instantiation oalist :: (linorder, Okay) Okay
 begin
 
@@ -63,72 +55,63 @@ definition oalist_ok_S :
 instance proof qed
 end
 
-locale lifting_putonly =
+locale lifting_sig =
   fixes l :: "('syn, 'a, 'b :: Pord_Weak) lifting"
   fixes S :: "('syn, 'b) valid_set"
+
+locale lifting_putonly = lifting_sig +
   assumes put_S : "\<And> s a b . LUpd l s a b \<in> S s"
 
 (* TODO: we are basically phasing this out. *)
-locale lifting_presonly =
-  fixes l :: "('syn, 'a, 'b :: Pord_Weak) lifting"
-  fixes S :: "('syn, 'b) valid_set"
+locale lifting_presonly = lifting_sig +
   assumes pres :
     "\<And> v V supr f s . 
          v \<in> V \<Longrightarrow>
          V \<subseteq> S s \<Longrightarrow>
          is_sup V supr \<Longrightarrow> supr \<in> S s \<Longrightarrow> is_sup (LMap l f s ` V) (LMap l f s supr)"
 
-
-(* reduced version of lifting-valid, for use with
- * improper merges (when using merge_l as a tool for combining
- * semantics) *)
 locale lifting_valid_presonly =
   lifting_putonly + lifting_presonly
 
-(* weak + (strong?) + (base?) + (ok?) + (pres?) *)
+(* weak + (strong?) + (base?) + (ok?) + (pres?) + (pairwise?) *)
 (* TODO: support for vsg style reasoning *)
 locale lifting_valid_weak =
   lifting_putonly +
   assumes put_get : "\<And> a . LOut l s (LUpd l s a b) = a"
   assumes get_put_weak : "\<And> s b . b \<in> S s \<Longrightarrow> b <[ LUpd l s (LOut l s b) b"
 
-(* NB: making a huge change w/r/t lifting strength def here (getting rid of \<in> S s assumption) *)
-locale lifting_valid = lifting_valid_weak +
+locale lifting_valid_ext = lifting_sig +
   assumes get_put : "\<And> s a b . b <[ LUpd l s a b"
 
-locale lifting_valid_weak_base = lifting_valid_weak +
+locale lifting_valid = lifting_valid_weak + lifting_valid_ext
+
+locale lifting_valid_base_ext = lifting_sig +
   assumes base : "\<And> s . LBase l s = \<bottom>"
 
-locale lifting_valid_base = lifting_valid + lifting_valid_weak_base
+locale lifting_valid_weak_base = lifting_valid_weak + lifting_valid_base_ext
 
-locale lifting_valid_weak_ok = lifting_valid_weak +
+locale lifting_valid_base = lifting_valid + lifting_valid_base_ext
+
+locale lifting_valid_ok_ext = 
+  lifting_sig +
   assumes ok_S_valid : "\<And> s . ok_S \<subseteq> S s"
   assumes ok_S_put : "\<And> s a b . b \<in> ok_S \<Longrightarrow> LUpd l s a b \<in> ok_S"
 
-locale lifting_valid_ok = lifting_valid + lifting_valid_weak_ok
+locale lifting_valid_weak_ok = lifting_valid_weak + lifting_valid_ok_ext
 
-locale lifting_valid_weak_base_ok = lifting_valid_weak_ok + lifting_valid_weak_base
+locale lifting_valid_ok = lifting_valid + lifting_valid_ok_ext
 
-locale lifting_valid_base_ok = lifting_valid_ok + lifting_valid_base
+locale lifting_valid_weak_base_ok = 
+  lifting_valid_weak + lifting_valid_base_ext + lifting_valid_ok_ext
+
+locale lifting_valid_base_ok = 
+  lifting_valid + lifting_valid_base_ext + lifting_valid_ok_ext 
+
+locale lifting_valid_pres_ext = lifting_presonly
 
 locale lifting_valid_weak_pres = lifting_valid_weak +
-  lifting_presonly
+  lifting_valid_pres_ext
 
-locale lifting_pairwise = 
-  fixes S :: "('syn, 'b :: {Pordc, Pordps}) valid_set"
-  assumes pairwise_S :
-    "\<And> x1 x2 x3 s s12 s23 s13 s123 .
-      x1 \<in> S s \<Longrightarrow>
-      x2 \<in> S s \<Longrightarrow>
-      x3 \<in> S s \<Longrightarrow>
-      is_sup {x1, x2} s12 \<Longrightarrow>
-      s12 \<in> S s \<Longrightarrow>
-      is_sup {x2, x3} s23 \<Longrightarrow>
-      s23 \<in> S s \<Longrightarrow>
-      is_sup {x1, x3} s13 \<Longrightarrow>
-      s13 \<in> S s \<Longrightarrow>
-      is_sup {x1, x2, x3} s123 \<Longrightarrow>
-      s123 \<in> S s"
 
 (*
 lemma (in lifting_pairwise) pairwise_finite_S :
@@ -225,24 +208,47 @@ locale lifting_valid_weak_clos = lifting_valid_weak +
   assumes clos_S : "\<And> a b s . a <[ b \<Longrightarrow> a \<in> S s \<Longrightarrow> b \<in> S s"
 *)
 
-locale lifting_valid_pres = lifting_valid + lifting_valid_weak_pres
+locale lifting_valid_pres = lifting_valid + lifting_valid_pres_ext
 
-locale lifting_valid_weak_base_pres = lifting_valid_weak_pres + lifting_valid_weak_base +
+locale lifting_valid_base_pres_ext = lifting_valid_pres_ext +
   assumes bot_bad : "\<And> s . \<bottom> \<notin> S s"
 
-locale lifting_valid_base_pres = lifting_valid_pres + lifting_valid_weak_base_pres
+locale lifting_valid_weak_base_pres = 
+  lifting_valid_weak + lifting_valid_base_ext + lifting_valid_base_pres_ext 
 
-locale lifting_valid_weak_ok_pres = lifting_valid_weak_pres + lifting_valid_weak_ok
+locale lifting_valid_base_pres = 
+  lifting_valid + lifting_valid_base_ext + lifting_valid_base_pres_ext
 
-locale lifting_valid_ok_pres = lifting_valid_pres + lifting_valid_ok
+locale lifting_valid_weak_ok_pres = 
+  lifting_valid_weak + lifting_valid_ok_ext + lifting_valid_pres_ext
+
+locale lifting_valid_ok_pres = 
+  lifting_valid + lifting_valid_ok_ext + lifting_valid_pres_ext
 
 locale lifting_valid_weak_base_ok_pres =
-  lifting_valid_weak_base_pres + lifting_valid_weak_base_ok
+  lifting_valid_weak + lifting_valid_base_ext + lifting_valid_ok_ext + lifting_valid_base_pres_ext
 
 (* generally we are assuming we won't be using ok and pres separately.
  * we could if we wanted to though. *)
 locale lifting_valid_base_ok_pres =
-  lifting_valid_base_pres + lifting_valid_base_ok
+  lifting_valid + lifting_valid_base_ext + lifting_valid_ok_ext + lifting_valid_base_pres_ext
+
+locale lifting_valid_pairwise_ext = 
+  fixes S :: "('syn, 'b :: {Pordc, Pordps}) valid_set"
+  assumes pairwise_S :
+    "\<And> x1 x2 x3 s s12 s23 s13 s123 .
+      x1 \<in> S s \<Longrightarrow>
+      x2 \<in> S s \<Longrightarrow>
+      x3 \<in> S s \<Longrightarrow>
+      is_sup {x1, x2} s12 \<Longrightarrow>
+      s12 \<in> S s \<Longrightarrow>
+      is_sup {x2, x3} s23 \<Longrightarrow>
+      s23 \<in> S s \<Longrightarrow>
+      is_sup {x1, x3} s13 \<Longrightarrow>
+      s13 \<in> S s \<Longrightarrow>
+      is_sup {x1, x2, x3} s123 \<Longrightarrow>
+      s123 \<in> S s"
+
 
 (* pairwise doesn't interact with the other components - we keep
  * it separated (otherwise the number of instances we'd have to
@@ -250,22 +256,22 @@ locale lifting_valid_base_ok_pres =
  * TODO: if this becomes a problem, we can probably use Velocity to
  * generate the instances.
  *)
-locale lifting_valid_weak_pairwise = lifting_valid_weak + lifting_pairwise
-locale lifting_valid_pairwise = lifting_valid + lifting_pairwise
-locale lifting_valid_weak_base_pairwise = lifting_valid_weak_base + lifting_pairwise
-locale lifting_valid_base_pairwise = lifting_valid_base + lifting_valid_pairwise
-locale lifting_valid_weak_ok_pairwise = lifting_valid_weak_ok + lifting_valid_pairwise
-locale lifting_valid_ok_pairwise = lifting_valid_ok + lifting_valid_pairwise
-locale lifting_valid_weak_base_ok_pairwise = lifting_valid_weak_base_ok + lifting_valid_pairwise
-locale lifting_valid_base_ok_pairwise = lifting_valid_base_ok + lifting_valid_pairwise
-locale lifting_valid_weak_pres_pairwise = lifting_valid_weak_pres + lifting_valid_pairwise
-locale lifting_valid_pres_pairwise = lifting_valid_pres +  lifting_valid_pairwise
-locale lifting_valid_weak_base_pres_pairwise = lifting_valid_weak_base_pres + lifting_valid_pairwise
-locale lifting_valid_base_pres_pairwise = lifting_valid_base_pres + lifting_valid_pairwise
-locale lifting_valid_weak_ok_pres_pairwise = lifting_valid_weak_ok_pres + lifting_valid_pairwise
-locale lifting_valid_ok_pres_pairwise = lifting_valid_ok_pres + lifting_valid_pairwise
-locale lifting_valid_weak_base_ok_pres_pairwise = lifting_valid_weak_base_ok_pres + lifting_valid_pairwise
-locale lifting_valid_base_ok_pres_pairwise = lifting_valid_base_ok_pres + lifting_valid_pairwise
+locale lifting_valid_weak_pairwise = lifting_valid_weak + lifting_valid_pairwise_ext
+locale lifting_valid_pairwise = lifting_valid + lifting_valid_pairwise_ext
+locale lifting_valid_weak_base_pairwise = lifting_valid_weak_base + lifting_valid_pairwise_ext
+locale lifting_valid_base_pairwise = lifting_valid_base + lifting_valid_pairwise_ext
+locale lifting_valid_weak_ok_pairwise = lifting_valid_weak_ok + lifting_valid_pairwise_ext
+locale lifting_valid_ok_pairwise = lifting_valid_ok + lifting_valid_pairwise_ext
+locale lifting_valid_weak_base_ok_pairwise = lifting_valid_weak_base_ok + lifting_valid_pairwise_ext
+locale lifting_valid_base_ok_pairwise = lifting_valid_base_ok + lifting_valid_pairwise_ext
+locale lifting_valid_weak_pres_pairwise = lifting_valid_weak_pres + lifting_valid_pairwise_ext
+locale lifting_valid_pres_pairwise = lifting_valid_pres +  lifting_valid_pairwise_ext
+locale lifting_valid_weak_base_pres_pairwise = lifting_valid_weak_base_pres + lifting_valid_pairwise_ext
+locale lifting_valid_base_pres_pairwise = lifting_valid_base_pres + lifting_valid_pairwise_ext
+locale lifting_valid_weak_ok_pres_pairwise = lifting_valid_weak_ok_pres + lifting_valid_pairwise_ext
+locale lifting_valid_ok_pres_pairwise = lifting_valid_ok_pres + lifting_valid_pairwise_ext
+locale lifting_valid_weak_base_ok_pres_pairwise = lifting_valid_weak_base_ok_pres + lifting_valid_pairwise_ext
+locale lifting_valid_base_ok_pres_pairwise = lifting_valid_base_ok_pres + lifting_valid_pairwise_ext
 
 
 (* orthogonality, used to define merge correctness *)

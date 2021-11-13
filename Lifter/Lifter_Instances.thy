@@ -1567,7 +1567,7 @@ qed
 locale prio_l_pairwise' = 
   fixes S :: "('syn, 'b :: {Pordbc, Pordps}) valid_set"
 
-locale prio_l_pairwise = prio_l_pairwise' +
+locale prio_l_valid_pairwise_ext = prio_l_pairwise' +
   lifting_valid_pairwise_ext
 
 lemma prio_sup_cases :
@@ -1886,7 +1886,7 @@ next
 qed
 
 
-sublocale prio_l_pairwise \<subseteq> out : lifting_valid_pairwise_ext "prio_l_S S"
+sublocale prio_l_valid_pairwise_ext \<subseteq> out : lifting_valid_pairwise_ext "prio_l_S S"
 proof
 
   fix s
@@ -2661,6 +2661,20 @@ proof
 qed
 
 
+lemma (in prio_l_valid_pairwise_ext) ax :
+  shows "lifting_valid_pairwise_ext (prio_l_S S)"
+  using out.lifting_valid_pairwise_ext_axioms
+  by auto
+
+lemma (in prio_l_valid_pairwise_ext) ax_g :
+  assumes H : "\<And> x . S' x = prio_l_S S x"
+  shows "lifting_valid_pairwise_ext S'"
+proof-
+  have "S' = prio_l_S S" using assms by auto
+  then show ?thesis using out.lifting_valid_pairwise_ext_axioms assms
+  by auto
+qed
+
 (* NB: "stronger" version of prio_l does not work with pres, because we need to know that
  * we are actually in prio_l_S S, not some superset.
  *)
@@ -2762,21 +2776,22 @@ lemma (in fst_l_valid_ext) ax:
   using out.lifting_valid_ext_axioms
   by auto
 
-locale fst_l_valid_weak_base = fst_l_valid_weak +   lifting_valid_weak_base
-sublocale fst_l_valid_weak_base \<subseteq> out : lifting_valid_weak_base "fst_l l" "fst_l_S S"
+locale fst_l_valid_base_ext = lifting_valid_base_ext
+
+sublocale fst_l_valid_base_ext \<subseteq> out : lifting_valid_base_ext "fst_l l" "fst_l_S S"
 proof
   fix s
   show "LBase (fst_l l) s = \<bottom>" using base
     by(auto simp add: fst_l_def prod_bot)
 qed
 
-locale fst_l_valid_base = fst_l_valid + fst_l_valid_weak_base
-sublocale fst_l_valid_base \<subseteq> out : lifting_valid_base "fst_l l" "fst_l_S S"
-proof
-qed
+lemma (in fst_l_valid_base_ext) ax :
+  shows "lifting_valid_base_ext (fst_l l)"
+  using out.lifting_valid_base_ext_axioms
+  by auto
 
-locale fst_l_valid_weak_ok = fst_l_valid_weak + lifting_valid_weak_ok
-sublocale fst_l_valid_weak_ok \<subseteq> out : lifting_valid_weak_ok "fst_l l" "fst_l_S S"
+locale fst_l_valid_ok_ext = lifting_valid_ok_ext
+sublocale fst_l_valid_ok_ext \<subseteq> out : lifting_valid_ok_ext "fst_l l" "fst_l_S S"
 proof
   fix s
 
@@ -2790,28 +2805,21 @@ next
     by(auto simp add: fst_l_def prod_ok_S)
 qed
 
-locale fst_l_valid_ok = fst_l_valid + fst_l_valid_weak_ok
-sublocale fst_l_valid_ok \<subseteq> lifting_valid_ok "fst_l l" "fst_l_S S"
-proof
+lemma (in fst_l_valid_ok_ext) ax :
+  shows "lifting_valid_ok_ext (fst_l l) (fst_l_S S)"
+  using out.lifting_valid_ok_ext_axioms by auto
+
+lemma (in fst_l_valid_ok_ext) ax_g :
+  assumes H: "\<And> x . S' x = fst_l_S S x"
+  shows "lifting_valid_ok_ext (fst_l l) S'"
+proof-
+  have "S' = fst_l_S S" using assms by auto
+  then show ?thesis using out.lifting_valid_ok_ext_axioms assms 
+    by auto
 qed
 
-locale fst_l_valid_weak_base_ok = fst_l_valid_weak_ok + fst_l_valid_weak_base
-sublocale fst_l_valid_weak_base_ok \<subseteq> out : lifting_valid_weak_base_ok "fst_l l" "fst_l_S S"
-proof
-qed
-
-locale fst_l_valid_base_ok = fst_l_valid_ok + fst_l_valid_base
-sublocale fst_l_valid_base_ok \<subseteq> out : lifting_valid_base_ok "fst_l l" "fst_l_S S"
-proof
-qed
-
-(*
-locale fst_l_valid_grade = fst_l_valid + lifting_valid_weak_grade 
-*)
-
-
-locale fst_l_valid_weak_pres = fst_l_valid_weak + lifting_valid_weak_pres
-sublocale fst_l_valid_weak_pres \<subseteq> out : lifting_valid_weak_pres "fst_l l" "fst_l_S S"
+locale fst_l_valid_pres_ext = lifting_valid_pres_ext
+sublocale fst_l_valid_pres_ext \<subseteq> out : lifting_valid_pres_ext "fst_l l" "fst_l_S S"
 proof
   fix v supr :: "('c * 'd)"
   fix V f s
@@ -3054,13 +3062,23 @@ proof
   qed
 qed
 
-locale fst_l_valid_pres = fst_l_valid_weak_pres + fst_l_valid
-sublocale fst_l_valid_pres \<subseteq> out : lifting_valid_pres "fst_l l" "fst_l_S S"
-proof
+lemma (in fst_l_valid_pres_ext) ax :
+  shows "lifting_valid_pres_ext (fst_l l) (fst_l_S S)"
+  using out.lifting_valid_pres_ext_axioms
+  by auto
+
+lemma (in fst_l_valid_pres_ext) ax_g :
+  assumes H: "\<And> x . S' x = fst_l_S S x"
+  shows "lifting_valid_pres_ext (fst_l l) S'"
+proof-
+  have "S' = fst_l_S S" using assms by auto
+  then show ?thesis using out.lifting_valid_pres_ext_axioms
+    by auto
 qed
 
-locale fst_l_valid_weak_base_pres = fst_l_valid_weak_base + fst_l_valid_weak_pres + lifting_valid_weak_base_pres
-sublocale fst_l_valid_weak_base_pres \<subseteq> out : lifting_valid_weak_base_pres "fst_l l" "fst_l_S S"
+locale fst_l_valid_base_pres_ext = fst_l_valid_pres_ext + fst_l_valid_base_ext + lifting_valid_base_pres_ext
+
+sublocale fst_l_valid_base_pres_ext \<subseteq> out : lifting_valid_base_pres_ext "fst_l l" "fst_l_S S"
 proof
   fix s
   show "\<bottom> \<notin> fst_l_S S s"
@@ -3068,25 +3086,19 @@ proof
     by(auto simp add: fst_l_S_def prod_bot)
 qed
 
-locale fst_l_valid_base_pres = fst_l_valid_pres + fst_l_valid_weak_base_pres
-sublocale fst_l_valid_base_pres \<subseteq> out : lifting_valid_base_pres "fst_l l" "fst_l_S S"
-proof qed
+lemma (in fst_l_valid_base_pres_ext) ax :
+  shows "lifting_valid_base_pres_ext (fst_l l) (fst_l_S S)"
+  using out.lifting_valid_base_pres_ext_axioms
+  by auto
 
-locale fst_l_valid_weak_ok_pres = fst_l_valid_weak_pres + fst_l_valid_weak_ok
-sublocale fst_l_valid_weak_ok_pres \<subseteq> out : lifting_valid_weak_ok_pres "fst_l l" "fst_l_S S"
-proof qed
-
-locale fst_l_valid_ok_pres = fst_l_valid_pres + fst_l_valid_ok
-sublocale fst_l_valid_ok_pres \<subseteq> out : lifting_valid_ok_pres "fst_l l" "fst_l_S S"
-proof qed
-
-locale fst_l_valid_weak_base_ok_pres = fst_l_valid_weak_base_pres + fst_l_valid_weak_ok
-sublocale fst_l_valid_weak_base_ok_pres \<subseteq> out: lifting_valid_weak_base_ok_pres "fst_l l" "fst_l_S S"
-proof qed
-
-locale fst_l_valid_base_ok_pres = fst_l_valid_base_pres + fst_l_valid_base_ok
-sublocale fst_l_valid_base_ok_pres \<subseteq> out : lifting_valid_base_ok_pres "fst_l l" "fst_l_S S"
-proof qed
+lemma (in fst_l_valid_base_pres_ext) ax_g :
+  assumes H : "\<And> x . S' x = fst_l_S S x"
+  shows "lifting_valid_base_pres_ext (fst_l l) S'"
+proof-
+  have "S' = fst_l_S S" using assms by auto
+  then show ?thesis using out.lifting_valid_base_pres_ext_axioms
+    by auto
+qed
 
 (*
  * snd
@@ -3129,9 +3141,26 @@ next
     by(auto simp add: snd_l_def prod_pleq leq_refl snd_l_S_def split:prod.splits)
 qed
 
-locale snd_l_valid = snd_l_valid_weak + lifting_valid
+lemma (in snd_l_valid_weak) ax :
+  shows "lifting_valid_weak (snd_l l) (snd_l_S S)"
+  using out.lifting_valid_weak_axioms
+  by auto
 
-sublocale snd_l_valid \<subseteq> out : lifting_valid "snd_l l" "snd_l_S S"
+lemma (in snd_l_valid_weak) ax_g :
+  assumes H : "\<And> x . S' x = snd_l_S S x"
+  shows "lifting_valid_weak (snd_l l) (snd_l_S S)"
+proof-
+  have "S' = snd_l_S S"
+    using assms by auto
+  then show ?thesis
+    using out.lifting_valid_weak_axioms
+    by auto
+qed
+
+
+locale snd_l_valid_ext = lifting_valid_ext
+
+sublocale snd_l_valid_ext \<subseteq> out : lifting_valid_ext "snd_l l" "snd_l_S S"
 proof
   fix s a 
   fix b :: "('e :: Pord_Weakb) * ('c :: Pord_Weak)"
@@ -3140,47 +3169,27 @@ proof
     using get_put
     by(auto simp add: snd_l_def prod_pleq leq_refl snd_l_S_def split:prod.splits)
 qed
-(*
-locale snd_l_valid_clos = lifting_valid_weak_clos + snd_l_valid_weak
 
-sublocale snd_l_valid_clos \<subseteq> lifting_valid_weak_clos "snd_l l" "snd_l_S S"
-proof
-  fix s
-  fix a b :: "('d * 'c)"
-  assume Leq : "a <[ b"
-  assume Ain : "a \<in> snd_l_S S s"
+lemma (in snd_l_valid_ext) ax :
+  shows "lifting_valid_ext (snd_l l)"
+  using out.lifting_valid_ext_axioms
+  by auto
 
-  then obtain a1 a2 where A' : "a = (a1, a2)" "a2 \<in> S s"
-    by(cases a; auto simp add: snd_l_S_def)
-
-  obtain b1 b2 where B' : "b = (b1, b2)" "a2 <[ b2"
-    using A' Leq
-    by(cases b; auto simp add: prod_pleq)
-
-  then have "b2 \<in> S s"
-    using clos_S[OF B'(2) A'(2)] by auto
-
-  then show "b \<in> snd_l_S S s"
-    unfolding B'
-    by(auto simp add: snd_l_S_def)
-qed
-*)
-
-locale snd_l_valid_weak_base = snd_l_valid_weak +   lifting_valid_weak_base
-sublocale snd_l_valid_weak_base \<subseteq> out : lifting_valid_weak_base "snd_l l" "snd_l_S S"
+locale snd_l_valid_base_ext = lifting_valid_base_ext
+sublocale snd_l_valid_base_ext \<subseteq> out : lifting_valid_base_ext "snd_l l" "snd_l_S S"
 proof
   fix s
   show "LBase (snd_l l) s = \<bottom>" using base
     by(auto simp add: snd_l_def prod_bot)
 qed
 
-locale snd_l_valid_base = snd_l_valid + snd_l_valid_weak_base
-sublocale snd_l_valid_base \<subseteq> out : lifting_valid_base "snd_l l" "snd_l_S S"
-proof
-qed
+lemma (in snd_l_valid_base_ext) ax :
+  shows "lifting_valid_base_ext (snd_l l)"
+  using out.lifting_valid_base_ext_axioms
+  by auto
 
-locale snd_l_valid_weak_ok = snd_l_valid_weak + lifting_valid_weak_ok
-sublocale snd_l_valid_weak_ok \<subseteq> out : lifting_valid_weak_ok "snd_l l" "snd_l_S S"
+locale snd_l_valid_ok_ext = lifting_valid_ok_ext
+sublocale snd_l_valid_ok_ext \<subseteq> out : lifting_valid_ok_ext "snd_l l" "snd_l_S S"
 proof
   fix s
 
@@ -3194,23 +3203,25 @@ next
     by(auto simp add: prod_ok_S snd_l_S_def snd_l_def)
 qed
 
-locale snd_l_valid_ok = snd_l_valid + snd_l_valid_weak_ok
-sublocale snd_l_valid_ok \<subseteq> lifting_valid_ok "snd_l l" "snd_l_S S"
-proof
+lemma (in snd_l_valid_ok_ext) ax :
+  shows "lifting_valid_ok_ext (snd_l l) (snd_l_S S)"
+  using out.lifting_valid_ok_ext_axioms
+  by auto
+
+lemma (in snd_l_valid_ok_ext) ax_g :
+  assumes H: "\<And> x . S' x = snd_l_S S x"
+  shows "lifting_valid_ok_ext (snd_l l) (snd_l_S S)"
+proof-
+  have "S' = snd_l_S S"
+    using assms by auto
+  then show ?thesis
+  using out.lifting_valid_ok_ext_axioms
+  by auto
 qed
 
-locale snd_l_valid_weak_base_ok = snd_l_valid_weak_ok + snd_l_valid_weak_base
-sublocale snd_l_valid_weak_base_ok \<subseteq> out : lifting_valid_weak_base_ok "snd_l l" "snd_l_S S"
-proof
-qed
 
-locale snd_l_valid_base_ok = snd_l_valid_ok + snd_l_valid_base
-sublocale snd_l_valid_base_ok \<subseteq> out : lifting_valid_base_ok "snd_l l" "snd_l_S S"
-proof
-qed
-
-locale snd_l_valid_weak_pres = snd_l_valid_weak + lifting_valid_weak_pres
-sublocale snd_l_valid_weak_pres \<subseteq> out : lifting_valid_weak_pres "snd_l l" "snd_l_S S"
+locale snd_l_valid_pres_ext = lifting_valid_pres_ext
+sublocale snd_l_valid_pres_ext \<subseteq> out : lifting_valid_pres_ext "snd_l l" "snd_l_S S"
 proof
   fix v supr :: "('d * 'c)"
   fix V f s
@@ -3453,13 +3464,25 @@ proof
   qed
 qed
 
-locale snd_l_valid_pres = snd_l_valid_weak_pres + snd_l_valid
-sublocale snd_l_valid_pres \<subseteq> out : lifting_valid_pres "snd_l l" "snd_l_S S"
-proof
+lemma (in snd_l_valid_pres_ext) ax :
+  shows "lifting_valid_pres_ext (snd_l l) (snd_l_S S)"
+  using out.lifting_valid_pres_ext_axioms
+  by auto
+
+lemma (in snd_l_valid_pres_ext) ax_g :
+  assumes H : "\<And> x . S' x = snd_l_S S x"
+  shows "lifting_valid_pres_ext (snd_l l) S'"
+proof-
+  have "S' = snd_l_S S"
+    using assms by auto
+  then show ?thesis
+    using out.lifting_valid_pres_ext_axioms
+  by auto
 qed
 
-locale snd_l_valid_weak_base_pres = snd_l_valid_weak_base + snd_l_valid_weak_pres + lifting_valid_weak_base_pres
-sublocale snd_l_valid_weak_base_pres \<subseteq> out : lifting_valid_weak_base_pres "snd_l l" "snd_l_S S"
+
+locale snd_l_valid_base_pres_ext = snd_l_valid_pres_ext + snd_l_valid_base_ext + lifting_valid_base_pres_ext
+sublocale snd_l_valid_base_pres_ext \<subseteq> out : lifting_valid_base_pres_ext "snd_l l" "snd_l_S S"
 proof
   fix s
   show "\<bottom> \<notin> snd_l_S S s"
@@ -3467,52 +3490,25 @@ proof
     by(auto simp add: snd_l_S_def prod_bot)
 qed
 
-locale snd_l_valid_base_pres = snd_l_valid_pres + snd_l_valid_weak_base_pres
-sublocale snd_l_valid_base_pres \<subseteq> out : lifting_valid_base_pres "snd_l l" "snd_l_S S"
-proof qed
+lemma (in snd_l_valid_base_pres_ext) ax :
+  shows "lifting_valid_base_pres_ext (snd_l l) (snd_l_S S)"
+  using out.lifting_valid_base_pres_ext_axioms by auto
 
-locale snd_l_valid_weak_ok_pres = snd_l_valid_weak_pres + snd_l_valid_weak_ok
-sublocale snd_l_valid_weak_ok_pres \<subseteq> out : lifting_valid_weak_ok_pres "snd_l l" "snd_l_S S"
-proof qed
-
-locale snd_l_valid_ok_pres = snd_l_valid_pres + snd_l_valid_ok
-sublocale snd_l_valid_ok_pres \<subseteq> out : lifting_valid_ok_pres "snd_l l" "snd_l_S S"
-proof qed
-
-locale snd_l_valid_weak_base_ok_pres = snd_l_valid_weak_base_pres + snd_l_valid_weak_ok
-sublocale snd_l_valid_weak_base_ok_pres \<subseteq> out: lifting_valid_weak_base_ok_pres "snd_l l" "snd_l_S S"
-proof
+lemma (in snd_l_valid_base_pres_ext) ax_g :
+  assumes H : "\<And> x . S' x = snd_l_S S x"
+  shows "lifting_valid_base_pres_ext (snd_l l) S'"
+proof-
+  have "S' = snd_l_S S"
+    using assms by auto
+  then show ?thesis
+    using out.lifting_valid_base_pres_ext_axioms by auto
 qed
 
-locale snd_l_valid_base_ok_pres = snd_l_valid_base_pres + snd_l_valid_base_ok
-sublocale snd_l_valid_base_ok_pres \<subseteq> out : lifting_valid_base_ok_pres "snd_l l" "snd_l_S S"
-proof qed
-
 
 (*
- * merge (new ! !)
+ * merge 
  *)
 
-(* idea
-
-*)
-
-(*
-definition merge_l ::
-  "('x, 'a1, 'b :: Mergeable, 'x \<Rightarrow> 'a1 \<Rightarrow> 'a1) lifting \<Rightarrow>
-   ('x, 'a2, 'b :: Mergeable, 'x \<Rightarrow> 'a2 \<Rightarrow> 'a2) lifting \<Rightarrow>
-   ('x, 'a1 * 'a2, 'b, 'x \<Rightarrow> ('a1 * 'a2) \<Rightarrow> 'a1 * 'a2) lifting" where
-"merge_l t1 t2 =
-    LMake
-      (\<lambda> s a b . 
-        (case a of (a1, a2) \<Rightarrow>
-          LUpd t1 s a1 (LUpd t2 s a2 b )))
-      (\<lambda> s b . (LOut t1 s b, LOut t2 s b))
-      (\<lambda> s . LBase t1 s)
-      (\<lambda> f s a1a2 . 
-        let res = ((f s a1a2) :: 'a1 * 'a2) in
-        (LFD t1 (fst res) s, LFD t2 (snd res) s))"
-*)
 
 definition merge_l ::
   "('x, 'a1, 'b) lifting \<Rightarrow>
@@ -3535,8 +3531,6 @@ locale merge_l_valid_weak =
   l_ortho +
   in1 : lifting_valid_weak l1 S1 +
   in2 : lifting_valid_weak l2 S2
-
-print_locale merge_l_valid_weak
 
 sublocale merge_l_valid_weak \<subseteq> out : lifting_valid_weak "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x"
 proof
@@ -3596,15 +3590,31 @@ next
   show "b <[ LUpd (merge_l l1 l2) s (LOut (merge_l l1 l2) s b) b"
     using leq_trans[OF Leq1 in1.get_put_weak[OF Upd_in]]
     by(auto simp add: merge_l_def Eq)
-
 qed
 
-locale merge_l_valid = merge_l_valid_weak +
-  in1 : lifting_valid l1 S1 +
-  in2 : lifting_valid l2 S2
+lemma (in merge_l_valid_weak) ax :
+  shows "lifting_valid_weak (merge_l l1 l2) (\<lambda> x . S1 x \<inter> S2 x)"
+  using out.lifting_valid_weak_axioms
+  by auto
 
-sublocale merge_l_valid \<subseteq> out : lifting_valid "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x"
+lemma (in merge_l_valid_weak) ax_g :
+  assumes H : "\<And> x . S' x = (\<lambda> x . S1 x \<inter> S2 x) x"
+  shows "lifting_valid_weak (merge_l l1 l2) S'"
+proof-
+  have "S' = (\<lambda> x . S1 x \<inter> S2 x)"
+    using assms by auto
+  then show ?thesis
+    using out.lifting_valid_weak_axioms
+    by auto
+qed
+
+locale merge_l_valid_ext = merge_l_valid_weak' +
+  in1 : lifting_valid_ext l1 +
+  in2 : lifting_valid_ext l2 
+
+sublocale merge_l_valid_ext \<subseteq> out : lifting_valid_ext "merge_l l1 l2"
 proof
+
   fix s
   fix a :: "'b * 'd"
   fix b :: "'c"
@@ -3623,11 +3633,16 @@ proof
     by(auto simp add: merge_l_def)
 qed
 
-locale merge_l_valid_weak_base = merge_l_valid_weak + l_ortho_base +
-  in1 : lifting_valid_base l1 S1 +
-  in2 : lifting_valid_base l2 S2
+lemma (in merge_l_valid_ext) ax :
+  shows "lifting_valid_ext (merge_l l1 l2)"
+  using out.lifting_valid_ext_axioms by auto
 
-sublocale merge_l_valid_weak_base \<subseteq> out : lifting_valid_weak_base "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x"
+locale merge_l_valid_base_ext =
+  l_ortho_base +
+  in1 : lifting_valid_base_ext l1 S1 +
+  in2 : lifting_valid_base_ext l2 S2
+
+sublocale merge_l_valid_base_ext \<subseteq> out : lifting_valid_base_ext "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x"
 proof
   fix s :: "'a"
 
@@ -3636,17 +3651,16 @@ proof
     by(auto simp add: merge_l_def)
 qed
 
-locale merge_l_valid_base = merge_l_valid + merge_l_valid_weak_base
+lemma (in merge_l_valid_base_ext) ax :
+  shows "lifting_valid_base_ext (merge_l l1 l2)"
+  using out.lifting_valid_base_ext_axioms
+  by auto
 
-sublocale merge_l_valid_base \<subseteq> out : lifting_valid_base "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x"
-proof
-qed
-(*
-locale merge_l_valid_weak_ok = merge_l_valid_weak + l_ortho_ok +
-  in1 : lifting_valid_weak_ok l1 S1 +
-  in2 : lifting_valid_weak_ok l2 S2
+locale merge_l_valid_ok_ext = l_ortho_ok +
+  in1 : lifting_valid_ok_ext l1 S1 +
+  in2 : lifting_valid_ok_ext l2 S2
 
-sublocale merge_l_valid_weak_ok \<subseteq> out : lifting_valid_weak_ok "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x"
+sublocale merge_l_valid_ok_ext \<subseteq> out : lifting_valid_ok_ext "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x"
 proof
   fix s
 
@@ -3654,7 +3668,7 @@ proof
     using in1.ok_S_valid in2.ok_S_valid by auto
 next
   fix s 
-  fix a :: "'b * 'e"
+  fix a :: "'b * 'd"
   fix b :: "'c"
 
   assume B_ok : "b \<in> ok_S"
@@ -3662,45 +3676,37 @@ next
   obtain a1 a2 where A: "a = (a1, a2)"
     by(cases a; auto)
 
-  have "is_sup {b, b} b"
-    by(auto simp add: is_sup_def is_least_def is_ub_def leq_refl)
-
-  then obtain supr where Supr : "is_sup {LUpd l1 s a1 b, LUpd l2 s a2 b} supr"
-    using compat[of s "a1" b "a2"]
-    by(auto simp add: has_sup_def)
-
-  have Eq : "[^ LUpd l1 s a1 b, LUpd l2 s a2 b ^] = supr"
-    using is_sup_unique[OF bsup_sup[OF Supr bsup_spec] Supr] by simp
-
   show "LUpd (merge_l l1 l2) s a b \<in> ok_S"
-    using compat_ok[OF  B_ok Supr] Eq A
+    using A in1.ok_S_put in2.ok_S_put B_ok
     by(auto simp add: merge_l_def)
 qed
 
-locale merge_l_valid_ok = merge_l_valid_weak_ok + merge_l_valid
+lemma (in merge_l_valid_ok_ext) ax :
+  shows "lifting_valid_ok_ext (merge_l l1 l2) (\<lambda> x . S1 x \<inter> S2 x)"
+  using out.lifting_valid_ok_ext_axioms
+  by auto
 
-sublocale merge_l_valid_ok \<subseteq> out : lifting_valid_ok "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x"
-proof
+lemma (in merge_l_valid_ok_ext) ax_g :
+  assumes H : "\<And> x . S' x = (\<lambda> x . S1 x \<inter> S2 x) x"
+  shows "lifting_valid_ok_ext (merge_l l1 l2) S'"
+proof-
+  have "S' = (\<lambda> x . S1 x \<inter> S2 x)"
+    using assms by auto
+  then show ?thesis
+    using out.lifting_valid_ok_ext_axioms
+    by auto
 qed
 
-locale merge_l_valid_weak_base_ok = merge_l_valid_weak_ok + merge_l_valid_weak_base
-sublocale merge_l_valid_weak_base_ok \<subseteq> out : lifting_valid_weak_base_ok "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x"
-proof
-qed
 
-locale merge_l_valid_base_ok = merge_l_valid_weak_base_ok + merge_l_valid_ok
-sublocale merge_l_valid_base_ok \<subseteq> out : lifting_valid_base_ok "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x"
-proof
-qed
-*)
-
-locale merge_l_valid_weak_pres = merge_l_valid_weak +
-  l_ortho_pres +
-  in1 : lifting_valid_weak_pres l1 S1 +
-  in2 : lifting_valid_weak_pres l2 S2
-
+(* TODO: make sure we don't actually need this. *)
 (*
-sublocale merge_l_valid_weak_pres \<subseteq> out: lifting_valid_weak_pres "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x"
+locale merge_l_valid_pres_ext = merge_l_valid_weak +
+  l_ortho_pres +
+  in1 : lifting_valid_pres_ext l1 S1 +
+  in2 : lifting_valid_pres_ext l2 S2
+
+
+sublocale merge_l_valid_pres_ext \<subseteq> out: lifting_valid_pres_ext "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x"
 proof
   fix v supr :: "'c"
   fix V
@@ -3752,15 +3758,61 @@ proof
       apply(auto simp add: merge_l_def split: prod.splits)
 
 
-qed
+    qed
 *)
 
+locale merge_l_valid_pairwise_ext =
+  l_ortho +
+  in1 : lifting_valid_pairwise_ext S1 +
+  in2 : lifting_valid_pairwise_ext S2
+
+sublocale merge_l_valid_pairwise_ext \<subseteq> out : lifting_valid_pairwise_ext "(\<lambda> x . S1 x \<inter> S2 x)"
+proof
+  show "\<And>x1 x2 x3 s s12 s23 s13 s123.
+       x1 \<in> S1 s \<inter> S2 s \<Longrightarrow>
+       x2 \<in> S1 s \<inter> S2 s \<Longrightarrow>
+       x3 \<in> S1 s \<inter> S2 s \<Longrightarrow>
+       is_sup {x1, x2} s12 \<Longrightarrow>
+       s12 \<in> S1 s \<inter> S2 s \<Longrightarrow>
+       is_sup {x2, x3} s23 \<Longrightarrow>
+       s23 \<in> S1 s \<inter> S2 s \<Longrightarrow>
+       is_sup {x1, x3} s13 \<Longrightarrow>
+       s13 \<in> S1 s \<inter> S2 s \<Longrightarrow>
+       is_sup {x1, x2, x3} s123 \<Longrightarrow> s123 \<in> S1 s \<inter> S2 s"
+    using in1.pairwise_S in2.pairwise_S
+    by blast
+qed
+
+lemma (in merge_l_valid_pairwise_ext) ax :
+  shows "lifting_valid_pairwise_ext (\<lambda> x . S1 x \<inter> S2 x)"
+  using out.lifting_valid_pairwise_ext_axioms
+  by auto
+
+lemma (in merge_l_valid_pairwise_ext) ax_g :
+  assumes H: "\<And> x . S' x = (\<lambda> x . S1 x \<inter> S2 x) x"
+  shows "lifting_valid_pairwise_ext S'"
+proof-
+  have "S' = (\<lambda> x . S1 x \<inter> S2 x)"
+    using assms by auto
+  then show ?thesis
+    using out.lifting_valid_pairwise_ext_axioms
+    by auto
+qed
+
+
+(* Next we declare some instances for ortho.
+ * The most useful ones are the ones for products
+ * (fst/fst, snd/snd, fst/snd, and merges *)
+
 locale option_l_ortho =
-  l_ortho (*+
-  in1 : option_l_valid_weak l1 S1 +
-  in2 : option_l_valid_weak l2 S2 *)
+  l_ortho
 
-
+(* YOU ARE HERE *)
+(* TODO: slice up ortho explicitly into a core and extensions instead of a series of growing structures.
+ * then, like before, prove extensions from extensions (i.e. minimally)
+ * in order to lower the burden of copying lots of code/proofs or worrying about things
+ * getting propagated correctly
+*)
 sublocale option_l_ortho \<subseteq> out : l_ortho "option_l l1"  "option_l_S S1" "option_l l2" "option_l_S S2"
 proof
   fix s
