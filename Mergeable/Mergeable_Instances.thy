@@ -182,7 +182,12 @@ instance proof
     by(auto simp add: triv_ok_S)
 qed
 end
-  
+
+instantiation md_triv :: (_) Pordpsc
+begin
+instance proof qed
+end
+
 instantiation md_triv :: (_) Mergeable 
 begin
 
@@ -304,6 +309,8 @@ instance proof
   qed
 qed
 end
+
+
 
 lemma is_sup_union_ub :
   assumes Hsup : "is_sup Xs x"

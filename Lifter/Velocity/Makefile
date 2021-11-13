@@ -2,7 +2,7 @@
 
 VELC := velocity
 
-THYS := Auto_Lifter.thy \
+THYS := Auto_Lifter_Lifters.thy \
 	Auto_Lifter_Sets.thy \
 	Schem_Lift_Defs.thy
 

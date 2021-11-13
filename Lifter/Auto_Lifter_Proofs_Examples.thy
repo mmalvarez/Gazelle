@@ -9,8 +9,14 @@ begin
 
 value [simp] "schem_lift NA NA"
 
+lemma tlv1 : "lifting_valid_weak (schem_lift NA (SP NX NA)) (\<lambda> _. UNIV)"
+  unfolding schem_lift_defs
+  apply(rule snd_l_valid_weak.axioms)
+  apply(auto intro: snd_l_valid_weak.axioms)
+
+
 lemma tlv' :
-  "lifting_valid_weak' (schem_lift NA NA)"
+  "lifting_valid_weak (schem_lift NA NA) (\<lambda> _ . UNIV)"
   unfolding schem_lift_defs
   apply(auto intro: lifting_valid)
   done

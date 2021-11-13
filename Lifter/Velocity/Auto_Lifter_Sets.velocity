@@ -1,5 +1,5 @@
 theory Auto_Lifter_Sets
-  imports Auto_Lifter
+  imports Auto_Lifter_Lifters
 begin
 
 #set( $names =

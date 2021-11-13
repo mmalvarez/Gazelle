@@ -1,5 +1,5 @@
 theory Auto_Lifter_Proofs
-imports Lifter Lifter_Instances Auto_Lifter
+  imports Lifter Lifter_Instances Auto_Lifter
 begin
 
 (* 
@@ -28,48 +28,7 @@ begin
 (* vsg versions add a side condition on equality of the valid set,
    which might make them more useful. *)
 
-lemmas schem_lift_defs =
-  schem_lift_base_trivA_def
-  schem_lift_base_trivB_def
-  schem_lift_base_trivC_def
-  schem_lift_base_trivD_def
-  schem_lift_base_trivE_def
 
-  schem_lift_base_idA_def
-  schem_lift_base_idB_def
-  schem_lift_base_idC_def
-  schem_lift_base_idD_def
-  schem_lift_base_idE_def
-
-  schem_lift_option_recR_def
-  schem_lift_prio_recR_def
-  (*schem_lift_oalist_recR_def*)
-  (*schem_lift_fan_recR_def*)
-
-  schem_lift_prod_recR_A_left_def
-  schem_lift_prod_recR_A_right_def
-  schem_lift_prod_recR_B_left_def
-  schem_lift_prod_recR_B_right_def
-  schem_lift_prod_recR_C_left_def
-  schem_lift_prod_recR_C_right_def
-  schem_lift_prod_recR_D_left_def
-  schem_lift_prod_recR_D_right_def
-  schem_lift_prod_recR_E_left_def
-  schem_lift_prod_recR_E_right_def
-
-  schem_lift_merge_recR_A_left_def
-  schem_lift_merge_recR_A_right_def
-  schem_lift_merge_recR_B_left_def
-  schem_lift_merge_recR_B_right_def
-  schem_lift_merge_recR_C_left_def
-  schem_lift_merge_recR_C_right_def
-  schem_lift_merge_recR_D_left_def
-  schem_lift_merge_recR_D_right_def
-  schem_lift_merge_recR_E_left_def
-  schem_lift_merge_recR_E_right_def
-
-  schem_lift_recL_def
-  schem_lift_inject_def
 
 lemmas lifting_defs =
   prio_l_inc_def
@@ -78,29 +37,37 @@ lemmas lifting_defs =
   prio_l_case_inc_def
 
 lemmas lifting_valid =
-  id_l_valid_weak
+  id_l.lifting_putonly_axioms
+  id_l.lifting_valid_weak_axioms
 
-  triv_l_valid_weak
+  triv_l.lifting_putonly_axioms
+  triv_l.lifting_valid_weak_axioms
+  triv_l.lifting_valid_weak_pres_axioms
+  triv_l.lifting_valid_weak_ok_pres_axioms
+  triv_l.lifting_pairwise_axioms
 
-  option_l_valid_weak
-  option_l_valid
-  option_l_valid_weakb
-  option_l_validb
+  option_l_valid_weak.axioms
+  option_l_valid.axioms
+  option_l_valid_weak_base.axioms
+  option_l_valid_weak_base_ok_pres.axioms
+  option_l_valid_base.axioms
 
-  inl_l_valid_weak
-  inl_l_valid
-
-  inr_l_valid_weak
-  inr_l_valid
-
-  prio_l_valid_weak
-  prio_l_valid
+  prio_l_valid_weak.axioms
+  prio_l_valid.axioms
   (*prio_l_valid_strong*)
-  prio_l_valid_stronger
-  prio_l_valid_weakb
-  prio_l_validb
-  (*prio_l_validb_strong*)
-  prio_l_validb_stronger
+  prio_l_valid_stronger.axioms
+  prio_l_valid_weak_base.axioms
+  prio_l_valid_base.axioms
+  (*prio_l_valid_strong_base*)
+  prio_l_valid_stronger_base.axioms
+  prio_l_valid_weak_ok.axioms
+prio_l_valid_weak_base_ok.axioms
+  prio_l_valid_ok.axioms
+prio_l_valid_base_ok.axioms
+(*prio_l_valid_strong_ok.axioms*)
+prio_l_valid_stronger_ok.axioms
+(*prio_l_valid_strong_base_ok.axioms*)
+prio_l_valid_stronger_base_ok.axioms
   
 
   fst_l_valid_weak

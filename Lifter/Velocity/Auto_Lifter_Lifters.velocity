@@ -1,4 +1,4 @@
-theory Auto_Lifter
+theory Auto_Lifter_Lifters
     imports Main "../Auto_Lifter_Datatypes" "../../Mergeable/Mergeable" "../Lifter_Instances" 
       "HOL-Library.Adhoc_Overloading"
 begin
