@@ -291,9 +291,6 @@ assumes eq_base : "\<And> s . LBase l1 s = LBase l2 s"
   assumes put1_S2 : "\<And> s a1 . b \<in> S2 s \<Longrightarrow> LUpd l1 s a1 b \<in> S2 s"
   assumes put2_S1 : "\<And> s a2 . b \<in> S1 s \<Longrightarrow> LUpd l2 s a2 b \<in> S1 s"
 
-locale l_ortho_base' =
-  fixes l1 :: "('a, 'b1, 'c :: Pord_Weakb) lifting"
-  fixes l2 :: "('a, 'b2, 'c) lifting"
 
 
 (* do we need both components of V to be subset of both sets? *)
@@ -316,11 +313,15 @@ locale l_ortho_pres' =
               (case (f s (LOut l1 s supr, LOut l2 s supr)) of (r1, r2) \<Rightarrow> LUpd l1 s r1 (LUpd l2 s r2 supr))"
 *)
 
-locale l_ortho_pres = l_ortho_pres' + l_ortho +
+locale l_ortho_pres_ext = l_ortho_pres' + 
   assumes compat_pres_sup :
   "\<And> a1 a2 s x . is_sup {LUpd l1 s a1 x, LUpd l2 s a2 x} (LUpd l1 s a1 (LUpd l2 s a2 x))"
 
-locale l_ortho_base = l_ortho + l_ortho_base' +
+locale l_ortho_base' =
+  fixes l1 :: "('a, 'b1, 'c :: Pord_Weakb) lifting"
+  fixes l2 :: "('a, 'b2, 'c) lifting"
+
+locale l_ortho_base_ext = l_ortho_base' +
   assumes compat_base1 : "\<And> s . LBase l1 s = \<bottom>"
   assumes compat_base2 : "\<And> s . LBase l2 s = \<bottom>"
 
@@ -331,7 +332,16 @@ locale l_ortho_ok' =
 (* l_ortho_ok? i think we actually don't need any further properties!
 *)
 
-locale l_ortho_ok = l_ortho + l_ortho_ok'
+locale l_ortho_ok_ext = l_ortho_ok'
+
+
+locale l_ortho_pres = l_ortho + l_ortho_pres_ext
+locale l_ortho_base = l_ortho + l_ortho_base_ext
+locale l_ortho_base_pres = l_ortho + l_ortho_base_ext + l_ortho_pres_ext
+locale l_ortho_ok = l_ortho + l_ortho_ok_ext
+locale l_ortho_base_ok = l_ortho + l_ortho_base_ext + l_ortho_ok_ext
+locale l_ortho_ok_pres = l_ortho + l_ortho_ok_ext + l_ortho_pres_ext
+locale l_ortho_base_ok_pres = l_ortho + l_ortho_base_ext + l_ortho_ok_ext + l_ortho_pres_ext
 
 (* lift_map_s is LMap plus a syntax translation *)
 definition lift_map_s ::

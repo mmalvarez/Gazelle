@@ -3807,12 +3807,6 @@ qed
 locale option_l_ortho =
   l_ortho
 
-(* YOU ARE HERE *)
-(* TODO: slice up ortho explicitly into a core and extensions instead of a series of growing structures.
- * then, like before, prove extensions from extensions (i.e. minimally)
- * in order to lower the burden of copying lots of code/proofs or worrying about things
- * getting propagated correctly
-*)
 sublocale option_l_ortho \<subseteq> out : l_ortho "option_l l1"  "option_l_S S1" "option_l l2" "option_l_S S2"
 proof
   fix s
@@ -3885,13 +3879,33 @@ next
     by(auto simp add: option_l_S_def option_l_def)
 qed
 
+lemma (in option_l_ortho) ax :
+  shows "l_ortho (option_l l1)  (option_l_S S1) (option_l l2) (option_l_S S2)"
+  using out.l_ortho_axioms
+  by auto
+
+lemma (in option_l_ortho) ax_g :
+  assumes H1 : "\<And> x . S'1 x = option_l_S S1 x"
+  assumes H2 : "\<And> x . S'2 x = option_l_S S2 x"
+  shows "l_ortho (option_l l1) S'1 (option_l l2) S'2"
+proof-
+  have H1' : "S'1 = option_l_S S1"
+    using H1 by auto
+
+  have H2' : "S'2 = option_l_S S2"
+    using H2 by auto
+
+  show ?thesis using ax unfolding H1' H2'
+    by auto
+qed
+
 lemma sup_singleton :
   "is_sup {x} x"
   by(auto simp add: is_least_def is_ub_def is_sup_def leq_refl)
 
-locale option_l_ortho_base = option_l_ortho + l_ortho_base'
+locale option_l_ortho_base_ext = l_ortho_base_ext
 
-sublocale option_l_ortho_base \<subseteq> out : l_ortho_base "option_l l1" "option_l_S S1" "option_l l2" "option_l_S S2"
+sublocale option_l_ortho_base_ext \<subseteq> out : l_ortho_base_ext "option_l l1" "option_l l2"
 proof
   fix s
 
@@ -3903,6 +3917,14 @@ next
   show "LBase (option_l l2) s = \<bottom>"
     by(auto simp add: option_l_def option_bot)
 qed
+
+lemma (in option_l_ortho_base_ext) ax :
+  shows "l_ortho_base_ext (option_l l1) (option_l l2)"
+  using out.l_ortho_base_ext_axioms
+  by auto
+
+
+(* NB we are not currenly using l_ortho_pres *)
 (*
 locale option_l_ortho_pres = option_l_ortho + l_ortho_pres + l_ortho_base
 
@@ -4228,20 +4250,22 @@ proof
 *)
 
 
+locale option_l_ortho_ok_ext =
+  option_l_ortho + l_ortho_ok_ext
 
-locale option_l_ortho_ok =
-  option_l_ortho + l_ortho_ok
-
-sublocale option_l_ortho_ok \<subseteq> out : l_ortho_ok "option_l l1" "option_l_S S1" "option_l l2" "option_l_S S2"
-proof
-qed
-
+sublocale option_l_ortho_ok_ext \<subseteq> out : l_ortho_ok_ext "option_l l1" "option_l l2" .
+ 
 (* Prio - let's defer this until later as we may not need it.
  * my guess is it's true, but annoying. *)
 
 (*
-locale prio_l_ortho =
-  l_ortho 
+locale prio_l_ortho = l_ortho (* ... *)
+
+locale prio_l_ortho_pres_ext = l_ortho_pres_ext (* ... *)
+
+locale prio_l_ortho_base_ext = l_ortho_base_ext (* ... *)
+
+locale prio_l_ortho_ok_ext = l_ortho_ok_ext (* ... *)
 *)
 
 (* next, products:
@@ -4249,7 +4273,6 @@ locale prio_l_ortho =
 - snd and snd, ditto
 - fst and snd, unconditionally
 *)
-
 
 locale fst_l_ortho = l_ortho
 
@@ -4340,9 +4363,29 @@ next
     by(auto simp add: fst_l_def fst_l_S_def)
 qed
 
-locale fst_l_ortho_base = fst_l_ortho + l_ortho_base
+lemma (in fst_l_ortho) ax :
+  shows "l_ortho (fst_l l1) (fst_l_S S1) (fst_l l2) (fst_l_S S2)"
+  using out.l_ortho_axioms
+  by auto
 
-sublocale fst_l_ortho_base \<subseteq> out : l_ortho_base "fst_l l1" "fst_l_S S1" "fst_l l2" "fst_l_S S2"
+lemma (in fst_l_ortho) ax_g :
+  assumes H1 : "\<And> x . S'1 x = fst_l_S S1 x"
+  assumes H2 : "\<And> x . S'2 x = fst_l_S S2 x"
+  shows "l_ortho (fst_l l1) S'1 (fst_l l2) S'2"
+proof-
+  have H1' : "S'1 = fst_l_S S1"
+    using H1 by auto
+
+  have H2' : "S'2 = fst_l_S S2"
+    using H2 by auto
+
+  show ?thesis using ax unfolding H1' H2'
+    by auto
+qed
+
+locale fst_l_ortho_base_ext = l_ortho_base_ext
+
+sublocale fst_l_ortho_base_ext \<subseteq> out : l_ortho_base_ext "fst_l l1" "fst_l l2"
 proof
   fix s
   show "LBase (fst_l l1) s = \<bottom>"
@@ -4354,7 +4397,17 @@ proof
     by(auto simp add: fst_l_def prod_bot)
 qed
 
-locale fst_l_ortho_pres = fst_l_ortho + l_ortho_pres
+lemma (in fst_l_ortho_base_ext) ax :
+  shows "l_ortho_base_ext (fst_l l1) (fst_l l2)"
+  using out.l_ortho_base_ext_axioms
+  by auto
+
+locale fst_l_ortho_ok_ext = l_ortho_ok_ext
+
+sublocale fst_l_ortho_ok_ext \<subseteq> out : l_ortho_ok_ext "fst_l l1" "fst_l l2" .
+
+(*
+locale fst_l_ortho_pres = l_ortho_pres_ext
 
 sublocale fst_l_ortho_pres \<subseteq> l_ortho_pres "fst_l l1" "fst_l_S S1" "fst_l l2" "fst_l_S S2"
 proof
@@ -4379,11 +4432,8 @@ proof
         (LUpd (fst_l l1) s a1 (LUpd (fst_l l2) s a2 x))"
     using X
     by(auto simp add: fst_l_def)
-
-(* YOU ARE HERE
-we need to figure out whether we really fixed this problem.
-*)
 qed
+*)
 
 (* snd (copy-paste-change from fst) *)
 locale snd_l_ortho = l_ortho
@@ -4476,9 +4526,29 @@ next
     by(auto simp add: snd_l_def snd_l_S_def)
 qed
 
-locale snd_l_ortho_base = snd_l_ortho + l_ortho_base
+lemma (in snd_l_ortho) ax :
+  shows "l_ortho (snd_l l1) (snd_l_S S1) (snd_l l2) (snd_l_S S2)"
+  using out.l_ortho_axioms by auto
 
-sublocale snd_l_ortho_base \<subseteq> out : l_ortho_base "snd_l l1" "snd_l_S S1" "snd_l l2" "snd_l_S S2"
+lemma (in snd_l_ortho) ax_g :
+  assumes H1 : "\<And> x . S'1 x = snd_l_S S1 x"
+  assumes H2 : "\<And> x . S'2 x = snd_l_S S2 x"
+  shows "l_ortho (snd_l l1) S'1 (snd_l l2) S'2"
+proof-
+  have H1' : "S'1 = snd_l_S S1"
+    using H1 by auto
+
+  have H2' : "S'2 = snd_l_S S2"
+    using H2 by auto
+
+  show ?thesis using ax unfolding H1' H2'
+    by auto
+qed
+
+
+locale snd_l_ortho_base_ext = l_ortho_base_ext
+
+sublocale snd_l_ortho_base_ext \<subseteq> out : l_ortho_base_ext "snd_l l1" "snd_l l2"
 proof
   fix s
   show "LBase (snd_l l1) s = \<bottom>"
@@ -4491,6 +4561,16 @@ next
     by(auto simp add: snd_l_def prod_bot)
 qed
 
+lemma (in snd_l_ortho_base_ext) ax : 
+  shows "l_ortho_base_ext (snd_l l1) (snd_l l2)"
+  using out.l_ortho_base_ext_axioms
+  by auto
+
+locale snd_l_ortho_ok_ext = l_ortho_ok_ext
+
+sublocale snd_l_ortho_ok_ext \<subseteq> out : l_ortho_ok_ext "snd_l l1" "snd_l l2" .
+
+(*
 locale snd_l_ortho_pres = snd_l_ortho + l_ortho_pres
 
 sublocale snd_l_ortho_pres \<subseteq> l_ortho_pres "snd_l l1" "snd_l_S S1" "snd_l l2" "snd_l_S S2"
@@ -4516,6 +4596,7 @@ proof
     using X
     by(auto simp add: snd_l_def)
 qed
+*)
 
 locale fst_l_snd_l_ortho' =
   fixes l1 :: "('a, 'b1, 'c1 :: Pordb) lifting"
@@ -4524,8 +4605,8 @@ locale fst_l_snd_l_ortho' =
   fixes S2 :: "'a \<Rightarrow> 'c2 set"
 
 locale fst_l_snd_l_ortho = fst_l_snd_l_ortho' +
-  in1 : lifting_valid_base l1 S1 +
-  in2 : lifting_valid_base l2 S2
+  in1 : lifting_valid_base_ext l1 S1 +
+  in2 : lifting_valid_base_ext l2 S2
 
 sublocale fst_l_snd_l_ortho \<subseteq> out : l_ortho "fst_l l1" "fst_l_S S1" "snd_l l2" "snd_l_S S2"
 proof
@@ -4594,86 +4675,38 @@ next
   then show "LUpd (snd_l l2) s a2 b \<in> fst_l_S S1 s" using Bin
     by(auto simp add: snd_l_def fst_l_S_def)
 qed
-(*
-(* lifting_valid_weak_ok *)
-locale fst_l_snd_l_ortho_ok =
-  fst_l_snd_l_ortho + 
-  in1 : lifting_valid_weak_ok l1 S1 +
-  in2 : lifting_valid_weak_ok l2 S2
 
-sublocale fst_l_snd_l_ortho_ok \<subseteq> out : l_ortho_ok "fst_l l1" "fst_l_S S1" "snd_l l2" "snd_l_S S2"
-proof
+lemma (in fst_l_snd_l_ortho) ax :
+  shows "l_ortho (fst_l l1) (fst_l_S S1) (snd_l l2) (snd_l_S S2)"
+  using out.l_ortho_axioms
+  by auto
 
-  fix b :: "'c * 'f"
-  fix s :: 'a
-  fix a1 :: 'b
-  fix a2 :: 'e
-  fix supr
-
-  assume Bok : "b \<in> ok_S"
-
-  assume Sup : "is_sup {LUpd (fst_l l1) s a1 b, LUpd (snd_l l2) s a2 b} supr"
-  obtain b1 b2 where B: "b = (b1, b2)"
-    by(cases b; auto)
-
-  obtain supr1 supr2 where Sup1_2 : "supr = (supr1, supr2)"
-    by(cases supr; auto)
-
-  have Sup' : "is_sup {LUpd (fst_l l1) s a1 b,
-                LUpd (snd_l l2) s a2 b}
-        ((LUpd l1 s a1 b1), (LUpd l2 s a2 b2))"
-  proof(rule is_supI)
-    fix x
-
-    assume X: "x \<in> {LUpd (fst_l l1) s a1 b, LUpd (snd_l l2) s a2 b}"
-
-    then consider (X1) "x = LUpd (fst_l l1) s a1 b" |
-                  (X2) "x = LUpd (snd_l l2) s a2 b"
-      by auto
-
-    then show "x <[ (LUpd l1 s a1 b1, LUpd l2 s a2 b2)"
-    proof cases
-      case X1
-      then show ?thesis using B leq_refl in2.get_put
-        by(auto simp add: fst_l_def prod_pleq)
-    next
-      case X2
-      then show ?thesis using B leq_refl in1.get_put
-        by(auto simp add: snd_l_def prod_pleq)
-    qed
-  next
-
-    fix x'
-    assume Ub : "is_ub {LUpd (fst_l l1) s a1 b, LUpd (snd_l l2) s a2 b} x'"
-
-    obtain x'1 x'2 where X': "x' = (x'1, x'2)"
-      by(cases x'; auto)
-
-    have Up1 : "LUpd l1 s a1 b1 <[ x'1" and Up2 : "LUpd l2 s a2 b2 <[ x'2"
-      using X' B is_ubE[OF Ub]
-      by(auto simp add: fst_l_def snd_l_def prod_pleq)
-
-    then show "(LUpd l1 s a1 b1, LUpd l2 s a2 b2) <[ x'"
-      using X'
-      by(auto simp add: prod_pleq)
-  qed
-
-  have Sup_eq : "supr = ((LUpd l1 s a1 b1), (LUpd l2 s a2 b2))"
-    using is_sup_unique[OF Sup Sup']
+lemma (in fst_l_snd_l_ortho) ax_g :
+  assumes H1 : "\<And> x . S'1 x = fst_l_S S1 x"
+  assumes H2 : "\<And> x . S'2 x = snd_l_S S2 x"
+  shows "l_ortho (fst_l l1) S'1 (snd_l l2) S'2"
+proof-
+  have H1' : "S'1 = fst_l_S S1"
+    using H1 by auto
+  have H2' : "S'2 = snd_l_S S2"
+    using H2 by auto
+  then show ?thesis using ax unfolding H1' H2'
     by auto
-
-  then show "supr \<in> ok_S"
-    using Bok B in1.ok_S_put in2.ok_S_put
-    by(auto simp add: prod_ok_S)
 qed
-*)
-locale fst_l_snd_l_ortho_base =
-  fst_l_snd_l_ortho + 
+
+locale fst_l_snd_l_ortho_ok_ext =
+  fixes l1 :: "('a, 'b1, 'c1 :: {Pord_Weakb, Okay}) lifting"
+  fixes l2 :: "('a, 'b2, 'c2 :: {Pord_Weakb, Okay}) lifting"
+
+sublocale fst_l_snd_l_ortho_ok_ext \<subseteq> out : l_ortho_ok_ext "fst_l l1" "snd_l l2" .
+
+locale fst_l_snd_l_ortho_base_ext =
+  fst_l_snd_l_ortho' + 
   in1 : lifting_valid_weak_base l1 S1 +
   in2 : lifting_valid_weak_base l2 S2
 
 
-sublocale fst_l_snd_l_ortho_base \<subseteq> out : l_ortho_base "fst_l l1" "fst_l_S S1" "snd_l l2" "snd_l_S S2"
+sublocale fst_l_snd_l_ortho_base_ext \<subseteq> out : l_ortho_base_ext "fst_l l1" "snd_l l2"
 proof
   fix s
   show "LBase (fst_l l1) s = \<bottom>"
@@ -4686,8 +4719,12 @@ next
     by(auto simp add: snd_l_def prod_bot)
 qed
 
+lemma (in fst_l_snd_l_ortho_base_ext) ax :
+  shows "l_ortho_base_ext (fst_l l1) (snd_l l2)"
+  using out.l_ortho_base_ext_axioms
+  by auto
   
-
+(*
 (* TODO: this was originally lifting_valid_weak_pres, but i think we actually need strength
  * to make this work *)
 locale fst_l_snd_l_ortho_pres =
@@ -4741,7 +4778,7 @@ proof
       by(auto simp add: fst_l_def snd_l_def prod_pleq)
   qed
 qed
-
+*)
 
 locale merge_l_ortho' =
   fixes l1 :: "('a, 'b1, 'c :: {Mergeableb, Pordps}) lifting"
@@ -4852,12 +4889,48 @@ next
     by auto
 qed
 
+lemma (in merge_l_ortho) ax :
+  shows "l_ortho (merge_l l1 l2) (\<lambda> x . S1 x \<inter> S2 x) l3 S3"
+  using out.l_ortho_axioms
+  by auto
+
+lemma (in merge_l_ortho) ax_g :
+  assumes H1_2 : "\<And> x . S1_2' x = S1 x \<inter> S2 x"
+  assumes H3 : "\<And> x . S3' x = S3 x"
+  shows "l_ortho (merge_l l1 l2) S1_2' l3 S3'" 
+proof-
+  have H1_2' : "S1_2' = (\<lambda> x . S1 x \<inter> S2 x)" using H1_2 by auto
+  have H3' : "S3' = S3" using H3 by auto
+  show ?thesis
+    using ax unfolding H1_2' H3'
+    by auto
+qed
+
+lemma (in merge_l_ortho) ax_g' :
+  assumes H1 : "\<And> x . S1' x = S1 x"
+  assumes H2 : "\<And> x . S2' x = S2 x"
+  assumes H3 : "\<And> x . S3' x = S3 x"
+  shows "l_ortho (merge_l l1 l2) (\<lambda> x . S1' x \<inter> S2' x) l3 S3'" 
+proof-
+  have H1' : "S1' = S1" using H1 by auto
+  have H2' : "S2' = S2" using H2 by auto
+  have H3' : "S3' = S3" using H3 by auto
+  show ?thesis
+    using ax unfolding H1' H2' H3'
+    by auto
+qed
+
+locale merge_l_ortho_base_ext = merge_l_ortho' +
+  orth1_2 : l_ortho_base_ext l1 l2 + 
+  orth1_3 : l_ortho_base_ext l1 l3 +
+  orth2_3 : l_ortho_base_ext l2 l3
+(*
 locale merge_l_ortho_base = merge_l_ortho +
   orth1_2 : l_ortho_base l1 S1 l2 S2 + 
   orth1_3 : l_ortho_base l1 S1 l3 S3 +
   orth2_3 : l_ortho_base l2 S2 l3 S3 
-
-sublocale merge_l_ortho_base \<subseteq> l_ortho_base "merge_l l1 l2" "\<lambda> x . S1 x \<inter> S2 x" l3 S3
+*)
+sublocale merge_l_ortho_base_ext  \<subseteq> out : l_ortho_base_ext "merge_l l1 l2" l3
 proof
   fix s
 
@@ -4873,6 +4946,19 @@ next
     by(auto)
 qed
 
+lemma (in merge_l_ortho_base_ext) ax :
+  shows "l_ortho_base_ext (merge_l l1 l2) l3"
+  using out.l_ortho_base_ext_axioms by auto
+
+locale merge_l_ortho_ok_ext = merge_l_ortho' +
+  orth1_2 : l_ortho_ok_ext l1 l2 + 
+  orth1_3 : l_ortho_ok_ext l1 l3 +
+  orth2_3 : l_ortho_ok_ext l2 l3
+
+sublocale merge_l_ortho_ok_ext \<subseteq> out : l_ortho_ok_ext "merge_l l1 l2" l3 .
+
+
+(*
 locale merge_l_ortho_pres = merge_l_ortho +
   orth1_2 : l_ortho_pres l1 S1 l2 S2 +
   orth1_3 : l_ortho_pres l1 S1 l3 S3 +
@@ -4942,5 +5028,6 @@ proof
     using Conc' unfolding Merge_eq Merge_eq'
     by simp
 qed
+*)
 
 end
