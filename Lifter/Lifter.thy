@@ -115,7 +115,7 @@ locale lifting_valid_weak_pres = lifting_valid_weak +
   lifting_presonly
 
 locale lifting_pairwise = 
-  fixes S :: "('syn, 'b :: Pordpsc) valid_set"
+  fixes S :: "('syn, 'b :: {Pordc, Pordps}) valid_set"
   assumes pairwise_S :
     "\<And> x1 x2 x3 s s12 s23 s13 s123 .
       x1 \<in> S s \<Longrightarrow>
@@ -129,37 +129,6 @@ locale lifting_pairwise =
       s13 \<in> S s \<Longrightarrow>
       is_sup {x1, x2, x3} s123 \<Longrightarrow>
       s123 \<in> S s"
-
-locale lifting_valid_weak_strict = lifting_valid_weak +
-  assumes strict :
-    "\<And> s x1 x2 a1 a2 . x1 <[ x2 \<Longrightarrow> x1 \<noteq> x2 \<Longrightarrow>
-      LUpd l s a1 x1 <[ LUpd l s a2 x2"
-
-locale lifting_valid_weak_strict_pres =
-lifting_valid_weak_strict + lifting_valid_weak_pres
-
-(* problem: "x1 \<noteq> x2" version fails to hold for products.
-*)
-locale lifting_valid_weak_grade = lifting_valid_weak +
-(*
-  assumes graded : "\<And> a b  x1 x2 s .
-x1 \<in> S s \<Longrightarrow>
-  x2 \<in> S s \<Longrightarrow>
-    x1 <[ x2 \<Longrightarrow>
-    LOut l s x1 = LOut l s x2 \<Longrightarrow>
-    x1 \<noteq> x2 \<Longrightarrow>
-    LUpd l s a x1 <[ LUpd l s b x2"
-*)
-
-  assumes graded : "\<And> a b  x1 x2 s .
-x1 \<in> S s \<Longrightarrow>
-  x2 \<in> S s \<Longrightarrow>
-    x1 <[ x2 \<Longrightarrow>
-    LOut l s x1 = LOut l s x2 \<Longrightarrow>
-    LUpd l s a x1 <[ LUpd l s a x2 \<Longrightarrow>
-    LUpd l s b x1 <[ LUpd l s b x2 \<Longrightarrow>
-    LUpd l s a x1 <[ LUpd l s b x2"
-
 
 (*
 lemma (in lifting_pairwise) pairwise_finite_S :
@@ -247,34 +216,16 @@ proof-
 
       then show ?thesis using Cons.prems
     qed
-  *)
+  qed
+*)
 
+(*
 (* valid set being closed under <[ *)
 locale lifting_valid_weak_clos = lifting_valid_weak +
   assumes clos_S : "\<And> a b s . a <[ b \<Longrightarrow> a \<in> S s \<Longrightarrow> b \<in> S s"
-
-(*
-sublocale lifting_valid_weak_pres \<subseteq> lifting_valid_presonly
-proof
-  show "\<And>s a b. LUpd l s a b \<in> S s"
-    using put_S by auto
-next
-  show "\<And>v V supr f s.
-       v \<in> V \<Longrightarrow>
-       V \<subseteq> S s \<Longrightarrow>
-       is_sup V supr \<Longrightarrow>
-       supr \<in> S s \<Longrightarrow>
-       is_sup (LMap l f s ` V)
-        (LMap l f s supr)"
-    using pres 
-    by auto
-qed
 *)
 
 locale lifting_valid_pres = lifting_valid + lifting_valid_weak_pres
-
-locale lifting_valid_strict_pres =
-  lifting_valid_weak_strict + lifting_valid_pres
 
 locale lifting_valid_weak_base_pres = lifting_valid_weak_pres + lifting_valid_weak_base +
   assumes bot_bad : "\<And> s . \<bottom> \<notin> S s"
@@ -292,6 +243,30 @@ locale lifting_valid_weak_base_ok_pres =
  * we could if we wanted to though. *)
 locale lifting_valid_base_ok_pres =
   lifting_valid_base_pres + lifting_valid_base_ok
+
+(* pairwise doesn't interact with the other components - we keep
+ * it separated (otherwise the number of instances we'd have to
+ * juggle here would get rather large
+ * TODO: if this becomes a problem, we can probably use Velocity to
+ * generate the instances.
+ *)
+locale lifting_valid_weak_pairwise = lifting_valid_weak + lifting_pairwise
+locale lifting_valid_pairwise = lifting_valid + lifting_pairwise
+locale lifting_valid_weak_base_pairwise = lifting_valid_weak_base + lifting_pairwise
+locale lifting_valid_base_pairwise = lifting_valid_base + lifting_valid_pairwise
+locale lifting_valid_weak_ok_pairwise = lifting_valid_weak_ok + lifting_valid_pairwise
+locale lifting_valid_ok_pairwise = lifting_valid_ok + lifting_valid_pairwise
+locale lifting_valid_weak_base_ok_pairwise = lifting_valid_weak_base_ok + lifting_valid_pairwise
+locale lifting_valid_base_ok_pairwise = lifting_valid_base_ok + lifting_valid_pairwise
+locale lifting_valid_weak_pres_pairwise = lifting_valid_weak_pres + lifting_valid_pairwise
+locale lifting_valid_pres_pairwise = lifting_valid_pres +  lifting_valid_pairwise
+locale lifting_valid_weak_base_pres_pairwise = lifting_valid_weak_base_pres + lifting_valid_pairwise
+locale lifting_valid_base_pres_pairwise = lifting_valid_base_pres + lifting_valid_pairwise
+locale lifting_valid_weak_ok_pres_pairwise = lifting_valid_weak_ok_pres + lifting_valid_pairwise
+locale lifting_valid_ok_pres_pairwise = lifting_valid_ok_pres + lifting_valid_pairwise
+locale lifting_valid_weak_base_ok_pres_pairwise = lifting_valid_weak_base_ok_pres + lifting_valid_pairwise
+locale lifting_valid_base_ok_pres_pairwise = lifting_valid_base_ok_pres + lifting_valid_pairwise
+
 
 (* orthogonality, used to define merge correctness *)
 locale l_ortho' =
@@ -430,14 +405,29 @@ proof
 qed
 
 locale vsg' =
-  fixes S' :: "'a \<Rightarrow> ('b :: Pord_Weak) set"
   fixes l :: "('a, 'b, 'c) lifting"
-  fixes lift_S :: "('a \<Rightarrow> 'b set) \<Rightarrow> ('a \<Rightarrow> 'c set)"
+  fixes S :: "'a \<Rightarrow> 'c set"
+  fixes S' :: "'a \<Rightarrow> 'c set"
 
+(*
+(* TODO: finish these VSG defs, make sure they work. *)
 locale lifting_valid_weak_vsg =
   lifting_valid_weak +
   vsg' +
-  assumes S'_S : "S' = lift_S S"
+  assumes S'_S : "\<And> x . S' x = S x"
+
+sublocale lifting_valid_weak_vsg \<subseteq> lifting_valid_weak l S'
+proof
+  show "\<And>s a b. LUpd l s a b \<in> S' s"
+    using S'_S put_S by auto
+next
+  show "\<And>s b a. LOut l s (LUpd l s a b) = a"
+    using S'_S put_get by auto
+next
+  show "\<And>s b. b \<in> S' s \<Longrightarrow> b <[ LUpd l s (LOut l s b) b"
+    using S'_S get_put_weak by auto
+qed
+*)
 
 (*
   option_l_valid_weak + vsg' +

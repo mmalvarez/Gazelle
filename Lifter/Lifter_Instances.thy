@@ -60,7 +60,7 @@ next
   show "LUpd triv_l s a b \<in> UNIV" by auto
 qed
 
-(* TODO: make sure that using the same namespace here hasn't cost us generality. *)
+
 interpretation triv_l:
   lifting_valid_weak_ok "(triv_l :: ('x, 'a :: {Bogus, Okay}, 'a md_triv) lifting')" "\<lambda> _ . UNIV"
 proof
@@ -134,6 +134,15 @@ interpretation triv_l : lifting_valid_weak_ok_pres "(triv_l :: ('x, 'a :: {Bogus
 proof
 qed
 
+interpretation triv_l : lifting_pairwise "\<lambda> _ . (UNIV :: 'a md_triv set)"
+proof
+  fix x1 x2 x3 s12 s23 s13 s123 :: "'a md_triv"
+
+  show "s123 \<in> UNIV"
+    by auto
+qed
+
+
 (*
  * option
  *)
@@ -182,6 +191,25 @@ next
     by(auto simp add: option_l_def option_bot)
 qed
 
+lemma (in option_l_valid_weak) ax :
+  shows "lifting_valid_weak (option_l l) (option_l_S S)"
+  using out.lifting_valid_weak_axioms
+    by auto
+
+lemma (in option_l_valid_weak) ax_g :
+  assumes "S' = option_l_S S"
+  shows "lifting_valid_weak (option_l l) S'"
+  using out.lifting_valid_weak_axioms assms
+  by auto
+
+
+(*
+lemma option_l_valid_weak :
+  assumes "lifting_valid_weak l S"
+  shows "lifting_valid_weak (option_l l) (option_l_S S)"
+*)
+
+(*
 locale option_l_valid_clos = lifting_valid_weak_clos + option_l_valid_weak
 
 sublocale option_l_valid_clos \<subseteq> lifting_valid_weak_clos "option_l l" "option_l_S S"
@@ -200,6 +228,7 @@ proof
     using A' Leq clos_S[OF B'(2) A'(2)] B'
     by(auto simp add: option_l_S_def option_pleq)
 qed
+*)
 
 locale option_l_valid_weak_base = option_l_valid_weak
 
@@ -207,9 +236,20 @@ sublocale option_l_valid_weak_base \<subseteq> out: lifting_valid_weak_base "opt
 proof
 qed
 
-locale option_l_valid = lifting_valid + option_l_valid_weak
+lemma (in option_l_valid_weak_base) ax :
+  shows "lifting_valid_weak_base (option_l l) (option_l_S S)"
+  using out.lifting_valid_weak_base_axioms
+    by auto
 
-sublocale option_l_valid \<subseteq> param : lifting_valid_base "option_l l" "option_l_S S"
+lemma (in option_l_valid_weak_base) ax_g :
+  assumes "S' = option_l_S S"
+  shows "lifting_valid_weak_base (option_l l) S'"
+  using out.lifting_valid_weak_base_axioms assms
+  by auto
+
+locale option_l_valid_base = lifting_valid + option_l_valid_weak
+
+sublocale option_l_valid_base \<subseteq> out : lifting_valid_base "option_l l" "option_l_S S"
 proof
   fix s a b
   (*assume "b \<in> option_l_S S s"*)
@@ -218,11 +258,21 @@ proof
     by(auto simp add:option_l_def option_l_S_def LNew_def option_pleq split:option.splits)
 qed
 
-locale option_l_valid_base = option_l_valid
+lemma (in option_l_valid_base) ax :
+  shows "lifting_valid (option_l l) (option_l_S S)"
+  using out.lifting_valid_axioms
+    by auto
 
+lemma (in option_l_valid_base) ax_g :
+  assumes "S' = option_l_S S"
+  shows "lifting_valid (option_l l) S'"
+  using out.lifting_valid_axioms assms
+  by auto
+
+locale option_l_valid = option_l_valid_base
 locale option_l_valid_weak_base_ok = option_l_valid_weak_base + lifting_valid_weak_ok
 
-sublocale option_l_valid_weak_base_ok \<subseteq> out : lifting_valid_weak_ok "option_l l" "option_l_S S"
+sublocale option_l_valid_weak_base_ok \<subseteq> out : lifting_valid_weak_base_ok "option_l l" "option_l_S S"
 proof
   fix s
   show "ok_S \<subseteq> option_l_S S s" using ok_S_valid
@@ -235,13 +285,19 @@ next
     by(auto simp add: option_l_S_def option_l_def option_ok_S split: option.splits)
 qed
 
+lemma (in option_l_valid_weak_base_ok) ax :
+  shows "lifting_valid_weak_base_ok (option_l l) (option_l_S S)"
+  using out.lifting_valid_weak
+
 lemma is_sup_pair :
   assumes "a <[ b"
   shows "is_sup {a, b} b" using assms
   by(auto simp add: is_sup_def is_least_def is_ub_def leq_refl)
 
+(*
 locale option_l_valid_weak_grade =
   option_l_valid_weak + lifting_valid_weak_grade
+*)
 (*
 sublocale option_l_valid_weak_grade \<subseteq> out : lifting_valid_weak_grade "option_l l" "option_l_S S"
 proof
@@ -409,7 +465,7 @@ sublocale option_l_valid_base_ok_pres \<subseteq> out : lifting_valid_base_ok_pr
 proof
 qed
 
-(*
+
 locale option_l_pairwise = 
   lifting_pairwise
 
@@ -485,7 +541,7 @@ proof
     using S123'
     by(auto simp add: option_l_S_def)
 qed
-*)
+
   
 
 (*
@@ -1587,7 +1643,7 @@ definition fst_l_S :: "('x, 'b1 :: Pord_Weak) valid_set \<Rightarrow> ('x, ('b1 
 
 locale fst_l_valid_weak = lifting_valid_weak
 
-sublocale fst_l_valid_weak \<subseteq> out : lifting_valid_weak "fst_l l" "fst_l_S S"
+sublocale fst_l_valid_weak \<subseteq> lifting_valid_weak "fst_l l" "fst_l_S S"
 proof
   fix s a 
   fix b :: "('c :: Pord_Weak) * ('e :: Pord_Weakb)"
@@ -1621,6 +1677,7 @@ proof
     by(auto simp add: fst_l_def prod_pleq fst_l_S_def leq_refl split:prod.splits)
 qed
 
+(*
 locale fst_l_valid_clos = lifting_valid_weak_clos + fst_l_valid_weak
 
 sublocale fst_l_valid_clos \<subseteq> lifting_valid_weak_clos "fst_l l" "fst_l_S S"
@@ -1644,7 +1701,7 @@ proof
     unfolding B'
     by(auto simp add: fst_l_S_def)
 qed
-
+*)
 
 locale fst_l_valid_weak_base = fst_l_valid_weak +   lifting_valid_weak_base
 sublocale fst_l_valid_weak_base \<subseteq> out : lifting_valid_weak_base "fst_l l" "fst_l_S S"
@@ -1689,8 +1746,9 @@ sublocale fst_l_valid_base_ok \<subseteq> out : lifting_valid_base_ok "fst_l l" 
 proof
 qed
 
+(*
 locale fst_l_valid_grade = fst_l_valid + lifting_valid_weak_grade 
-
+*)
 
 
 locale fst_l_valid_weak_pres = fst_l_valid_weak + lifting_valid_weak_pres
@@ -2023,7 +2081,7 @@ proof
     using get_put
     by(auto simp add: snd_l_def prod_pleq leq_refl snd_l_S_def split:prod.splits)
 qed
-
+(*
 locale snd_l_valid_clos = lifting_valid_weak_clos + snd_l_valid_weak
 
 sublocale snd_l_valid_clos \<subseteq> lifting_valid_weak_clos "snd_l l" "snd_l_S S"
@@ -2047,7 +2105,7 @@ proof
     unfolding B'
     by(auto simp add: snd_l_S_def)
 qed
-
+*)
 
 locale snd_l_valid_weak_base = snd_l_valid_weak +   lifting_valid_weak_base
 sublocale snd_l_valid_weak_base \<subseteq> out : lifting_valid_weak_base "snd_l l" "snd_l_S S"
