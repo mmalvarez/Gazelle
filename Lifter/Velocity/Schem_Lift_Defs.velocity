@@ -9,6 +9,15 @@ lemmas schem_lift_defs =
 #foreach ($n in $names)
   schem_lift_base_triv${n}_def
 #end
+
+schem_lift_inject_def
+
+schem_lift_option_recR_def
+
+schem_lift_prio_recR_def
+
+schem_lift_recL_def
+
 #foreach ($n in $names)
   schem_lift_prod_recR_${n}_left_def
   schem_lift_prod_recR_${n}_right_def
@@ -17,5 +26,29 @@ lemmas schem_lift_defs =
   schem_lift_merge_recR_${n}_left_def
   schem_lift_merge_recR_${n}_right_def
 #end
+
+lemmas schem_lift_S_defs =
+#foreach ($n in $names)
+  schem_lift_S_base_id${n}_def
+#end
+
+(*
+schem_lift_inject_def
+*)
+schem_lift_S_option_recR_def
+
+schem_lift_S_prio_recR_def
+
+schem_lift_S_recL_def
+
+#foreach ($n in $names)
+  schem_lift_S_prod_recR_${n}_left_def
+  schem_lift_S_prod_recR_${n}_right_def
+#end
+#foreach ($n in $names)
+  schem_lift_S_merge_recR_${n}_left_def
+  schem_lift_S_merge_recR_${n}_right_def
+#end
+
 
 end

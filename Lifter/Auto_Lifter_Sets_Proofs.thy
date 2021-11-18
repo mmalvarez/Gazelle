@@ -1,6 +1,8 @@
 theory Auto_Lifter_Sets_Proofs
-imports Lifter Lifter_Instances Auto_Lifter_Sets Auto_Lifter_Proofs
+imports Lifter Lifter_Instances "Velocity/Auto_Lifter_Sets" "Velocity/Auto_Lifter_Sets_Proofs"
 begin
+
+(* TODO: is this file still useful? *)
 
 (* 
  * In this file, we have some rather basic proof automation (really just lemma-lists to supply

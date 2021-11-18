@@ -4,7 +4,7 @@ begin
 
 (* Alternative approach to Hoare lifting:
 transforming predicate transformers. *)
-
+(* TODO: this probably is no longer needed *)
 (*
   assume
   {P} c {Q(P, c)}
@@ -18,7 +18,7 @@ idea:
 
 definition liftt_conc ::
   "('a1, 'b1) syn_lifting \<Rightarrow>
-   ('a1, 'a2, 'b2 :: {Pord, Okay}, 'z) lifting_scheme \<Rightarrow>
+   ('a1, 'a2, 'b2 :: {Pord, Okay}) lifting \<Rightarrow>
    'b1 \<Rightarrow>
    (('a2 \<Rightarrow> bool) \<Rightarrow> ('a2 \<Rightarrow> bool)) \<Rightarrow>
    (('b2 \<Rightarrow> bool) \<Rightarrow> ('b2 \<Rightarrow> bool))" where
@@ -51,7 +51,7 @@ lemma new_lift :
   fixes P' :: "_ \<Rightarrow> bool"
   assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut l x st)"
   assumes HOk : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
-  assumes HV : "lifting_validx l S"
+  assumes HV : "lifting_valid_ok_ext l S"
   assumes Hsyn : "l' x' = x"
   assumes HT : "sem % {{P'}} x {{Q'}}"
   shows "(lift_map_s l' l sem) % 
@@ -69,8 +69,11 @@ proof(rule HTSI)
     using HTSE[OF HT H']
     by auto
 
+  interpret V : lifting_valid_ok_ext l S
+    using HV.
+
   have Ok' : "LUpd l x (sem x (LOut l x a)) a \<in> ok_S"
-    using lifting_validxDP'[OF HV HOk[OF H]]
+    using V.ok_S_put[OF HOk[OF H]]
     by auto
 
   show " \<exists>old_big small_new.
@@ -78,7 +81,7 @@ proof(rule HTSI)
             Q' small_new \<and>
             lift_map_s l' l sem x' a = LUpd l x small_new old_big \<and>
             lift_map_s l' l sem x' a \<in> ok_S"
-    unfolding lift_map_s_def Hsyn
+    unfolding lift_map_s_def Hsyn LMap_def
     using H Q' Ok'
     by blast
 qed

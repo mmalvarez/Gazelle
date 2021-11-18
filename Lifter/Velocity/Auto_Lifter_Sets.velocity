@@ -17,13 +17,16 @@ consts schem_lift_S ::
   "('s1 :: schem, 's2 :: schem, 'x, 'b) schem_lift_S"
 
 
-(* TODO: this was originally commented *)
+(* can't have both base and triv - otherwise we have ambiguous instances.
+ * fortunately this isn't much of an issue as they both do the same thing *)
+(*
 #foreach ($n in $names)
 definition schem_lift_S_base_triv${n} ::
   "('n :: n_${n}, 'ls, 'x, 'a md_triv) schem_lift_S" where
 "schem_lift_S_base_triv${n} _ _ _ =
   UNIV"
 #end
+*)
 
 #foreach ($n in $names)
 definition schem_lift_S_base_id${n} ::
@@ -130,10 +133,11 @@ definition schem_lift_S_recL ::
 
 adhoc_overloading schem_lift_S
 
-(* the triv instances were commented out *)
+(*
 #foreach ($n in $names)
 "schem_lift_S_base_triv${n}"
 #end
+*)
 
 #foreach ($n in $names)
 "schem_lift_S_base_id${n}"

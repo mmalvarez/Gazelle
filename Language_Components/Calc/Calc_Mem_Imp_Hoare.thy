@@ -1,5 +1,5 @@
 theory Calc_Mem_Imp_Hoare
-  imports Calc_Mem_Imp "../../Hoare/Hoare_Step" "../../Hoare/Hoare_Lift" "../Mem/Mem_Simple"
+  imports Calc_Mem_Imp (*"../../Hoare/Hoare_Step" *) "../../Hoare/Hoare_Lift" "../Mem/Mem_Simple"
 begin
 
 (* final definitions that perhaps should be in mem_simple (TODO) *)
@@ -29,7 +29,7 @@ term "sems"
 *)
 
 lemma pres :
-"sups_pres sems"
+"sups_pres sems (\<lambda> _ . ok_S)"
 proof(rule sups_presI)
 
   fix x :: "('a, 'b) state"

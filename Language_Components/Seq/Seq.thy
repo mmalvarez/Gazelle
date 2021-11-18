@@ -42,14 +42,20 @@ type_synonym 's cstate = "('s, unit option) state"
  * to what extent this is an issue or just a usability bug (or even just a matter
  * of terrible error messages making it hard to see what's going on) *)
 
+definition seq_sem_lifting_schem1 where
+  "seq_sem_lifting_schem1 = NC "
+
+definition seq_sem_lifting_schem2 where
+"seq_sem_lifting_schem2 = (SP (SPRI (SO NC)) NX)"
+
 (* TODO: is this the correct priority calculation? *)
-definition seq_sem_lifting_gen :: "(syn, 'x state', ('x, 'a :: Pordb) control, _) lifting"
+definition seq_sem_lifting_gen :: "(syn, 'x state', ('x, 'a :: Pordb) control) lifting"
   where
 "seq_sem_lifting_gen = schem_lift
     NC (SP (SPRI (SO NC)) NX) "
 
 (* alternate definition that doesn't rely on auto lifter *)
-definition seq_sem_lifting' :: "(syn, 'x state', 'x state' md_triv option md_prio, _) lifting"
+definition seq_sem_lifting' :: "(syn, 'x state', 'x state' md_triv option md_prio) lifting"
   where
 "seq_sem_lifting' =
   (prio_l (\<lambda> _ . 0) (\<lambda> _ z . 1 + z) (option_l (triv_l)))"
@@ -60,18 +66,10 @@ lemma fst_l_S_univ :
   by(blast)
 
 lemma seq_sem_lifting_gen_validb :
-  "lifting_validb (seq_sem_lifting_gen :: (syn, 'x state', ('x, _ :: Pordb) control) lifting) 
-                  (\<lambda> _ . UNIV)" unfolding seq_sem_lifting_gen_def
-  unfolding seq_sem_lifting'_def schem_lift_defs
-  apply(auto intro: lifting_valid lifting_ortho)
-  apply(simp only: sym[OF fst_l_S_univ])
-  apply(rule fst_l_validb)
-  apply(rule prio_l_validb_strong)
-    apply(rule option_l_valid_weakb)
-    apply(rule triv_l_valid_weak)
-   apply(auto)
-  done
-
+  "lifting_valid_base (seq_sem_lifting_gen :: (syn, 'x state', ('x, _ :: Pordb) control) lifting) 
+                  (schem_lift_S seq_sem_lifting_schem1 seq_sem_lifting_schem2)" unfolding seq_sem_lifting_gen_def seq_sem_lifting_schem1_def seq_sem_lifting_schem2_def
+  unfolding seq_sem_lifting'_def schem_lift_defs schem_lift_S_defs
+  by(fastforce intro: lifting_valid_noaxiom lifting_ortho_noaxiom)
 
 definition seq_sem_l_gen ::
   "('s \<Rightarrow> syn) \<Rightarrow>

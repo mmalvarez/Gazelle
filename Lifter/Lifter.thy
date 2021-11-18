@@ -398,12 +398,19 @@ next
     using put1_S2 by auto
 qed
 
-sublocale l_ortho_base \<subseteq> comm :
-  l_ortho l2 S2 l1 S1
-proof qed
+sublocale l_ortho_base_ext \<subseteq> comm :
+  l_ortho_base_ext l2 l1
+proof
+  show "\<And>s. LBase l2 s = \<bottom>"
+    using compat_base1 compat_base2 by auto
+next
+  show "\<And>s. LBase l1 s = \<bottom>"
+    using compat_base1 compat_base2 by auto
+qed
 
-sublocale l_ortho_pres \<subseteq> comm :
-  l_ortho_pres l2 S2 l1 S1
+(*
+sublocale l_ortho_pres_ext \<subseteq> comm :
+  l_ortho_pres_ext l2 S2 l1 S1
 proof
   fix a1 a2 s x
 
@@ -419,7 +426,12 @@ proof
     using compat
     by fastforce
 qed
+*)
 
+(* previously I was trying to use this locale-signature to auto-generate
+ * useful theorems for composing proofs... in the end i took a more
+ * manual approach (see Lifter_Instances.thy, theorems "ax"/"ax_g"
+ *)
 locale vsg' =
   fixes l :: "('a, 'b, 'c) lifting"
   fixes S :: "'a \<Rightarrow> 'c set"

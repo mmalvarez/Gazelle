@@ -15,7 +15,9 @@ consts schem_lift_S ::
   "('s1 :: schem, 's2 :: schem, 'x, 'b) schem_lift_S"
 
 
-(* TODO: this was originally commented *)
+(* can't have both base and triv - otherwise we have ambiguous instances.
+ * fortunately this isn't much of an issue as they both do the same thing *)
+(*
 definition schem_lift_S_base_trivA ::
   "('n :: n_A, 'ls, 'x, 'a md_triv) schem_lift_S" where
 "schem_lift_S_base_trivA _ _ _ =
@@ -60,6 +62,7 @@ definition schem_lift_S_base_trivK ::
   "('n :: n_K, 'ls, 'x, 'a md_triv) schem_lift_S" where
 "schem_lift_S_base_trivK _ _ _ =
   UNIV"
+*)
 
 definition schem_lift_S_base_idA ::
   "('n :: n_A, 'n, 'x, 'a) schem_lift_S" where
@@ -520,7 +523,7 @@ definition schem_lift_S_recL ::
 
 adhoc_overloading schem_lift_S
 
-(* the triv instances were commented out *)
+(*
 "schem_lift_S_base_trivA"
 "schem_lift_S_base_trivB"
 "schem_lift_S_base_trivC"
@@ -532,6 +535,7 @@ adhoc_overloading schem_lift_S
 "schem_lift_S_base_trivI"
 "schem_lift_S_base_trivJ"
 "schem_lift_S_base_trivK"
+*)
 
 "schem_lift_S_base_idA"
 "schem_lift_S_base_idB"

@@ -683,8 +683,8 @@ locale prio_l_valid_ext_stronger' = prio_l_valid_ext_strong' +
   fixes T :: "('syn \<Rightarrow> ('b :: Pord_Weak) md_prio set)"
   assumes T : "\<And> x . prio_l_S S x \<subseteq> T x"
 
-locale prio_l_valid_stronger = prio_l_valid_strong + prio_l_valid_ext_stronger'
-sublocale prio_l_valid_stronger \<subseteq> out : lifting_valid "prio_l f0 f1 l" "T"
+locale prio_l_valid_ext_stronger = prio_l_valid_strong + prio_l_valid_ext_stronger'
+sublocale prio_l_valid_ext_stronger \<subseteq> out : lifting_valid "prio_l f0 f1 l" "T"
 proof
   show "\<And>s b a. LOut (prio_l f0 f1 l) s (LUpd (prio_l f0 f1 l) s a b) = a"
     using out.put_get by auto
@@ -715,12 +715,12 @@ next
     by(auto simp add: prio_l_def prio_l_S_def split: md_prio.splits)
 qed
 
-lemma (in prio_l_valid_stronger) ax :
+lemma (in prio_l_valid_ext_stronger) ax :
   shows "lifting_valid (prio_l f0 f1 l) T"
   using out.lifting_valid_weak_axioms out.lifting_valid_ext_axioms
   by(intro_locales; auto)
 
-lemma (in prio_l_valid_stronger) ax_g :
+lemma (in prio_l_valid_ext_stronger) ax_g :
   assumes H: "S' = T"
   shows "lifting_valid (prio_l f0 f1 l) T"
   using ax assms
@@ -786,9 +786,9 @@ lemma (in prio_l_valid_ok_ext) ax_g :
   using out.lifting_valid_ok_ext_axioms assms
   by auto
 
-locale prio_l_valid_stronger_ok = prio_l_valid_weak_ok + prio_l_valid_stronger
+locale prio_l_valid_ext_stronger_ok = prio_l_valid_weak_ok + prio_l_valid_ext_stronger
 
-sublocale prio_l_valid_stronger_ok \<subseteq> out : lifting_valid_ok "prio_l f0 f1 l" "T"
+sublocale prio_l_valid_ext_stronger_ok \<subseteq> out : lifting_valid_ok "prio_l f0 f1 l" "T"
 proof
   fix s
   show "ok_S \<subseteq> T s"
@@ -811,12 +811,12 @@ next
     by(auto simp add: prio_l_S_def prio_l_def prio_ok_S)
 qed
 
-lemma (in prio_l_valid_stronger_ok) ax :
+lemma (in prio_l_valid_ext_stronger_ok) ax :
   shows "lifting_valid_ok_ext (prio_l f0 f1 l) T"
   using out.lifting_valid_ok_ext_axioms
   by auto
 
-lemma (in prio_l_valid_stronger_ok) ax_g :
+lemma (in prio_l_valid_ext_stronger_ok) ax_g :
   assumes H : "S' = T"
   shows "lifting_valid_ok_ext (prio_l f0 f1 l) S'"
   using out.lifting_valid_ok_ext_axioms assms
@@ -3148,7 +3148,7 @@ lemma (in snd_l_valid_weak) ax :
 
 lemma (in snd_l_valid_weak) ax_g :
   assumes H : "\<And> x . S' x = snd_l_S S x"
-  shows "lifting_valid_weak (snd_l l) (snd_l_S S)"
+  shows "lifting_valid_weak (snd_l l) S'"
 proof-
   have "S' = snd_l_S S"
     using assms by auto
@@ -3210,7 +3210,7 @@ lemma (in snd_l_valid_ok_ext) ax :
 
 lemma (in snd_l_valid_ok_ext) ax_g :
   assumes H: "\<And> x . S' x = snd_l_S S x"
-  shows "lifting_valid_ok_ext (snd_l l) (snd_l_S S)"
+  shows "lifting_valid_ok_ext (snd_l l) S'"
 proof-
   have "S' = snd_l_S S"
     using assms by auto
@@ -4694,6 +4694,26 @@ proof-
     by auto
 qed
 
+(* commutative *)
+lemma (in fst_l_snd_l_ortho) ax_comm :
+  shows "l_ortho (snd_l l2) (snd_l_S S2) (fst_l l1) (fst_l_S S1)"
+  using out.comm.l_ortho_axioms
+  by auto
+
+lemma (in fst_l_snd_l_ortho) ax_g_comm :
+  assumes H1 : "\<And> x . S'2 x = snd_l_S S2 x"
+  assumes H2 : "\<And> x . S'1 x = fst_l_S S1 x"
+  shows "l_ortho (snd_l l2) S'2 (fst_l l1) S'1"
+proof-
+  have H1' : "S'2 = snd_l_S S2"
+    using H1 by auto
+  have H2' : "S'1 = fst_l_S S1"
+    using H2 by auto
+  then show ?thesis using ax_comm unfolding H1' H2'
+    by auto
+qed
+
+
 locale fst_l_snd_l_ortho_ok_ext =
   fixes l1 :: "('a, 'b1, 'c1 :: {Pord_Weakb, Okay}) lifting"
   fixes l2 :: "('a, 'b2, 'c2 :: {Pord_Weakb, Okay}) lifting"
@@ -4723,7 +4743,12 @@ lemma (in fst_l_snd_l_ortho_base_ext) ax :
   shows "l_ortho_base_ext (fst_l l1) (snd_l l2)"
   using out.l_ortho_base_ext_axioms
   by auto
-  
+
+lemma (in fst_l_snd_l_ortho_base_ext) ax_comm :
+  shows "l_ortho_base_ext (snd_l l2) (fst_l l1)"
+  using out.comm.l_ortho_base_ext_axioms
+  by auto
+
 (*
 (* TODO: this was originally lifting_valid_weak_pres, but i think we actually need strength
  * to make this work *)
@@ -4920,6 +4945,37 @@ proof-
     by auto
 qed
 
+lemma (in merge_l_ortho) ax_comm :
+  shows "l_ortho l3 S3 (merge_l l1 l2) (\<lambda> x . S1 x \<inter> S2 x)"
+  using out.comm.l_ortho_axioms
+  by auto
+
+lemma (in merge_l_ortho) ax_g_comm :
+  assumes H1_2 : "\<And> x . S1_2' x = S1 x \<inter> S2 x"
+  assumes H3 : "\<And> x . S3' x = S3 x"
+  shows "l_ortho l3 S3' (merge_l l1 l2) S1_2' " 
+proof-
+  have H1_2' : "S1_2' = (\<lambda> x . S1 x \<inter> S2 x)" using H1_2 by auto
+  have H3' : "S3' = S3" using H3 by auto
+  show ?thesis
+    using ax_comm unfolding H1_2' H3'
+    by auto
+qed
+
+lemma (in merge_l_ortho) ax_g'_comm :
+  assumes H1 : "\<And> x . S1' x = S1 x"
+  assumes H2 : "\<And> x . S2' x = S2 x"
+  assumes H3 : "\<And> x . S3' x = S3 x"
+  shows "l_ortho l3 S3' (merge_l l1 l2) (\<lambda> x . S1' x \<inter> S2' x) " 
+proof-
+  have H1' : "S1' = S1" using H1 by auto
+  have H2' : "S2' = S2" using H2 by auto
+  have H3' : "S3' = S3" using H3 by auto
+  show ?thesis
+    using ax_comm unfolding H1' H2' H3'
+    by auto
+qed
+
 locale merge_l_ortho_base_ext = merge_l_ortho' +
   orth1_2 : l_ortho_base_ext l1 l2 + 
   orth1_3 : l_ortho_base_ext l1 l3 +
@@ -4949,6 +5005,10 @@ qed
 lemma (in merge_l_ortho_base_ext) ax :
   shows "l_ortho_base_ext (merge_l l1 l2) l3"
   using out.l_ortho_base_ext_axioms by auto
+
+lemma (in merge_l_ortho_base_ext) ax_comm :
+  shows "l_ortho_base_ext l3 (merge_l l1 l2)"
+  using out.comm.l_ortho_base_ext_axioms by auto
 
 locale merge_l_ortho_ok_ext = merge_l_ortho' +
   orth1_2 : l_ortho_ok_ext l1 l2 + 

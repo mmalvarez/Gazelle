@@ -13,6 +13,8 @@ begin
  * lifted version of the rule holds without side conditions.
  *)
 
+(* TODO - decouple this from seq *)
+
 (* However, we might be able to avoid reasoning about liftings at all in such cases (?)
  * by playing the same parametricity trick as with the control languages?
  *)
@@ -42,68 +44,55 @@ definition no_control_l :: "
 "no_control_l l f =
   lift_map_s id (no_control_lifting l) f"
   
-
-(* TODO: this hypothesis is rather inconvenient. *)
-(* TODO: there is a not-very-nice control flow interaction here, wherein we actually
- * need to remove the head...
- * seq handles this, but we need to figure out how to express that this will be handled
- * by another semantics - something like a generalization of dominates?
+(* need to figure out what the appropriate set is for use with sups_pres here.
+ * possibly ok_S?
  *)
-(* so, if we merge with sequence, we are most of the way there.
- * however, we need to show that sequence doesn't get overridden
- * by other control semantics.
-   * idea: we can actually use dominance here.
-   * all we need to do is say that seq is dominant for that syntax
-   * for all _other_ semantics. no_control_lifting should do the rest. i think.
- *)
-
-(* can we get away with lift_pred_s? looks like the answer is no; see below. *)
-
-(* YOU ARE HERE.
-   The main thing i am trying to figure out now is how big of an issue this is.
-   on the one hand it means that these rules might not naturally compose between
-   different liftings (which will have different valid sets).
-
-   A weaker, alternate notion of lifting validity (updates are only guaranteed to be in
-   the valid set if we started in the valid set) feels very ugly, but i worry i am running
-   out of other options.
-*)
-
+term "seq_sem_l_gen :: _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> (_, _) control"
+term "sups_pres"
 lemma HTS_imp_HT' :
+  fixes fs :: "('b \<Rightarrow> ('b, 'c) control \<Rightarrow> ('b, 'c :: {Bogus, Mergeableb, Okay}) control) list"
   assumes H: "f % {{P1}} c {{P2}}"
-  assumes Valid : "lifting_validx l S"
+  assumes Valid : "lifting_valid_ok l S"
   assumes Hf' : "f' = no_control_l l f"
   assumes H0 : "gs = pcomps fs"
-  assumes Hpres : "sups_pres (set fs)"
+  (* was payload ` ok_S *)
+(*
+  assumes Hpres : "sups_pres (set fs) (\<lambda> _ . (ok_S :: ('b, 'c) control set))"
+
+*)
+  assumes Hpres : "sups_pres (set fs) (\<lambda> _ . (ok_S :: ('b, 'c) control set))"
+
   assumes Hseq : "seq_sem_l_gen lfts \<in> set fs"
   assumes Skip : "lfts c = Sskip"
   assumes Hnemp : "g \<in> (set fs - {seq_sem_l_gen lfts})"
   assumes Hdom : "(f' \<downharpoonleft> (set fs - {seq_sem_l_gen lfts}) c)"
-  shows "|gs| {~ (lift_pred_validx_s id l c P1) ~} [G c z] {~ (lift_pred_validx_s id l c P2) ~}"
+  shows "|gs| {~ (lift_pred_valid_ok_s id l c P1) ~} [G c z] {~ (lift_pred_valid_ok_s id l c P2) ~}"
 proof(rule HT'I)
   fix npost
 
-  have Valid' : "lifting_valid l S"
-    using lifting_validxDV[OF Valid] by auto
+  interpret V: lifting_valid_ok l S
+    using Valid .
 
-  have "|#gs#| {#-lift_pred_validx_s id l c
+  have "|#gs#| {#-lift_pred_valid_ok_s id l c
                      P1, (0 +
-                          npost)-#} [G c z] {#-lift_pred_validx_s id l c
+                          npost)-#} [G c z] {#-lift_pred_valid_ok_s id l c
        P2, npost-#}"
     unfolding add_0
   proof
     fix c'
 
-    assume Guard : "|#gs#| {#lift_pred_validx_s id l c P2, npost#} c'"
-    show "|#gs#| {#lift_pred_validx_s id l c P1, npost#} ([G c z] @ c')"
+    assume Guard : "|#gs#| {#lift_pred_valid_ok_s id l c P2, npost#} c'"
+    show "|#gs#| {#lift_pred_valid_ok_s id l c P1, npost#} ([G c z] @ c')"
     proof
-      fix m :: "('a, 'c) control"
-      assume Hpay : "lift_pred_validx_s id l c P1 (payload m)"
+      fix m :: "('b, 'c) control"
+      assume Hpay : "lift_pred_valid_ok_s id l c P1 (payload m)"
       assume Hcont : "cont m = Inl ([G c z] @ c') "
 
       have Hpay1 : "P1 (LOut l c (payload m))" and Hpay2 : "payload m \<in> S c" and Hpay3 : "payload m \<in> ok_S"
-        using Hpay lifting_validxDS[OF Valid]
-        unfolding lift_pred_valid_s_def lift_pred_validx_s_def lift_pred_s_def
+        using Hpay 
+        using V.ok_S_valid
+        unfolding lift_pred_valid_ok_s_def 
+        unfolding lift_pred_noS_s_def lift_pred_s_def
         by auto
 
       have Hpay' : "P2 (f c (LOut l c (payload m)))"
@@ -121,8 +110,17 @@ proof(rule HT'I)
       next
         case (Inl m')
 
-        have Pres' : "sups_pres (set fs - {seq_sem_l_gen lfts})"
-          using sups_pres_subset[OF Hpres, of "set fs - {seq_sem_l_gen lfts}"] by auto
+        have Huh : "set fs - {seq_sem_l_gen lfts} \<subseteq> set fs" "finite (set fs)"
+          by auto
+
+(* some annoying type annotation thing needs to happen here...
+*)
+        have Pres' : "sups_pres (set fs - {seq_sem_l_gen lfts}) (\<lambda> _ . ok_S)"
+          (*using sups_pres_subset[OF Hpres, of "set fs - {seq_sem_l_gen lfts}"] Hnemp by auto*)
+          using sups_pres_subset[OF Hpres Huh(2) Huh(1) Hnemp]
+          by(auto)
+          
+          
 
         obtain fs_sub where Fs_sub : "set fs_sub = set fs - {seq_sem_l_gen lfts}"
           using finite_list[of "set fs - {seq_sem_l_gen lfts}"]
@@ -135,16 +133,26 @@ proof(rule HT'I)
 - we can then unfold these things in order and everything should be ok.
 *)
 
+(* this does not hold in general now - need to use some information about the input. *)
+(* gs c m specifically is all we need *)
+
+(*
         have Assoc : 
              "pcomps (fs_sub @ [seq_sem_l_gen lfts]) =
               pcomps [pcomps fs_sub, pcomps [seq_sem_l_gen lfts]]"
-        proof(rule pcomps_assoc)
+
+*)
+
+        have Assoc : 
+             "pcomps (fs_sub @ [seq_sem_l_gen lfts]) c m =
+              pcomps [pcomps fs_sub, pcomps [seq_sem_l_gen lfts]] c m"
+        proof(rule pcomps_assoc[where S = "\<lambda> _ . ok_S"])
 
           have "set fs - {seq_sem_l_gen lfts} \<union> set [seq_sem_l_gen lfts] = set fs"
             using Hseq 
             by(simp; blast)
 
-          then show "sups_pres (set fs_sub \<union> set [seq_sem_l_gen lfts])"
+          then show "\<And> s x . sups_pres (set fs_sub \<union> set [seq_sem_l_gen lfts]) (\<lambda> _ . ok_S)"
             unfolding Fs_sub
             using Hpres
             by auto
@@ -156,6 +164,7 @@ proof(rule HT'I)
         next
 
           show "[seq_sem_l_gen lfts] \<noteq> []" by simp
+        next
         qed
 
         have Set_alt : "set (fs_sub @ [seq_sem_l_gen lfts]) = set fs"
@@ -169,14 +178,13 @@ proof(rule HT'I)
           
 (* TODO: find a better solution than this awful type annotation hack *)
         have Seq_pres : 
-          "sups_pres {(seq_sem_l_gen lfts  :: ('a \<Rightarrow> 'a gensyn list md_triv option md_prio \<times>
+          "sups_pres {(seq_sem_l_gen lfts  :: ('b \<Rightarrow> 'b gensyn list md_triv option md_prio \<times>
             String.literal md_triv option md_prio \<times> 'c
-            \<Rightarrow> 'a gensyn list md_triv option md_prio \<times>
+            \<Rightarrow> 'b gensyn list md_triv option md_prio \<times>
                String.literal md_triv option md_prio \<times>
-               'c))}"
+               'c))} (\<lambda> _ . ok_S)"
           using sups_pres_subset[OF Hpres, of "{seq_sem_l_gen lfts}"] Hseq
           by(auto)
-
 
         have Gs_alt' : "gs = pcomps [pcomps fs_sub, seq_sem_l_gen lfts]"
           using Gs_alt pcomps_singleton[OF Seq_pres, of "[seq_sem_l_gen lfts]"]
@@ -186,7 +194,10 @@ proof(rule HT'I)
 
         have Hdom' :  "f' \<downharpoonleft> (set fs_sub) c"
           using Fs_sub Hdom by auto
-        have Dominate1 : "pcomps fs_sub c m = f' c m" using dominant_pcomps[OF _ _ Hdom', of g m] Pres' Hnemp Fs_sub
+
+        have Dominate1 : "pcomps fs_sub c m = f' c m" 
+          using dominant_pcomps[OF Pres'[folded Fs_sub] _ Hdom' _] Hpay3
+          using dominant_pcomps[OF _ _ Hdom', of g m] Pres' Hnemp Fs_sub
           by auto
 
 (* almost have this. the missing ingredient is using the fact that
@@ -196,9 +207,11 @@ proof(rule HT'I)
         obtain pri1 pri2 rest where Msplit :
           "m = (mdp pri1 (Some (mdt (G c z # c'))), mdp pri2 None, rest)"
           and Rest : "rest \<in> ok_S"
-          using Gs_alt' Dominate1 Skip Hpay Hcont Hf'
+          using (*Gs_alt'*) Dominate1 Skip Hpay Hcont Hf'
+          unfolding lift_pred_valid_ok_s_def lift_pred_noS_s_def
+
           by(auto simp add: seq_sem_l_gen_def seq_sem_lifting_gen_def 
-            lift_pred_valid_s_def lift_pred_validx_s_def lift_pred_s_def
+            lift_pred_s_def lift_pred_valid_ok_s_def lift_pred_s_def
             no_control_lifting_def cont_def
             schem_lift_defs fst_l_def snd_l_def prio_l_def triv_l_def option_l_def seq_sem_def
             prod_bsup no_control_l_def

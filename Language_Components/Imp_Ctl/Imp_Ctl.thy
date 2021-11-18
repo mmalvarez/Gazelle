@@ -61,7 +61,7 @@ definition imp_prio :: "(syn' \<Rightarrow> nat)" where
 
 
 definition imp_sem_lifting_gen :: "(syn', 'x imp_state', 
-                                   ('x, _ ) state, _) lifting" where
+                                   ('x, _ ) state) lifting" where
 "imp_sem_lifting_gen = 
  (schem_lift (SP NA NB)
              (SP (SPRC imp_prio (SO NA)) (SP NX (SP (SPRK (SO NB)) NX))))"

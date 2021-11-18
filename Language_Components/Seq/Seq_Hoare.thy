@@ -50,13 +50,13 @@ proof
       have CM1 :  "cont m' = Inl (cs @ c')"
         using Inl CM H0 H1
         by(cases m; auto simp add: schem_lift_defs sem_step_def seq_semx_def seq_sem_l_gen_def seq_sem_def cont_def seq_sem_lifting_gen_def fst_l_def
-            prio_l_def option_l_def triv_l_def split: md_prio.splits option.splits md_triv.splits sum.splits)
+            prio_l_def option_l_def triv_l_def lift_map_s_def split: md_prio.splits option.splits md_triv.splits sum.splits)
 
 (*TODO: make this less bad *)
       have M1_eq : "payload m' = payload m"
         using Inl H0
         by(cases m; auto simp add: schem_lift_defs sem_step_def seq_semx_def seq_sem_l_gen_def seq_sem_def cont_def seq_sem_lifting_gen_def fst_l_def
-            prio_l_def option_l_def triv_l_def split: md_prio.splits option.splits md_triv.splits list.split_asm)
+            prio_l_def option_l_def triv_l_def lift_map_s_def split: md_prio.splits option.splits md_triv.splits list.split_asm)
 
       have M1 : "P1 (payload m')" using M unfolding M1_eq by auto
 
@@ -101,14 +101,16 @@ fs is nonempty? *)
  * This version is deprecated in favor of HxSeq; see below.
  * It is retained to give an idea of what a more conventional proof of this Hoare rule looks like.
  *)
+(* TODO: need to figure out what set to use as the second argument for sups_pres. *)
 lemma HSeq_gen :
   assumes H0 : "gs = pcomps fs "
   (*assumes H1 : "seq_sem_l_gen lfts \<in> set fs" *)
   assumes HF : "f = seq_sem_l_gen lfts"
-  assumes Hpres : "sups_pres (set fs)"
+  assumes Hpres : "sups_pres (set fs) S"
   assumes Hnemp : "g \<in> set fs"
   assumes Hdom : "(f \<downharpoonleft> (set fs) Sseq')"
   assumes H2 : "lfts Sseq' = Sseq"
+  assumes Hok : "\<And> x . P1 x \<Longrightarrow> x \<in> S"
   assumes H : "|gs| {- P1 -} cs {- P2 -}"
   shows "|gs| {- P1 -} [G Sseq' cs] {- P2 -}"
 proof
@@ -138,9 +140,11 @@ proof
     next
       case (Inl m')
 
+      term "fs"
+
       have F_eq : "sem_step f m = Inl m'"
-        using sym[OF dominant_pcomps[OF Hpres Hnemp Hdom]] CM Inl H0
-        by(simp add: sem_step_def)
+        using sym[OF dominant_pcomps[OF Hpres Hnemp Hdom]] CM Inl H0 Hok[OF M]
+        apply(cases m; auto simp add: sem_step_def)
 
       have Fcont : "cont m' = Inl (cs @ c')"
         using HF F_eq CM H2
