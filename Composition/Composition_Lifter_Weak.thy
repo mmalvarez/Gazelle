@@ -734,6 +734,75 @@ next
   qed
 qed
 
+lemma sups_pres_singletonI :
+  "\<And> S f . 
+    sups_pres {f} S"
+proof
+  fix S :: "'a \<Rightarrow> 'b set"
+  fix f :: "'a \<Rightarrow> 'b \<Rightarrow> 'b" 
+  fix x syn Fs' f'
+
+  assume X : "x \<in> S syn"
+  assume Fs' : "Fs' \<subseteq> {f}"
+  assume F' : "f' \<in> Fs'"
+
+  have F'_f : "f = f'"
+    using Fs' F' by auto
+
+  then have Fs'_f : "Fs' = {f}"
+    using F' Fs'
+    by auto
+
+  have "is_sup {f syn x} (f syn x)"
+    using sup_singleton
+    by auto
+
+  then show "has_sup ((\<lambda>f. f syn x) ` Fs')"
+    unfolding Fs'_f
+    by(auto simp add: has_sup_def)
+qed
+
+lemma sups_pres_pairI :
+  fixes Fs
+  fixes f
+  fixes S :: "'a \<Rightarrow> ('b :: Pord) set"
+  assumes Sups : "\<And> x s . x \<in> S s \<Longrightarrow> has_sup {f1 s x, f2 s x}"
+(*  assumes Pairwise_S : "lifting_pairwise S"*)
+  shows "sups_pres {f1, f2} S"
+proof
+  fix f :: "'a \<Rightarrow> 'b \<Rightarrow> 'b" 
+  fix x syn Fs' f'
+
+  assume X : "x \<in> S syn"
+  assume Fs' : "Fs' \<subseteq> {f1, f2}"
+  assume F' : "f' \<in> Fs'"
+
+  consider (1) "Fs' = {}" | (2) "Fs' = {f1}"  | (3) "Fs' = {f2}" | (4) "Fs' = {f1, f2}"
+    using Fs' by auto
+  then show "has_sup ((\<lambda>f. f syn x) ` Fs')"
+  proof cases
+    case 1
+    then have False using F' by auto
+    then show ?thesis by auto
+  next
+    case 2
+    show ?thesis unfolding 2 using sup_singleton[of "f1 syn x"]
+      by(auto simp add: has_sup_def)
+  next
+    case 3
+    show ?thesis unfolding 3 using sup_singleton[of "f2 syn x"]
+      by(auto simp add: has_sup_def)
+  next
+    case 4
+
+    have "has_sup {f1 syn x, f2 syn x}"
+      using Sups[OF X] by auto
+
+    then show ?thesis unfolding 4
+      by(auto simp add: has_sup_def)
+  qed
+qed
+
 (* next: want to show that, if for each lifting in a set of lifted functions,
  * a new lifted function is ortho. to all of them,
  * and they are sups_pres
@@ -742,36 +811,5 @@ qed
 * idea: we can do this using merge_l_ortho.
 *)
 
-
-(* all syntax? or can we do a specific s? *)
-(* what do we need sups_pres for here, then?
-i guess just maybe showing the validity?
-*)
-(*
-lemma sups_pres_merge_lift :
-  assumes H : " sups_pres {LMap l1 f1, LMap l2 f2} (\<lambda> s . S1 s \<inter> S2 s)"
-  assumes Hx : "x \<in> S1 s \<inter> S2 s"
-  shows "LMap (merge_l l1 l2) (f1, f2) s x = pcomps [LMap l1 f1, LMap l2 f2] s x"
-proof-
-
-  have H' : "sups_pres (set [LMap l1 f1, LMap l2 f2]) (\<lambda> s . S1 s \<inter> S2 s)"
-    using H by auto
-
-  have Sup: "is_sup (scross ((\<lambda>f. f s) ` set [LMap l1 f1, LMap l2 f2]) {x})
-   (pcomps [LMap l1 f1, LMap l2 f2] s x)"
-    using sups_pres_pcomps_gen1[OF H', where
-f = "LMap l1 f1",
-where Xs = "{x}",
-where x = x,
-where syn = s,
-where xsup = x
-(*  *)]
-    using Hx
-    using sup_singleton[of x]
-    by(auto)
-    
-  show "LMap (merge_l l1 l2) (f1, f2) s x = pcomps [LMap l1 f1, LMap l2 f2] s x"
-    apply(simp add: merge_l_def)
-*)
 
 end

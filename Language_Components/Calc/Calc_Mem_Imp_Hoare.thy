@@ -1,5 +1,6 @@
 theory Calc_Mem_Imp_Hoare
   imports Calc_Mem_Imp (*"../../Hoare/Hoare_Step" *) "../../Hoare/Hoare_Lift" "../Mem/Mem_Simple"
+    "../../Lifter/Auto_Lifter_Proofs"
 begin
 
 (* final definitions that perhaps should be in mem_simple (TODO) *)
@@ -19,10 +20,40 @@ definition sem_final' :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) 
 "sem_final' =
   pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
 
+
+(*lemma idea:
+  - if, for each syntax, we can show one function is dominant
+  - then we know sups_pres
+  - maybe this is actually the best way to do it.
+  - what about building this argument up from sub-sets?
+    - might be ok if all languages leave things unchanged for other syntax.
+*)
+(*
+lemma dominant_sups_pres2 ::
+  assumes "f \<downharpoonleft> {} x"
+*)  
+
+(*
+ok, so... how can we do this?
+sups_pres of e.g. calc and mem...
+- dominance
+- need a nice way to "walk the tree" of liftings and compare priorities
+*)
+
+(*
 (* New idea: have a lifting for use in theorems about the state. *)
 (* in this case we can just use mem_lift1 I think. *)
 
+lemma calc_sem_l_valid :
+  ""
+*)
+
 term "sems"
+
+lemma sups_pres_calc :
+  "sups_pres {calc_sem_l} (\<lambda> _ . ok_S)"
+  unfolding calc_sem_l_def calc_lift_def schem_lift_defs
+proof(rule sups_presI; simp)
 
 (* OK, how to prove sups_pres.
  * 

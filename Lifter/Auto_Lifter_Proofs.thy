@@ -561,5 +561,45 @@ merge_l_ortho_ok_ext.intro
 merge_l_ortho_ok_ext.axioms
 *)
 
+(* typeclass instance definitions *)
+lemmas bogus_defs =
+  md_triv_bogus
+  option_bogus
+  md_prio_bogus
+  prod_bogus
+
+lemmas pleq_defs =
+  triv_pleq
+  option_pleq
+  prio_pleq
+  prod_pleq
+
+lemmas bsup_defs =
+  triv_bsup
+  option_bsup
+  prio_bsup
+  prod_bsup
+
+lemmas ok_S_defs =
+  triv_ok_S
+  option_ok_S
+  prio_ok_S
+  prod_ok_S
+
+(* lifting instance definitions *)
+lemmas lifter_instances =
+  triv_l_def
+  option_l_def
+  prio_l_def
+  fst_l_def
+  snd_l_def
+  id_l_def
+  merge_l_def
+
+lemmas lifter_S_instances =
+  option_l_S_def
+  prio_l_S_def
+  fst_l_S_def
+  snd_l_S_def
 
 end

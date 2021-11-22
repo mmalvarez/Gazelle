@@ -10,6 +10,10 @@ begin
  *)
 
 
+(*
+This file is deprecated in favor of sups_pres_weak
+*)
+
 lemma l_ortho_sups_pres :
   fixes l1 :: "('x, 'a, 'b :: {Mergeable, Okay}) lifting"
   fixes l2 :: "('x, 'a2, 'b) lifting"

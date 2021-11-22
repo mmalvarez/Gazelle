@@ -1,6 +1,7 @@
 theory Hoare_Indexed
   imports
  "../Syntax/Gensyn" "../Syntax/Gensyn_Descend" "../Mergeable/Mergeable"
+  "../Mergeable/Mergeable_Instances"
  "../Semantics/Semantics" "../Semantics/Semantics_Facts"
 begin
 
@@ -210,20 +211,21 @@ qed
 (* Indexed version of guarded (capturing the idea that starting in a state satisfying P
  * means we are safe for a certain number of steps)
  *)
-definition guarded :: "('syn, 'mstate) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> 'syn gensyn list \<Rightarrow> bool"
+definition guarded :: "('syn, 'mstate :: Okay) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> 'syn gensyn list \<Rightarrow> bool"
 ("|#_#| {#_, _#} _" [210, 212, 214, 216])
  where
 "guarded gs P n c =
-  (\<forall> m . P (payload m) \<longrightarrow> cont m = Inl c \<longrightarrow> safe_for gs m n)"
+  (\<forall> m . m \<in> ok_S \<longrightarrow> P (payload m) \<longrightarrow> cont m = Inl c \<longrightarrow> safe_for gs m n)"
 
 lemma guardediI [intro] :
-  assumes H : "\<And> m . P (payload m) \<Longrightarrow> cont m = Inl c \<Longrightarrow> safe_for gs m n"
+  assumes H : "\<And> m . m \<in> ok_S \<Longrightarrow> P (payload m) \<Longrightarrow> cont m = Inl c \<Longrightarrow> safe_for gs m n"
   shows "guarded gs P n c" using H
   unfolding guarded_def
   by auto
 
 lemma guardediD :
   assumes H : "guarded gs P n c"
+  assumes Hok : "m \<in> ok_S"
   assumes HP : "P (payload m)"
   assumes Hcont : "cont m = Inl c"
   shows "safe_for gs m n" using assms
@@ -232,7 +234,7 @@ lemma guardediD :
 (* Our indexed Hoare triple. The basic idea here is that we limit the number of steps we are
  * required to be safe for, both on the "input" (|gs| {Q, nq} (c')) 
  * and the "output" (|gs| {P, np} (c @ c')) *)
-definition HT :: "('syn, 'mstate) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> 'syn gensyn list \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> bool" 
+definition HT :: "('syn, 'mstate :: Okay) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> 'syn gensyn list \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> bool" 
   ("|#_#| {#-_, _-#} _ {#-_, _-#}" [220, 222, 224, 226, 228, 230])
   where
 "HT gs P np c Q nq =
@@ -264,13 +266,14 @@ proof(rule HTiI)
   have Exec' : "|#gs#| {#Q', nq'#} c'"
   proof
     fix m :: "('a, 'b) control"
+    assume Ok : "m \<in> ok_S"
     assume Q' : "Q' (payload m)"
     assume C : "cont m = Inl c'"
 
     have Q : "Q (payload m)" using HQ1[OF Q'] by simp
 
     have Conc' : "safe_for gs m nq"
-      using guardediD[OF Exec Q C] by auto
+      using guardediD[OF Exec Ok Q C] by auto
 
     show "safe_for gs m nq'"
       using safe_for_weaken[OF Conc' HQ2] by auto
@@ -282,13 +285,14 @@ proof(rule HTiI)
   show "|#gs#| {#P, np#} (c @ c')"
   proof
     fix m :: "('a, 'b) control"
+    assume Ok : "m \<in> ok_S"
     assume P: "P (payload m)"
     assume C : "cont m = Inl (c @ c')"
 
     have P' : "P' (payload m)" using HP1[OF P] by simp
 
     have Conc' : "safe_for gs m np'"
-      using guardediD[OF Exec'' P' C] by auto
+      using guardediD[OF Exec'' Ok P' C] by auto
 
     show "safe_for gs m np"
       using safe_for_weaken[OF Conc' HP2] by auto
@@ -319,7 +323,7 @@ qed
  * for this to work like a normal Hoare triple, for any desired safe execution length npre,
  * we must be able to find a suffix execution
  * (safe for some npost number of steps) such that the concatenation is safe for npre. *)
-definition HT' :: "('syn, 'mstate) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'syn gensyn list \<Rightarrow> ('mstate \<Rightarrow> bool)\<Rightarrow> bool" 
+definition HT' :: "('syn, 'mstate :: Okay) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'syn gensyn list \<Rightarrow> ('mstate \<Rightarrow> bool)\<Rightarrow> bool" 
   ("|_| {~_~} _ {~_~}" [250, 252, 254, 256])  
   where
 "HT' gs P c Q =

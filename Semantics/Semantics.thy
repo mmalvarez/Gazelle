@@ -18,7 +18,6 @@ begin
  * denotationally as pure functional programs in Isabelle, without any complications.
  *)
 
-
 (* 'mstate augmented with control information used by the semantics *)
 type_synonym ('full, 'mstate) control =
   "('full gensyn list md_triv option md_prio * String.literal md_triv option md_prio * 'mstate)"
@@ -40,12 +39,24 @@ definition payload :: "('full, 'mstate) control \<Rightarrow> 'mstate" where
 
 declare payload_def [simp add]
 
+(*
 definition cont :: "('full, 'mstate) control \<Rightarrow> ('full gensyn list orerror)" where
 "cont m \<equiv>
   (case m of
-    ((mdp _ (Some (mdt x))), (mdp _ None), _) \<Rightarrow> Inl x
+    ((mdp _ (Some (mdt x))), (mdp _ (Some (mdt (STR '''')))), _) \<Rightarrow> Inl x
     | ((mdp _ None), _, _) \<Rightarrow> Inr (STR ''Hit bottom in continuation field'') 
+    | ((mdp _ _), (mdp _ None), _) \<Rightarrow> Inr (STR ''Hit bottom in message field'') 
     | ((mdp _ _), (mdp _ (Some (mdt msg))), _) \<Rightarrow> Inr msg)"
+*)
+
+definition cont :: "('full, 'mstate) control \<Rightarrow> ('full gensyn list orerror)" where
+"cont m \<equiv>
+  (case m of
+    ((mdp _ (Some (mdt x))), (mdp _ (Some (mdt msg))), _) \<Rightarrow> 
+      (if msg = (STR '''') then Inl x else Inr msg)
+    | ((mdp _ None), _, _) \<Rightarrow> Inr (STR ''Hit bottom in continuation field'') 
+    | ((mdp _ _), (mdp _ None), _) \<Rightarrow> Inr (STR ''Hit bottom in message field''))"
+
 
 (* Small-step semantics *)
 definition sem_step ::
