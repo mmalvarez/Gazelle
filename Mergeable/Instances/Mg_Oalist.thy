@@ -1,10 +1,25 @@
-theory Mergeable_Oalist imports "../Lib/Oalist/Oalist" "Mergeable"
+theory Mg_Oalist imports "../../Lib/Oalist/Oalist" "../Mergeable"
 begin
 
 (* 
  * Mergeable instance for AList, the type of (ordered) association lists defined
  * in Gazelle/Lib/AList/AList.
  *)
+
+instantiation oalist :: (linorder, _) Bogus begin
+definition oalist_bogus : "bogus = (empty :: (_, _) oalist)"
+instance proof qed
+end
+
+instantiation oalist :: (linorder, Okay) Okay
+begin
+
+definition oalist_ok_S :
+  "(ok_S :: ('a, 'b) oalist set) = { x  :: ('a, 'b) oalist . oalist_all_val (\<lambda> y . y \<in> ok_S) x }"
+instance proof qed
+end
+
+
 
 (* Comparisons for the underlying data of ALists. Note that the first component
  * must be of the linorder class - a builtin Isabelle typeclass capturing linear

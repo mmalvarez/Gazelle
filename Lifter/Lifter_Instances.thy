@@ -1,12 +1,6 @@
 theory Lifter_Instances imports Lifter "../Mergeable/Mergeable_Facts" "../Mergeable/Wrappers" "../Mergeable/Mergeable_Instances"
 begin
 
-instantiation oalist :: (linorder, _) Bogus begin
-definition oalist_bogus : "bogus = (empty :: (_, _) oalist)"
-instance proof qed
-end
-
-
 (* TODO: add VSG versions of these, and hopefully
    figure out a way to infer. *)
 (*
