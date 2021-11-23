@@ -1,5 +1,5 @@
 theory Hoare_Lift imports Hoare_Indexed Hoare_Indexed_Sound Hoare_Direct
-  "../Lifter/Lifter" "../Composition/Composition" "../Composition/Dominant"
+  "../Lifter/Lifter" "../Composition/Composition_Weak" "../Composition/Dominant"
 begin
 
 (* TODO rename this file to Hoare_Direct_Lift (or Hoare_Step_Lift...) *)

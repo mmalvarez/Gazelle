@@ -1,5 +1,0 @@
-theory Ortho_New
-imports Lifter Lifter_Instances
-begin
-
-end
