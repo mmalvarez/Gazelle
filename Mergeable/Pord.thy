@@ -1,4 +1,4 @@
-theory Pord imports Main
+theory Pord imports Bogus Okay
 
 begin
 
@@ -6,18 +6,6 @@ begin
  * Typeclass definitions for partial orders and various extensions thereof
  * TODO: these proofs could be cleaned up and ISAR-ified
  *)
-
-class Bogus =
-  fixes bogus :: "'a"
-
-
-
-
-(* Okay typeclass - attaches a set of "valid" values to a type
- * (useful in specifying liftings.
- *)
-class Okay =
-  fixes ok_S :: "('a) set"
 
 (* Comparison function for orderings, not currently used *)
 definition ord_leq :: "('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> bool"
