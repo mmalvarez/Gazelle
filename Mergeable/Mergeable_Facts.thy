@@ -369,4 +369,9 @@ lemma sup_ub :
   using sup_subset_ub[OF H, of S]
   by auto
 
+lemma is_sup_pair :
+  assumes "a <[ b"
+  shows "is_sup {a, b} b" using assms
+  by(auto simp add: is_sup_def is_least_def is_ub_def leq_refl)
+
 end
