@@ -1,5 +1,9 @@
-theory Cond_Mem imports Cond "../Mem/Mem" "../../Composition/Composition"
+theory Cond_Mem imports 
+  "../../Language_Components/Cond/Cond" 
+  "../../Language_Components/Mem/Mem" "../../Composition/Composition"
 begin
+
+(* TODO: import Mem or Mem_Simple? *)
 
 datatype syn =
   Sb cond str

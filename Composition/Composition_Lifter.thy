@@ -1,5 +1,5 @@
-theory Composition_Lifter_Weak
-imports Composition_Weak "../Lifter/Lifter" "../Lifter/Lifter_Instances"
+theory Composition_Lifter
+imports Composition "../Lifter/Lifter" "../Lifter/Lifter_Instances"
 
 begin
 
@@ -9,7 +9,6 @@ begin
  * themselves: just the lifting(s) being applied to them.
  *)
 
-(* YOU ARE HERE *)
 (* looks like we can eliminate a lot of pres.
 we just need put/get facts, and ability to commute (in ortho) *)
 

@@ -229,11 +229,12 @@ lemma guarded_weaken :
   shows "|#gs#| {#P, n2#} c"
 proof
   fix m :: "('a, 'b) control"
+  assume M_ok : "m \<in> ok_S"
   assume P : "P (payload m)"
   assume C : "cont m = Inl c"
 
   have Conc' : "safe_for gs m n1"
-    using guardediD[OF H P C]
+    using guardediD[OF H M_ok P C]
     by auto
 
   show "safe_for gs m n2"
@@ -257,6 +258,7 @@ proof
   show "|gs| {P} (c @ c')"
   proof
     fix m :: "('a, 'b) control"
+    assume M_ok : "m \<in> ok_S"
     assume Pm : "P (payload m)" 
     assume Cm : "cont m = Inl (c @ c')" 
     show "safe gs m"
@@ -273,11 +275,13 @@ proof
       have Guard'_out : "|#gs#| {#Q, n#} c'"
       proof
         fix mx :: "('a, 'b) control"
+        assume Mx_ok : "mx \<in> ok_S"
         assume Q: "Q (payload mx)"
         assume C: "cont mx = Inl c'" 
 
         have Safe : "safe gs mx"
-          using guardedD[OF Guard Q C] by simp
+          using guardedD[OF Guard Mx_ok Q C]
+          by simp
 
         show "safe_for gs mx n"
           using safe_imp_safe_for[OF Safe] by simp
@@ -290,7 +294,7 @@ proof
         using guarded_weaken[OF Guard'_in] by simp
 
       have Safe' : "safe_for gs m n"
-        using guardediD[OF Guard'_in' Pm Cm] by simp
+        using guardediD[OF Guard'_in' M_ok Pm Cm] by simp
 
       show "imm_safe gs m'"
         using safe_for_imm_safe[OF Safe' Execc] by simp
@@ -341,7 +345,7 @@ proof(rule HT'I)
  * harder to reason about loops and termination without extra assumptions on control flow... *)
 (* The issue is that the existentials are nested in such a way that this doesn't work...
  * this is why we have a new construct, HT''. But, what are the implications of this...? *)
-definition HT'' :: "('syn, 'mstate) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'syn gensyn list \<Rightarrow> ('mstate \<Rightarrow> bool)\<Rightarrow> bool" where
+definition HT'' :: "('syn, ('mstate :: Okay)) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'syn gensyn list \<Rightarrow> ('mstate \<Rightarrow> bool)\<Rightarrow> bool" where
 "HT'' gs P c Q \<equiv> (\<forall> npre c' . \<exists> npost . ( |#gs#| {#Q, npost#} c' \<longrightarrow> |#gs#| {#P, npre#} (c @ c')))"
 
 lemma HT''I :
@@ -372,24 +376,25 @@ proof(rule HT''I)
     show ?thesis
     proof
       fix m :: "('a, 'b) control"
+      assume M_ok : "m \<in> ok_S"
       assume HP : "P (payload m)"
       assume CP : "cont m = Inl (c @ c')"
 
-      show "safe_for gs m npre" using safe_imp_safe_for[OF guardedD[OF Guard HP CP]]
+      show "safe_for gs m npre" using safe_imp_safe_for[OF guardedD[OF Guard M_ok HP CP]]
         by blast
     qed
 
   next
     case False
 
-    then obtain bad where Bad : "Q (payload bad)" "cont bad = Inl c'" "\<not> safe gs bad"
+    then obtain bad where Bad : "bad \<in> ok_S" "Q (payload bad)" "cont bad = Inl c'" "\<not> safe gs bad"
       unfolding guarded_def
       by blast
 
-    obtain nbad where Nbad: "\<not> safe_for gs bad nbad" using unsafe_imp_unsafe_for[OF Bad(3)]
+    obtain nbad where Nbad: "\<not> safe_for gs bad nbad" using unsafe_imp_unsafe_for[OF Bad(4)]
       by blast
 
-    then have False using guardediD[OF X[of nbad] Bad(1) Bad(2)] by blast
+    then have False using guardediD[OF X[of nbad] Bad(1) Bad(2) Bad(3)] by blast
 
     thus "|#gs#| {#P, npre#} (c @ c')" by blast
   qed
@@ -404,6 +409,7 @@ proof
   show "|gs| {P} (c @ c')"
   proof
     fix m :: "('a, 'b) control"
+    assume M_ok : "m \<in> ok_S"
     assume Pm : "P (payload m)" 
     assume Cm : "cont m = Inl (c @ c')" 
     show "safe gs m"
@@ -418,11 +424,12 @@ proof
       proof
         fix npost 
         fix mx :: "('a, 'b) control"
+        assume Mx_ok : "mx \<in> ok_S"
         assume Q: "Q (payload mx)"
         assume C: "cont mx = Inl c'" 
 
         have Safe : "safe gs mx"
-          using guardedD[OF Guard Q C] by simp
+          using guardedD[OF Guard Mx_ok Q C] by simp
 
         show "safe_for gs mx npost"
           using safe_imp_safe_for[OF Safe] by simp
@@ -432,7 +439,7 @@ proof
         using HT''D[OF H Guard'_out] by blast
 
       have Safe' : "safe_for gs m n"
-        using guardediD[OF Guard'_in Pm Cm] by simp
+        using guardediD[OF Guard'_in M_ok Pm Cm] by simp
 
       show "imm_safe gs m'"
         using safe_for_imm_safe[OF Safe' Execc] by simp

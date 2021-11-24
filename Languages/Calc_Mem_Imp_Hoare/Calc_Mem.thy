@@ -1,4 +1,6 @@
-theory Calc_Mem imports Calc "../Mem/Mem_Simple" "../../Composition/Composition"
+theory Calc_Mem imports "../../Language_Components/Calc/Calc"
+                        "../../Language_Components/Mem/Mem_Simple"
+                        "../../Composition/Composition"
 begin
 
 datatype syn =

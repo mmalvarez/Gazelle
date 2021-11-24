@@ -48,20 +48,21 @@ lemma safeD :
   unfolding safe_def by blast
 
 (* Guarded: if we start in a state satisfying P, we are safe *)
-definition guarded :: "('syn, 'mstate) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'syn gensyn list \<Rightarrow> bool"
+definition guarded :: "('syn, ('mstate :: Okay)) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'syn gensyn list \<Rightarrow> bool"
 ("|_| {_} _" [200, 202, 204])
  where
 "guarded gs P c =
-  (\<forall> m . P (payload m) \<longrightarrow> cont m = Inl c \<longrightarrow> safe gs m)"
+  (\<forall> m . m \<in> ok_S \<longrightarrow> P (payload m) \<longrightarrow> cont m = Inl c \<longrightarrow> safe gs m)"
 
 lemma guardedI [intro] :
-  assumes H : "\<And> m . P (payload m) \<Longrightarrow> cont m = Inl c \<Longrightarrow> safe gs m"
+  assumes H : "\<And> m . m \<in> ok_S \<Longrightarrow> P (payload m) \<Longrightarrow> cont m = Inl c \<Longrightarrow> safe gs m"
   shows "guarded gs P c" using H
   unfolding guarded_def
   by auto
 
 lemma guardedD :
   assumes H : "guarded gs P c"
+  assumes HOk : "m \<in> ok_S"
   assumes HP : "P (payload m)"
   assumes Hcont : "cont m = Inl c"
   shows "safe gs m" using assms
@@ -71,7 +72,7 @@ lemma guardedD :
  * For any tail c' that is safe under condition Q (the postcondition of the triple),
  * the program c followed by the tail c' will be safe under P (the precondition)
  *)
-definition HT :: "('syn, 'mstate) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'syn gensyn list \<Rightarrow> ('mstate \<Rightarrow> bool)\<Rightarrow> bool" 
+definition HT :: "('syn, ('mstate :: Okay)) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'syn gensyn list \<Rightarrow> ('mstate \<Rightarrow> bool)\<Rightarrow> bool" 
   ("|_| {-_-} _ {-_-}" [206, 208, 210])
   where
 "HT gs P c Q =

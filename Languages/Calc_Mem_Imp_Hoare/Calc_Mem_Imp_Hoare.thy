@@ -1,5 +1,6 @@
 theory Calc_Mem_Imp_Hoare
-  imports Calc_Mem_Imp (*"../../Hoare/Hoare_Step" *) "../../Hoare/Hoare_Lift" "../Mem/Mem_Simple"
+  imports Calc_Mem_Imp (*"../../Hoare/Hoare_Step" *) "../../Hoare/Hoare_Lift" 
+    "../../Language_Components/Mem/Mem_Simple"
     "../../Lifter/Auto_Lifter_Proofs"
 begin
 
@@ -2173,8 +2174,6 @@ split: md_triv.splits)
     apply(case_tac "xa = 0"; simp)
     done
 
-
-(* YOU ARE HERE *)
 
 (* TODO: is our loop invariant correct? *)
 

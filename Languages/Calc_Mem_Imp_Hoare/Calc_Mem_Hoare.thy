@@ -1,5 +1,7 @@
 theory Calc_Mem_Hoare
-  imports Calc Calc_Mem "../../Hoare/Hoare_Direct" "../../Hoare/Hoare_Lift" "../../Lifter/Auto_Lifter_Proofs"
+  imports "../../Language_Components/Calc/Calc" 
+          Calc_Mem 
+          "../../Hoare/Hoare_Direct" "../../Hoare/Hoare_Lift" "../../Lifter/Auto_Lifter_Proofs"
 
 begin
 

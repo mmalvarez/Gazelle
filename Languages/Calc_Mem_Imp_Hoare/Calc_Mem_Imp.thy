@@ -1,4 +1,6 @@
-theory Calc_Mem_Imp imports Calc_Mem "../Cond/Cond" "../Imp_Ctl/Imp_Ctl" "../Seq/Seq" 
+theory Calc_Mem_Imp imports Calc_Mem "../../Language_Components/Cond/Cond" 
+              "../../Language_Components/Imp_Ctl/Imp_Ctl" 
+             "../../Language_Components/Seq/Seq" 
 "../../Hoare/Hoare_Step"
 begin
 
