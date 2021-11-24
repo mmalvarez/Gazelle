@@ -1,375 +1,291 @@
-theory Hoare imports "../Lifting/LiftUtils" "../Lifting/LiftInstances" "../Lifting/LangCompSimple"
+theory Hoare imports 
+ "../Syntax/Gensyn" "../Syntax/Gensyn_Descend" "../Mergeable/Mergeable"
+ "../Semantics/Semantics" "../Semantics/Semantics_Facts"
 begin
 
-(*
-datatype 'a triple =
-  T "('a \<Rightarrow> bool)" "('a \<Rightarrow> 'a \<Rightarrow> bool)" "('a \<Rightarrow> bool)"
-    ("{[_]} _ {[_]}" [0,0,0] 61)
-
-(*
-type_synonym 'a triple =
-  "('a \<Rightarrow> bool) * ('a \<Rightarrow> 'a \<Rightarrow> bool) * ('a \<Rightarrow> bool)"
-*)
-definition VT :: "'a triple \<Rightarrow> bool" ("![ _ ]!" 58)
- where
-"VT t =
-  (case t of
-    T pre x post \<Rightarrow>
-      (\<forall> a b . pre a \<longrightarrow> x a b \<longrightarrow> post b))"
-*)
-
-abbreviation C where
-"C x \<equiv> (\<lambda> _ . x)"
-
-definition predimp :: "('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool"
-  ("_ *-> _" 63)
-  where
-"predimp P1 P2 =
-  (\<forall> x . P1 x \<longrightarrow> P2 x)"
-
-definition VT :: 
-  "('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool" 
-  ("{{_}} _ {{_}}" [0,0,0] 61) where
-"VT pre x post =
-  (\<forall> a b . pre a \<longrightarrow> x a b \<longrightarrow> post b)"
-
-lemma VTI :
-  assumes H1 : 
-    "\<And> a b . pre a \<Longrightarrow> x a b \<Longrightarrow> post b"
-  shows "VT pre x post" using assms
-  unfolding VT_def by auto
-
-lemma VTE :
-  assumes H : "VT pre x post"
-  assumes Ha : "pre a"
-  assumes Hb : "x a b"
-  shows "post b" using assms
-  unfolding VT_def by auto
-
-lemma Vtop :
-  shows "{{P}} X {{C True}}"
-  by(simp add:VT_def)
-
-lemma Vbot :
-  shows "{{C False}} X {{P}}"
-  by(simp add:VT_def)
-
-lemma Vconseq_pre :
-  assumes H1 : "{{P}} X {{Q}}"
-  assumes H2 : "P' *-> P"
-  shows "{{P'}} X {{Q}}" using assms
-  by(auto simp add: VT_def predimp_def)
-
-lemma Vconseq_post :
-  assumes H1 : "{{P}} X {{Q}}"
-  assumes H2 : "Q *-> Q'"
-  shows "{{P}} X {{Q'}}" using assms
-  by(auto simp add: VT_def predimp_def)
-
-lemma VandI :
-  assumes H1 : "{{P1}} X {{Q1}}"
-  assumes H2 : "{{P2}} X {{Q2}}"
-  shows "{{(\<lambda> x . (P1 x \<and> P2 x))}} X {{(\<lambda> x . (Q1 x \<and> Q2 x))}}"
-    using assms
-    by(auto simp add: VT_def)
-
-
-type_synonym ('x, 'a) syn_triple =
-  "('a \<Rightarrow> bool) \<Rightarrow> 'x \<Rightarrow> ('a \<Rightarrow> bool)"
-
-(* we could use ad-hoc polymorphism here, in leiu of an actual typeclass,
-for syn_triple (keyed on syntax). but maybe this wouldn't be a good idea.
-*)
-
-(* "valid triple, syntax." *)
-(*
-definition VTS ::
-  "('x \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow>
-   ('a \<Rightarrow> bool) \<Rightarrow> 'x \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool"
-  ("_: {{_}} _ {{_}}" [0,0,0,0] 62)
-  where
-"VTS sem pre x post =
-  VT pre (sem x) post"
-*)
-
-(* hmm. how to deal with syntax transformation when lifting predicates? *)
-(*
-definition VTS :: 
-  "('x \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow>
-   ('x \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> 'x \<Rightarrow> ('x \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> bool"
-  ("_: {{_}} _ {{_}}" [0,0,0,0] 62)
-  where
-"VTS sem pre x post =
-  VT (pre x) (sem x) (post x)"
-*)
-
-abbreviation VTS :: 
-  "('x \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow>
-   ('a \<Rightarrow> bool) \<Rightarrow> 'x \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool"
-  ("_ % {{_}} _ {{_}}" [0,0,0,0] 63)
-  where
-"VTS sem pre x post \<equiv>
-  VT (pre) (sem x) (post)"
-
-(* executable VTS. probably less useful than relational one. *)
-definition VTS' ::
-  "('x \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow>
-   ('a \<Rightarrow> bool) \<Rightarrow> 'x \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool"
-  where
-"VTS' sem pre x post =
-  VT pre (\<lambda> a b . sem x a = b) post"
-
-definition lift_pred_s ::
-  "('a1, 'b1) syn_lifting \<Rightarrow>
-   ('a1, 'a2, 'b2 :: Pord, 'z) lifting_scheme \<Rightarrow>
-   'b1 \<Rightarrow>
-   ('a2 \<Rightarrow> bool) \<Rightarrow>
-   ('b2 \<Rightarrow> bool)" where
-"lift_pred_s l' l syn P st =
- P (LOut l (l' syn) st)"
-
-(* TODO: figure out why there is this ambiguity *)
-definition semprop2 ::
-  "('a1 \<Rightarrow> 'a2 \<Rightarrow> 'a3) \<Rightarrow>
-   ('a1 \<Rightarrow> 'a2 \<Rightarrow> 'a3 \<Rightarrow> bool)"
-  ("! _" [3] 61)
-  where
-"semprop2 f a1 a2 a3 \<equiv>
-  (f a1 a2 = a3)"
-
-lemma semprop2I :
-  "(!f) a1 a2 (f a1 a2)"
-  by(auto simp add: semprop2_def)
-
-lemma semprop2E :
-  assumes H : "(!f) a1 a2 a3"
-  shows "a3 = f a1 a2" using assms
-  by(auto simp add: semprop2_def)
-
-(* need to consider liftings. *)
-lemma Vlift :
-  assumes Valid : "lifting_valid l v" 
-  assumes V: "(!sem) % {{P}} x {{Q}}"
-  assumes Syn : "l' x' = x"
-  shows "(! lift_map_s l' l sem) % {{lift_pred_s l' l x' P}} x' {{lift_pred_s l' l x' Q}}"
- using V Syn
-  unfolding VT_def lift_pred_s_def lift_map_s_def semprop2_def
-  by(auto simp add: lifting_validDO[OF Valid])
-
-(* need to fix up LangComp.thy.
-   ok, i think we can actually avoid talking about lifting here. just merging (?) *)
-(* maybe we actually do want to integrate these... *)
-
-
-(* do we need explicit P0 ... Pn ?*)
-lemma Vmerge :
-  assumes Pres : "sups_pres (set l)"
-  assumes Sem : "f \<in> set l"
-  assumes V : "(!f) % {{P}} x {{Q}}"
-  shows "(! pcomps' l) % 
-         {{P}}
-         x
-         {{(\<lambda> st . \<exists> st_sub . Q st_sub \<and> st_sub <[ st)}}"
-proof(rule VTI)
-  fix a b
-  assume HP : "P a"
-  assume HS : "(! pcomps' l) x a b"
-
-  have Conc_f : "Q (f x a)"
-    using VTE[OF V HP]
-    unfolding semprop2_def by auto
-
-  have Elem : "f x a \<in> (\<lambda>f. f x a) ` set l"
-    using Sem by auto
-
-  have Nemp : "l \<noteq> []" using Sem by (cases l; auto)
-
-  have Conc' : "f x a <[ pcomps' l x a"
-    using is_sup_unfold1[OF sups_pres_pcomps_sup[OF Pres Nemp] Elem]
-    by auto
-
-  have Pc_l_b : "pcomps' l x a = b" using HS unfolding semprop2_def
-    by auto
-
-  show "\<exists>st_sub. Q st_sub \<and> st_sub <[ b"
-    using Conc_f Conc' unfolding Pc_l_b
-    by auto
-qed
-    
-
-lemma Vmerge_mono :
-  assumes Pres : "sups_pres (set l)"
-  assumes Sem : "f \<in> set l"
-  assumes Mono : "Pord.is_monop1 Q"
-  assumes V : "(!f) % {{P}} x {{Q}}"
-  shows "(! pcomps' l) % 
-         {{P}}
-         x
-         {{Q}}"
-proof(-)
-  have PC : "(! pcomps' l) % {{P}} x {{\<lambda>st. \<exists>st_sub. Q st_sub \<and> st_sub <[ st}}"
-    using Vmerge[OF Pres Sem V]
-    unfolding semprop2_def
-    by auto
-
-  show "(! pcomps' l) % {{P}} x {{Q}}"
-  proof(rule Vconseq_post[OF PC])
-    show "(\<lambda>st. \<exists>st_sub. Q st_sub \<and> st_sub <[ st) *-> Q"
-      unfolding predimp_def
-    proof(clarify)
-      fix x st_sub
-      assume Hi1 : "Q st_sub"
-      assume Hi2 : "st_sub <[ x"
-      show "Q x" using Hi1 Hi2 Mono unfolding is_monop1_def
-        by(auto)
-    qed
-  qed
-qed
-
-(* ok, should have a way of proving sups_pres holds on some lifted stuff
-   idea: for every input (?) lifted outputs have sup
-   this will look kind of similar to orthogonality
-
-   do we need the more general version of sups_pres for this though?
-
-   goal is to show that sups_pres {lift_map_s l1 f1, lift_map_s l2 f2} for all f1, f2
-
-   this means that:
-    {lift_map_s l1 f1 syn st, lift_map_s l2 f2 syn st} have a sup
-
-   this means that:
-    {LUpd ln syn (fn syn (LOut ln syn st)) st} have a sup
-
-   one common(?) case: LUpd ln syn x1 , LUpd ln syn x2 always have a sup
-
-   - does l_ortho imply this?
-
+(* A simple implementation of primitives for a (sound) partial-correctness 
+ * Hoare logic on top of the general Gazelle semantics.
+ * This model of Hoare logic is based on the CPS-flavored version described in
+ * _Program Logics for Certified Compilers_ and _Separation Logic for Small-Step Cminor_
  *)
 
-(* a (almost) weaker version of l_ortho, that
-   talks about when liftings are orthogonal in the sense
-   that arbitrary lifted functions preserve sups at runtime *)
-definition l_ortho_run ::
-  "('x, 'a1, 'b :: Mergeable, 'z1) lifting_scheme \<Rightarrow>
-   ('x, 'a2, 'b, 'z2) lifting_scheme \<Rightarrow>
-   bool" where
-"l_ortho_run l1 l2 = 
-  (\<forall> x1 x2 . sups_pres {(\<lambda>syn . LUpd l1 syn x1), (\<lambda> syn . LUpd l2 syn x2)})"
+definition imm_safe :: "('syn, 'mstate) semc \<Rightarrow> ('syn, 'mstate) control  \<Rightarrow> bool" where
+"imm_safe gs m \<equiv>
+ ((cont m = Inl []) \<or>
+  (\<exists> m' . sem_step_p gs m m'))"
 
-lemma leq_sup :
-  assumes H : "x1 <[ x2"
-  shows "is_sup {x1, x2} x2"
-proof(rule is_sup_intro)
-  fix x
-  assume "x \<in> {x1, x2}"
-  then show "x <[ x2" using H leq_refl by auto
-next
-  fix x'
-  assume "is_ub {x1, x2} x'"
-  then show "x2 <[ x'"
-    by(auto simp add: is_ub_def)
+lemma imm_safeI_Done :
+  assumes H : "cont m = Inl []"
+  shows "imm_safe gs m" using H
+  unfolding imm_safe_def by auto
+
+lemma imm_safeI_Step :
+  assumes H : "sem_step_p gs m m'"
+  shows "imm_safe gs m" using H
+  unfolding imm_safe_def
+  by(cases m'; auto)
+
+lemma imm_safeD :
+  assumes H : "imm_safe gs m"
+  shows "((cont m = Inl []) \<or>
+  (\<exists> m' . sem_step_p gs m m'))" using H
+  unfolding imm_safe_def by (auto)
+
+(* Safe means we terminate or diverge (partial correctness) *)
+definition safe :: "('syn, 'mstate) semc \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> bool" where
+"safe gs m \<equiv>
+  (\<forall> m' . sem_exec_p gs m m' \<longrightarrow> imm_safe gs m')"
+
+lemma safeI [intro]:
+  assumes H : "\<And> m' . sem_exec_p gs m m' \<Longrightarrow> imm_safe gs m'"
+  shows "safe gs m" using H unfolding safe_def
+  by auto
+
+lemma safeD :
+  assumes H : "safe gs m"
+  assumes Hx : "sem_exec_p gs m m'"
+  shows "imm_safe gs m'" using H Hx
+  unfolding safe_def by blast
+
+(* Guarded: if we start in a state satisfying P, we are safe *)
+definition guarded :: "('syn, ('mstate :: Okay)) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'syn gensyn list \<Rightarrow> bool"
+("|_| {_} _" [200, 202, 204])
+ where
+"guarded gs P c =
+  (\<forall> m . m \<in> ok_S \<longrightarrow> P (payload m) \<longrightarrow> cont m = Inl c \<longrightarrow> safe gs m)"
+
+lemma guardedI [intro] :
+  assumes H : "\<And> m . m \<in> ok_S \<Longrightarrow> P (payload m) \<Longrightarrow> cont m = Inl c \<Longrightarrow> safe gs m"
+  shows "guarded gs P c" using H
+  unfolding guarded_def
+  by auto
+
+lemma guardedD :
+  assumes H : "guarded gs P c"
+  assumes HOk : "m \<in> ok_S"
+  assumes HP : "P (payload m)"
+  assumes Hcont : "cont m = Inl c"
+  shows "safe gs m" using assms
+  unfolding guarded_def by blast
+
+(* Hoare triple definition:
+ * For any tail c' that is safe under condition Q (the postcondition of the triple),
+ * the program c followed by the tail c' will be safe under P (the precondition)
+ *)
+definition HT :: "('syn, ('mstate :: Okay)) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'syn gensyn list \<Rightarrow> ('mstate \<Rightarrow> bool)\<Rightarrow> bool" 
+  ("|_| {-_-} _ {-_-}" [206, 208, 210])
+  where
+"HT gs P c Q =
+  (\<forall> c' .  |gs| {Q} (c') \<longrightarrow> |gs| {P} (c @ c'))"
+
+lemma HTI [intro] :
+  assumes H : "\<And> c' . |gs| {Q} (c') \<Longrightarrow> |gs| {P} (c @ c')"
+  shows "HT gs P c Q" using H unfolding HT_def
+  by auto
+
+lemma HTE [elim]:
+  assumes H : "HT gs P c Q"
+  assumes H' : "|gs| {Q} c'"
+  shows "|gs| {P} (c@c')" using assms
+  unfolding HT_def
+  by auto
+
+lemma HConseq :
+  assumes H : "|gs| {- P' -} c {-Q'-}"
+  assumes H' : "\<And> st . P st \<Longrightarrow> P' st"
+  assumes H'' : "\<And> st . Q' st \<Longrightarrow> Q st"
+  shows "|gs| {-P-} c {-Q-}"
+proof(rule HTI)
+  fix c'
+  assume Exec : "|gs| {Q} c'"
+
+  then have Exec' : "|gs| {Q'} c'"
+    unfolding guarded_def using H'' by blast
+
+  then have Exec'' :"|gs| {P'} (c@c')"
+    using HTE[OF H Exec'] by auto
+
+  then show "|gs| {P} (c @ c')"
+    unfolding guarded_def using H' by blast
 qed
 
-(* TODO: why is 'b being forced to be Mergeableb? *)
-lemma prio_ortho_run :
-  fixes tf :: "('x, 'a1, 'b :: Mergeableb) lifting"
-  fixes tg :: "('x, 'a2, 'b ) lifting"
-  assumes H0 : "\<And> s p . f1 s p \<noteq> g1 s p"
-  shows "l_ortho_run (prio_l f0 f1 tf) (prio_l g0 g1 tg)"
-  unfolding l_ortho_run_def sups_pres_def
-proof(clarify)
-  fix x1 x2 syn
-  fix st :: "'b md_prio"
+(* Lifting for non-control, single-step instructions *)
+(* TODO: this proof needs to be fixed *)
+(*
+lemma HStep : 
+  assumes H : "(! sem ) % {{P o payload}} c {{Q o payload}}"
+  assumes Hgs : "s_sem gs = sem"
+  shows "|gs| {-P-} [G c l] {-Q-}" 
+proof(rule HTI)
+  fix c'
+  assume Exec : "|gs| {Q} c'"
 
-  obtain p st' where St : "st = mdp p st'" by(cases st; auto)
+  show "|gs| {P} [G c l] @ c'"
+  proof(rule guardedI)
+    fix m :: "('a, 'b) control"
 
-  have Conc' : "has_sup {(LUpd (prio_l f0 f1 tf) syn x1 st),
-                         (LUpd (prio_l g0 g1 tg) syn x2 st)}"
-  proof(cases "f1 syn p \<le> g1 syn p")
-    case True
-    then have True' : "f1 syn p < g1 syn p" using H0[of syn p] by auto
-    then have Gt : "(LUpd (prio_l f0 f1 tf) syn x1 st) <[ (LUpd (prio_l g0 g1 tg) syn x2 st)"
-      using St
-      by(auto simp add: prio_l_def prio_pleq)
+    assume P : "P (payload m)"
+    obtain ms mm mc where M: "m = (mc, mm, ms)" and P' : "P ms"
+      using P by (cases m; auto)
 
-    show ?thesis using leq_sup[OF Gt] by (auto simp add: has_sup_def)
-  next
-    case False
-    then have False' : "g1 syn p < f1 syn p" using H0[of syn p] by auto
-    then have Gt : "(LUpd (prio_l g0 g1 tg) syn x2 st) <[ (LUpd (prio_l f0 f1 tf) syn x1 st)"
-      using St
-      by(auto simp add: prio_l_def prio_pleq)
-    show ?thesis using is_sup_comm2[OF leq_sup[OF Gt]] by (auto simp add: has_sup_def)
-  qed
+    assume Cont : "s_cont m = Inl ([G c l] @ c')"
 
-  thus "has_sup
-        ((\<lambda>f. f syn st) ` 
-         {\<lambda>syn. LUpd (prio_l f0 f1 tf) syn x1, \<lambda>syn. LUpd (prio_l g0 g1 tg) syn x2})"
-    by(auto)
-qed
+    have Q: "Q (payload (s_sem gs c m))"
+      using H P M unfolding semprop2_def VT_def Hgs
+      by(auto)
 
-lemma l_ortho_imp_weak :
+    have "s_cont (sem.s_sem gs c m) = Inl c' " using Hgs
+      apply(auto simp add: s_cont_def split: prod.splits md_prio.splits option.splits md_triv.splits)
 
-  fixes tf :: "('x, 'a1, 'b :: Mergeable) lifting"
-  fixes tg :: "('x, 'a2, 'b ) lifting"
-(* TODO: make sure these really need to be the same valid-set
-   i don't intuitively understand why this should be *)
+(* *)
+(* idea: sem will only modify the payload. *)
+    show "safe gs m" using guardedD[OF Exec Q]
 
-  assumes Hvf :  "lifting_valid tf Sf"
-  assumes Hvg :  "lifting_valid tg Sg"
-  assumes Hs : "Sf = Sg"
-  assumes H: "l_ortho tf tg"
-  shows "l_ortho_run tf tg"
-  unfolding l_ortho_run_def sups_pres_def
-proof(clarify)
-  fix x1 x2 syn st
+    show "safe gs m"
+    proof(rule safeI)
+      fix m'
+      assume Exec' : "sem_exec_p gs m m'"
+      show "imm_safe gs m'"
 
-  have Orth : "LUpd tf syn x1 (LUpd tg syn x2 st) = LUpd tg syn x2 (LUpd tf syn x1 st)"
-    using l_orthoDI[OF H, of syn x1 x2 st] by auto
-
-  have Ub : "is_ub {LUpd tf syn x1 st, LUpd tg syn x2 st} (LUpd tf syn x1 (LUpd tg syn x2 st))"
-  proof(rule is_ub_intro)
-    fix x
-    assume Hx : "x \<in> {LUpd tf syn x1 st, LUpd tg syn x2 st}"
-
-    then consider (1) "x = LUpd tf syn x1 st" |
-                  (2) "x = LUpd tg syn x2 st" by auto
-
-    then show "x <[ LUpd tf syn x1 (LUpd tg syn x2 st)"
-    proof cases
-      case 1
-
-      have Sg : "x \<in> Sg syn"
-        using lifting_validDP[OF Hvf] unfolding 1 Orth Hs by auto
-
-      then show ?thesis
-        using lifting_validDI[OF Hvg Sg]
-        unfolding 1 Orth by auto
-    next
-      case 2
-      have Sf : "x \<in> Sf syn"
-        using lifting_validDP[OF Hvg] unfolding 2 Orth Hs by auto
-
-      then show ?thesis
-        using lifting_validDI[OF Hvf Sf]
-        unfolding 2 sym[OF Orth] by auto
+      proof(cases "s_cont m'")
+        case (Inr bad)
+        then have False using Cont by auto
+        case Nil
+        then show ?thesis unfolding imm_safe_def by auto
+      next
+        case (Cons a list)
+        then show ?thesis using Exec' unfolding sem_exec_p_def imm_safe_def sem_step_p_eq sem_step_def
+          by(cases m; auto)
+      qed
     qed
   qed
+qed
+*)
 
-  hence Ub' : "has_ub {LUpd tf syn x1 st, LUpd tg syn x2 st}"
-    by(auto simp add: has_ub_def)
+(* sequencing lemma *)
+lemma HCat :
+  assumes H : "|gs| {- P1 -} c1 {- P2 -}"
+  assumes H' : "|gs| {- P2 -} c2 {- P3 -}"
+  shows "|gs| {- P1 -} (c1 @ c2) {- P3 -}"
+proof(rule HTI)
+  fix c'
+  assume HP3 : "|gs| {P3} c'"
 
-  have Sup : "has_sup {LUpd tf syn x1 st, LUpd tg syn x2 st}" 
-    using complete2[OF Ub'] by auto
+  have P2_cont : "|gs| {P2} (c2 @ c')"
+    using HTE[OF H' HP3]
+    by auto
 
-  thus "has_sup ((\<lambda>f. f syn st) ` {\<lambda>syn. LUpd tf syn x1, \<lambda>syn. LUpd tg syn x2})"
+  show "|gs| {P1} ((c1 @ c2) @ c')"
+    using HTE[OF H P2_cont]
+    unfolding append_assoc
     by auto
 qed
 
-(*
-  we also need a way to relate orthogonality as expressed in LiftInstances
-  (a binary operation) to a setwise version used here. (do we?)
-*)
-   
+lemma diverges_safe :
+  assumes H : "diverges gs st"
+  shows "safe gs st" using H
+  unfolding diverges_def safe_def imm_safe_def by blast
 
+lemma guard_emp :
+  "|gs| {P} []"
+proof
+  fix m :: "('a, 'b) control"
+  assume H : "P (payload m)"
+
+  assume Hc : "cont m = Inl []"
+
+  show "safe gs m"
+  proof
+    fix m'
+
+    assume Exec : "sem_exec_p gs m m'"
+
+    hence Exec' : "rtranclp (sem_step_p gs) m m'"
+      unfolding sem_exec_p_def by auto
+
+    have Nostep : "(\<And>x1'. sem_step_p gs m x1' \<Longrightarrow> False)"
+      unfolding sem_step_p_eq using Hc
+      by(simp add: sem_step_def)
+
+    have Meq : "m = m'"
+      using rtranclp_nostep[OF sem_step_determ Exec' Nostep]
+      by auto
+
+    show "imm_safe gs m'"
+      using Hc
+      unfolding Meq imm_safe_def
+      by blast
+  qed
+qed
+
+lemma rtranclp_paths_step :
+  assumes H0 : "determ R"
+  assumes H1 : "R\<^sup>*\<^sup>* x1 y"
+  assumes H2 : "R x1 x2"
+  shows "(x1 = y \<or> R\<^sup>*\<^sup>* x2 y)" using H1 H2
+proof(induction arbitrary: x2 rule:rtranclp_induct)
+  case base
+  then show ?case by auto
+next
+  case (step nxt last)
+
+  have Opts : "x1 = nxt \<or> R\<^sup>*\<^sup>* x2 nxt"
+    using step.IH[OF step.prems(1)] by auto
+
+  then show ?case
+  proof(cases "x1 = nxt")
+    case True
+
+    then have X1alt : "R x1 last" 
+      using step.hyps by auto
+
+    then have X2alt : "x2 = last"
+      using determE[OF H0 X1alt step.prems(1)]
+      by auto
+
+    hence "R\<^sup>*\<^sup>* x2 last"
+      by auto
+
+    thus ?thesis by auto
+  next
+    case False
+
+    then have False' : "R\<^sup>*\<^sup>* x2 nxt" using Opts by auto
+
+    show ?thesis using rtranclp.intros(2)[OF False' step.hyps(2)]
+      by auto
+  qed
+qed
+
+lemma safe_exec_safe :
+  assumes H1 : "safe gs m"
+  assumes H2 : "sem_exec_p gs m m'"
+  shows "safe gs m'" using H2 H1 unfolding sem_exec_p_def
+proof(induction rule: rtranclp_induct)
+  case base
+  then show ?case by blast
+next
+  case (step y z)
+
+  have SafeY: "safe gs y"
+    using step.prems step.IH by blast
+
+  show ?case
+  proof
+    fix z'
+    assume "sem_exec_p gs z z'"
+
+    hence Exec1 : "(sem_step_p gs)\<^sup>*\<^sup>* z z'" 
+      unfolding sem_exec_p_def
+      by simp
+
+    have ExecFull : "sem_exec_p gs y z'"
+      using step.hyps(2) Exec1
+      by auto
+
+    show "imm_safe gs z'" using safeD[OF SafeY ExecFull] by simp
+  qed
+qed
+
+      
 end

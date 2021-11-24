@@ -1,0 +1,164 @@
+theory Auto_Lifter_Sets
+  imports Auto_Lifter_Lifters
+begin
+
+#set( $names =
+  [ "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"])
+
+
+(* Automation for constructing valid-sets for liftings specified through schema
+ * See Auto_Lifter.thy for details on how this works.
+ *)
+
+type_synonym ('s1, 's2, 'x, 'b) schem_lift_S =
+"('s1 \<Rightarrow> 's2 \<Rightarrow> ('x, 'b) valid_set)"
+
+consts schem_lift_S ::
+  "('s1 :: schem, 's2 :: schem, 'x, 'b) schem_lift_S"
+
+
+(* can't have both base and triv - otherwise we have ambiguous instances.
+ * fortunately this isn't much of an issue as they both do the same thing *)
+(*
+#foreach ($n in $names)
+definition schem_lift_S_base_triv${n} ::
+  "('n :: n_${n}, 'ls, 'x, 'a md_triv) schem_lift_S" where
+"schem_lift_S_base_triv${n} _ _ _ =
+  UNIV"
+#end
+*)
+
+#foreach ($n in $names)
+definition schem_lift_S_base_id${n} ::
+  "('n :: n_${n}, 'n, 'x, 'a) schem_lift_S" where
+"schem_lift_S_base_id${n} _ _ _ =
+  UNIV"
+#end
+
+
+(* right-side recursion (prio) *)
+definition schem_lift_S_prio_recR ::
+  "('n, 'ls, 'x, 'b2 :: Pord) schem_lift_S \<Rightarrow>
+   ('n, ('x, 'ls) sprio, 'x, 'b2 md_prio) schem_lift_S" where
+"schem_lift_S_prio_recR rec n s =
+  (case s of
+    SPR f1 f2 s' \<Rightarrow>
+      prio_l_S (rec n s'))"
+
+(* right-side recursion (option) *)
+definition schem_lift_S_option_recR ::
+  "('n, 'ls, 'x, 'b2 :: Pord) schem_lift_S \<Rightarrow>
+   ('n, 'ls soption, 'x, 'b2 option) schem_lift_S" where
+"schem_lift_S_option_recR rec n s =
+  (case s of
+    SO s' \<Rightarrow>
+      option_l_S (rec n s'))"
+
+(*
+(* right-side recursion (oalist) *)
+definition schem_lift_S_oalist_recR ::
+  "('n, 'ls, 'x, 'b2 :: Pord) schem_lift_S \<Rightarrow>
+   ('n, ('x, 'k :: linorder, 'ls) soalist, 'x, ('k, 'b2) oalist) schem_lift_S" where
+"schem_lift_S_oalist_recR rec n s =
+  (case s of
+    SL f1 s' \<Rightarrow>
+      oalist_l_S f1 (rec n s'))"
+*)
+
+(*
+(* right-side recursion (roalist) *)
+(* NB we don't allow lifting into the "inr" data of the roalist.
+   a separate lifting could allow this. *)
+definition schem_lift_S_roalist_recR ::
+  "('n, 'ls, 'x, 'b2 :: Pord) schem_lift_S \<Rightarrow>
+   ('n, ('x, 'k :: linorder, 'ls) sroalist, 'x, ('k, 'b2, 'z :: Pord) roalist) schem_lift_S" where
+"schem_lift_S_roalist_recR rec n s =
+  (case s of
+    SRL f1 s' \<Rightarrow>
+      roalist_l_S f1 (rec n s'))"
+*)
+
+#foreach ($n in $names)
+definition schem_lift_S_prod_recR_${n}_left ::
+  "('n, 'ls, 'x, 'b2 :: Pord) schem_lift_S =>
+   ('n :: n_${n}, ('ls, 'rs :: hasnt${n}) sprod, 'x, 'b2 * ('rest :: Pordb)) schem_lift_S" where
+"schem_lift_S_prod_recR_${n}_left rec n s =
+  (case s of
+    SP ls rs =>
+      fst_l_S (rec n ls))"
+
+definition schem_lift_S_prod_recR_${n}_right ::
+  "('n, 'rs, 'x, 'b2 :: Pord) schem_lift_S =>
+   ('n :: n_${n}, ('ls :: hasnt${n}, 'rs ) sprod, 'x, ('rest :: Pordb) * ('b2)) schem_lift_S" where
+"schem_lift_S_prod_recR_${n}_right rec n s =
+  (case s of
+    SP ls rs =>
+      snd_l_S (rec n rs))"
+
+#end
+
+#foreach ($n in $names)
+definition schem_lift_S_merge_recR_${n}_left ::
+  "('n, 'ls, 'x, 'b2) schem_lift_S =>
+   ('n :: n_${n}, ('ls, 'rs :: hasnt${n}) smerge, 'x, 'b2) schem_lift_S" where
+"schem_lift_S_merge_recR_${n}_left rec n s =
+  (case s of
+    SM ls rs =>
+      (rec n ls))"
+
+definition schem_lift_S_merge_recR_${n}_right ::
+  "('n, 'rs, 'x, 'b2) schem_lift_S =>
+   ('n :: n_${n}, ('ls :: hasnt${n}, 'rs) smerge, 'x, 'b2) schem_lift_S" where
+"schem_lift_S_merge_recR_${n}_right rec n s =
+  (case s of
+    SM ls rs =>
+      (rec n rs))"
+
+#end
+
+(* left-side recursion (merge)
+ * Here we have baked in the assumption that the two
+ * valid-sets to be merged are equal (so, WLOG, we choose the left one)
+ * TODO: make sure this is a valid assumption
+ *)
+definition schem_lift_S_recL ::
+  "('s1l, 's2, 'x, 'b2) schem_lift_S \<Rightarrow>
+   ('s1r, 's2, 'x, 'b2) schem_lift_S \<Rightarrow>
+   (('s1l :: schem, 's1r :: schem) sprod, 's2 :: schem, 'x, 'b2 :: Mergeable) schem_lift_S" where
+"schem_lift_S_recL recl recr s1 s2 =
+  (case s1 of
+    SP s1l s1r \<Rightarrow> (\<lambda> syn . (recl s1l s2) syn \<inter> (recr s1r s2) syn))"
+(*(\<lambda> syn . (recl s1l s2) syn \<inter> (recr s1r s2) syn)*)
+
+
+adhoc_overloading schem_lift_S
+
+(*
+#foreach ($n in $names)
+"schem_lift_S_base_triv${n}"
+#end
+*)
+
+#foreach ($n in $names)
+"schem_lift_S_base_id${n}"
+#end
+
+"schem_lift_S_option_recR schem_lift_S"
+"schem_lift_S_prio_recR schem_lift_S"
+(*"schem_lift_S_oalist_recR schem_lift_S"*)
+(*"schem_lift_S_roalist_recR schem_lift_S"*)
+
+
+#foreach ($n in $names)
+"schem_lift_S_prod_recR_${n}_left schem_lift_S"
+"schem_lift_S_prod_recR_${n}_right schem_lift_S"
+#end
+
+#foreach ($n in $names)
+"schem_lift_S_merge_recR_${n}_left schem_lift_S"
+"schem_lift_S_merge_recR_${n}_right schem_lift_S"
+#end
+
+"schem_lift_S_recL schem_lift_S schem_lift_S"
+
+end
