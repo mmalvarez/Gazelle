@@ -1,4 +1,4 @@
-theory Composition_Weak
+theory Composition
 imports Composition_Core "../Mergeable/Mergeable"
 begin
 

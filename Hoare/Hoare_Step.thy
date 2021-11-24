@@ -721,8 +721,6 @@ proof(rule HT'I)
 
         have Dominate1 : "pcomps fs_sub c m = f' c m" using dominant_pcomps[OF _ _ Hdom', of g m] Pres' Hnemp Fs_sub
           by auto
-
-(* YOU ARE HERE. *)
 (* problem: seems like we still need to know something about the validity of the initial state.
    maybe this is OK, but i worry that it will create problems.
    the obvious solution is just to throw the validity condition into the pre and post conditions.
@@ -790,7 +788,6 @@ proof(rule HT'I)
             prod_bsup no_control_l_def
             split: md_prio.splits prod.splits md_triv.splits option.splits list.split_asm)
 
-(* YOU ARE HERE *)
 (* TODO: we need to pull out the "ok_S" piece. *)
         have "payload m' = LUpd l (id c) (f c (LOut l c (payload m)))(payload m) \<and>
                (P1 (payload m)) \<and>

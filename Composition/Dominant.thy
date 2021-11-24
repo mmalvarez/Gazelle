@@ -1,4 +1,4 @@
-theory Dominant imports Composition_Weak
+theory Dominant imports Composition
 begin
 
 (*

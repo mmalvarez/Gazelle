@@ -1,5 +1,6 @@
 theory Mem_Simple
-  imports "../../Syntax/Gensyn" "../../Syntax/Gensyn_Descend" "../../Mergeable/Mergeable"
+  imports "../../Lib/Oalist/Oalist" 
+        "../../Syntax/Gensyn" "../../Syntax/Gensyn_Descend" "../../Mergeable/Mergeable"
         "../../Mergeable/Mergeable_Instances"
         "../../Lifter/Lifter" "../../Lifter/Lifter_Instances"
         "../../Lifter/Auto_Lifter" "../../Lifter/Auto_Lifter_Proofs" 

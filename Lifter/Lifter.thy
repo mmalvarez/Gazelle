@@ -1,6 +1,6 @@
 theory Lifter
   imports  "../Mergeable/Mergeable_Instances" "../Mergeable/Mono"
-"../Composition/Composition_Weak"
+    "../Composition/Composition"
 begin
 
 (*
