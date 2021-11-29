@@ -794,4 +794,34 @@ instance proof
   qed
 end
 
+instantiation prod :: (Pordc_all, Pordc_all) Pordc_all
+begin
+
+instance proof
+  fix a b :: "'a * 'b"
+
+  obtain a1 a2 where A: "a = (a1, a2)"
+    by(cases a; auto)
+
+  obtain b1 b2 where B: "b = (b1, b2)"
+    by(cases b; auto)
+
+  obtain ub1 where Ub1 : "is_ub {a1, b1} ub1"
+    using ub2_all[of a1 b1]
+    by(auto simp add: has_ub_def)
+
+  obtain ub2 where Ub2 : "is_ub {a2, b2} ub2"
+    using ub2_all[of a2 b2]
+    by(auto simp add: has_ub_def)
+
+  have "is_ub {a, b} (ub1, ub2)"
+    using is_ub_prod[OF Ub1 Ub2, of "{a, b}"]
+    unfolding A B
+    by auto
+
+  then show "has_ub {a, b}"
+    by(auto simp add: has_ub_def)
+qed
+end
+
 end

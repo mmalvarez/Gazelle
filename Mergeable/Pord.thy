@@ -671,4 +671,14 @@ class Pordbc =  Pordc + Pordb
 
 class Pordbpsc = Pordbc + Pordps
 
+class Pordc_all = Pordc +
+  assumes ub2_all : "\<And> a b . has_ub {a, b}"
+
+lemma sup2_all :
+  fixes a b :: "'a :: Pordc_all"
+  shows "has_sup {a, b}"
+  using complete2[OF ub2_all[of a b]]
+  by auto
+  
+
 end

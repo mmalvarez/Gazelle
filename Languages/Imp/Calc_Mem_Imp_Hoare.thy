@@ -1,7 +1,7 @@
 theory Calc_Mem_Imp_Hoare
   imports Calc_Mem_Imp (*"../../Hoare/Hoare_Step" *) "../../Hoare/Hoare_Lift" 
     "../../Language_Components/Mem/Mem_Simple"
-    "../../Lifter/Auto_Lifter_Proofs"
+    "../../Lifter/Auto_Lifter_Proofs" "../../Composition/Composition_Lifter"
 begin
 
 (* final definitions that perhaps should be in mem_simple (TODO) *)
@@ -49,12 +49,10 @@ lemma calc_sem_l_valid :
   ""
 *)
 
-term "sems"
-
 lemma sups_pres_calc :
   "sups_pres {calc_sem_l} (\<lambda> _ . ok_S)"
-  unfolding calc_sem_l_def calc_lift_def schem_lift_defs
-proof(rule sups_presI; simp)
+  using sups_pres_singletonI
+  by auto
 
 (* OK, how to prove sups_pres.
  * 

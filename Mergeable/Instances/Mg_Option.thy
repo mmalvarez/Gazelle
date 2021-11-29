@@ -662,4 +662,45 @@ instance proof
   qed
 end
 
+instantiation option :: (Pordc_all) Pordc_all
+begin
+instance proof
+  fix a b :: "('a option)"
+
+  show "has_ub {a, b}"
+  proof(cases a)
+    case None
+    then have "is_ub {a, b} b"
+      by(cases b; auto simp add: is_ub_def option_pleq leq_refl)
+    then show ?thesis
+      by(auto simp add: has_ub_def)
+  next
+    case (Some a')
+    show ?thesis
+    proof(cases b)
+      case None' : None
+      then have "is_ub {a, b} a" using Some
+        by(auto simp add: is_ub_def option_pleq leq_refl)
+      then show ?thesis
+        by(auto simp add: has_ub_def)
+    next
+      case Some' : (Some b')
+
+      obtain ub where Ub: "is_ub {a', b'} ub"
+        using ub2_all
+        by(auto simp add: has_ub_def)
+
+      then have "is_ub {a, b} (Some ub)"
+        unfolding Some Some'
+        using is_ub_Some[OF _ Ub]
+        by auto
+
+      then show ?thesis
+        by(auto simp add: has_ub_def)
+    qed
+  qed
+qed   
+
+end
+
 end

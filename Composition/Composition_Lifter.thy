@@ -235,8 +235,6 @@ proof-
       obtain sl' where Sup_l' : "is_sup (set l') sl'"
         using has_sup_subset[OF _ Cons.prems(1), of "set l'" w'] Cons' Sub3
         by(auto simp add: has_sup_def)
-(* YOU ARE HERE
- * need a generalized lemma about lifting pairwise in finite settings *)
 
       have Nwise'' : "(\<And>z. z \<in> set l' \<Longrightarrow> has_sup {x, z} )"
         using Cons.prems(2)
@@ -802,13 +800,37 @@ proof
   qed
 qed
 
-(* next: want to show that, if for each lifting in a set of lifted functions,
- * a new lifted function is ortho. to all of them,
- * and they are sups_pres
- * then the entire thing is sups_pres.
-
-* idea: we can do this using merge_l_ortho.
+(*
+  if we are in a type where all sups exist, this becomes much easier
 *)
+lemma sups_pres_finite_all:
+  fixes Fs :: "('a \<Rightarrow> ('b :: Pordc_all) \<Rightarrow> 'b) set"
+  assumes Nemp : "f \<in> Fs"
+  assumes Fin : "finite Fs"
+  shows "sups_pres Fs S"
+proof(rule sups_presI)
+  fix x :: 'b 
+  fix syn :: 'a
+  fix Fs' :: "('a \<Rightarrow> 'b \<Rightarrow> 'b) set"
+  fix f
 
+  assume Nemp_S : "x \<in> S syn"
+  assume Fs'_sub : "Fs' \<subseteq> Fs"
+  assume Fs'_nemp : "f \<in> Fs'"
+
+  have Fs'_fin : "finite Fs'"
+    using finite_subset[OF Fs'_sub Fin] by auto
+
+  then have Conc_fin : "finite ((\<lambda>f. f syn x) ` Fs')"
+    by auto
+
+  have Conc_nemp : "f syn x \<in> ((\<lambda>f. f syn x) ` Fs')"
+    using imageI[OF Fs'_nemp]
+    by auto
+
+  show "has_sup ((\<lambda>f. f syn x) ` Fs')"
+    using sup_finite_all[OF Conc_fin Conc_nemp]
+    by auto
+qed
 
 end

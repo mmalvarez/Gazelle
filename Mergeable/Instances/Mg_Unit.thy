@@ -65,4 +65,16 @@ instantiation unit :: Mergeableb begin
 instance proof qed
 end
 
+instantiation unit :: Pordc_all
+begin
+instance proof
+  fix a b :: unit
+  have "a = ()" "b = ()"
+    by auto
+
+  show "has_ub {a, b}"
+    by(auto simp add: has_ub_def is_ub_def is_least_def leq_refl)
+qed
+end
+
 end

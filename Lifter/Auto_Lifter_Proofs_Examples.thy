@@ -74,6 +74,6 @@ lemma mrg2'' :
                apply(rule fst_l_valid_base_ext.intro)
                apply(rule prio_l_valid_base_ext.ax)
                apply(rule prio_l_valid_base_ext.intro)
-         apply(auto intro: lifting_valid_noaxiom lifting_ortho_noaxiom simp add: ok_S_defs)
+         apply(auto intro: lifting_valid_noaxiom lifting_ortho_noaxiom simp add: ok_S_defs lifting_S_defs)
 
 end

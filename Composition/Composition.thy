@@ -167,6 +167,36 @@ proof(rule sups_presI)
     by(auto)
 qed
 
+lemma sups_pres_subset_syn :
+  fixes Fs :: "('a \<Rightarrow> ('b :: Mergeable) \<Rightarrow> 'b) set"
+  assumes H : "sups_pres Fs S"
+  assumes Hfin : "finite Fs"
+  assumes Hsub : "\<And> x . S' x \<subseteq> S x"
+  assumes Hnemp : "f \<in> Fs'"
+  shows "sups_pres Fs S'"
+proof(rule sups_presI)
+  fix x :: "'b"
+  fix sup1 :: "'b"
+  fix syn 
+  fix Fs_sub :: "('a \<Rightarrow> 'b \<Rightarrow> 'b) set"
+  fix f
+
+  assume Subs : "x \<in> S' syn"
+  assume Hfs_sub : "Fs_sub \<subseteq> Fs"
+  assume Hnemp_Fs_sub : "f \<in> Fs_sub"
+
+  have Subs' : "x \<in> S syn"
+    using Hsub Subs by blast
+
+  show "has_sup
+        ((\<lambda>f. f syn x) ` Fs_sub)" 
+    using sups_presD[OF H Subs' Hfs_sub Hnemp_Fs_sub] 
+    unfolding has_sup_def
+    by(auto)
+qed
+
+
+
 (* TODO: we weren't using this lemma, but the fact that
  * we couldn't prove it under our new definition may be a bad sign.
  *)
@@ -1306,4 +1336,6 @@ next
     qed
   qed
 qed
+
+
 end

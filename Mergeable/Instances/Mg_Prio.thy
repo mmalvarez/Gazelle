@@ -75,8 +75,6 @@ begin
 instance proof qed
 end
 
-(* TODO: could we get away with md_prio :: (Pordb) Pordbc?
- *)
 instantiation md_prio :: (Pordbc) Pordbc
 begin
 instance proof
@@ -789,6 +787,71 @@ instance proof
 qed
 end
 
+(* NB: if we were to separate Pordc_all from Pordc,
+ * we could show this for arbitrary Pord type parameter.
+ * However that might not be that useful.
+ *)
+instantiation md_prio :: ("{Pordbc}") Pordc_all
+begin
+instance proof
+  fix a b :: "'a md_prio"
 
+  obtain pa' a' where A : "a = mdp pa' a'"
+    by(cases a; auto)
+
+  obtain pb' b' where B: "b = mdp pb' b'"
+    by(cases b; auto)
+
+  consider (1) "pa' < pb'" |
+           (2) "pb' < pa'" |
+           (3) "pa' = pb'"
+    by arith
+
+  then show "has_ub {a, b}"
+  proof cases
+    case 1
+
+    then have "a <[ b"
+      using A B
+      by(auto simp add: prio_pleq)
+
+    then have "is_ub {a, b} b"
+      by(auto simp add: is_ub_def leq_refl)
+
+    then show ?thesis
+      by(auto simp add: has_ub_def)
+  next
+
+    case 2
+    then have "b <[ a"
+      using A B
+      by(auto simp add: prio_pleq)
+
+    then have "is_ub {a, b} a"
+      by(auto simp add: is_ub_def leq_refl)
+
+    then show ?thesis
+      by(auto simp add: has_ub_def)
+  next
+
+    case 3
+
+    have A_leq : "a <[ mdp (1 + pa') a'"
+      using A
+      by(auto simp add: prio_pleq)
+
+    have B_leq : "b <[ mdp (1 + pa') a'"
+      using B 3
+      by(auto simp add: prio_pleq)
+
+    have "is_ub {a, b} (mdp (1 + pa') a')"
+      using A_leq B_leq
+      by(auto simp add: is_ub_def)
+
+    then show "has_ub {a, b}"
+      by(auto simp add: has_ub_def)
+  qed
+qed
+end
 
 end

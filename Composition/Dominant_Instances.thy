@@ -1,5 +1,12 @@
 theory Dominant_Instances
   imports Dominant
+    "Dominant/Dom_Triv"
+    "Dominant/Dom_Option"
+    "Dominant/Dom_Prio"
+    "Dominant/Dom_Fst"
+    "Dominant/Dom_Snd"
+    "Dominant/Dom_Fst_Snd"
+    "Dominant/Dom_Merge"
 begin
 
 (*

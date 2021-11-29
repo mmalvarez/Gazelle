@@ -192,6 +192,92 @@ next
     show ?thesis using sup_union1[OF X1sup S'sup Ssup] by auto
   qed
 qed
+(*
+lemma ub_finite_all :
+  fixes S :: "('b :: Pordc_all) set"
+  fixes x :: "'b"
+  assumes Hfin : "finite S"
+  assumes Hx : "x \<in> S" 
+  shows "\<exists> sub . is_ub S sub" using assms
+proof(induction S arbitrary: x)
+  case empty
+  then show ?case 
+    by auto
+next
+  case (insert x1 S')
+  show ?case
+  proof(cases "S' = {}")
+    case True
+    then have "is_ub (insert x1 S') x1"
+      by(auto simp add: is_sup_def is_ub_def is_least_def leq_refl)
+    thus ?thesis by auto
+  next
+    case False
+    then obtain x' where X': "x' \<in> S'" by auto
+    have Ub1 : "is_ub S' sub" using insert
+      by(auto simp add: is_ub_def)
+    have Union : "is_ub ({x1} \<union> S') sub" using insert by auto
+
+    obtain s'sup where S'sup : "is_sup S' s'sup"
+      using insert.IH[OF X' Ub1] by auto
+
+    have X1sup : "is_sup {x1} x1" by(auto simp add: is_sup_def is_least_def is_ub_def leq_refl)
+
+    have Pair : "has_ub ({x1, s'sup})"
+      using ub_union2[OF X1sup S'sup Union]
+      by(auto simp add: has_ub_def)
+
+    obtain ssup where Ssup : "is_sup {x1, s'sup} ssup"
+      using complete2[OF Pair] by(auto simp add: has_sup_def)
+
+    show ?thesis using sup_union1[OF X1sup S'sup Ssup] by auto
+  qed
+qed
+*)
+
+(*
+lemma sup_finite_all :
+  fixes S :: "('b :: Pordc_all) set"
+  fixes x :: "'b"
+  assumes Hfin : "finite S"
+  assumes Hx : "x \<in> S" 
+  shows "\<exists> ssup . is_sup S ssup" using assms
+proof(induction S arbitrary: x)
+  case empty
+  then show ?case 
+    by auto
+next
+  case (insert x1 S')
+  show ?case
+  proof(cases "S' = {}")
+    case True
+    then have "is_ub (insert x1 S') x1"
+      by(auto simp add: is_sup_def is_ub_def is_least_def leq_refl)
+    thus ?thesis by auto
+  next
+    case False
+    then obtain x' where X': "x' \<in> S'" by auto
+    have Ub1 : "is_ub S' sub" using insert
+      by(auto simp add: is_ub_def)
+    have Union : "is_ub ({x1} \<union> S') sub" using insert by auto
+
+    obtain s'sup where S'sup : "is_sup S' s'sup"
+      using insert.IH[OF X' Ub1] by auto
+
+    have X1sup : "is_sup {x1} x1" by(auto simp add: is_sup_def is_least_def is_ub_def leq_refl)
+
+    have Pair : "has_ub ({x1, s'sup})"
+      using ub_union2[OF X1sup S'sup Union]
+      by(auto simp add: has_ub_def)
+
+    obtain ssup where Ssup : "is_sup {x1, s'sup} ssup"
+      using complete2[OF Pair] by(auto simp add: has_sup_def)
+
+    show ?thesis using sup_union1[OF X1sup S'sup Ssup] by auto
+  qed
+qed
+
+*)
 
 lemma has_sup_subset :
   fixes S S' :: "('b :: Pordc) set"
@@ -374,4 +460,70 @@ lemma is_sup_pair :
   shows "is_sup {a, b} b" using assms
   by(auto simp add: is_sup_def is_least_def is_ub_def leq_refl)
 
+
+lemma sup_finite_all :
+  assumes X_fin : "finite (X :: ('a :: Pordc_all) set)"
+  assumes X_nemp : "x \<in> X"
+  shows "has_sup X"
+proof-
+  obtain l where L: "set l = X"
+    using finite_list[OF X_fin]
+    by auto
+
+  then show "has_sup X"
+    using X_fin X_nemp
+  proof(induction l arbitrary: X x)
+    case Nil
+    then show ?case by auto
+  next
+    case (Cons lh lt)
+    then show ?case
+    proof(cases lt)
+      case Nil' : Nil
+
+      have "is_sup X lh"
+        using Cons.prems Nil' sup_singleton[of "lh"]
+        by(auto)
+
+      then show ?thesis 
+        by(auto simp add: has_sup_def)
+    next
+      case Cons' : (Cons lh' lt')
+
+      have Sub1 : "set lt' \<subseteq> insert lh' (set lt')"
+        by auto
+
+      have Sub2 : "insert lh' (set lt') \<subseteq> insert lh (insert lh' (set lt'))"
+        by auto
+
+      have Sub3 : "set lt' \<subseteq> insert lh (insert lh' (set lt'))"
+        using Sub1 Sub2 by auto
+
+      obtain slt where Slt: "is_sup (set lt) slt"
+        using Cons.IH[OF refl _, of lh'] Cons'
+        by(auto simp add: has_sup_def)
+
+      obtain sl where Sl_alt : "is_sup {lh, slt} sl"
+        using sup2_all[of lh slt]
+        by(auto simp add: has_sup_def)
+
+      have Lh_sup : "is_sup {lh} lh"
+        using sup_singleton by auto
+  
+      have Conc' : "is_sup ({lh} \<union> (set lt)) sl"
+        using sup_union1[OF Lh_sup Slt Sl_alt]
+        by simp
+
+      then have Conc'' : "is_sup (set (lh#lt)) sl"
+        by auto
+
+      then have Conc' : "is_sup X sl"
+        using Cons.prems(1) Cons'
+        by auto
+
+      then show ?thesis
+        by(auto simp add: has_sup_def)
+    qed
+  qed
+qed
 end

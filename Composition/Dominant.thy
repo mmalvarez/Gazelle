@@ -1,4 +1,4 @@
-theory Dominant imports Composition
+theory Dominant imports Composition "../Lifter/Lifter"
 begin
 
 (*
@@ -16,24 +16,54 @@ begin
  * behavior of IF.)
  *)
 
+(* binary notion of dominance (greater than or equal) for liftings *)
+(* original notion had a valid-set parameter S, but i 
+ * don't think we need it (new update should be equivalent to changing it to
+   UNIV in all cases *)
+
+locale dominant2_sig =
+  fixes l1 :: "('a, 'b1, 'c :: Pord) lifting"
+  fixes l2 :: "('a, 'b2, 'c :: Pord) lifting"
+  fixes S :: "'a \<Rightarrow> 'c set"
+  fixes X :: "'a set"
+
+locale dominant2 = dominant2_sig +
+  assumes dominant_leq :
+    "\<And> a1 a2 b x . x \<in> X \<Longrightarrow> b \<in> S x \<Longrightarrow> LUpd l2 x a2 b <[ LUpd l1 x a1 b"
+
+(*
+locale dominant2_sig =
+  fixes l1 :: "('a, 'b1, 'c :: Pord) lifting"
+  fixes l2 :: "('a, 'b2, 'c :: Pord) lifting"
+  fixes X :: "'a set"
+
+locale dominant2 = dominant2_sig +
+  assumes dominant_leq :
+    "\<And> a1 a2 b x . x \<in> X \<Longrightarrow> LUpd l2 x a2 b <[ LUpd l1 x a1 b"
+*)
 (* dominant: for the given syntax x, f "dominates" set S if for all state inputs b,
  * f x b is the least upper bound of
  * applying each f' in S to x and b.
  *)
 definition dominant ::
-  "('a \<Rightarrow> ('b :: Mergeable) \<Rightarrow> 'b) \<Rightarrow> ('a \<Rightarrow> ('b :: Mergeable) \<Rightarrow> 'b) set \<Rightarrow> 'a \<Rightarrow> bool"
+  "('a \<Rightarrow> ('b :: Mergeable) \<Rightarrow> 'b) \<Rightarrow> ('a \<Rightarrow> ('b :: Mergeable) \<Rightarrow> 'b) set \<Rightarrow> 'a set \<Rightarrow> bool"
 ("_ \<downharpoonleft> _ _" [250, 252, 254])
 where
-"(f \<downharpoonleft> S x) =
- (\<forall> b . is_sup ((\<lambda> g . g x b) ` S) (f x b))"
+"(f \<downharpoonleft> S X) =
+ (\<forall> b x . x \<in> X \<longrightarrow> is_sup ((\<lambda> g . g x b) ` S) (f x b))"
+
+(* TODO: might be a good idea to have a special version of dominant for lifters.
+ * Similar e.g. to ortho.
+ *)
 
 lemma dominantI [intro] :
-  assumes "\<And> b . is_sup ((\<lambda> g . g x b) ` S) (f x b)"
-  shows "(f \<downharpoonleft> S x)" using assms
+  assumes "\<And> b x . x \<in> X \<Longrightarrow> is_sup ((\<lambda> g . g x b) ` S) (f x b)"
+  shows "(f \<downharpoonleft> S X)" using assms
   unfolding dominant_def by auto
 
 lemma dominantE [elim] :
-  assumes "(f \<downharpoonleft> S x)"
+  assumes "(f \<downharpoonleft> S X)"
+  assumes "x \<in> X"
   shows "is_sup ((\<lambda> g . g x b) ` S) (f x b)" using assms
   unfolding dominant_def by auto
 
@@ -48,7 +78,8 @@ lemma dominantE [elim] :
 lemma dominant_pcomps :
   assumes Hpres : "sups_pres (set l) S"
   assumes Hne : "z \<in> set l"
-  assumes H : "(f \<downharpoonleft> (set l) x)"
+  assumes H : "(f \<downharpoonleft> (set l) X)"
+  assumes Xin : "x \<in> X"
   assumes Bin : "b \<in> S x"
   shows "pcomps l x b = f x b"
 proof-
@@ -73,7 +104,7 @@ proof-
     by auto
 
   have Sup2' : "is_sup ((\<lambda>f. f x b) ` set l) (f x b)"
-    using dominantE[OF H, of b]
+    using dominantE[OF H Xin, of b]
     by auto
 
   show ?thesis using is_sup_unique[OF Sup2 Sup2'] by auto
@@ -82,8 +113,9 @@ qed
 lemma dominant_pcomps_set :
   assumes Hpres : "sups_pres Fs S"
   assumes Hne : "z \<in> Fs"
-  assumes H : "(f \<downharpoonleft> Fs x)"
+  assumes H : "(f \<downharpoonleft> Fs X)"
   assumes L : "set l = Fs"
+  assumes Xin: "x \<in> X"
   assumes Bin : "b \<in> S x"
   shows "pcomps l x b = f x b"
   using dominant_pcomps assms unfolding sym[OF L] by auto
@@ -117,5 +149,17 @@ lemma dominantE [elim] :
   shows "is_sup ((\<lambda> g . g x b) ` S) (f x b)" using assms
   unfolding dominant_def by auto
 *)
+
+(* "pairwise" way of proving dominance using dominant2 *)
+(* do we need UNIV here? *)
+lemma dominant2_dominant: 
+  fixes l1 :: "('a, 'b1, 'c :: Mergeable) lifting"
+  assumes HDom : "dominant2 l1 l2 S X"
+  shows "(LMap l1 f1) \<downharpoonleft> {LMap l1 f1, LMap l2 f2} X"
+proof
+  fix b :: 'c
+  fix x :: 'a
+  assume Xin : "x \<in> X"
+
 
 end
