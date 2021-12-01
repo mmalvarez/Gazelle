@@ -320,7 +320,7 @@ proof(rule HT'I)
     show "|#gs#| {#P, npost#} (c @ c')"
     proof(cases "|gs| {Q} c'")
       case True
-      then show ?thesis sorry
+      then show ?thesis \<comment> \<open>get stuck here\<close>
     next
       case False
 

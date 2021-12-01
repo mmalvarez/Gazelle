@@ -9,7 +9,7 @@ begin
  * involves unfolding a bunch of liftings. This is an opportunity to improve
  * Auto_Lifter related automation.
  *)
-
+(*
 (*
  * Standard Seq Hoare rule. Included mostly for explanatory purposes since it is not able to
  * make any guarantees in the context of Seq merged with other languages - it is "closed"
@@ -32,6 +32,7 @@ proof
   show "|gs| {P1} ([G Sseq' cs] @ c')"
   proof
     fix m :: "('a, 'b) control"
+    assume Ok : "m \<in> ok_S"
     assume M : "P1 (payload m)"
     assume CM : "cont m = Inl ([G Sseq' cs] @ c')"
 
@@ -63,7 +64,21 @@ proof
       have Step : "sem_step_p gs m m'"
         using sem_step_sem_step_p[OF Inl] by auto
 
-      have Conc' : "safe gs m'" using guardedD[OF Guarded M1 CM1]
+      obtain pri1 pri2 rest where Msplit :
+        "m = (mdp pri1 (Some (mdt (G Sseq' cs # c'))), mdp pri2 (Some (mdt (STR ''''))), rest)"
+        and Rest : "rest \<in> ok_S"
+        using (*Gs_alt'*) CM Ok
+        by(cases m; auto simp add: prod_ok_S cont_def split: md_prio.splits option.splits md_triv.splits if_splits)
+
+
+      have Ok' : "m' \<in> ok_S"
+        using Msplit M1_eq Ok Inl
+        apply(cases m'; auto simp add: schem_lift_defs sem_step_def seq_semx_def seq_sem_l_gen_def seq_sem_def cont_def seq_sem_lifting_gen_def fst_l_def
+            prio_l_def option_l_def triv_l_def lift_map_s_def prod_ok_S sem_step_p_sem_step
+            split: md_prio.splits option.splits md_triv.splits sum.splits if_splits list.splits
+            )
+
+      have Conc' : "safe gs m'" using guardedD[OF Guarded _ M1 CM1]
         by auto
 
       show "safe gs m"
@@ -86,7 +101,7 @@ proof
     qed
   qed
 qed
-
+*)
 (*
  * More general version of HSeq that applies for any list fs of composed functions meeting
  * certain conditions:
@@ -206,7 +221,7 @@ lemma HxSeq :
   assumes HF : "f = seq_sem_l_gen lfts"
   assumes Hpres : "sups_pres (set fs) (\<lambda> _ . ok_S)"
   assumes Hnemp : "g \<in> set fs"
-  assumes Hdom : "(f \<downharpoonleft> (set fs) Sseq')"
+  assumes Hdom : "(f \<downharpoonleft> (set fs) {Sseq'})"
   assumes H2 : "lfts Sseq' = Sseq"
   assumes H : "|gs| {~ P1 ~} cs {~ P2 ~}"
   shows "|gs| {~ P1 ~} [G Sseq' cs] {~ P2 ~}"
@@ -246,7 +261,7 @@ proof(rule HT'I)
         case (Inl m')
   
         have F_eq : "sem_step f m = Inl m'"
-          using sym[OF dominant_pcomps[OF Hpres Hnemp Hdom Ok]] CM Inl H0
+          using sym[OF dominant_pcomps[OF Hpres Hnemp Hdom _ Ok]] CM Inl H0
           by(simp add: sem_step_def)
 
         have Fcont : "cont m' = Inl (cs @ c')"

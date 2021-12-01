@@ -2,6 +2,7 @@ theory Calc_Mem_Imp imports Calc_Mem "../../Language_Components/Cond/Cond"
               "../../Language_Components/Imp_Ctl/Imp_Ctl" 
              "../../Language_Components/Seq/Seq" 
 "../../Hoare/Hoare_Step"
+"../../Composition/Dominant_Instances"
 begin
 
 datatype syn =
@@ -82,10 +83,17 @@ term "no_control_lifting"
 term "(SP NA (SP NB NC))"
 term "(SP NX (SP (SPRC calc_prio (SO NC)) (SP (SPRK (SO NA)) (SP (SPRK (SO NB)) NX ))))"
 
+definition calc_schemi where
+"calc_schemi = (SP NA (SP NB NC))"
+declare calc_schemi_def [simp]
+
+definition calc_schemo where
+"calc_schemo = (SP NX (SP (SPRC calc_prio (SO NC)) (SP (SPRI (SO NA)) (SP (SPRI (SO NB)) NX ))))"
+declare calc_schemo_def [simp]
+
 definition calc_lift :: "(Calc.calc, Calc.calc_state, ('s, 'x :: {Bogus, Pord, Mergeableb, Okay}) Mem_Simple.state) lifting" where
 "calc_lift = 
-  no_control_lifting (schem_lift (SP NA (SP NB NC)) (SP NX (SP (SPRC calc_prio (SO NC)) (SP (SPRI (SO NA)) (SP (SPRI (SO NB)) NX )))))"
-
+  no_control_lifting (schem_lift calc_schemi calc_schemo)"
 
 (* TODO: priority stuff is all wrong here. *)
 (* concretize our schem_lift at an appropriate type. *)
@@ -112,7 +120,7 @@ definition cond_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) 
   cond_sem
 "
 
-definition imp_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
+definition imp_sem_l :: "syn \<Rightarrow> ('s, (_ :: Pordc_all)) state \<Rightarrow> ('s, (_ :: Pordc_all)) state" where
 "imp_sem_l = imp_sem_l_gen imp_trans"
 
 definition seq_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
@@ -124,11 +132,51 @@ definition mem_lift where
 definition mem_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
 "mem_sem_l = lift_map_s mem_trans mem_lift mem0_sem"
 
-definition sem_final :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
+definition sem_final :: "syn \<Rightarrow> ('s, (_ :: Pordc_all)) state \<Rightarrow> ('s, (_ :: Pordc_all)) state" where
 "sem_final =
   pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
 
+definition sems ::
+  "(syn \<Rightarrow> ('s, (_ :: Pordc_all)) state \<Rightarrow> ('s, (_ :: Pordc_all)) state) set" where
+"sems = {calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l}"
 
+(* Domination facts needed for proof. *)
+(* TODO: need to include syntax translation in dominant2 *)
+(* Hmm... does calc dominate mem here actually? *)
+(* Merge vs merge. *)
+(* maybe we can just compute these...
+ * will be annoying, but should work.
+ * might be easier than dealing with the details of
+ * using automation to construct proofs out of the locale instances.
+ *)
+lemma calc_dom_mem :
+  "dominant2 calc_lift calc_trans mem_lift mem_trans { x . case x of (Sc _) \<Rightarrow> True | _ \<Rightarrow> False}"
+proof(rule dominant2.intro)
+  fix a1 a2 b x
+
+  assume X: "x \<in> {x. case x of Calc_Mem_Imp.syn.Sc x \<Rightarrow> True
+                | _ \<Rightarrow> False}"
+  then show
+    "LUpd mem_lift (Calc_Mem_Imp.mem_trans x) a2 b <[
+       LUpd calc_lift (Calc_Mem_Imp.calc_trans x) a1 b"
+  unfolding calc_lift_def calc_schemi_def calc_schemo_def
+            mem_lift_def mem_lift1_def no_control_lifting_def schem_lift_defs
+  apply(auto simp add: schem_lift_defs lifter_instances
+ split: prod.splits md_prio.splits syn.splits option.splits)
+(*
+  apply(simp)
+  apply(rule dominant2_snd.ax)
+  apply(rule dominant2_snd.intro)
+  apply(rule dominant2_snd.ax)
+  apply(rule dominant2_snd.intro)
+  apply(rule dominant2_merge_left.ax)
+  apply(rule dominant2_merge_left.intro)
+*)
+proof
+  fix 
+
+lemma calc_sem_dom_calc :
+  "calc_sem_l \<downharpoonleft> sems { x . case x of (Sc _) \<Rightarrow> True | _ \<Rightarrow> False}"
 
 (* testing *)
 
