@@ -35,15 +35,15 @@ locale dominant2 = dominant2_sig +
  * need either ok_S or valid-set restriction on b
 *)
 locale dominant2_sig =
-  fixes l1 :: "('a1, 'b1, 'c :: Pord) lifting"
+  fixes l1 :: "('a1, 'b1, 'c :: {Pord, Okay}) lifting"
   fixes t1 :: "'a \<Rightarrow> 'a1"
-  fixes l2 :: "('a2, 'b2, 'c :: Pord) lifting"
+  fixes l2 :: "('a2, 'b2, 'c) lifting"
   fixes t2 :: "'a \<Rightarrow> 'a2"
   fixes X :: "'a set"
 
 locale dominant2 = dominant2_sig +
   assumes dominant_leq :
-    "\<And> a1 a2 b x . x \<in> X \<Longrightarrow> LUpd l2 (t2 x) a2 b <[ LUpd l1 (t1 x) a1 b"
+    "\<And> a1 a2 b x . x \<in> X \<Longrightarrow> b \<in> ok_S \<Longrightarrow> LUpd l2 (t2 x) a2 b <[ LUpd l1 (t1 x) a1 b"
 
 (* dominant: for the given syntax x, f "dominates" set S if for all state inputs b,
  * f x b is the least upper bound of
@@ -55,24 +55,25 @@ locale dominant2 = dominant2_sig +
  * would require some changes to other proofs.
  *)
 definition dominant ::
-  "('a \<Rightarrow> ('b :: Mergeable) \<Rightarrow> 'b) \<Rightarrow> ('a \<Rightarrow> ('b :: Mergeable) \<Rightarrow> 'b) set \<Rightarrow> 'a set \<Rightarrow> bool"
+  "('a \<Rightarrow> ('b :: {Mergeable, Okay}) \<Rightarrow> 'b) \<Rightarrow> ('a \<Rightarrow> ('b) \<Rightarrow> 'b) set \<Rightarrow> 'a set \<Rightarrow> bool"
 ("_ \<downharpoonleft> _ _" [250, 252, 254])
 where
 "(f \<downharpoonleft> S X) =
- (\<forall> b x . x \<in> X \<longrightarrow> is_sup ((\<lambda> g . g x b) ` S) (f x b))"
+ (\<forall> b x . x \<in> X \<longrightarrow> b \<in> ok_S \<longrightarrow> is_sup ((\<lambda> g . g x b) ` S) (f x b))"
 
 (* TODO: might be a good idea to have a special version of dominant for lifters.
  * Similar e.g. to ortho.
  *)
 
 lemma dominantI [intro] :
-  assumes "\<And> b x . x \<in> X \<Longrightarrow> is_sup ((\<lambda> g . g x b) ` S) (f x b)"
+  assumes "\<And> b x . x \<in> X \<Longrightarrow> b \<in> ok_S \<Longrightarrow> is_sup ((\<lambda> g . g x b) ` S) (f x b)"
   shows "(f \<downharpoonleft> S X)" using assms
   unfolding dominant_def by auto
 
 lemma dominantE [elim] :
   assumes "(f \<downharpoonleft> S X)"
   assumes "x \<in> X"
+  assumes "b \<in> ok_S"
   shows "is_sup ((\<lambda> g . g x b) ` S) (f x b)" using assms
   unfolding dominant_def by auto
 
@@ -85,11 +86,11 @@ lemma dominantE [elim] :
  *)
 
 lemma dominant_pcomps :
-  assumes Hpres : "sups_pres (set l) S"
+  assumes Hpres : "sups_pres (set l) (\<lambda> _ . ok_S)"
   assumes Hne : "z \<in> set l"
   assumes H : "(f \<downharpoonleft> (set l) X)"
   assumes Xin : "x \<in> X"
-  assumes Bin : "b \<in> S x"
+  assumes Bin : "b \<in> ok_S"
   shows "pcomps l x b = f x b"
 proof-
 
@@ -113,19 +114,19 @@ proof-
     by auto
 
   have Sup2' : "is_sup ((\<lambda>f. f x b) ` set l) (f x b)"
-    using dominantE[OF H Xin, of b]
+    using dominantE[OF H Xin Bin]
     by auto
 
   show ?thesis using is_sup_unique[OF Sup2 Sup2'] by auto
 qed
 
 lemma dominant_pcomps_set :
-  assumes Hpres : "sups_pres Fs S"
+  assumes Hpres : "sups_pres Fs (\<lambda> _ . ok_S)"
   assumes Hne : "z \<in> Fs"
   assumes H : "(f \<downharpoonleft> Fs X)"
   assumes L : "set l = Fs"
   assumes Xin: "x \<in> X"
-  assumes Bin : "b \<in> S x"
+  assumes Bin : "b \<in> ok_S"
   shows "pcomps l x b = f x b"
   using dominant_pcomps assms unfolding sym[OF L] by auto
 
@@ -162,14 +163,15 @@ lemma dominantE [elim] :
 (* "pairwise" way of proving dominance using dominant2 *)
 (* do we need UNIV here? *)
 lemma dominant2_dominant: 
-  fixes l1 :: "('a1, 'b1, 'c :: Mergeable) lifting"
-  fixes l2 :: "('a2, 'b2, 'c :: Mergeable) lifting"
+  fixes l1 :: "('a1, 'b1, 'c :: {Mergeable, Okay}) lifting"
+  fixes l2 :: "('a2, 'b2, 'c) lifting"
   assumes HDom : "dominant2 l1 t1 l2 t2 X"
   shows "(lift_map_s t1 l1 f1) \<downharpoonleft> {lift_map_s t1 l1 f1, lift_map_s t2 l2 f2} X"
 proof
   fix b :: 'c
   fix x :: 'a
   assume Xin : "x \<in> X"
+  assume Bin : "b \<in> ok_S"
 
   interpret D : dominant2 l1 t1 l2 t2 X
     using HDom.
@@ -195,7 +197,7 @@ proof
     next
       case 2
       then show ?thesis
-        using D.dominant_leq[OF Xin]
+        using D.dominant_leq[OF Xin Bin]
         by(auto simp add: lift_map_s_def)
     qed
   next
@@ -215,7 +217,7 @@ proof
 qed
 
 lemma dominant_singleton :
-  fixes f :: "'a \<Rightarrow> ('b :: Mergeable) \<Rightarrow> 'b"
+  fixes f :: "'a \<Rightarrow> ('b :: {Mergeable, Okay}) \<Rightarrow> 'b"
   shows "f \<downharpoonleft> {f} X"
 proof
   fix b :: 'b
@@ -235,7 +237,7 @@ qed
  * that f \<in> Fs,
  *)
 lemma dominant_pairwise :
-  fixes Fs :: "('a \<Rightarrow> ('b :: Mergeable) \<Rightarrow> 'b) set"
+  fixes Fs :: "('a \<Rightarrow> ('b :: {Mergeable, Okay}) \<Rightarrow> 'b) set"
   assumes Hfin : "finite Fs"
   assumes HFs_f : "f \<in> Fs"
   assumes H: "\<And> f' . f' \<in> Fs \<Longrightarrow> f \<downharpoonleft> {f'} X"
@@ -245,6 +247,7 @@ proof
   fix x :: 'a
 
   assume Xin : "x \<in> X"
+  assume Bin : "b \<in> ok_S"
 
   show
     "is_sup ((\<lambda>g. g x b) ` Fs) (f x b)"
@@ -261,7 +264,7 @@ proof
       by auto
 
     have Zf_sup : "is_sup ((\<lambda>g. g x b) ` {zf}) (f x b)"
-      using dominantE[OF Zf_dom Xin, of b]
+      using dominantE[OF Zf_dom Xin Bin]
       by auto
       
     then have Conc' :

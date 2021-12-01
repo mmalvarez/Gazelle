@@ -17,4 +17,8 @@ begin
 
 (* sups_presI *)
 
+(* TODO: we are currently seeing if we actually need these instances,
+ * or if it is feasible to prove dominant2 directly.
+ *)
+
 end

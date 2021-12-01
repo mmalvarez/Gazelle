@@ -15,7 +15,17 @@ lemmas schem_lift_defs =
   schem_lift_base_trivI_def
   schem_lift_base_trivJ_def
   schem_lift_base_trivK_def
-
+  schem_lift_base_idA_def
+  schem_lift_base_idB_def
+  schem_lift_base_idC_def
+  schem_lift_base_idD_def
+  schem_lift_base_idE_def
+  schem_lift_base_idF_def
+  schem_lift_base_idG_def
+  schem_lift_base_idH_def
+  schem_lift_base_idI_def
+  schem_lift_base_idJ_def
+  schem_lift_base_idK_def
 schem_lift_inject_def
 
 schem_lift_option_recR_def

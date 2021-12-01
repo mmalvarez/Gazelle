@@ -298,6 +298,7 @@ lemma HTS_imp_HT'' :
   fixes l' :: "('syn1 \<Rightarrow> 'syn0)"
 *)
   assumes H: "f % {{P'}} (l' x) {{Q'}}"
+  (* TODO: can we weaken this to lifting_valid_weak_ok *)
   assumes Valid : "lifting_valid_ok l S"
   assumes Hf' : "f' = lift_map_s l' (no_control_lifting  l) f"
   assumes H0 : "gs = pcomps fs"

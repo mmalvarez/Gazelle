@@ -9,7 +9,9 @@ lemmas schem_lift_defs =
 #foreach ($n in $names)
   schem_lift_base_triv${n}_def
 #end
-
+#foreach ($n in $names)
+  schem_lift_base_id${n}_def
+#end
 schem_lift_inject_def
 
 schem_lift_option_recR_def

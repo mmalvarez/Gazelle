@@ -1,4 +1,4 @@
-theory Calc_Mem_Imp_Hoare
+theory Calc_Mem_Imp_Hoare_Example
   imports Calc_Mem_Imp "../../Hoare/Hoare_Step" "../../Hoare/Hoare_Lift" 
     "../../Language_Components/Mem/Mem_Simple"
     "../../Lifter/Auto_Lifter_Proofs" "../../Composition/Composition_Lifter"
