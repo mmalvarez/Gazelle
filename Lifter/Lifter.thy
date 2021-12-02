@@ -1,6 +1,6 @@
 theory Lifter
   imports  "../Mergeable/Mergeable_Instances" "../Mergeable/Mono"
-    "../Composition/Composition"
+    "../Composition/Composition" "../Mergeable/Bump"
 begin
 
 (*
@@ -154,6 +154,76 @@ locale lifting_valid_ok_pres_pairwise = lifting_valid_ok_pres + lifting_valid_pa
 locale lifting_valid_weak_base_ok_pres_pairwise = lifting_valid_weak_base_ok_pres + lifting_valid_pairwise_ext
 locale lifting_valid_base_ok_pres_pairwise = lifting_valid_base_ok_pres + lifting_valid_pairwise_ext
 
+(* TODO: we could weaken this to not require this to hold for all syntax
+ * data but instead for particular ones - for now let's not though. *)
+definition gt_compat :: "('syn, 'a, 'b :: Pord_Weak) lifting \<Rightarrow> ('b :: Pord_Weak) \<Rightarrow> 'b \<Rightarrow> bool" where
+"gt_compat l x1 x2 =
+  (x1 \<noteq> x2 \<and> x1 <[ x2 \<and> (\<forall> s . LOut l s x1 = LOut l s x2))"
+
+lemma gt_compatI :
+  assumes "x1 \<noteq> x2"
+  assumes "x1 <[ x2"
+  assumes "\<And> s . LOut l s x1 = LOut l s x2"
+  shows "gt_compat l x1 x2"
+  using assms unfolding gt_compat_def
+  by auto
+
+lemma gt_compatD1 :
+  assumes "gt_compat l x1 x2"
+  shows "x1 \<noteq> x2"
+  using assms unfolding gt_compat_def
+  by auto
+  
+lemma gt_compatD2 :
+  assumes "gt_compat l x1 x2"
+  shows "x1 <[ x2"
+  using assms unfolding gt_compat_def
+  by auto
+
+lemma gt_compatD3 :
+  assumes "gt_compat l x1 x2"
+  shows "LOut l s x1 = LOut l s x2"
+  using assms unfolding gt_compat_def
+  by auto
+
+definition bump_spec :: "('syn, 'a, 'b :: Pord_Weak) lifting \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> bool" where
+"bump_spec l bf =
+  (\<forall> x . is_least (gt_compat l x) (bf x))"
+
+lemma bump_specI :
+  assumes H1 :
+    "\<And> x . gt_compat l x (bf x)"
+  assumes H2 :
+    "\<And> x x' . gt_compat l x x' \<Longrightarrow> bf x <[ x'"
+  shows "bump_spec l bf"
+  using assms
+  unfolding bump_spec_def is_least_def
+  by(blast)
+
+lemma bump_specD1 :
+  assumes "bump_spec l bf"
+  shows "gt_compat l x (bf x)"
+  using assms unfolding bump_spec_def is_least_def by auto
+
+lemma bump_specD2 :
+  assumes "bump_spec l bf"
+  assumes "gt_compat l x x'"
+  shows "bf x <[ x'"
+  using assms unfolding bump_spec_def is_least_def
+  by blast
+
+locale lifting_valid_bump_ext =
+  fixes l :: "('syn, 'a, 'b :: Bump) lifting"
+  fixes S :: "('syn, 'b) valid_set"
+  assumes bump_S : "\<And> s b . b \<in> S s \<Longrightarrow> bump b \<in> S s"
+  assumes bump_out :
+    "\<And> s b . b \<in> S s \<Longrightarrow> LOut l s (bump b) = LOut l s b"
+  assumes bump_bump_spec :
+    "bump_spec l (bump :: ('b \<Rightarrow> 'b))"
+
+locale lifting_valid_bump_ok_ext =
+  fixes l :: "('syn, 'a, 'b :: {Bump, Okay}) lifting"
+  assumes bump_ok_S : "\<And> (b :: 'b) . b \<in> ok_S \<Longrightarrow> bump b \<in> ok_S"
 
 (* orthogonality, used to define merge correctness *)
 locale l_ortho' =
@@ -269,5 +339,6 @@ next
   show "\<And>s. LBase l1 s = \<bottom>"
     using compat_base1 compat_base2 by auto
 qed
+
 
 end

@@ -632,40 +632,6 @@ qed
 qed
 
 
-(*
-proof(rule dominant2.intro)
-  fix a1 a2 x
-  fix b :: "(_, (_ :: {Okay, Mergeableb, Bogus})) state"
-  term "b"
-  term "LUpd mem_lift"
-  assume X: "x \<in> {x. case x of Calc_Mem_Imp.syn.Sc x \<Rightarrow> True
-                | _ \<Rightarrow> False}"
-  assume B_ok : "b \<in> ok_S"
-  then show
-    "LUpd mem_lift (Calc_Mem_Imp.mem_trans x) a2 b <[
-       LUpd calc_lift (Calc_Mem_Imp.calc_trans x) a1 b" using X
-  unfolding calc_lift_def calc_schemi_def calc_schemo_def
-            mem_lift_def mem_lift1_def no_control_lifting_def schem_lift_defs
-  apply(auto simp add: schem_lift_defs lifter_instances
-  prod_ok_S prio_ok_S option_ok_S triv_ok_S
-prod_pleq leq_refl
-*)
-
-(*
-  apply(simp)
-  apply(rule dominant2_snd.ax)
-  apply(rule dominant2_snd.intro)
-  apply(rule dominant2_snd.ax)
-  apply(rule dominant2_snd.intro)
-  apply(rule dominant2_merge_left.ax)
-  apply(rule dominant2_merge_left.intro)
-*)
-proof
-  fix 
-
-lemma calc_sem_dom_calc :
-  "calc_sem_l \<downharpoonleft> sems { x . case x of (Sc _) \<Rightarrow> True | _ \<Rightarrow> False}"
-
 (* testing *)
 
 

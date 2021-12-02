@@ -1,4 +1,4 @@
-theory Mg_Prio imports "../Pord" "../Mergeable" "../Mergeable_Facts"
+theory Mg_Prio imports "../Pord" "../Mergeable" "../Mergeable_Facts" "../Bump"
 begin
 (* md_prio pairs objects with natural numbers, in which the comparison is
  * "lexicographic-like" in that the comparison is made first between the natural numbers,
@@ -851,6 +851,22 @@ instance proof
     then show "has_ub {a, b}"
       by(auto simp add: has_ub_def)
   qed
+qed
+end
+
+instantiation md_prio :: (Pord_Weak) Bump
+begin
+definition prio_bump :
+  "bump x = (case x of (mdp px' x') \<Rightarrow> (mdp (1 + px') x'))"
+
+instance proof
+  fix x :: "'a md_prio"
+  show "bump x \<noteq> x"
+    by(cases x; auto simp add: prio_bump)
+next
+  fix x :: "'a md_prio"
+  show "x <[ bump x"
+    by(cases x; auto simp add: prio_bump prio_pleq)
 qed
 end
 

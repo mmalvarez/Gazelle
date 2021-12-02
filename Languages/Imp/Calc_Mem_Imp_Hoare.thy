@@ -19,7 +19,7 @@ abbreviation sems_nos where
 
 definition sem_final' :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
 "sem_final' =
-  pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
+  pcomps [with_baseline calc_sem_l, with_baseline mem_sem_l, with_baseline cond_sem_l, with_baseline imp_sem_l, with_baseline seq_sem_l]"
 
 
 (*lemma idea:

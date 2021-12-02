@@ -1,5 +1,5 @@
 theory Mg_Prod
-  imports "../Pord" "../Mergeable"
+  imports "../Pord" "../Mergeable" "../Bump"
 begin
 
 (* For product types, we impose an ordering that requires that _all_ components of
@@ -822,6 +822,24 @@ instance proof
   then show "has_ub {a, b}"
     by(auto simp add: has_ub_def)
 qed
+end
+
+instantiation prod :: (Bump, Bump) Bump
+begin
+
+definition prod_bump :
+  "bump x = (case x of (x1, x2) \<Rightarrow> (bump x1, bump x2))"
+
+instance proof
+  fix x :: "'a * 'b"
+  show "bump x \<noteq> x"
+    by(cases x; auto simp add: prod_bump bump_neq)
+next
+  fix x :: "'a * 'b"
+  show "x <[ bump x"
+    by(cases x; auto simp add: prod_bump prod_pleq bump_geq)
+qed
+
 end
 
 end
