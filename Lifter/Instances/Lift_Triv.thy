@@ -111,5 +111,30 @@ proof
     by auto
 qed
 
+interpretation triv_l : lifting_valid_oc_ext "triv_l ::('x, 'a :: {Bogus}, 'a md_triv) lifting'" "\<lambda> _ . (UNIV :: 'a md_triv set)"
+proof
+  fix x2 Xs 
+  fix supr :: "'a md_triv" 
+  fix s :: 'x
+  fix r :: 'a
+  fix w :: "'a md_triv"
+  assume W: "w \<in> Xs"
+  assume Supr : "is_sup Xs supr"
+  assume Compat :
+    "(\<And>x. x \<in> Xs \<Longrightarrow>
+             LOut triv_l s x = r)"
+
+  have Supr_W : "supr = w"
+    using is_supD1[OF Supr W]
+    by(auto simp add: triv_pleq)
+
+  hence "w = mdt r"
+    using Compat[OF W]
+    by(cases w; auto simp add: triv_pleq triv_l_def)
+
+  then show "LOut triv_l s supr = r"
+    using Supr_W
+    by(auto simp add: triv_l_def)
+qed
 
 end

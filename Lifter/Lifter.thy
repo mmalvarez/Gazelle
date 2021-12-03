@@ -156,6 +156,8 @@ locale lifting_valid_base_ok_pres_pairwise = lifting_valid_base_ok_pres + liftin
 
 (* TODO: we could weaken this to not require this to hold for all syntax
  * data but instead for particular ones - for now let's not though. *)
+(* TODO: this bump abstraction is probably a failed experiment, leaving it in for now...
+ *)
 definition gt_compat :: "('syn, 'a, 'b :: Pord_Weak) lifting \<Rightarrow> ('b :: Pord_Weak) \<Rightarrow> 'b \<Rightarrow> bool" where
 "gt_compat l x1 x2 =
   (x1 \<noteq> x2 \<and> x1 <[ x2 \<and> (\<forall> s . LOut l s x1 = LOut l s x2))"
@@ -224,6 +226,29 @@ locale lifting_valid_bump_ext =
 locale lifting_valid_bump_ok_ext =
   fixes l :: "('syn, 'a, 'b :: {Bump, Okay}) lifting"
   assumes bump_ok_S : "\<And> (b :: 'b) . b \<in> ok_S \<Longrightarrow> bump b \<in> ok_S"
+
+(* "output-consistent"
+ * the idea here is
+ * if the following hold on 2 pieces of data
+  - has a least uppeer bound, which is valid
+  - LOut of the two are equal
+
+ * then LOut of the least upper bound is equal to that same value.
+*)
+
+(* do we need the supr \<in> S s constraint? *)
+locale lifting_valid_oc_ext =
+  fixes l :: "('syn, 'a, 'b :: Pord_Weak) lifting"
+  fixes S :: "('syn, 'b) valid_set"
+  assumes output_consistent :
+    "\<And> (Xs :: 'b set) (supr :: 'b) (w :: 'b) (s :: 'syn) (r :: 'a) . 
+      w \<in> Xs \<Longrightarrow>
+      is_sup Xs supr \<Longrightarrow>
+      \<comment> \<open> supr \<in> S s \<Longrightarrow> \<close>
+      (\<And> x . x \<in> Xs \<Longrightarrow> LOut l s x = r) \<Longrightarrow>
+      LOut l s supr = r"
+     
+      
 
 (* orthogonality, used to define merge correctness *)
 locale l_ortho' =

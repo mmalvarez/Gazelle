@@ -819,4 +819,154 @@ locale option_l_ortho_ok_ext =
 
 sublocale option_l_ortho_ok_ext \<subseteq> out : l_ortho_ok_ext "option_l l1" "option_l l2" .
 
+locale option_l_valid_oc_ext =
+  lifting_valid_oc_ext
+
+sublocale option_l_valid_oc_ext \<subseteq> out : lifting_valid_oc_ext "option_l l" "option_l_S S"
+proof
+  fix Xs :: "('c :: Pord_Weak) option set"
+  fix supr :: "'c option" 
+  fix s :: 'a
+  fix r :: 'b
+  fix w :: "'c option"
+  assume W: "w \<in> Xs"
+  assume Supr : "is_sup Xs supr"
+  assume Compat :
+    "(\<And>x. x \<in> Xs \<Longrightarrow>
+             LOut (option_l l) s x = r)"
+
+
+
+  show "LOut (option_l l) s supr = r"
+  proof(cases supr)
+    case None
+
+    then have "w = None"
+      using is_supD1[OF Supr W]
+      by(cases w; auto simp add: option_pleq)
+
+    then have "r = LOut l s (LBase l s)"
+      using Compat[OF W]
+      by(auto simp add: option_l_def)
+
+    then show ?thesis using None
+      by(auto simp add: option_l_def)
+  next
+    case (Some supr')
+
+    show ?thesis
+    proof(cases "Xs = {None}")
+      case True
+
+      have Ub' : "is_ub {None} None"
+        by(auto simp add: is_ub_def leq_refl)
+
+      then have False using is_supD2[OF Supr[unfolded True] Ub'] True Some
+        by(auto simp add: option_pleq)
+
+      then show ?thesis by auto
+    next
+      case False
+
+      show ?thesis
+      proof(cases "\<exists> y . y \<in> Xs \<and> y \<noteq> None")
+        case Y_false : False
+
+        then have "Xs = {}" using False
+          by(auto)
+
+        then have False using W by auto
+
+        then show ?thesis by auto
+      next
+        case Y_true : True
+
+        then obtain y' where Y' : "Some y' \<in> Xs"
+          by auto
+
+        obtain Xs' where Xs' : "Xs' = {x . (Some x \<in> Xs)}"
+          by simp
+
+        then have Y'_in : "y' \<in> Xs'" using Y' by auto
+
+        have Sup_some : "is_sup (Some ` Xs') (Some supr')"
+        proof(rule is_supI)
+          fix x
+          assume "x \<in> Some ` Xs'"
+
+          then have X_orig : "x \<in> Xs"
+            using Xs'
+            by auto
+
+          show "x <[ Some supr'"
+            using is_supD1[OF Supr X_orig] Some
+            by auto
+        next
+          fix x'
+          assume Ub: "is_ub (Some ` Xs') x'"
+
+          have Ub' : "is_ub Xs x'"
+          proof(rule is_ubI)
+            fix z
+            assume Z: "z \<in> Xs"
+
+            show "z <[ x'"
+            proof(cases z)
+              case None' : None
+              then show "z <[ x'"
+                by(auto simp add: option_pleq)
+            next
+              case Some' : (Some z')
+
+              then have Z'_in1 : "z' \<in> Xs'"
+                using Xs' Z
+                by(auto)
+
+              then have Z'_in2 : "Some z' \<in> (Some ` Xs')"
+                by auto
+
+              then show ?thesis using is_ubE[OF Ub Z'_in2] Some'
+                by auto
+            qed
+          qed
+
+          show "Some supr' <[ x'"
+            using is_supD2[OF Supr Ub']
+              Some
+            by auto
+        qed
+
+        then have Sup_xs' : "is_sup Xs' supr'"
+          using is_sup_Some'[OF Y'_in Sup_some]
+          by auto
+
+        have Xs'_compat :
+          "(\<And>x. x \<in> Xs' \<Longrightarrow> LOut l s x = r)"
+        proof-
+          fix k
+          assume K : "k \<in> Xs'"
+
+          then have K1 : "Some k \<in> Xs"
+            using Xs'
+            by auto
+
+          show "LOut l s k = r"
+            using Compat[OF K1]
+            by(auto simp add: option_l_def)
+        qed
+          
+        show "LOut (option_l l) s supr = r"
+          using output_consistent[OF Y'_in Sup_xs' Xs'_compat]
+            Some
+          by(auto simp add: option_l_def)
+      qed
+    qed
+  qed
+qed
+
+lemma (in option_l_valid_oc_ext) ax :
+  shows "lifting_valid_oc_ext (option_l l)"
+  using out.lifting_valid_oc_ext_axioms
+  by auto
+
 end

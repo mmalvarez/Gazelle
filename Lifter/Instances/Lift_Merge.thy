@@ -508,6 +508,8 @@ locale merge_l_ortho_ok_ext = merge_l_ortho' +
 
 sublocale merge_l_ortho_ok_ext \<subseteq> out : l_ortho_ok_ext "merge_l l1 l2" l3 .
 
+
+
 (*
 locale merge_l_ortho_pres = merge_l_ortho +
   orth1_2 : l_ortho_pres l1 S1 l2 S2 +

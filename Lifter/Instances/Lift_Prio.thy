@@ -2092,24 +2092,58 @@ definition prio_l_case_inc :: "('x \<Rightarrow> nat) \<Rightarrow> ('x, 'a, 'b 
 "prio_l_case_inc f =
   prio_l (\<lambda> _ . 0) (\<lambda> s x . (f s) + x)"
 
-(* Prio - let's defer this until later as we may not need it.
- * my guess is it's true, but annoying. *)
+locale prio_l_valid_oc_ext = lifting_valid_oc_ext
 
-(*
-locale prio_l_ortho = l_ortho (* ... *)
+sublocale prio_l_valid_oc_ext \<subseteq> out : lifting_valid_oc_ext "prio_l f0 f1 l" "prio_l_S S"
+proof
+  fix Xs :: "('c :: Pord_Weak) md_prio set"
+  fix supr :: "'c md_prio" 
+  fix s :: 'a
+  fix r :: 'b
+  fix w :: "'c md_prio"
+  assume W: "w \<in> Xs"
+  assume Supr : "is_sup Xs supr"
+  assume Compat :
+    "(\<And>x. x \<in> Xs \<Longrightarrow>
+             LOut (prio_l f0 f1 l) s x = r)"
 
-locale prio_l_ortho_pres_ext = l_ortho_pres_ext (* ... *)
+  obtain pw' w' where W' : "w = mdp pw' w'"
+    by(cases w; auto)
 
-locale prio_l_ortho_base_ext = l_ortho_base_ext (* ... *)
+  obtain psupr' supr' where
+    Supr' : "supr = mdp psupr' supr'"
+    by(cases supr; auto)
 
-locale prio_l_ortho_ok_ext = l_ortho_ok_ext (* ... *)
-*)
+  obtain Xs' where Xs' : "Xs' = {x . \<exists> px . mdp px x \<in> Xs}"
+    by simp
 
-(* next, products:
-- ortho between fst and fst, if inner liftings ortho
-- snd and snd, ditto
-- fst and snd, unconditionally
-*)
+  then have W'_xs' : "w' \<in> Xs'"
+    using W W'
+    by(auto)
+
+  have Compat' :
+    "\<And> x . x \<in> Xs' \<Longrightarrow>
+      LOut l s x = r"
+  proof-
+    fix x
+    assume X: "x \<in> Xs'"
+
+    then obtain p where Xp : "mdp p x \<in> Xs"
+      using Xs'
+      by auto
+
+    show "LOut l s (x) = r"
+      using Compat[OF Xp]
+      by(auto simp add: prio_l_def)
+  qed
+
+
+
+  show "LOut (prio_l f0 f1 l) s supr = r"
+    using output_consistent[OF W'_xs']
+
+locale option_l_valid_oc_ext =
+  lifting_valid_oc_ext
 
 
 end

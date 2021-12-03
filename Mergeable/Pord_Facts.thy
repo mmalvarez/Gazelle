@@ -269,3 +269,5 @@ proof-
 
   show "s \<in> ok_S" using pairwise_sup_ok[OF Sup_ab_in C Abc_sup'] by auto
 qed
+
+end

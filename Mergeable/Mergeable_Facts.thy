@@ -526,4 +526,297 @@ proof-
     qed
   qed
 qed
+
+
+(* make sure we really need this before spending any more time trying to prove it *)
+
+lemma sup_finite_pairwise :
+  assumes X_fin : "finite (X :: ('a :: Pordpsc) set)"
+  assumes X_nemp : "x \<in> X"
+  assumes Nwise : "\<And> a b . a \<in> X \<Longrightarrow> b \<in> X \<Longrightarrow> has_sup {a, b}"
+  shows "has_sup X"
+proof-
+
+  obtain c where C: "c = card X"
+    by auto
+
+  show "has_sup X"
+    using C X_fin X_nemp Nwise
+  proof(induction c  arbitrary: X x rule: full_nat_induct)
+    case (1 c)
+
+    have IH :
+      "\<And> m (x :: 'a set) xa. Suc m \<le> c \<Longrightarrow>
+        m = card x \<Longrightarrow>
+        finite x \<Longrightarrow>
+        xa \<in> x \<Longrightarrow>
+        (\<And> xa. xa \<in> x \<Longrightarrow>  (\<And> xb. xb \<in> x \<Longrightarrow> has_sup {xa, xb})) \<Longrightarrow>
+                   has_sup x"
+    proof-
+      fix m :: nat
+      fix x :: "'a set"
+      fix xa :: 'a
+
+      assume H1 :"Suc m \<le> c"
+      assume H2 :"m = card (x :: 'a set)"
+      assume H3 :"finite x"
+      assume H4: "xa \<in> x"
+      assume H5: "(\<And>xa. xa \<in> x \<Longrightarrow> (\<And>xb. xb \<in> x \<Longrightarrow> has_sup {xa, xb}))"
+      show "has_sup x"
+        using mp[OF spec[OF mp[OF mp[OF spec[OF mp[OF spec[OF 1(1), of m] H1]] H2] H3]] H4] H5
+        by auto
+    qed
+
+    show ?case
+    proof(cases c)
+      case 0
+  
+      then have False using 1
+        by auto
+  
+      then show ?thesis by auto
+    next
+      case (Suc c1)
+      show ?thesis
+      proof(cases c1)
+        case Z1 : 0
+  
+        then have "card X = Suc 0"
+          using 1 Suc
+          by auto
+  
+        then obtain x1 where "X = {x1}"
+          unfolding card_1_singleton_iff
+          by(auto)
+  
+        then have "X = {x}"
+          using 1
+          by auto
+  
+        then have "is_sup X x"
+          using sup_singleton[of x]
+          by auto
+  
+        then show ?thesis
+          by(auto simp add: has_sup_def)
+      next
+        case Suc1 : (Suc c2)
+  
+        then have Card_suc1 : "card X = Suc (Suc c2)"
+          using 1 Suc
+          by auto
+  
+        have Card_rest0 : "c1 = card (X - {x})"
+          using card_Diff_singleton[OF 1(3) 1(4)]
+            1 Suc Suc1
+          by auto
+  
+        then have "0 < card (X - {x})"
+          using Suc1 by auto
+  
+        then have "\<exists> x' . x' \<in> (X - {x})"
+          unfolding card_gt_0_iff
+          by(auto)
+  
+        then obtain x1 where X1 : "x1 \<in> (X)" "x1 \<noteq> x" "x1 \<in> (X - {x})"
+          by(auto)
+  
+        have X_in_x1 : "x \<in> (X - {x1})"
+          using 1(4) X1(2)
+          by auto
+  
+        have Card_rest1 : "c1 = card (X - {x1})"
+          using card_Diff_singleton[OF 1(3) X1(1)] Suc Suc1
+            1
+          by auto
+  
+        have Nwise0 : 
+          "(\<And>a b. a \<in> (X - {x})\<Longrightarrow>
+            b \<in> (X - {x}) \<Longrightarrow>
+            has_sup {a, b})"
+          using 1(5)
+          by auto
+  
+        have Nwise1 :
+          "(\<And>a b. a \<in> (X - {x1})\<Longrightarrow>
+            b \<in> (X - {x1}) \<Longrightarrow>
+            has_sup {a, b})"
+          using 1(5)
+          by auto
+
+        show ?thesis
+        proof(cases c2)
+          case Z2 : 0
+
+          then have "card X = 2"
+            using 1(2) Suc Suc1
+            by auto
+
+          then obtain w1 w2 where W: "X = {w1, w2}" "w1 \<noteq> w2"
+            unfolding card_2_iff
+            by auto
+
+          then show ?thesis
+            using 1(5)[of w1 w2]
+            by(auto)
+        next
+          case Suc2 : (Suc c3)
+
+          then have Card_suc2 : "card X = Suc (Suc (Suc c3))"
+            using 1 Suc Suc1
+            by auto
+    
+          have Card_rest01 : "c2 = card ((X - {x}) - {x1})"
+            using card_Diff_singleton[OF _ X1(3)]
+              1 Suc Suc1 Suc2
+            by auto
+    
+          then have "0 < card ((X - {x}) - {x1})"
+            using Suc1 Suc2 by auto
+    
+          then have "\<exists> x' . x' \<in> ((X - {x}) - {x1})"
+            unfolding card_gt_0_iff
+            by(auto)
+    
+          then obtain x2 where X2 : "x2 \<in> (X)" "x2 \<noteq> x1" "x2 \<in> ((X - {x}) - {x1})"
+            by(auto)
+
+          have X2_x0 : "x2 \<noteq> x"
+            using X2(3)
+            by auto
+
+          have Nwise2 :
+            "(\<And>a b. a \<in> ((X - {x}) - {x1})\<Longrightarrow>
+              b \<in> ((X - {x}) - {x1}) \<Longrightarrow>
+              has_sup {a, b})"
+            using 1(5)
+            by auto
+
+          have Nwise2' :
+            "(\<And>a b. a \<in> (X - {x2})\<Longrightarrow>
+              b \<in> (X - {x2}) \<Longrightarrow>
+              has_sup {a, b})"
+            using 1(5)
+            by auto
+
+          have "has_sup (X - {x})"
+            using IH[OF _ Card_rest0 _ X1(3) Nwise0]
+              Suc Suc1 1(3)
+            by(auto)
+
+          then obtain sup0 where Sup0 : "is_sup (X - {x}) sup0"
+            by(auto simp add: has_sup_def)
+
+          then obtain sup01 where Sup01: "is_sup ((X - {x}) - {x1}) sup01"
+            using has_sup_subset[OF _ Sup0 _ X2(3)]
+              1(3)
+            by(auto simp add: has_sup_def)
+
+          have X2_in_x1 : "x2 \<in> X - {x1}"
+            using X2 X1 X2_x0
+            by auto
+
+          have "has_sup (X - {x1})"
+            using IH[OF _ Card_rest1 _ X2_in_x1 Nwise1] 1(3)
+              Suc Suc1 Suc2
+            by auto
+
+          then obtain sup1 where Sup1 : "is_sup (X - {x1}) sup1"
+            by(auto simp add: has_sup_def)
+
+          have X_in_x12 : "x \<in> X - {x1} - {x2}"
+            using X2 X1 X2_x0 1(4)
+            by auto
+
+          then obtain sup12 where Sup12 : "is_sup ((X - {x1}) - {x2}) sup12"
+            using has_sup_subset[OF _ Sup1 _ X_in_x12] 1(3)
+            by(auto simp add: has_sup_def)
+
+          have Card_rest2 : "c1 = card (X - {x2})"
+            using card_Diff_singleton[OF 1(3) X2(1)] Suc Suc1
+              1
+            by auto
+
+          have X1_x2 : "x1 \<in> X - {x2}"
+            using X2 X1
+            by auto
+
+          have X1_in_x20 : "x1 \<in> X - {x2} - {x}"
+            using X2 X1 X2_x0 1(4)
+            by auto
+
+          have "has_sup (X - {x2})"
+            using IH[OF _ Card_rest2 _ X1_x2 Nwise2']
+              Suc Suc1 Suc2 1(3)
+            by(auto)
+
+          then obtain sup2 where Sup2 : "is_sup (X - {x2}) sup2"
+            by(auto simp add: has_sup_def)
+
+          then obtain sup20 where Sup20: "is_sup ((X - {x2}) - {x}) sup20"
+            using has_sup_subset[OF _ Sup2 _ X1_in_x20] 1(3)
+            by(auto simp add: has_sup_def)
+
+          have Unfold1 : "(X - {x} - {x1} \<union> (X - {x1} - {x2})) = (X - {x1})"
+            using X2(2) X2_x0 X1(2)
+            by(auto)
+
+          have Sup0112 : "is_sup {sup01, sup12} sup1"
+            using sup_union2[OF Sup01 Sup12, unfolded Unfold1, OF Sup1]
+            by auto
+
+          hence Hsup0112 : "has_sup {sup01, sup12}"
+            by(auto simp add: has_sup_def)
+
+          have Unfold2 : "(X - {x1} - {x2} \<union> (X - {x2} - {x})) = (X - {x2})"
+            using X2(2) X2_x0 X1(2)
+            by(auto)
+ 
+          have Sup1220 : "is_sup {sup12, sup20} sup2"
+            using sup_union2[OF Sup12 Sup20, unfolded Unfold2, OF Sup2]
+            by auto
+
+          hence Hsup1220 : "has_sup {sup12, sup20}"
+            by(auto simp add: has_sup_def)
+
+          have Unfold0 : "(X - {x} - {x1} \<union> (X - {x2} - {x})) = X - {x}"
+            using X2(2) X2_x0 X1(2)
+            by(auto)
+
+          have Sup0120 : "is_sup {sup01, sup20} sup0"
+            using sup_union2[OF Sup01 Sup20, unfolded Unfold0, OF Sup0]
+            by auto
+
+          hence Hsup0120 : "has_sup {sup01, sup20}"
+            by(auto simp add: has_sup_def)
+
+          obtain sup_final where Final :
+            "is_sup {sup01, sup12, sup20} sup_final"
+            using pairwise_sup[OF Hsup0112 Hsup1220 Hsup0120]
+            by(auto simp add: has_sup_def)
+
+          have Unfold_final0 : "({sup12, sup20} \<union> {sup01}) = {sup01, sup12, sup20}"
+            by auto
+
+          have Unfold_final :
+            "(X - {x2} \<union> (X - {x} - {x1})) = X" 
+            using X2(2) X2_x0 X1(2)
+            by(auto)
+
+          have Combine: "is_sup {sup2, sup01} sup_final"
+            using sup_union2[OF Sup1220 sup_singleton[of sup01], unfolded Unfold_final0, OF Final] 
+            by auto
+
+          have "is_sup X sup_final"
+            using sup_union1[OF Sup2 Sup01 Combine]
+            unfolding Unfold_final
+            by auto
+
+          then show ?thesis
+            by(auto simp add: has_sup_def)
+        qed
+      qed
+    qed
+  qed
+qed
 end
