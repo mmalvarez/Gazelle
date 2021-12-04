@@ -2091,7 +2091,7 @@ definition prio_l_incN :: "nat \<Rightarrow> ('x, 'a, 'b :: Pord) lifting \<Righ
 definition prio_l_case_inc :: "('x \<Rightarrow> nat) \<Rightarrow> ('x, 'a, 'b :: Pord) lifting \<Rightarrow> ('x, 'a, 'b md_prio) lifting" where
 "prio_l_case_inc f =
   prio_l (\<lambda> _ . 0) (\<lambda> s x . (f s) + x)"
-
+(*
 locale prio_l_valid_oc_ext = lifting_valid_oc_ext
 
 sublocale prio_l_valid_oc_ext \<subseteq> out : lifting_valid_oc_ext "prio_l f0 f1 l" "prio_l_S S"
@@ -2144,6 +2144,6 @@ proof
 
 locale option_l_valid_oc_ext =
   lifting_valid_oc_ext
-
+*)
 
 end

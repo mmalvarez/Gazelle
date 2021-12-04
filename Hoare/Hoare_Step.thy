@@ -31,7 +31,7 @@ definition no_control_l :: "
 ('a \<Rightarrow> ('x, 'b2 :: {Bogus, Pord}) control \<Rightarrow> ('x, 'b2 ) control)" where
 "no_control_l l f =
   lift_map_s id (no_control_lifting l) f"
-  
+  (*
 lemma HTS_imp_HT' :
   fixes fs :: "('b \<Rightarrow> ('b, 'c) control \<Rightarrow> ('b, 'c :: {Bogus, Mergeableb, Okay}) control) list"
   assumes H: "f % {{P1}} c {{P2}}"
@@ -288,7 +288,7 @@ proof(rule HT'I)
                      P1, (npre + npost)-#} [G c z] {#-lift_pred_valid_ok_s id l c P2, npost-#}"
     by blast
 qed
-
+*)
 
 lemma HTS_imp_HT'' :
   fixes fs :: "('b \<Rightarrow> ('b, 'c) control \<Rightarrow> ('b, 'c :: {Bogus, Mergeableb, Okay}) control) list"
