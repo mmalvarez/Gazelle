@@ -3,6 +3,7 @@ theory Hoare_Lift imports Hoare_Indexed Hoare_Indexed_Sound Hoare_Direct
 begin
 
 (* TODO rename this file to Hoare_Direct_Lift (or Hoare_Step_Lift...) *)
+(* TODO: do we still need this? *)
 
 (*
  * This file contains some abstractions for lifting Hoare rules expressed on a single language

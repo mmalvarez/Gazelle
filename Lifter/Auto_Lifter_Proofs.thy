@@ -28,7 +28,45 @@ begin
 (* vsg versions add a side condition on equality of the valid set,
    which might make them more useful. *)
 
+(* lemmas for showing base is bot *)
+(*
+lemma option_l_base_bot :
+  shows "LBase (option_l l) s = \<bottom>"
+  by(auto simp add: option_l_def option_bot)
 
+lemma prio_l_base_bot :
+  assumes H : "LBase l s = \<bottom>"
+  shows "LBase (prio_l (\<lambda> _ . 0) f1 l) s = \<bottom>"
+  using assms
+  by(auto simp add: prio_l_def prio_bot)
+
+lemma fst_l_base_bot :
+  assumes H : "LBase l1 s = \<bottom>"
+  shows "LBase (fst_l l1) s = \<bottom>"
+  using assms
+  by(auto simp add: fst_l_def prod_bot)
+
+lemma snd_l_base_bot :
+  assumes H : "LBase l1 s = \<bottom>"
+  shows "LBase (snd_l l1) s = \<bottom>"
+  using assms
+  by(auto simp add: snd_l_def prod_bot)
+
+lemma merge_l_base_bot :
+  assumes H : "LBase l1 s = \<bottom>"
+  shows "LBase (merge_l l1 l2) s = \<bottom>"
+  using assms
+  by(auto simp add: merge_l_def)
+
+
+(* TODO: if performance is good, add this to our simplification sets *)
+lemmas base_bot =
+  option_l_base_bot
+  prio_l_base_bot
+fst_l_base_bot
+snd_l_base_bot
+merge_l_base_bot
+*)
 
 lemmas lifting_defs =
   prio_l_inc_def
@@ -72,7 +110,9 @@ lemmas lifting_valid_locale_intro =
 
 (* TODO: do we need putonly instances? *)
 (* TODO: do we need ax or just ax_g? *)
-lemmas lifting_valid_noaxiom =
+
+(* to build up our lemmas list, we first include some rules we pretty much always want. *)
+lemmas lifting_valid_basic =
 lifting_valid_locale_intro 
 
   id_l.lifting_putonly_axioms
@@ -85,310 +125,167 @@ lifting_valid_locale_intro
   triv_l.lifting_valid_ok_ext_axioms
   triv_l.lifting_valid_pairwise_ext_axioms
 
-
   option_l_valid_weak.intro
-  (*option_l_valid_weak.axioms*)
-  option_l_valid_weak.ax_g
 
   option_l_valid_ext.intro
-  (*option_l_valid_ext.axioms*)
   option_l_valid_ext.ax
 
   option_l_valid_base_ext.ax
 
   option_l_valid_ok_ext.intro
-  (*option_l_valid_ok_ext.axioms*)
-  option_l_valid_ok_ext.ax_g
 
   option_l_valid_pres_ext.intro
-  (*option_l_valid_pres_ext.axioms*)
-  option_l_valid_pres_ext.ax_g
 
   option_l_valid_base_pres_ext.intro
-  (*option_l_valid_base_pres_ext.axioms*)
-  option_l_valid_base_pres_ext.ax_g
 
   option_l_valid_pairwise_ext.intro
-  (*option_l_valid_pairwise_ext.axioms*)
-  option_l_valid_pairwise_ext.ax_g
 
 
   prio_l_valid_weak.intro
-  (*prio_l_valid_weak.axioms*)
-  prio_l_valid_weak.ax_g
 prio_l_valid_weak'.intro
-(*
-prio_l_valid_ext.intro
-(*prio_l_valid_ext.axioms*)
-prio_l_valid_ext.ax
-*)
 
+(* TODO: double check these w/r/t stronger. *)
 prio_l_valid_ext_strong.intro
-(*prio_l_valid_ext_strong.axioms*)
 prio_l_valid_ext_strong.ax
 prio_l_valid_ext_strong'.intro
 
-(*
-prio_l_valid_ext_stronger.intro
-(*prio_l_valid_ext_stronger.axioms*)
-prio_l_valid_ext_stronger.ax_g
-*)
 prio_l_valid_base_ext.intro
-(*prio_l_valid_base_ext.axioms*)
 prio_l_valid_base_ext.ax
 prio_l_valid_base'.intro
 
 prio_l_valid_ok_ext.intro
-(*prio_l_valid_ok_ext.axioms*)
-prio_l_valid_ok_ext.ax_g
-
-(*
-prio_l_valid_ext_stronger_ok.intro
-(*prio_l_valid_ext_stronger_ok.axioms*)
-prio_l_valid_ext_stronger_ok.ax_g
-*)
 
 prio_l_valid_base_ok_pres.intro
-(*prio_l_valid_base_ok_pres.axioms*)
-prio_l_valid_base_ok_pres.ax_g
 
 prio_l_valid_pairwise_ext.intro
-(*prio_l_valid_pairwise_ext.axioms*)
-prio_l_valid_pairwise_ext.ax_g
-
 
   fst_l_valid_weak.intro
-(*fst_l_valid_weak.axioms*)
-fst_l_valid_weak.ax_g
 
   fst_l_valid_ext.intro
-(*fst_l_valid_ext.axioms*)
 fst_l_valid_ext.ax
 
   fst_l_valid_base_ext.intro
-(*fst_l_valid_base_ext.axioms*)
 fst_l_valid_base_ext.ax
 
 fst_l_valid_ok_ext.intro
-(*fst_l_valid_ok_ext.axioms*)
 fst_l_valid_ok_ext.ax
 
 fst_l_valid_pres_ext.intro
-(*fst_l_valid_pres_ext.axioms*)
-fst_l_valid_pres_ext.ax_g
 
 fst_l_valid_base_pres_ext.intro
-(*fst_l_valid_base_pres_ext.axioms*)
-fst_l_valid_base_pres_ext.ax_g
-
 
   snd_l_valid_weak.intro
-(*snd_l_valid_weak.axioms*)
-snd_l_valid_weak.ax_g
 
   snd_l_valid_ext.intro
-(*snd_l_valid_ext.axioms*)
 snd_l_valid_ext.ax
 
   snd_l_valid_base_ext.intro
-(*snd_l_valid_base_ext.axioms*)
 snd_l_valid_base_ext.ax
 
 snd_l_valid_ok_ext.intro
-(*snd_l_valid_ok_ext.axioms*)
 snd_l_valid_ok_ext.ax
 
 snd_l_valid_pres_ext.intro
-(*snd_l_valid_pres_ext.axioms*)
-snd_l_valid_pres_ext.ax_g
 
 snd_l_valid_base_pres_ext.intro
-(*snd_l_valid_base_pres_ext.axioms*)
-snd_l_valid_base_pres_ext.ax_g
-
 
 merge_l_valid_weak.intro
-(*merge_l_valid_weak.axioms*)
-(*merge_l_valid_weak.ax_g*)
-(* ax_g for merg_l seems to cause diverging behavior... *)
-merge_l_valid_weak.ax
 
 merge_l_valid_ext.intro
-(*merge_l_valid_ext.axioms*)
 merge_l_valid_ext.ax
 
 merge_l_valid_base_ext.intro
-(*merge_l_valid_base_ext.axioms*)
 merge_l_valid_base_ext.ax
 
 merge_l_valid_ok_ext.intro
-(*merge_l_valid_ok_ext.axioms*)
-merge_l_valid_ok_ext.ax_g
 
 (* NB: don't have pres proofs for merge (likely not true in general) *)
 
 merge_l_valid_pairwise_ext.intro
-(*merge_l_valid_pairwise_ext.axioms*)
-merge_l_valid_pairwise_ext.ax_g
 
-lemmas lifting_valid_noaxiom_nog =
-lifting_valid_locale_intro 
+(* next we add in variants of lemmas that do not abstract the valid-set.
+ * this makes the automation behavior more predictable, but may not be able
+ * to solve more complex validity structures (e.g. merge liftings).
+ *)
+lemmas lifting_valid_fast =
+  lifting_valid_basic 
 
-  id_l.lifting_putonly_axioms
-  id_l.lifting_valid_weak_axioms
-
-
-  triv_l.lifting_putonly_axioms
-  triv_l.lifting_valid_weak_axioms
-  triv_l.lifting_valid_pres_ext_axioms
-  triv_l.lifting_valid_ok_ext_axioms
-  triv_l.lifting_valid_pairwise_ext_axioms
-
-
-  option_l_valid_weak.intro
-  (*option_l_valid_weak.axioms*)
   option_l_valid_weak.ax
-
-  option_l_valid_ext.intro
-  (*option_l_valid_ext.axioms*)
-  option_l_valid_ext.ax
-
-  option_l_valid_base_ext.ax
-
-  option_l_valid_ok_ext.intro
-  (*option_l_valid_ok_ext.axioms*)
   option_l_valid_ok_ext.ax
-
-  option_l_valid_pres_ext.intro
-  (*option_l_valid_pres_ext.axioms*)
   option_l_valid_pres_ext.ax
-
-  option_l_valid_base_pres_ext.intro
-  (*option_l_valid_base_pres_ext.axioms*)
   option_l_valid_base_pres_ext.ax
-
-  option_l_valid_pairwise_ext.intro
-  (*option_l_valid_pairwise_ext.axioms*)
   option_l_valid_pairwise_ext.ax
 
-
-  prio_l_valid_weak.intro
-  (*prio_l_valid_weak.axioms*)
   prio_l_valid_weak.ax
-prio_l_valid_weak'.intro
-(*
-prio_l_valid_ext.intro
-(*prio_l_valid_ext.axioms*)
-prio_l_valid_ext.ax
-*)
-
-prio_l_valid_ext_strong.intro
-(*prio_l_valid_ext_strong.axioms*)
-prio_l_valid_ext_strong.ax
-prio_l_valid_ext_strong'.intro
-
-(*
-prio_l_valid_ext_stronger.intro
-(*prio_l_valid_ext_stronger.axioms*)
-prio_l_valid_ext_stronger.ax_g
-*)
-prio_l_valid_base_ext.intro
-(*prio_l_valid_base_ext.axioms*)
-prio_l_valid_base_ext.ax
-prio_l_valid_base'.intro
-
-prio_l_valid_ok_ext.intro
-(*prio_l_valid_ok_ext.axioms*)
 prio_l_valid_ok_ext.ax
-
-(*
-prio_l_valid_ext_stronger_ok.intro
-(*prio_l_valid_ext_stronger_ok.axioms*)
-prio_l_valid_ext_stronger_ok.ax_g
-*)
-
-prio_l_valid_base_ok_pres.intro
-(*prio_l_valid_base_ok_pres.axioms*)
 prio_l_valid_base_ok_pres.ax
-
-prio_l_valid_pairwise_ext.intro
-(*prio_l_valid_pairwise_ext.axioms*)
 prio_l_valid_pairwise_ext.ax
 
-
-  fst_l_valid_weak.intro
-(*fst_l_valid_weak.axioms*)
 fst_l_valid_weak.ax
-
-  fst_l_valid_ext.intro
-(*fst_l_valid_ext.axioms*)
-fst_l_valid_ext.ax
-
-  fst_l_valid_base_ext.intro
-(*fst_l_valid_base_ext.axioms*)
-fst_l_valid_base_ext.ax
-
-fst_l_valid_ok_ext.intro
-(*fst_l_valid_ok_ext.axioms*)
-fst_l_valid_ok_ext.ax
-
-fst_l_valid_pres_ext.intro
-(*fst_l_valid_pres_ext.axioms*)
 fst_l_valid_pres_ext.ax
-
-fst_l_valid_base_pres_ext.intro
-(*fst_l_valid_base_pres_ext.axioms*)
 fst_l_valid_base_pres_ext.ax
 
-
-  snd_l_valid_weak.intro
-(*snd_l_valid_weak.axioms*)
 snd_l_valid_weak.ax
-
-  snd_l_valid_ext.intro
-(*snd_l_valid_ext.axioms*)
-snd_l_valid_ext.ax
-
-  snd_l_valid_base_ext.intro
-(*snd_l_valid_base_ext.axioms*)
-snd_l_valid_base_ext.ax
-
-snd_l_valid_ok_ext.intro
-(*snd_l_valid_ok_ext.axioms*)
-snd_l_valid_ok_ext.ax
-
-snd_l_valid_pres_ext.intro
-(*snd_l_valid_pres_ext.axioms*)
 snd_l_valid_pres_ext.ax
-
-snd_l_valid_base_pres_ext.intro
-(*snd_l_valid_base_pres_ext.axioms*)
 snd_l_valid_base_pres_ext.ax
 
+merge_l_valid_ok_ext.ax
+merge_l_valid_pairwise_ext.ax
+  merge_l_valid_weak.ax
 
-merge_l_valid_weak.intro
-(*merge_l_valid_weak.axioms*)
-(*merge_l_valid_weak.ax_g*)
-(* ax_g for merg_l seems to cause diverging behavior... *)
+
+lemmas lifting_valid_standard_no_merge =
+lifting_valid_basic
+
+  option_l_valid_weak.ax_g
+  option_l_valid_ok_ext.ax_g
+  option_l_valid_pres_ext.ax_g
+  option_l_valid_base_pres_ext.ax_g
+  option_l_valid_pairwise_ext.ax_g
+
+  prio_l_valid_weak.ax_g
+prio_l_valid_ok_ext.ax_g
+prio_l_valid_base_ok_pres.ax_g
+prio_l_valid_pairwise_ext.ax_g
+
+fst_l_valid_weak.ax_g
+fst_l_valid_pres_ext.ax_g
+fst_l_valid_base_pres_ext.ax_g
+
+snd_l_valid_weak.ax_g
+snd_l_valid_pres_ext.ax_g
+snd_l_valid_base_pres_ext.ax_g
+
+(*merge_l_valid_weak.ax_g (* this is slow, so we move it to a different automation set *)*)
 merge_l_valid_weak.ax
 
-merge_l_valid_ext.intro
-(*merge_l_valid_ext.axioms*)
-merge_l_valid_ext.ax
+merge_l_valid_ok_ext.ax_g
+merge_l_valid_pairwise_ext.ax_g
 
-merge_l_valid_base_ext.intro
-(*merge_l_valid_base_ext.axioms*)
-merge_l_valid_base_ext.ax
+(* a decent default setting for automation, but a bit on the conservative side speed wise *)
+lemmas lifting_valid_standard =
+  lifting_valid_standard_no_merge
+  merge_l_valid_weak.ax
 
-merge_l_valid_ok_ext.intro
-(*merge_l_valid_ok_ext.axioms*)
-merge_l_valid_ok_ext.ax
+(* Next, a variant that has the slower version of merge_l *)
+lemmas lifting_valid_slow =
+  lifting_valid_standard_no_merge
+  merge_l_valid_weak.ax_g
 
-(* NB: don't have pres proofs for merge (likely not true in general) *)
+(* finally, a variant that also adds the "strong" version of prio_l
+ * (TODO: make sure we don't also need to remove the standard version of prio_l from the list)
+ *)
+lemmas lifting_valid_slower =
+  lifting_valid_slow
+ 
+prio_l_valid_ext_stronger.intro
+prio_l_valid_ext_stronger.ax_g
 
-merge_l_valid_pairwise_ext.intro
-(*merge_l_valid_pairwise_ext.axioms*)
-merge_l_valid_pairwise_ext.ax
+prio_l_valid_ext_stronger_ok.intro
+prio_l_valid_ext_stronger_ok.ax_g
+
+prio_l_valid_ext_stronger'.intro
+
 
 lemmas lifting_valid_set_defs =
   option_l_S_def
@@ -404,162 +301,71 @@ l_ortho_ok.intro
 l_ortho_ok_pres.intro
 l_ortho_base_ok_pres.intro
 
-(* TODO: separate out orthogonality lemmas or no? *)
-lemmas lifting_ortho_noaxiom =
+(* TODO: we currently don't separate out the set-abstracting orthogonality lemmas.
+ * this might be something to try.*)
+lemmas lifting_ortho_basic =
 
 lifting_ortho_locale_intro
 
   option_l_ortho.intro
-(*option_l_ortho.axioms*)
-option_l_ortho.ax_g
 
 option_l_ortho_base_ext.intro
-(*option_l_ortho_base_ext.axioms*)
 option_l_ortho_base_ext.ax
 
 option_l_ortho_ok_ext.intro
-(*option_l_ortho_ok_ext.axioms*)
-
 
 fst_l_ortho.intro
-(*fst_l_ortho.axioms*)
-fst_l_ortho.ax_g
 
 fst_l_ortho_base_ext.intro
-(*fst_l_ortho_base_ext.axioms*)
 fst_l_ortho_base_ext.ax
-(*
-fst_l_ortho_ok_ext.intro
-fst_l_ortho_ok_ext.axioms
-*)
 
 snd_l_ortho.intro
-(*snd_l_ortho.axioms*)
-snd_l_ortho.ax_g
 
 snd_l_ortho_base_ext.intro
-(*snd_l_ortho_base_ext.axioms*)
 snd_l_ortho_base_ext.ax
-(*
-snd_l_ortho_ok_ext.intro
-snd_l_ortho_ok_ext.axioms
-*)
 
 fst_l_snd_l_ortho.intro
-(*fst_l_snd_l_ortho.axioms*)
-fst_l_snd_l_ortho.ax_g
-fst_l_snd_l_ortho.ax_g_comm
 
 fst_l_snd_l_ortho_base_ext.intro
-(*fst_l_snd_l_ortho_base_ext.axioms*)
-fst_l_snd_l_ortho_base_ext.ax
-fst_l_snd_l_ortho_base_ext.ax_comm
-
-(*
-fst_l_snd_l_ortho_ok_ext.intro
-fst_l_snd_l_ortho_ok_ext.axioms
-*)
 
 merge_l_ortho.intro
-(*merge_l_ortho.axioms*)
-(* might wish to use ax_g' instead? *)
-(*merge_l_ortho.ax_g
-merge_l_ortho.ax_g_comm*)
-(* as with merge lifting validity, using the _g version here
- * seems to cause divergence in the automation 
- * probably to do with the use of set intersection
- * hopefully this isn't a problem, or we can find some
- * simplification or other rule to eliminate.
- *)
-merge_l_ortho.ax
-merge_l_ortho.ax_comm
 
 merge_l_ortho_base_ext.intro
-(*merge_l_ortho_base_ext.axioms*)
 merge_l_ortho_base_ext.ax
 merge_l_ortho_base_ext.ax_comm
-(*
-merge_l_ortho_ok_ext.intro
-merge_l_ortho_ok_ext.axioms
-*)
 
-lemmas lifting_ortho_noaxiom_nog =
+lemmas lifting_ortho_fast =
+  lifting_ortho_basic
 
-lifting_ortho_locale_intro
-
-  option_l_ortho.intro
-(*option_l_ortho.axioms*)
 option_l_ortho.ax
-
-option_l_ortho_base_ext.intro
-(*option_l_ortho_base_ext.axioms*)
-option_l_ortho_base_ext.ax
-
-option_l_ortho_ok_ext.intro
-(*option_l_ortho_ok_ext.axioms*)
-
-
-fst_l_ortho.intro
-(*fst_l_ortho.axioms*)
 fst_l_ortho.ax
-
-fst_l_ortho_base_ext.intro
-(*fst_l_ortho_base_ext.axioms*)
-fst_l_ortho_base_ext.ax
-(*
-fst_l_ortho_ok_ext.intro
-fst_l_ortho_ok_ext.axioms
-*)
-
-snd_l_ortho.intro
-(*snd_l_ortho.axioms*)
 snd_l_ortho.ax
-
-snd_l_ortho_base_ext.intro
-(*snd_l_ortho_base_ext.axioms*)
-snd_l_ortho_base_ext.ax
-(*
-snd_l_ortho_ok_ext.intro
-snd_l_ortho_ok_ext.axioms
-*)
-
-fst_l_snd_l_ortho.intro
-(*fst_l_snd_l_ortho.axioms*)
 fst_l_snd_l_ortho.ax
 fst_l_snd_l_ortho.ax_comm
 
-fst_l_snd_l_ortho_base_ext.intro
-(*fst_l_snd_l_ortho_base_ext.axioms*)
-fst_l_snd_l_ortho_base_ext.ax
-fst_l_snd_l_ortho_base_ext.ax_comm
-
-(*
-fst_l_snd_l_ortho_ok_ext.intro
-fst_l_snd_l_ortho_ok_ext.axioms
-*)
-
-merge_l_ortho.intro
-(*merge_l_ortho.axioms*)
-(* might wish to use ax_g' instead? *)
-(*merge_l_ortho.ax_g
-merge_l_ortho.ax_g_comm*)
-(* as with merge lifting validity, using the _g version here
- * seems to cause divergence in the automation 
- * probably to do with the use of set intersection
- * hopefully this isn't a problem, or we can find some
- * simplification or other rule to eliminate.
- *)
 merge_l_ortho.ax
 merge_l_ortho.ax_comm
 
-merge_l_ortho_base_ext.intro
-(*merge_l_ortho_base_ext.axioms*)
-merge_l_ortho_base_ext.ax
-merge_l_ortho_base_ext.ax_comm
-(*
-merge_l_ortho_ok_ext.intro
-merge_l_ortho_ok_ext.axioms
-*)
+
+lemmas lifting_ortho_standard_no_merge = 
+lifting_ortho_basic
+option_l_ortho.ax_g
+fst_l_ortho.ax_g
+snd_l_ortho.ax_g
+fst_l_snd_l_ortho.ax_g
+fst_l_snd_l_ortho.ax_g_comm
+
+
+lemmas lifting_ortho_standard =
+lifting_ortho_standard_no_merge
+merge_l_ortho.ax
+merge_l_ortho.ax_comm
+
+lemmas lifting_ortho_slow =
+  lifting_ortho_standard_no_merge
+  merge_l_ortho.ax_g
+  merge_l_ortho.ax_g_comm
+
 
 (* typeclass instance definitions *)
 lemmas bogus_defs =

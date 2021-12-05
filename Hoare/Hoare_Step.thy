@@ -3,7 +3,7 @@ theory Hoare_Step imports Hoare Hoare_Indexed Hoare_Direct
  "../Mergeable/Mergeable_Instances"
  "../Composition/Composition" "../Composition/Dominant"
  "../Language_Components/Seq/Seq_Hoare"
- "Hoare_Lift" "Hoare_Lift_Transform"
+ "Hoare_Lift" "Hoare_Lift_Transform" "../Lifter/Toggle"
 begin
 
 (* 
@@ -31,6 +31,7 @@ definition no_control_l :: "
 ('a \<Rightarrow> ('x, 'b2 :: {Bogus, Pord}) control \<Rightarrow> ('x, 'b2 ) control)" where
 "no_control_l l f =
   lift_map_s id (no_control_lifting l) f"
+
   (*
 lemma HTS_imp_HT' :
   fixes fs :: "('b \<Rightarrow> ('b, 'c) control \<Rightarrow> ('b, 'c :: {Bogus, Mergeableb, Okay}) control) list"
@@ -300,11 +301,12 @@ lemma HTS_imp_HT'' :
   assumes H: "f % {{P'}} (l' x) {{Q'}}"
   (* TODO: can we weaken this to lifting_valid_weak_ok *)
   assumes Valid : "lifting_valid_ok l S"
-  assumes Hf' : "f' = lift_map_s l' (no_control_lifting  l) f"
+  assumes Hf' : "f' = lift_map_t_s l' (no_control_lifting  l) tg f"
   assumes H0 : "gs = pcomps fs"
   assumes Hpres : "sups_pres (set fs) (\<lambda> _ . ok_S)"
   assumes Hseq : "seq_sem_l_gen lfts \<in> set fs"
   assumes Skip : "lfts x = Sskip"
+  assumes Active : "tg x = True"
   assumes Xin : "x \<in> X"
   assumes Hnemp : "g \<in> (set fs - {seq_sem_l_gen lfts})"
   assumes Hdom : "(f' \<downharpoonleft> (set fs - {seq_sem_l_gen lfts}) X)"
@@ -501,7 +503,7 @@ proof(rule HT'I)
         have Cont_final : "cont m' = cont (seq_sem_l_gen lfts x m)"
           using Hcont Msplit Skip Inl Gs_alt' Dominate1 Hf' Msplit
           by(auto simp add: seq_sem_l_gen_def seq_sem_lifting_gen_def sem_step_def
-            lift_pred_s_def lift_map_s_def
+            lift_pred_s_def lift_map_s_def lift_map_t_s_def
             no_control_lifting_def cont_def
             schem_lift_defs fst_l_def snd_l_def prio_l_def triv_l_def option_l_def seq_sem_def
             prod_bsup no_control_l_def prio_bsup option_bsup leq_refl triv_bsup split: md_prio.splits if_splits md_triv.splits option.splits)
@@ -518,9 +520,9 @@ proof(rule HT'I)
             split: md_prio.splits prod.splits md_triv.splits option.splits list.split_asm)
 
         have Pay_final : "payload m' = LUpd l (l' x) (f (l' x) (LOut l (l' x) (payload m))) (payload m)"
-          using Gs_alt' Dominate1 Skip Hpay Hcont Hf' Msplit Inl LUpd_rest2
+          using Gs_alt' Dominate1 Skip Hpay Hcont Hf' Msplit Inl LUpd_rest2 Active
           by(auto simp add: seq_sem_l_gen_def seq_sem_lifting_gen_def sem_step_def
-            lift_map_s_def lift_pred_s_def
+            lift_map_s_def lift_map_t_s_def lift_pred_s_def
             no_control_lifting_def cont_def
             schem_lift_defs fst_l_def snd_l_def prio_l_def triv_l_def option_l_def seq_sem_def
             prod_bsup no_control_l_def
@@ -542,7 +544,7 @@ proof(rule HT'I)
           using Hcont Msplit Skip Inl Gs_alt' Dominate1 Hf' Msplit Cont_final' Pay_final
             V.ok_S_put[OF Rest]
           by(auto simp add: seq_sem_l_gen_def seq_sem_lifting_gen_def sem_step_def
-            lift_pred_s_def lift_map_s_def
+            lift_pred_s_def lift_map_s_def lift_map_t_s_def
             no_control_lifting_def cont_def
             schem_lift_defs fst_l_def snd_l_def prio_l_def triv_l_def option_l_def seq_sem_def
             prod_bsup no_control_l_def prio_bsup option_bsup leq_refl triv_bsup

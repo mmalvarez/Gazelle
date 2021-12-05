@@ -6,6 +6,8 @@ theory Calc_Mem_Imp imports (*Calc_Mem*)
              "../../Language_Components/Seq/Seq" 
 "../../Hoare/Hoare_Step"
 "../../Composition/Dominant_Instances"
+"../../Lifter/Auto_Lifter_Proofs"
+"../../Lifter/Auto_Lifter"
 begin
 
 datatype syn =
@@ -24,9 +26,17 @@ fun calc_prio :: "(Calc.calc \<Rightarrow> nat)" where
 "calc_prio (Cskip) = 1"
 | "calc_prio _ = 2"
 
+fun calc_toggle :: "syn \<Rightarrow> bool" where
+"calc_toggle (Sc _) = True"
+| "calc_toggle _ = False"
+
 fun mem_trans :: "syn \<Rightarrow> Mem_Simple.syn" where
 "mem_trans (Sm m) = m"
 | "mem_trans _ = Mem_Simple.Sskip"
+
+fun mem_toggle :: "syn \<Rightarrow> bool" where
+"mem_toggle (Sm _) = True"
+| "mem_toggle _ = False"
 
 (* mem_prio not needed, handled by custom implementation (?still true?) *)
 
@@ -38,13 +48,23 @@ fun cond_prio :: "Cond.cond \<Rightarrow> nat" where
 "cond_prio (Sskip_cond) = 1"
 | "cond_prio _ = 2"
 
+fun cond_toggle :: "syn \<Rightarrow> bool" where
+"cond_toggle (Sb _) = True"
+| "cond_toggle _ = False"
+
 fun seq_trans :: "syn \<Rightarrow> Seq.syn" where
 "seq_trans (Ss x) = x"
 | "seq_trans _ = Seq.Sskip"
 
+(* NB seq is always active; this is handled by special rules *)
+
 fun imp_trans :: "syn \<Rightarrow> Imp_Ctl.syn'" where
 "imp_trans (Si x) = x"
 | "imp_trans _ = Imp_Ctl.Sskip"
+
+fun imp_toggle :: "syn \<Rightarrow> bool" where
+"imp_toggle (Si _) = True"
+| "imp_toggle _ = False"
 
 (* layout of state:
  * boolean flag
@@ -58,44 +78,6 @@ fun imp_trans :: "syn \<Rightarrow> Imp_Ctl.syn'" where
 type_synonym ('s, 'x) state =
   "('s, 'x) Mem_Simple.state"
 
-(* now we need to restate this using no_control_l *)
-(*
-definition calc_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
-"calc_sem_l =
-  lift_map_s calc_trans
-  (schem_lift
-    (SP NA (SP NB NC))
-    (SP NX (SP NX (SP (SPRI (SO NC)) (SP (SPRI (SO NB)) (SP (SPRI (SO NA)) NX))))))
-  calc_sem"
-*)
-
-(*
-('a::type, 'b::{Bogus,Pord},
-       int md_triv option md_prio \<times>
-       int md_triv option md_prio \<times>
-       int md_triv option md_prio \<times>
-       int md_triv option md_prio \<times>
-       (String.literal,
-        int md_triv option md_prio) oalist \<times>
-       'c::{Bogus,Pord}) lifting
-*)
-
-definition baseline_l where
-"baseline_l =
-  schem_lift (SP NA (SP NB (SP NC (SP ND (SP NE (SP NF (SP NG NH)))))))
-  (SP (SPRI (SO NA)) (SP (SPRI (SO NB)) (SP (SPRI (SO NC)) (SP (SPRI (SO ND)) (SP (SPRI (SO NE)) 
-    (SP (SPRI (SO NF)) (SP (SPRI (SO NG)) (SID NH))))))))"
-
-definition baseline_f where
-"baseline_f =
-  LMap baseline_l (\<lambda> _ . id)"
-
-term "baseline_f id"
-term "no_control_lifting (schem_lift (SP NA (SP NB NC)) (SP (SPRI (SO NC)) (SP (SPRI (SO NB)) (SP (SPRI (SO NA)) NX ))))"
-term "no_control_lifting"
-
-term "(SP NA (SP NB NC))"
-term "(SP NX (SP (SPRC calc_prio (SO NC)) (SP (SPRK (SO NA)) (SP (SPRK (SO NB)) NX ))))"
 
 definition calc_schemi where
 "calc_schemi = (SP NA (SP NB NC))"
@@ -114,25 +96,90 @@ definition calc_schemo where
 "calc_schemo = (SP NX (SP (SPRC calc_prio (SO NC)) (SP (SPRI (SO NA)) (SP (SPRI (SO NB)) NX))))"
 declare calc_schemo_def [simp]
 
-definition calc_lift :: "(Calc.calc, Calc.calc_state, ('s, 'x :: {Bogus, Pord, Mergeableb, Okay}) Mem_Simple.state) lifting" where
+term "no_control_lifting"
+
+(* need no_control_lifting_S *)
+definition calc_lift :: "(Calc.calc, Calc.calc_state, ('s, 'x :: {Bogus, Pord, Mergeableb, Okay, Pordps}) Mem_Simple.state) lifting" where
 "calc_lift = 
   no_control_lifting (schem_lift calc_schemi calc_schemo)"
 
-term "(schem_lift calc_schemi calc_schemo)"
-
-definition with_baseline :: 
-  "(syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state) \<Rightarrow>
-   (syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state)" where
-"with_baseline f syn st =
-  [^f syn st, baseline_f syn st^]"
-
-(* TODO: priority stuff is all wrong here. *)
-(* concretize our schem_lift at an appropriate type. *)
-term "lift_map_s"
 definition calc_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
 "calc_sem_l =
- lift_map_s calc_trans calc_lift
+ lift_map_t_s calc_trans calc_lift calc_toggle
 calc_sem"
+
+term "calc_sem_l"
+term "calc_lift"
+
+term "schem_lift_S calc_schemi calc_schemo"
+
+
+(* something is wrong here. for some reason in the case of this merge
+ * we end up having to prove that two non-equal (at least, not obviously equal)
+ * valid sets are indeed equal.
+ * Either the automation is making a poor choice w/r/t existential variables,
+ * or something about this apporach to calculating valid sets (especially when
+ * merging fst and snd) is broken 
+ *)
+
+
+lemma calc_valid :
+  "lifting_valid_ok calc_lift (schem_lift_S calc_schemi calc_schemo)"
+  unfolding calc_lift_def schem_lift_defs schem_lift_S_defs
+no_control_lifting_def calc_schemi_def calc_schemo_def 
+  apply(auto intro: lifting_valid_noaxiom lifting_ortho_noaxiom base_bot)
+  apply(rule lifting_valid_ok.intro)
+   apply(rule lifting_valid.intro)
+  apply(rule snd_l_valid_weak.ax_g)
+     apply(auto intro: lifting_valid_noaxiom lifting_ortho_noaxiom)
+  apply(rule snd_l_valid_weak.intro)
+      apply(rule snd_l_valid_weak.ax_g)
+  apply(rule snd_l_valid_weak.intro)
+       apply(rule merge_l_valid_weak.ax_g)
+              apply(fastforce intro: lifting_valid_noaxiom lifting_ortho_noaxiom)
+       apply(rule refl)
+  apply(auto simp add: lifter_S_instances)
+  apply(simp add: option_l_S_def)
+     apply(auto intro: lifting_valid_noaxiom lifting_ortho_noaxiom)
+      apply(rule merge_l_valid_weak.intro)
+(*
+  using merge_l_ortho.ax_g_comm
+  using merge_l_ortho.ax_g_comm
+[of "(snd_l (snd_l (snd_l (fst_l (prio_l (\<lambda>_. 0) (\<lambda>_. (+) (Suc 0)) (option_l triv_l))))))"
+     _ 
+     "(snd_l (fst_l (prio_l calc_prio (\<lambda>s. (+) (calc_prio s)) (option_l triv_l))))" 
+     _
+     "(snd_l (snd_l (fst_l (prio_l (\<lambda>_. 0) (\<lambda>_. (+) (Suc 0)) (option_l triv_l)))))"]
+*)
+        apply(rule merge_l_ortho.ax_g_comm)
+              apply(fastforce intro: lifting_valid_noaxiom lifting_ortho_noaxiom)
+              apply(fastforce intro: lifting_valid_noaxiom lifting_ortho_noaxiom; simp add: fst_l_S_def snd_l_S_def prio_l_S_def)
+
+          apply(auto intro: lifting_valid_noaxiom lifting_ortho_noaxiom)
+        apply(rule merge_l_ortho.intro)
+(* bad things start happening here - introducing existential-variable constraints that are not solvable! *)
+  apply(rule snd_l_ortho.ax)
+            apply(auto intro: lifting_valid_noaxiom lifting_ortho_noaxiom)
+              apply(rule snd_l_ortho.intro)
+  apply(rule fst_l_snd_l_ortho.ax_g_comm)
+          apply(auto intro: lifting_valid_noaxiom lifting_ortho_noaxiom lifting_valid_base_ext.intro base_bot)
+              apply(rule fst_l_snd_l_ortho.intro)
+  apply(rule prio_l_valid_base_ext.ax)
+  apply(rule prio_l_valid_base_ext.intro)
+                apply(auto intro: lifting_valid_noaxiom lifting_ortho_noaxiom)
+              apply(fastforce intro: lifting_valid_noaxiom lifting_ortho_noaxiom)
+  apply(simp add: snd_l_S_def fst_l_S_def prio_l_S_def option_l_S_def split: md_prio.splits)
+apply(fastforce intro: lifting_valid_noaxiom lifting_ortho_noaxiom)
+              apply(rule snd_l_valid_base_ext.ax)
+              apply(rule snd_l_valid_base_ext.intro)
+           apply(rule fst_l_valid_base_ext.ax)
+  apply(simp add: snd_l_S_def fst_l_S_def prio_l_S_def option_l_S_def split: md_prio.splits)
+apply(fastforce intro: lifting_valid_noaxiom lifting_ortho_noaxiom)
+  apply(simp add: snd_l_S_def fst_l_S_def prio_l_S_def option_l_S_def split: md_prio.splits)
+apply(fastforce intro: lifting_valid_noaxiom lifting_ortho_noaxiom)
+
+                apply(auto intro: lifting_valid_noaxiom lifting_ortho_noaxiom)
+
 (*
 definition mem_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
 "mem_sem_l = 
@@ -147,13 +194,18 @@ definition cond_lift where
 
 definition cond_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
 "cond_sem_l =
-  lift_map_s cond_trans
-    cond_lift
+  lift_map_t_s cond_trans
+    cond_lift cond_toggle
   cond_sem
 "
 
+(*
 definition imp_sem_l :: "syn \<Rightarrow> ('s, (_ :: Pordc_all)) state \<Rightarrow> ('s, (_ :: Pordc_all)) state" where
 "imp_sem_l = imp_sem_l_gen imp_trans"
+*)
+
+definition imp_sem_l :: "syn \<Rightarrow> ('s, (_ :: Pordc_all)) state \<Rightarrow> ('s, (_ :: Pordc_all)) state" where
+"imp_sem_l = lift_map_t_s imp_trans imp_sem_lifting_gen imp_toggle imp_ctl_sem"
 
 definition seq_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
 "seq_sem_l = seq_sem_l_gen seq_trans"
@@ -162,49 +214,29 @@ definition mem_lift where
 "mem_lift = no_control_lifting mem_lift1"
 
 definition mem_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
-"mem_sem_l = lift_map_s mem_trans mem_lift mem0_sem"
+"mem_sem_l = lift_map_t_s mem_trans mem_lift mem_toggle mem0_sem"
 
 definition sem_final :: "syn \<Rightarrow> ('s, (_ :: Pordc_all)) state \<Rightarrow> ('s, (_ :: Pordc_all)) state" where
 "sem_final =
-  pcomps [with_baseline calc_sem_l, with_baseline mem_sem_l, with_baseline cond_sem_l, with_baseline imp_sem_l, with_baseline seq_sem_l]"
+  pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
 
 definition sems ::
   "(syn \<Rightarrow> ('s, (_ :: Pordc_all)) state \<Rightarrow> ('s, (_ :: Pordc_all)) state) set" where
 "sems = {calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l}"
 
+(* sems without seq - this is used for certain Hoare facts. *)
+
+definition sems' ::
+  "(syn \<Rightarrow> ('s, (_ :: Pordc_all)) state \<Rightarrow> ('s, (_ :: Pordc_all)) state) set" where
+"sems' = {calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l}"
+
 (* Domination facts needed for proof. *)
 (* TODO: need to include syntax translation in dominant2 *)
-(* Hmm... does calc dominate mem here actually? *)
-(* Merge vs merge. *)
-(* maybe we can just compute these...
- * will be annoying, but should work.
- * might be easier than dealing with the details of
- * using automation to construct proofs out of the locale instances.
- *)
-(* YOU ARE HERE
- * i think the problem is with the skip case of calc. we would need to know that it isn't that case
- * that still doesn't answer why mem would be greater though...? *)
-(*
-lemma calc_dom_mem :
-  "dominant2 calc_lift calc_trans mem_lift mem_trans { x . case x of (Sc _) \<Rightarrow> True | _ \<Rightarrow> False}"
-proof(rule dominant2.intro)
-  fix a1 a2 x
-  fix b :: "(_, (_ :: {Okay, Mergeableb, Bogus})) state"
-  term "b"
-  term "LUpd mem_lift"
-  assume X: "x \<in> {x. case x of Calc_Mem_Imp.syn.Sc x \<Rightarrow> True
-                | _ \<Rightarrow> False}"
-  assume B_ok : "b \<in> ok_S"
-  then show
-    "LUpd mem_lift (Calc_Mem_Imp.mem_trans x) a2 b <[
-       LUpd calc_lift (Calc_Mem_Imp.calc_trans x) a1 b" using X
-  unfolding calc_lift_def calc_schemi_def calc_schemo_def
-            mem_lift_def mem_lift1_def no_control_lifting_def schem_lift_defs
-  apply(auto simp add: schem_lift_defs lifter_instances
-  prod_ok_S prio_ok_S option_ok_S triv_ok_S
-prod_pleq leq_refl
- split: prod.splits md_prio.splits syn.splits option.splits)
-*)
+lemma calc_dom :
+  "calc_sem_l \<downharpoonleft> sems' { x . (calc_toggle x = True)}"
+  unfolding calc_sem_l_def
+proof(rule dominant_toggles)
+
 
 lemma calc_dom_mem :
   "(with_baseline calc_sem_l) \<downharpoonleft> {with_baseline mem_sem_l, with_baseline calc_sem_l} { x . case x of (Sc _) \<Rightarrow> True | _ \<Rightarrow> False}"

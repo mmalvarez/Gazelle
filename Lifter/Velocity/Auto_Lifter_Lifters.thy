@@ -1465,6 +1465,6 @@ abbreviation SPRIN where
 (* NB: differs from prio_l_case_inc behavior *)
 abbreviation SPRC where
 "SPRC f x \<equiv>
-  SPR (\<lambda> s . f s) (\<lambda> s z . (f s) + z) x"
+  SPR (\<lambda> s . 0) (\<lambda> s z . (f s) + z) x"
 
 end

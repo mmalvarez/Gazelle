@@ -45,20 +45,24 @@ lemma mrg2 :
   unfolding schem_lift_defs     
     by(fastforce intro: lifting_valid_noaxiom_nog lifting_ortho_noaxiom_nog split: soption.splits)
 
+
+
 lemma mrg2' :
   "lifting_valid (schem_lift (SP NC (SP NB NA)) 
-    (SP (SPRI (SO NA)) (SP (SPRI (SO NB)) (SPRI (SO NC)))))
+    (SP (SPRI (SO NA)) (SP (SPRC (\<lambda> _ . 1) (SO NB)) (SPRI (SO NC)))))
 (schem_lift_S (SP NC (SP NB NA)) 
-    (SP (SPRI (SO NA)) (SP (SPRI (SO NB)) (SPRI (SO NC))))) "
+    (SP (SPRI (SO NA)) (SP (SPRC (\<lambda> _ . 1) (SO NB)) (SPRI (SO NC))))) "
   unfolding schem_lift_defs schem_lift_S_defs
-  by(fastforce intro: lifting_valid_noaxiom lifting_ortho_noaxiom)
+  by(fastforce intro: lifting_valid_noaxiom lifting_ortho_noaxiom )
 
+
+(*
 lemma mrg2'' :
   "lifting_valid (schem_lift (SP NC (SP NB NA)) 
     (SP (SPRI (SO NA)) (SP (SPRI (SO NB)) (SPRI (SO NC)))))
 (\<lambda> _ . ok_S) "
   unfolding schem_lift_defs schem_lift_S_defs
-  apply(auto intro: lifting_valid_noaxiom lifting_ortho_noaxiom)
+  apply(fastforce intro: lifting_valid_noaxiom lifting_ortho_noaxiom)
   apply(rule lifting_valid.intro)
   apply(rule merge_l_valid_weak.ax_g)
     apply(auto intro: lifting_valid_noaxiom lifting_ortho_noaxiom)
@@ -75,5 +79,5 @@ lemma mrg2'' :
                apply(rule prio_l_valid_base_ext.ax)
                apply(rule prio_l_valid_base_ext.intro)
          apply(auto intro: lifting_valid_noaxiom lifting_ortho_noaxiom simp add: ok_S_defs lifting_S_defs)
-
+*)
 end
