@@ -8,6 +8,7 @@ definition id_l ::
 "id_l =
   LMake (\<lambda> s a a' . a) (\<lambda> s a . a) (\<lambda> s . bogus)" 
 
+(* TODO: change this along the lines of triv_l. *)
 interpretation id_l: lifting_valid_weak "id_l" "\<lambda> _ . UNIV"
 proof
   show "\<And>s a b. LOut id_l s (LUpd id_l s a b) = a"

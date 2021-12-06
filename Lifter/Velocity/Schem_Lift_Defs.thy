@@ -92,9 +92,9 @@ lemmas schem_lift_S_defs =
   schem_lift_S_base_idJ_def
   schem_lift_S_base_idK_def
 
-(*
-schem_lift_inject_def
-*)
+
+schem_lift_S_inject_def
+
 schem_lift_S_option_recR_def
 
 schem_lift_S_prio_recR_def

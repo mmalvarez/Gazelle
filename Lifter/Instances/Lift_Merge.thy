@@ -297,7 +297,7 @@ qed
 
 
 locale merge_l_ortho' =
-  fixes l1 :: "('a, 'b1, 'c :: {Mergeableb, Pordps}) lifting"
+  fixes l1 :: "('a, 'b1, 'c :: {Mergeable, Pordps}) lifting"
   fixes S1 :: "'a \<Rightarrow> 'c1 set"
   fixes l2 :: "('a, 'b2, 'c) lifting"
   fixes S2 :: "'a \<Rightarrow> 'c2 set"

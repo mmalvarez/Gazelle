@@ -118,7 +118,7 @@ definition mem_lift1 ::
 *)
 
 definition mem_lift1 ::
-  "(syn, state0, _ state1) lifting" where
+  "(syn, state0, (_ :: {Okay, Bogus, Mergeableb, Pordps}) state1) lifting" where
 "mem_lift1 =
   schem_lift (SP NA (SP NB (SP NC (SP ND NE))))
   (SP (SPRC (mem_prio_reg Reg_flag) (SO NA)) 
@@ -127,6 +127,15 @@ definition mem_lift1 ::
                   (SP (SPRC (mem_prio_reg Reg_b) (SO ND))
                   (SP (SPRC mem_prio_mem (SO NE)) NX)))))"
 
+definition mem_lift1_S ::
+  "syn \<Rightarrow> (_ :: {Okay, Bogus, Mergeableb, Pordps}) state1 set" where
+"mem_lift1_S =
+  schem_lift_S (SP NA (SP NB (SP NC (SP ND NE))))
+  (SP (SPRC (mem_prio_reg Reg_flag) (SO NA)) 
+                  (SP (SPRC (mem_prio_reg Reg_c) (SO NB))
+                  (SP (SPRC (mem_prio_reg Reg_a) (SO NC))
+                  (SP (SPRC (mem_prio_reg Reg_b) (SO ND))
+                  (SP (SPRC mem_prio_mem (SO NE)) NX)))))"
 
 (*
 definition mem_sem_lifting_gen ::

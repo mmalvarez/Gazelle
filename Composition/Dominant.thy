@@ -363,7 +363,7 @@ lemma dominant_toggles' :
   assumes Fs_sub : "Fs_sub \<subseteq> Fs"
   assumes Fs_f1 : "lift_map_t_s l'1 l1 t1 f1 \<in> Fs_sub"
   assumes Toggle1 : "\<And> s . s \<in> X \<Longrightarrow> t1 s"
-  assumes Toggles : "\<forall> f . f \<in> Fs \<longrightarrow>
+  assumes Toggles : "\<And> f . f \<in> Fs \<Longrightarrow> f \<noteq> lift_map_t_s l'1 l1 t1 f1 \<Longrightarrow>
     (\<exists> tg g . f = toggle tg g \<and> (\<forall> s . s \<in> X \<longrightarrow> \<not> tg s))"
   shows  "(lift_map_t_s l'1 l1 t1 f1) \<downharpoonleft> Fs_sub X"
 proof-
@@ -463,19 +463,32 @@ proof-
           using Suc.prems F3
           by auto
 
-        obtain tg g where F3_toggle :
-          "f3 = toggle tg g" "\<And> s . s \<in> X \<Longrightarrow> \<not> tg s"
-          using Suc.prems(4) F3_in'
-          by auto
-
-        have Toggles : "(\<And>s. s \<in> X \<Longrightarrow> t1 s \<and> \<not> tg s)"
-          using F3_toggle Suc.prems(3)
-          by auto
-
         show "lift_map_t_s l'1 l1 t1 f1 \<downharpoonleft> {f3, lift_map_t_s l'1 l1 t1 f1} X"
-          using dominant_toggle[OF Valid Toggles, of X id]
-          unfolding F3_toggle(1)
-          by(auto)
+        proof(cases "f3 = lift_map_t_s l'1 l1 t1 f1")
+          case True
+
+          show ?thesis
+            using dominant_singleton[of "lift_map_t_s l'1 l1 t1 f1"]
+            unfolding True
+            by auto
+        next
+          case False
+
+
+          then obtain tg g where F3_toggle :
+            "f3 = toggle tg g" "\<And> s . s \<in> X \<Longrightarrow> \<not> tg s"
+            using Suc.prems(4)[OF F3_in']
+            by auto
+  
+          have Toggles : "(\<And>s. s \<in> X \<Longrightarrow> t1 s \<and> \<not> tg s)"
+            using F3_toggle Suc.prems(3)
+            by auto
+  
+          show "lift_map_t_s l'1 l1 t1 f1 \<downharpoonleft> {f3, lift_map_t_s l'1 l1 t1 f1} X"
+            using dominant_toggle[OF Valid Toggles, of X id]
+            unfolding F3_toggle(1)
+            by(auto)
+        qed
       qed
     qed
   qed
@@ -486,11 +499,48 @@ lemma dominant_toggles :
   assumes Fs_fin : "finite (Fs :: (_ \<Rightarrow> (_ :: Mergeable) \<Rightarrow> _) set)"
   assumes Fs_f1 : "lift_map_t_s l'1 l1 t1 f1 \<in> Fs"
   assumes Toggle1 : "\<And> s . s \<in> X \<Longrightarrow> t1 s"
-  assumes Toggles : "\<forall> f . f \<in> Fs \<longrightarrow>
+  assumes Toggles: "\<And> f . f \<in> Fs \<Longrightarrow> f \<noteq> lift_map_t_s l'1 l1 t1 f1 \<Longrightarrow>
     (\<exists> tg g . f = toggle tg g \<and> (\<forall> s . s \<in> X \<longrightarrow> \<not> tg s))"
   shows  "(lift_map_t_s l'1 l1 t1 f1) \<downharpoonleft> Fs X"
-  using dominant_toggles'[OF Valid Fs_fin _ Fs_f1 Toggle1 Toggles]
-  by auto
+proof-
+
+  show "lift_map_t_s l'1 l1 t1 f1 \<downharpoonleft> Fs X"
+    using dominant_toggles'[OF Valid Fs_fin _ Fs_f1 Toggle1 Toggles]
+    by blast
+qed
+
+lemma dominant_toggles2 :
+  assumes Valid : "lifting_valid l1 S1"
+  assumes Fs_fin : "finite (Fs :: (_ \<Rightarrow> (_ :: Mergeable) \<Rightarrow> _) set)"
+  assumes Fs_f1 : "lift_map_t_s l'1 l1 t1 f1 \<in> Fs"
+  assumes Toggle1 : "\<And> s . s \<in> X \<Longrightarrow> t1 s"
+  assumes Toggles: "\<And> f s z . f \<in> Fs \<Longrightarrow> f s z \<noteq> lift_map_t_s l'1 l1 t1 f1 s z \<Longrightarrow>
+    (\<exists> tg g . f = toggle tg g \<and> (\<forall> s . s \<in> X \<longrightarrow> \<not> tg s))"
+  shows  "(lift_map_t_s l'1 l1 t1 f1) \<downharpoonleft> Fs X"
+proof-
+  have Toggles' : "\<And> f . f \<in> Fs \<Longrightarrow> f  \<noteq> lift_map_t_s l'1 l1 t1 f1 \<Longrightarrow>
+    (\<exists> tg g . f = toggle tg g \<and> (\<forall> s . s \<in> X \<longrightarrow> \<not> tg s))"
+  proof-
+    fix f
+    assume Fin : "f \<in> Fs"
+    assume Neq : "f \<noteq> lift_map_t_s l'1 l1 t1 f1"
+
+    then obtain s  where Neq' : "f s  \<noteq> lift_map_t_s l'1 l1 t1 f1 s "
+      by(auto)
+
+    then obtain z where Neq'' : "f s z \<noteq> lift_map_t_s l'1 l1 t1 f1 s z"
+      by auto
+
+    then show "\<exists>tg g. f = toggle tg g \<and> (\<forall>s. s \<in> X \<longrightarrow> \<not> tg s)"
+      using Toggles[OF Fin Neq'']
+      by auto
+  qed
+
+  show "lift_map_t_s l'1 l1 t1 f1 \<downharpoonleft> Fs X"
+    using dominant_toggles'[OF Valid Fs_fin _ Fs_f1 Toggle1 Toggles']
+    by blast
+qed
+
 
 lemma dominant_toggle' :
   assumes Valid : "lifting_valid l1 S1"

@@ -78,7 +78,6 @@ fun imp_toggle :: "syn \<Rightarrow> bool" where
 type_synonym ('s, 'x) state =
   "('s, 'x) Mem_Simple.state"
 
-
 definition calc_schemi where
 "calc_schemi = (SP NA (SP NB NC))"
 declare calc_schemi_def [simp]
@@ -96,52 +95,135 @@ definition calc_schemo where
 "calc_schemo = (SP NX (SP (SPRC calc_prio (SO NC)) (SP (SPRI (SO NA)) (SP (SPRI (SO NB)) NX))))"
 declare calc_schemo_def [simp]
 
-term "no_control_lifting"
-
 (* need no_control_lifting_S *)
 definition calc_lift :: "(Calc.calc, Calc.calc_state, ('s, 'x :: {Bogus, Pord, Mergeableb, Okay, Pordps}) Mem_Simple.state) lifting" where
 "calc_lift = 
-  no_control_lifting (schem_lift calc_schemi calc_schemo)"
+  no_control_lifting (schem_lift calc_schemi calc_schemo) (schem_lift_S calc_schemi calc_schemo)"
 
 definition calc_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
 "calc_sem_l =
  lift_map_t_s calc_trans calc_lift calc_toggle
 calc_sem"
 
-term "calc_sem_l"
-term "calc_lift"
 
-term "schem_lift_S calc_schemi calc_schemo"
+lemma calc_prio_pos : "\<And> s . 0 < calc_prio s"
+proof-
+  fix s
+  show "0 < calc_prio s"
+    by(cases s; auto)
+qed
 
-
-(* something is wrong here. for some reason in the case of this merge
- * we end up having to prove that two non-equal (at least, not obviously equal)
- * valid sets are indeed equal.
- * Either the automation is making a poor choice w/r/t existential variables,
- * or something about this apporach to calculating valid sets (especially when
- * merging fst and snd) is broken 
- *)
-
-
+(*
 lemma calc_valid :
-  "lifting_valid_ok calc_lift (schem_lift_S calc_schemi calc_schemo)"
+  "lifting_valid_ok ((schem_lift calc_schemi calc_schemo) ::
+  ((calc, 'a::Bogus \<times> 'd::Bogus \<times> 'c::Bogus,
+       'b::{Mergeableb, Okay, Pordps} \<times>
+       'c::Bogus md_triv option md_prio \<times>
+       'a::Bogus md_triv option md_prio \<times>
+       'd::Bogus md_triv option md_prio \<times>
+       'e::{Mergeableb, Okay, Pordps}) lifting)) (schem_lift_S calc_schemi calc_schemo)"
+*)
+(* Need a pordps instance for Unit *)
+(*
+lemma calc_valid :
+  "lifting_valid_ok (schem_lift calc_schemi calc_schemo
+::
+    (calc, Mem_Simple.state0, _ :: {Bogus, Okay, Mergeableb, Pordps}) lifting)
+    (schem_lift_S calc_schemi calc_schemo) "
   unfolding calc_lift_def schem_lift_defs schem_lift_S_defs
 no_control_lifting_def calc_schemi_def calc_schemo_def 
-  apply(auto intro: lifting_valid_noaxiom lifting_ortho_noaxiom base_bot)
-  apply(rule lifting_valid_ok.intro)
-   apply(rule lifting_valid.intro)
-  apply(rule snd_l_valid_weak.ax_g)
-     apply(auto intro: lifting_valid_noaxiom lifting_ortho_noaxiom)
-  apply(rule snd_l_valid_weak.intro)
-      apply(rule snd_l_valid_weak.ax_g)
-  apply(rule snd_l_valid_weak.intro)
-       apply(rule merge_l_valid_weak.ax_g)
-              apply(fastforce intro: lifting_valid_noaxiom lifting_ortho_noaxiom)
-       apply(rule refl)
-  apply(auto simp add: lifter_S_instances)
-  apply(simp add: option_l_S_def)
-     apply(auto intro: lifting_valid_noaxiom lifting_ortho_noaxiom)
-      apply(rule merge_l_valid_weak.intro)
+*)
+(* can't show base validity...?*)
+lemma calc_valid :
+  "lifting_valid_ok ((schem_lift calc_schemi calc_schemo)
+::
+    (Calc.calc, Calc.calc_state, ('x :: {Okay, Bogus, Mergeableb, Pordps}) state1) lifting)
+    (schem_lift_S calc_schemi calc_schemo) "
+  unfolding calc_lift_def schem_lift_defs schem_lift_S_defs
+no_control_lifting_def calc_schemi_def calc_schemo_def 
+  by(fastforce simp add: calc_prio_pos intro: lifting_valid_fast lifting_ortho_fast)
+
+lemma calc_valid_full' :
+  "lifting_valid_ok (no_control_lifting (schem_lift calc_schemi calc_schemo) (schem_lift_S calc_schemi calc_schemo) ::
+(Calc.calc, Calc.calc_state, ('s, 'x :: {Bogus, Pord, Mergeableb, Okay, Pordps}) Mem_Simple.state) lifting)
+                    (no_control_lifting_S (schem_lift calc_schemi calc_schemo) (schem_lift_S calc_schemi calc_schemo))"
+  using no_control_l_valid[OF calc_valid]
+  by auto
+
+lemma calc_valid_full :
+  "lifting_valid_ok calc_lift
+(no_control_lifting_S (schem_lift calc_schemi calc_schemo) (schem_lift_S calc_schemi calc_schemo))"
+  unfolding calc_lift_def
+  using calc_valid_full'
+  by auto
+
+(* the following sketch gives more detail into the proof structure.
+ * it may be useful for debugging errors in the proof search, especially
+ * tricky ones related to polymorphism *)
+(*
+
+  apply(rule merge_l_ortho.ax_g_comm)
+          apply(auto intro: lifting_valid_slower lifting_ortho_slow)
+        apply(rule merge_l_ortho.intro)
+          apply(rule snd_l_ortho.ax_g)
+          apply(auto intro: lifting_valid_slower lifting_ortho_slow)
+              apply(rule snd_l_ortho.intro)
+              apply(rule fst_l_snd_l_ortho.ax_g_comm)
+          apply(auto intro: lifting_valid_slower lifting_ortho_slow)
+              apply(rule fst_l_snd_l_ortho.intro)
+               apply(rule lifting_valid_base_ext.intro)
+               apply(simp add: prio_l_def option_l_def triv_l_def bot_defs)
+  apply(rule lifting_valid_base_ext.intro)
+        apply(simp add: lifter_instances bot_defs)
+  apply(rule snd_l_ortho.ax_g)
+         apply(auto intro: lifting_valid_slower lifting_ortho_slow)
+       apply(rule snd_l_ortho.intro)
+  apply(rule snd_l_ortho.ax_g)
+         apply(auto intro: lifting_valid_slower lifting_ortho_slow)
+       apply(rule snd_l_ortho.intro)
+  apply(rule fst_l_snd_l_ortho.ax_g_comm)
+         apply(fastforce intro: lifting_valid_slower lifting_ortho_slow)
+        apply(fastforce intro: lifting_valid_slower lifting_ortho_slow)
+       apply(fastforce intro: lifting_valid_slower lifting_ortho_slow)
+      apply(fastforce intro: lifting_valid_slower lifting_ortho_slow)
+         apply(fastforce intro: lifting_valid_slower lifting_ortho_slow)
+    apply(fastforce intro: lifting_valid_slower lifting_ortho_slow)
+  apply(rule merge_l_valid_ext.ax)
+  apply(rule merge_l_valid_ext.intro)
+    apply(fastforce intro: lifting_valid_slower lifting_ortho_slow)
+   apply(rule merge_l_valid_ext.ax)
+  apply(rule merge_l_valid_ext.intro)
+    apply(fastforce intro: lifting_valid_slower lifting_ortho_slow)
+   apply(rule snd_l_valid_ext.ax)
+   apply(rule snd_l_valid_ext.intro)
+   apply(rule fst_l_valid_ext.ax)
+   apply(rule fst_l_valid_ext.intro)
+   apply(rule prio_l_valid_ext_strong.ax)
+   apply(rule prio_l_valid_ext_strong.intro)
+   apply(rule prio_l_valid_ext_strong'.intro)
+   apply(simp add: calc_prio_pos)
+
+  apply(rule merge_l_valid_ok_ext.ax_g)
+  apply(rule merge_l_valid_ok_ext.intro)
+         apply(fastforce simp add: calc_prio_pos intro: lifting_valid_fast lifting_ortho_fast)
+  apply(rule snd_l_valid_ok_ext.ax_g)
+     apply(rule snd_l_valid_ok_ext.intro)
+  apply(rule snd_l_valid_ok_ext.ax_g)
+  apply(rule snd_l_valid_ok_ext.intro)
+  apply(rule fst_l_valid_ok_ext.ax_g)
+       apply(rule fst_l_valid_ok_ext.intro)
+       apply(rule prio_l_valid_ok_ext.ax)
+       apply(rule prio_l_valid_ok_ext.intro)
+       apply(rule option_l_valid_ok_ext.ax)
+       apply(rule option_l_valid_ok_ext.intro)
+(* Something weird about polymorphism is happening here. *)
+  apply(rule triv_l_valid_ok_ext.ax)
+         apply(fastforce simp add: calc_prio_pos intro: lifting_valid_fast lifting_ortho_fast)
+         apply(fastforce simp add: calc_prio_pos intro: lifting_valid_fast lifting_ortho_fast)
+         apply(fastforce simp add: calc_prio_pos intro: lifting_valid_fast lifting_ortho_fast)
+         apply(fastforce simp add: calc_prio_pos intro: lifting_valid_fast lifting_ortho_fast)
+         apply(fastforce simp add: calc_prio_pos intro: lifting_valid_fast lifting_ortho_fast)
+
 (*
   using merge_l_ortho.ax_g_comm
   using merge_l_ortho.ax_g_comm
@@ -179,49 +261,117 @@ apply(fastforce intro: lifting_valid_noaxiom lifting_ortho_noaxiom)
 apply(fastforce intro: lifting_valid_noaxiom lifting_ortho_noaxiom)
 
                 apply(auto intro: lifting_valid_noaxiom lifting_ortho_noaxiom)
-
-(*
-definition mem_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
-"mem_sem_l = 
-  lift_map_s mem_trans
-    id_l
-  mem_sem"
 *)
-definition cond_lift where
+
+definition cond_lift :: "(Cond.cond, Cond.cond_state, ('s, 'x :: {Bogus, Pord, Mergeableb, Okay, Pordps}) Mem_Simple.state) lifting" where
 "cond_lift = 
   no_control_lifting (schem_lift (SP NA NB) (SP (SPRC cond_prio (SO NA)) 
+                     (SP (SPRI (SO NB)) NX)) :: (Cond.cond, Cond.cond_state, ('x :: {Okay, Bogus, Mergeableb, Pordps}) state1) lifting)
+(schem_lift_S (SP NA NB) (SP (SPRC cond_prio (SO NA)) 
                      (SP (SPRI (SO NB)) NX)))"
 
 definition cond_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
 "cond_sem_l =
   lift_map_t_s cond_trans
     cond_lift cond_toggle
-  cond_sem
-"
+  cond_sem"
+
+lemma cond_prio_pos :
+  "\<And> s . 0 < cond_prio s"
+proof-
+  fix s
+  show "0 < cond_prio s"
+    by(cases s; auto)
+qed
+
+lemma cond_valid :
+  "lifting_valid_ok ((schem_lift (SP NA NB) (SP (SPRC cond_prio (SO NA)) 
+                     (SP (SPRI (SO NB)) NX))))
+    (schem_lift_S (SP NA NB) (SP (SPRC cond_prio (SO NA)) 
+                     (SP (SPRI (SO NB)) NX))) "
+  unfolding calc_lift_def schem_lift_defs schem_lift_S_defs
+no_control_lifting_def calc_schemi_def calc_schemo_def 
+  by(fastforce simp add: cond_prio_pos intro: lifting_valid_fast lifting_ortho_fast)
+
+lemma cond_valid_full' :
+  "lifting_valid_ok 
+  (no_control_lifting (schem_lift (SP NA NB) (SP (SPRC cond_prio (SO NA)) 
+                     (SP (SPRI (SO NB)) NX)))
+  (schem_lift_S (SP NA NB) (SP (SPRC cond_prio (SO NA)) 
+                     (SP (SPRI (SO NB)) NX))))
+  (no_control_lifting_S (schem_lift (SP NA NB) (SP (SPRC cond_prio (SO NA)) 
+                     (SP (SPRI (SO NB)) NX)))
+  (schem_lift_S (SP NA NB) (SP (SPRC cond_prio (SO NA))
+                     (SP (SPRI (SO NB)) NX))))"
+    using no_control_l_valid[OF cond_valid]
+    by auto
+
+lemma cond_valid_full :
+  "lifting_valid_ok
+  cond_lift
+  (no_control_lifting_S (schem_lift (SP NA NB) (SP (SPRC cond_prio (SO NA)) 
+                     (SP (SPRI (SO NB)) NX)))
+  (schem_lift_S (SP NA NB) (SP (SPRC cond_prio (SO NA))
+                     (SP (SPRI (SO NB)) NX))))"
+  unfolding cond_lift_def
+  using cond_valid_full'
+  by blast
+
 
 (*
 definition imp_sem_l :: "syn \<Rightarrow> ('s, (_ :: Pordc_all)) state \<Rightarrow> ('s, (_ :: Pordc_all)) state" where
 "imp_sem_l = imp_sem_l_gen imp_trans"
 *)
 
-definition imp_sem_l :: "syn \<Rightarrow> ('s, (_ :: Pordc_all)) state \<Rightarrow> ('s, (_ :: Pordc_all)) state" where
-"imp_sem_l = lift_map_t_s imp_trans imp_sem_lifting_gen imp_toggle imp_ctl_sem"
 
-definition seq_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
+definition seq_sem_l :: "syn \<Rightarrow> ('s, _ ::{Okay, Bogus, Mergeableb, Pordps}) state \<Rightarrow> ('s, _) state" where
 "seq_sem_l = seq_sem_l_gen seq_trans"
 
-definition mem_lift where
-"mem_lift = no_control_lifting mem_lift1"
+definition mem_lift :: "(Mem_Simple.syn, Mem_Simple.state0, ('s, _ ::{Okay, Bogus, Mergeableb, Pordps}) state) lifting" where
+"mem_lift = no_control_lifting mem_lift1 mem_lift1_S"
+
+lemma mem_prio_reg_pos : "\<And> r s . 0 < mem_prio_reg r s"
+proof-
+  fix r s
+  show "0 < mem_prio_reg r s"
+    by(cases s; auto)
+qed
+
+lemma mem_prio_mem_pos : "\<And> s . 0 < mem_prio_mem s"
+proof-
+  fix s
+  show "0 < mem_prio_mem s"
+    by(cases s; auto)
+qed
+
+lemma mem_valid :
+  "lifting_valid_ok mem_lift1 mem_lift1_S"
+  unfolding mem_lift1_def mem_lift1_S_def
+no_control_lifting_def calc_schemi_def calc_schemo_def schem_lift_defs schem_lift_S_defs
+  by(fastforce simp add: mem_prio_reg_pos mem_prio_mem_pos intro: lifting_valid_fast lifting_ortho_fast)
+
+lemma mem_valid_full :
+  "lifting_valid_ok mem_lift (no_control_lifting_S mem_lift1 mem_lift1_S)"
+  using no_control_l_valid[OF mem_valid]
+  unfolding mem_lift_def
+  by auto
 
 definition mem_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
 "mem_sem_l = lift_map_t_s mem_trans mem_lift mem_toggle mem0_sem"
+
+definition imp_sem_lifting_spec where
+"imp_sem_lifting_spec = 
+  (imp_sem_lifting_gen :: (_, _, (_, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state) lifting)"
+
+definition imp_sem_l :: "syn \<Rightarrow> ('s, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state \<Rightarrow> ('s, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state" where
+"imp_sem_l = lift_map_t_s imp_trans imp_sem_lifting_spec imp_toggle imp_ctl_sem"
 
 definition sem_final :: "syn \<Rightarrow> ('s, (_ :: Pordc_all)) state \<Rightarrow> ('s, (_ :: Pordc_all)) state" where
 "sem_final =
   pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
 
 definition sems ::
-  "(syn \<Rightarrow> ('s, (_ :: Pordc_all)) state \<Rightarrow> ('s, (_ :: Pordc_all)) state) set" where
+  "(syn \<Rightarrow> ('s, (_ :: Pordc_all)) state \<Rightarrow> ('s, (_)) state) set" where
 "sems = {calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l}"
 
 (* sems without seq - this is used for certain Hoare facts. *)
@@ -231,437 +381,225 @@ definition sems' ::
 "sems' = {calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l}"
 
 (* Domination facts needed for proof. *)
-(* TODO: need to include syntax translation in dominant2 *)
 lemma calc_dom :
   "calc_sem_l \<downharpoonleft> sems' { x . (calc_toggle x = True)}"
   unfolding calc_sem_l_def
 proof(rule dominant_toggles)
+  show "lifting_valid calc_lift 
+     (no_control_lifting_S (schem_lift calc_schemi calc_schemo)
+       (schem_lift_S calc_schemi calc_schemo))"
+    using lifting_valid_ok.axioms[OF calc_valid_full] unfolding calc_lift_def
+    by(auto)
+next
+  show "finite sems'"
+    unfolding sems'_def
+    by auto
+next
+  show "lift_map_t_s calc_trans calc_lift calc_toggle calc_sem \<in> sems'"
+    unfolding sems'_def
+    calc_sem_l_def
+    by auto
+next
+  show "\<And>s. s \<in> {x. calc_toggle x = True} \<Longrightarrow> calc_toggle s"
+    by auto
+next
+  fix f s z
+  assume F1 :"f \<in> sems'"
+  assume F2 :"f \<noteq> lift_map_t_s calc_trans calc_lift calc_toggle calc_sem"
+
+  have Calc_Mem : "(\<forall>s. calc_toggle s \<longrightarrow> \<not> mem_toggle s)"
+  proof
+    fix s
+    show "calc_toggle s \<longrightarrow> \<not> mem_toggle s"
+      by(cases s; auto)
+  qed
+
+  have Calc_Imp : "(\<forall>s. calc_toggle s \<longrightarrow> \<not> imp_toggle s)"
+  proof
+    fix s
+    show "calc_toggle s \<longrightarrow> \<not> imp_toggle s"
+      by(cases s; auto)
+  qed
+
+  have Calc_Cond : "(\<forall>s. calc_toggle s \<longrightarrow> \<not> cond_toggle s)"
+  proof
+    fix s
+    show "calc_toggle s \<longrightarrow> \<not> cond_toggle s"
+      by(cases s; auto)
+  qed
 
 
-lemma calc_dom_mem :
-  "(with_baseline calc_sem_l) \<downharpoonleft> {with_baseline mem_sem_l, with_baseline calc_sem_l} { x . case x of (Sc _) \<Rightarrow> True | _ \<Rightarrow> False}"
-proof
-  fix b :: "(_, (_ :: {Bogus, Mergeableb})) state"
-  fix x
-  assume Xin : "x \<in> {x. case x of Sc x \<Rightarrow> True
-                   | _ \<Rightarrow> False} "
-  assume Bin : "b \<in> ok_S"
-  show "
-           is_sup
-            ((\<lambda>g. g x b) `
-             {with_baseline mem_sem_l,
-              with_baseline calc_sem_l})
-            (with_baseline calc_sem_l x b)"
-  proof(simp; rule is_sup_pair)
-    show "with_baseline mem_sem_l x b <[
-    with_baseline calc_sem_l x b"
-      using Xin Bin
-  unfolding calc_lift_def calc_schemi_def calc_schemo_def
-            mem_lift_def mem_lift1_def no_control_lifting_def schem_lift_defs with_baseline_def
-mem_sem_l_def calc_sem_l_def baseline_l_def baseline_f_def
-       apply(auto split: prod.splits md_prio.splits option.splits syn.splits md_triv.splits)
-    by(auto simp add: schem_lift_defs lifter_instances
-    prod_ok_S prio_ok_S option_ok_S triv_ok_S
-  prio_pleq triv_pleq
-  prod_pleq leq_refl lift_map_s_def option_pleq
-  prod_bsup prio_bsup option_bsup triv_bsup schem_lift_defs
-split: option.splits md_triv.splits prod.splits)
-qed
+  show "\<exists>tg g. f = toggle tg g \<and> (\<forall>s. s \<in> {x. calc_toggle x = True} \<longrightarrow> \<not> tg s)"
+    using F1 F2 Calc_Mem Calc_Imp Calc_Cond
+    unfolding sems'_def calc_sem_l_def mem_sem_l_def cond_sem_l_def imp_sem_l_def
+      lift_map_t_s_toggle
+    by(auto)
 qed
 
-lemma calc_dom_cond :
-  "(with_baseline calc_sem_l) \<downharpoonleft> {with_baseline cond_sem_l, with_baseline calc_sem_l} { x . case x of (Sc _) \<Rightarrow> True | _ \<Rightarrow> False}"
-proof
-  fix b :: "(_, (_ :: {Bogus, Mergeableb})) state"
-  fix x
-  assume Xin : "x \<in> {x. case x of Sc x \<Rightarrow> True
-                   | _ \<Rightarrow> False} "
-  assume Bin : "b \<in> ok_S"
-  show "is_sup
-            ((\<lambda>g. g x b) `
-             {with_baseline cond_sem_l,
-              with_baseline calc_sem_l})
-            (with_baseline calc_sem_l x b)"
-  proof(simp; rule is_sup_pair)
-    show "with_baseline cond_sem_l x b <[
-    with_baseline calc_sem_l x b"
-      using Xin Bin
-  unfolding calc_lift_def calc_schemi_def calc_schemo_def
-            mem_lift_def mem_lift1_def no_control_lifting_def schem_lift_defs with_baseline_def
-mem_sem_l_def calc_sem_l_def cond_sem_l_def baseline_l_def baseline_f_def cond_lift_def cond_sem_def
-       apply(auto split: prod.splits md_prio.splits option.splits syn.splits md_triv.splits)
-  by(auto simp add: schem_lift_defs lifter_instances
-    prod_ok_S prio_ok_S option_ok_S triv_ok_S
-  prio_pleq triv_pleq
-  prod_pleq leq_refl lift_map_s_def option_pleq
-  prod_bsup prio_bsup option_bsup triv_bsup schem_lift_defs
-split: option.splits md_triv.splits prod.splits)
-qed
-qed
+lemma mem_dom :
+  "mem_sem_l \<downharpoonleft> sems' { x . (mem_toggle x = True)}"
+  unfolding mem_sem_l_def
+proof(rule dominant_toggles)
+  show "lifting_valid mem_lift (no_control_lifting_S mem_lift1 mem_lift1_S)"
+    using lifting_valid_ok.axioms[OF mem_valid_full] 
+    by(auto)
+next
+  show "finite sems'"
+    unfolding sems'_def
+    by auto
+next
+  show "lift_map_t_s mem_trans mem_lift mem_toggle mem0_sem \<in> sems'"
+    unfolding sems'_def
+    mem_sem_l_def
+    by auto
+next
+  show "\<And>s. s \<in> {x. mem_toggle x = True} \<Longrightarrow> mem_toggle s"
+    by auto
+next
+  fix f s z
+  assume F1 :"f \<in> sems'"
+  assume F2 :"f \<noteq> lift_map_t_s mem_trans mem_lift mem_toggle mem0_sem"
+
+  have Mem_Calc : "(\<forall>s. mem_toggle s \<longrightarrow> \<not> calc_toggle s)"
+  proof
+    fix s
+    show "mem_toggle s \<longrightarrow> \<not> calc_toggle s"
+      by(cases s; auto)
+  qed
+
+  have Mem_Imp : "(\<forall>s. mem_toggle s \<longrightarrow> \<not> imp_toggle s)"
+  proof
+    fix s
+    show "mem_toggle s \<longrightarrow> \<not> imp_toggle s"
+      by(cases s; auto)
+  qed
+
+  have Mem_Cond : "(\<forall>s. mem_toggle s \<longrightarrow> \<not> cond_toggle s)"
+  proof
+    fix s
+    show "mem_toggle s \<longrightarrow> \<not> cond_toggle s"
+      by(cases s; auto)
+  qed
 
 
-lemma calc_dom_imp :
-  "(with_baseline calc_sem_l) \<downharpoonleft> {with_baseline imp_sem_l, with_baseline calc_sem_l} { x . case x of (Sc _) \<Rightarrow> True | _ \<Rightarrow> False}"
-proof
-  fix b :: "(_, (_ :: {Bogus, Mergeableb, Okay, Pordc_all})) state"
-  fix x
-  assume Xin : "x \<in> {x. case x of Sc x \<Rightarrow> True
-                   | _ \<Rightarrow> False} "
-  assume Bin : "b \<in> ok_S"
-  show "is_sup
-            ((\<lambda>g. g x b) `
-             {with_baseline imp_sem_l,
-              with_baseline calc_sem_l})
-            (with_baseline calc_sem_l x b)"
-  proof(simp; rule is_sup_pair)
-    show "with_baseline imp_sem_l x b <[
-    with_baseline calc_sem_l x b"
-      using Xin Bin
-  unfolding calc_lift_def calc_schemi_def calc_schemo_def
-            mem_lift_def mem_lift1_def no_control_lifting_def schem_lift_defs with_baseline_def
-mem_sem_l_def calc_sem_l_def cond_sem_l_def baseline_l_def baseline_f_def cond_lift_def cond_sem_def
-imp_sem_l_def imp_sem_l_gen_def lift_map_s_def imp_ctl_sem_def get_cond_def imp_sem_lifting_gen_def
-       apply(auto split: prod.splits md_prio.splits option.splits syn.splits md_triv.splits list.splits)
-  by(auto simp add: schem_lift_defs lifter_instances
-    prod_ok_S prio_ok_S option_ok_S triv_ok_S
-  prio_pleq triv_pleq
-  prod_pleq leq_refl lift_map_s_def option_pleq
-  prod_bsup prio_bsup option_bsup triv_bsup schem_lift_defs imp_prio_def
-split: option.splits md_triv.splits prod.splits list.splits 
-)
-
-qed
-qed
-(*
-lemma calc_dom_seq :
-  "(with_baseline calc_sem_l) \<downharpoonleft> {with_baseline seq_sem_l, with_baseline calc_sem_l} { x . case x of (Sc _) \<Rightarrow> True | _ \<Rightarrow> False}"
-proof
-  fix b :: "(_, (_ :: {Bogus, Mergeableb, Okay})) state"
-  fix x
-  assume Xin : "x \<in> {x. case x of Sc x \<Rightarrow> True
-                   | _ \<Rightarrow> False} "
-  assume Bin : "b \<in> ok_S"
-  show "is_sup
-            ((\<lambda>g. g x b) `
-             {with_baseline seq_sem_l,
-              with_baseline calc_sem_l})
-            (with_baseline calc_sem_l x b)"
-  proof(simp; rule is_sup_pair)
-    show "with_baseline seq_sem_l x b <[
-    with_baseline calc_sem_l x b"
-      using Xin Bin
-  unfolding calc_lift_def calc_schemi_def calc_schemo_def
-            mem_lift_def mem_lift1_def no_control_lifting_def schem_lift_defs with_baseline_def
-mem_sem_l_def calc_sem_l_def cond_sem_l_def baseline_l_def baseline_f_def cond_lift_def cond_sem_def
-imp_sem_l_def imp_sem_l_gen_def lift_map_s_def imp_ctl_sem_def get_cond_def imp_sem_lifting_gen_def
-seq_sem_l_def seq_sem_l_gen_def seq_sem_lifting_gen_def
-       apply(auto split: prod.splits md_prio.splits option.splits syn.splits md_triv.splits list.splits)
-  apply(auto simp add: schem_lift_defs lifter_instances
-    prod_ok_S prio_ok_S option_ok_S triv_ok_S
-  prio_pleq triv_pleq
-  prod_pleq leq_refl lift_map_s_def option_pleq
-  prod_bsup prio_bsup option_bsup triv_bsup schem_lift_defs imp_prio_def
-split: option.splits md_triv.splits prod.splits list.splits 
-)
-*)
-
-lemma mem_dom_calc :
-  "(with_baseline mem_sem_l) \<downharpoonleft> {with_baseline calc_sem_l, with_baseline mem_sem_l} { x . case x of (Sm _) \<Rightarrow> True | _ \<Rightarrow> False}"
-proof
-  fix b :: "(_, (_ :: {Bogus, Mergeableb, Okay})) state"
-  fix x
-  assume Xin : "x \<in> {x. case x of Sm x \<Rightarrow> True
-                   | _ \<Rightarrow> False} "
-  assume Bin : "b \<in> ok_S"
-  show "is_sup
-            ((\<lambda>g. g x b) `
-             {with_baseline calc_sem_l,
-              with_baseline mem_sem_l})
-            (with_baseline mem_sem_l x b)"
-  proof(simp; rule is_sup_pair)
-    show "with_baseline calc_sem_l x b <[
-    with_baseline mem_sem_l x b"
-      using Xin Bin
-  unfolding calc_lift_def calc_schemi_def calc_schemo_def
-            mem_lift_def mem_lift1_def no_control_lifting_def schem_lift_defs with_baseline_def
-mem_sem_l_def calc_sem_l_def cond_sem_l_def baseline_l_def baseline_f_def cond_lift_def cond_sem_def
-imp_sem_l_def imp_sem_l_gen_def lift_map_s_def imp_ctl_sem_def get_cond_def imp_sem_lifting_gen_def
-seq_sem_l_def seq_sem_l_gen_def seq_sem_lifting_gen_def
-       apply(auto split: prod.splits md_prio.splits option.splits syn.splits md_triv.splits list.splits)
-  apply(auto simp add: schem_lift_defs lifter_instances
-    prod_ok_S prio_ok_S option_ok_S triv_ok_S
-  prio_pleq triv_pleq
-  prod_pleq leq_refl lift_map_s_def option_pleq
-  prod_bsup prio_bsup option_bsup triv_bsup schem_lift_defs imp_prio_def
-split: option.splits md_triv.splits prod.splits list.splits )
-  done
-qed
+  show "\<exists>tg g. f = toggle tg g \<and> (\<forall>s. s \<in> {x. mem_toggle x = True} \<longrightarrow> \<not> tg s)"
+    using F1 F2 Mem_Calc Mem_Imp Mem_Cond
+    unfolding sems'_def calc_sem_l_def mem_sem_l_def cond_sem_l_def imp_sem_l_def
+      lift_map_t_s_toggle
+    by(auto)
 qed
 
-lemma mem_dom_cond :
-  "(with_baseline mem_sem_l) \<downharpoonleft> {with_baseline cond_sem_l, with_baseline mem_sem_l} { x . case x of (Sm _) \<Rightarrow> True | _ \<Rightarrow> False}"
-proof
-  fix b :: "(_, (_ :: {Bogus, Mergeableb, Okay})) state"
-  fix x
-  assume Xin : "x \<in> {x. case x of Sm x \<Rightarrow> True
-                   | _ \<Rightarrow> False} "
-  assume Bin : "b \<in> ok_S"
-  show "is_sup
-            ((\<lambda>g. g x b) `
-             {with_baseline cond_sem_l,
-              with_baseline mem_sem_l})
-            (with_baseline mem_sem_l x b)"
-  proof(simp; rule is_sup_pair)
-    show "with_baseline cond_sem_l x b <[
-    with_baseline mem_sem_l x b"
-      using Xin Bin
-  unfolding calc_lift_def calc_schemi_def calc_schemo_def
-            mem_lift_def mem_lift1_def no_control_lifting_def schem_lift_defs with_baseline_def
-mem_sem_l_def calc_sem_l_def cond_sem_l_def baseline_l_def baseline_f_def cond_lift_def cond_sem_def
-imp_sem_l_def imp_sem_l_gen_def lift_map_s_def imp_ctl_sem_def get_cond_def imp_sem_lifting_gen_def
-seq_sem_l_def seq_sem_l_gen_def seq_sem_lifting_gen_def
-       apply(auto split: prod.splits md_prio.splits option.splits syn.splits md_triv.splits list.splits)
-  apply(auto simp add: schem_lift_defs lifter_instances
-    prod_ok_S prio_ok_S option_ok_S triv_ok_S
-  prio_pleq triv_pleq
-  prod_pleq leq_refl lift_map_s_def option_pleq
-  prod_bsup prio_bsup option_bsup triv_bsup schem_lift_defs imp_prio_def
-split: option.splits md_triv.splits prod.splits list.splits )
-  done
-qed
-qed
+lemma cond_dom :
+  "cond_sem_l \<downharpoonleft> sems' { x . (cond_toggle x = True)}"
+  unfolding cond_sem_l_def
+proof(rule dominant_toggles)
+  show "lifting_valid cond_lift (no_control_lifting_S (schem_lift (SP NA NB) (SP (SPRC cond_prio (SO NA)) 
+                     (SP (SPRI (SO NB)) NX)))
+  (schem_lift_S (SP NA NB) (SP (SPRC cond_prio (SO NA))
+                     (SP (SPRI (SO NB)) NX))))"
+    using lifting_valid_ok.axioms[OF cond_valid_full] 
+    by(auto)
+next
+  show "finite sems'"
+    unfolding sems'_def
+    by auto
+next
+  show "lift_map_t_s cond_trans cond_lift cond_toggle cond_sem \<in> sems'"
+    unfolding sems'_def
+    cond_sem_l_def
+    by auto
+next
+  show "\<And>s. s \<in> {x. cond_toggle x = True} \<Longrightarrow> cond_toggle s"
+    by auto
+next
+  fix f s z
+  assume F1 :"f \<in> sems'"
+  assume F2 :"f \<noteq> lift_map_t_s cond_trans cond_lift cond_toggle cond_sem"
 
-lemma mem_dom_imp :
-  "(with_baseline mem_sem_l) \<downharpoonleft> {with_baseline imp_sem_l, with_baseline mem_sem_l} { x . case x of (Sm _) \<Rightarrow> True | _ \<Rightarrow> False}"
-proof
-  fix b :: "(_, (_ :: {Bogus, Mergeableb, Okay, Pordc_all})) state"
-  fix x
-  assume Xin : "x \<in> {x. case x of Sm x \<Rightarrow> True
-                   | _ \<Rightarrow> False} "
-  assume Bin : "b \<in> ok_S"
-  show "is_sup
-            ((\<lambda>g. g x b) `
-             {with_baseline imp_sem_l,
-              with_baseline mem_sem_l})
-            (with_baseline mem_sem_l x b)"
-  proof(simp; rule is_sup_pair)
-    show "with_baseline imp_sem_l x b <[
-    with_baseline mem_sem_l x b"
-      using Xin Bin
-  unfolding calc_lift_def calc_schemi_def calc_schemo_def
-            mem_lift_def mem_lift1_def no_control_lifting_def schem_lift_defs with_baseline_def
-mem_sem_l_def calc_sem_l_def cond_sem_l_def baseline_l_def baseline_f_def cond_lift_def cond_sem_def
-imp_sem_l_def imp_sem_l_gen_def lift_map_s_def imp_ctl_sem_def get_cond_def imp_sem_lifting_gen_def
-seq_sem_l_def seq_sem_l_gen_def seq_sem_lifting_gen_def
-       apply(auto split: prod.splits md_prio.splits option.splits syn.splits md_triv.splits list.splits)
-  apply(auto simp add: schem_lift_defs lifter_instances
-    prod_ok_S prio_ok_S option_ok_S triv_ok_S
-  prio_pleq triv_pleq
-  prod_pleq leq_refl lift_map_s_def option_pleq
-  prod_bsup prio_bsup option_bsup triv_bsup schem_lift_defs imp_prio_def
-split: option.splits md_triv.splits prod.splits list.splits )
-  done
-qed
-qed
+  have Cond_Calc : "(\<forall>s. cond_toggle s \<longrightarrow> \<not> calc_toggle s)"
+  proof
+    fix s
+    show "cond_toggle s \<longrightarrow> \<not> calc_toggle s"
+      by(cases s; auto)
+  qed
 
-lemma cond_dom_calc :
-  "(with_baseline cond_sem_l) \<downharpoonleft> {with_baseline calc_sem_l, with_baseline cond_sem_l} { x . case x of (Sb _) \<Rightarrow> True | _ \<Rightarrow> False}"
-proof
-  fix b :: "(_, (_ :: {Bogus, Mergeableb, Okay})) state"
-  fix x
-  assume Xin : "x \<in> {x. case x of Sb x \<Rightarrow> True
-                   | _ \<Rightarrow> False} "
-  assume Bin : "b \<in> ok_S"
-  show "is_sup
-            ((\<lambda>g. g x b) `
-             {with_baseline calc_sem_l,
-              with_baseline cond_sem_l})
-            (with_baseline cond_sem_l x b)"
-  proof(simp; rule is_sup_pair)
-    show "with_baseline calc_sem_l x b <[
-    with_baseline cond_sem_l x b"
-      using Xin Bin
-  unfolding calc_lift_def calc_schemi_def calc_schemo_def
-            mem_lift_def mem_lift1_def no_control_lifting_def schem_lift_defs with_baseline_def
-mem_sem_l_def calc_sem_l_def cond_sem_l_def baseline_l_def baseline_f_def cond_lift_def cond_sem_def
-imp_sem_l_def imp_sem_l_gen_def lift_map_s_def imp_ctl_sem_def get_cond_def imp_sem_lifting_gen_def
-seq_sem_l_def seq_sem_l_gen_def seq_sem_lifting_gen_def
-       apply(auto split: prod.splits md_prio.splits option.splits syn.splits md_triv.splits list.splits)
-  apply(auto simp add: schem_lift_defs lifter_instances
-    prod_ok_S prio_ok_S option_ok_S triv_ok_S
-  prio_pleq triv_pleq
-  prod_pleq leq_refl lift_map_s_def option_pleq
-  prod_bsup prio_bsup option_bsup triv_bsup schem_lift_defs imp_prio_def
-split: option.splits md_triv.splits prod.splits list.splits )
-  done
-qed
-qed
+  have Cond_Imp : "(\<forall>s. cond_toggle s \<longrightarrow> \<not> imp_toggle s)"
+  proof
+    fix s
+    show "cond_toggle s \<longrightarrow> \<not> imp_toggle s"
+      by(cases s; auto)
+  qed
 
-lemma cond_dom_mem :
-  "(with_baseline cond_sem_l) \<downharpoonleft> {with_baseline mem_sem_l, with_baseline cond_sem_l} { x . case x of (Sb _) \<Rightarrow> True | _ \<Rightarrow> False}"
-proof
-  fix b :: "(_, (_ :: {Bogus, Mergeableb, Okay})) state"
-  fix x
-  assume Xin : "x \<in> {x. case x of Sb x \<Rightarrow> True
-                   | _ \<Rightarrow> False} "
-  assume Bin : "b \<in> ok_S"
-  show "is_sup
-            ((\<lambda>g. g x b) `
-             {with_baseline mem_sem_l,
-              with_baseline cond_sem_l})
-            (with_baseline cond_sem_l x b)"
-  proof(simp; rule is_sup_pair)
-    show "with_baseline mem_sem_l x b <[
-    with_baseline cond_sem_l x b"
-      using Xin Bin
-  unfolding calc_lift_def calc_schemi_def calc_schemo_def
-            mem_lift_def mem_lift1_def no_control_lifting_def schem_lift_defs with_baseline_def
-mem_sem_l_def calc_sem_l_def cond_sem_l_def baseline_l_def baseline_f_def cond_lift_def cond_sem_def
-imp_sem_l_def imp_sem_l_gen_def lift_map_s_def imp_ctl_sem_def get_cond_def imp_sem_lifting_gen_def
-seq_sem_l_def seq_sem_l_gen_def seq_sem_lifting_gen_def
-       apply(auto split: prod.splits md_prio.splits option.splits syn.splits md_triv.splits list.splits)
-  apply(auto simp add: schem_lift_defs lifter_instances
-    prod_ok_S prio_ok_S option_ok_S triv_ok_S
-  prio_pleq triv_pleq
-  prod_pleq leq_refl lift_map_s_def option_pleq
-  prod_bsup prio_bsup option_bsup triv_bsup schem_lift_defs imp_prio_def
-split: option.splits md_triv.splits prod.splits list.splits )
-  done
-qed
-qed
+  have Cond_Mem : "(\<forall>s. cond_toggle s \<longrightarrow> \<not> mem_toggle s)"
+  proof
+    fix s
+    show "cond_toggle s \<longrightarrow> \<not> mem_toggle s"
+      by(cases s; auto)
+  qed
 
-lemma cond_dom_imp :
-  "(with_baseline cond_sem_l) \<downharpoonleft> {with_baseline imp_sem_l, with_baseline cond_sem_l} { x . case x of (Sb _) \<Rightarrow> True | _ \<Rightarrow> False}"
-proof
-  fix b :: "(_, (_ :: {Bogus, Mergeableb, Okay, Pordc_all})) state"
-  fix x
-  assume Xin : "x \<in> {x. case x of Sb x \<Rightarrow> True
-                   | _ \<Rightarrow> False} "
-  assume Bin : "b \<in> ok_S"
-  show "is_sup
-            ((\<lambda>g. g x b) `
-             {with_baseline imp_sem_l,
-              with_baseline cond_sem_l})
-            (with_baseline cond_sem_l x b)"
-  proof(simp; rule is_sup_pair)
-    show "with_baseline imp_sem_l x b <[
-    with_baseline cond_sem_l x b"
-      using Xin Bin
-  unfolding calc_lift_def calc_schemi_def calc_schemo_def
-            mem_lift_def mem_lift1_def no_control_lifting_def schem_lift_defs with_baseline_def
-mem_sem_l_def calc_sem_l_def cond_sem_l_def baseline_l_def baseline_f_def cond_lift_def cond_sem_def
-imp_sem_l_def imp_sem_l_gen_def lift_map_s_def imp_ctl_sem_def get_cond_def imp_sem_lifting_gen_def
-seq_sem_l_def seq_sem_l_gen_def seq_sem_lifting_gen_def
-       apply(auto split: prod.splits md_prio.splits option.splits syn.splits md_triv.splits list.splits)
-  apply(auto simp add: schem_lift_defs lifter_instances
-    prod_ok_S prio_ok_S option_ok_S triv_ok_S
-  prio_pleq triv_pleq
-  prod_pleq leq_refl lift_map_s_def option_pleq
-  prod_bsup prio_bsup option_bsup triv_bsup schem_lift_defs imp_prio_def
-split: option.splits md_triv.splits prod.splits list.splits )
-  done
+  show "\<exists>tg g. f = toggle tg g \<and> (\<forall>s. s \<in> {x. cond_toggle x = True} \<longrightarrow> \<not> tg s)"
+    using F1 F2 Cond_Calc Cond_Imp Cond_Mem
+    unfolding sems'_def calc_sem_l_def mem_sem_l_def cond_sem_l_def imp_sem_l_def
+      lift_map_t_s_toggle
+    by(auto)
 qed
-qed
+    
+lemma imp_dom :
+  "imp_sem_l \<downharpoonleft> sems' { x . (imp_toggle x = True)}"
+  unfolding imp_sem_l_def
+proof(rule dominant_toggles)
+  show "lifting_valid imp_sem_lifting_spec
+         (schem_lift_S (SP NA NB)
+             (SP (SPRC imp_prio (SO NA)) (SP NX (SP (SPRI (SO NB)) NX))))"
+    using lifting_valid_ok.axioms[OF imp_sem_lifting_gen_valid2] 
+    unfolding imp_sem_lifting_gen_def imp_sem_lifting_spec_def
+    by(auto)
+next
+  show "finite sems'"
+    unfolding sems'_def
+    by auto
+next
+  show "lift_map_t_s imp_trans imp_sem_lifting_spec imp_toggle imp_ctl_sem \<in> sems'"
+    unfolding sems'_def
+    imp_sem_l_def
+    by auto
+next
+  show "\<And>s. s \<in> {x. imp_toggle x = True} \<Longrightarrow> imp_toggle s"
+    by auto
+next
+  fix f s z
+  assume F1 :"f \<in> sems'"
+  assume F2 :"f \<noteq> lift_map_t_s imp_trans imp_sem_lifting_spec imp_toggle imp_ctl_sem"
 
-lemma imp_dom_calc :
-  "(with_baseline imp_sem_l) \<downharpoonleft> {with_baseline calc_sem_l, with_baseline imp_sem_l} { x . case x of (Si _) \<Rightarrow> True | _ \<Rightarrow> False}"
-proof
-  fix b :: "(_, (_ :: {Bogus, Mergeableb, Okay, Pordc_all})) state"
-  fix x
-  assume Xin : "x \<in> {x. case x of Si x \<Rightarrow> True
-                   | _ \<Rightarrow> False} "
-  assume Bin : "b \<in> ok_S"
-  show "is_sup
-            ((\<lambda>g. g x b) `
-             {with_baseline calc_sem_l,
-              with_baseline imp_sem_l})
-            (with_baseline imp_sem_l x b)"
-  proof(simp; rule is_sup_pair)
-    show "with_baseline calc_sem_l x b <[
-    with_baseline imp_sem_l x b"
-      using Xin Bin
-  unfolding calc_lift_def calc_schemi_def calc_schemo_def
-            mem_lift_def mem_lift1_def no_control_lifting_def schem_lift_defs with_baseline_def
-mem_sem_l_def calc_sem_l_def cond_sem_l_def baseline_l_def baseline_f_def cond_lift_def cond_sem_def
-imp_sem_l_def imp_sem_l_gen_def lift_map_s_def imp_ctl_sem_def get_cond_def imp_sem_lifting_gen_def
-seq_sem_l_def seq_sem_l_gen_def seq_sem_lifting_gen_def
-       apply(auto split: prod.splits md_prio.splits option.splits syn.splits md_triv.splits list.splits)
-  apply(auto simp add: schem_lift_defs lifter_instances
-    prod_ok_S prio_ok_S option_ok_S triv_ok_S
-  prio_pleq triv_pleq
-  prod_pleq leq_refl lift_map_s_def option_pleq
-  prod_bsup prio_bsup option_bsup triv_bsup schem_lift_defs imp_prio_def
-split: option.splits md_triv.splits prod.splits list.splits )
-  done
-qed
-qed
+  have Imp_Calc : "(\<forall>s. imp_toggle s \<longrightarrow> \<not> calc_toggle s)"
+  proof
+    fix s
+    show "imp_toggle s \<longrightarrow> \<not> calc_toggle s"
+      by(cases s; auto)
+  qed
 
-lemma imp_dom_mem :
-  "(with_baseline imp_sem_l) \<downharpoonleft> {with_baseline mem_sem_l, with_baseline imp_sem_l} { x . case x of (Si _) \<Rightarrow> True | _ \<Rightarrow> False}"
-proof
-  fix b :: "(_, (_ :: {Bogus, Mergeableb, Okay, Pordc_all})) state"
-  fix x
-  assume Xin : "x \<in> {x. case x of Si x \<Rightarrow> True
-                   | _ \<Rightarrow> False} "
-  assume Bin : "b \<in> ok_S"
-  show "is_sup
-            ((\<lambda>g. g x b) `
-             {with_baseline mem_sem_l,
-              with_baseline imp_sem_l})
-            (with_baseline imp_sem_l x b)"
-  proof(simp; rule is_sup_pair)
-    show "with_baseline mem_sem_l x b <[
-    with_baseline imp_sem_l x b"
-      using Xin Bin
-  unfolding calc_lift_def calc_schemi_def calc_schemo_def
-            mem_lift_def mem_lift1_def no_control_lifting_def schem_lift_defs with_baseline_def
-mem_sem_l_def calc_sem_l_def cond_sem_l_def baseline_l_def baseline_f_def cond_lift_def cond_sem_def
-imp_sem_l_def imp_sem_l_gen_def lift_map_s_def imp_ctl_sem_def get_cond_def imp_sem_lifting_gen_def
-seq_sem_l_def seq_sem_l_gen_def seq_sem_lifting_gen_def
-       apply(auto split: prod.splits md_prio.splits option.splits syn.splits md_triv.splits list.splits)
-  apply(auto simp add: schem_lift_defs lifter_instances
-    prod_ok_S prio_ok_S option_ok_S triv_ok_S
-  prio_pleq triv_pleq
-  prod_pleq leq_refl lift_map_s_def option_pleq
-  prod_bsup prio_bsup option_bsup triv_bsup schem_lift_defs imp_prio_def
-split: option.splits md_triv.splits prod.splits list.splits )
-  done
-qed
-qed
+  have Imp_Cond : "(\<forall>s. imp_toggle s \<longrightarrow> \<not> cond_toggle s)"
+  proof
+    fix s
+    show "imp_toggle s \<longrightarrow> \<not> cond_toggle s"
+      by(cases s; auto)
+  qed
+
+  have Imp_Mem : "(\<forall>s. imp_toggle s \<longrightarrow> \<not> mem_toggle s)"
+  proof
+    fix s
+    show "imp_toggle s \<longrightarrow> \<not> mem_toggle s"
+      by(cases s; auto)
+  qed
 
 
-lemma imp_dom_cond :
-  "(with_baseline imp_sem_l) \<downharpoonleft> {with_baseline cond_sem_l, with_baseline imp_sem_l} { x . case x of (Si _) \<Rightarrow> True | _ \<Rightarrow> False}"
-proof
-  fix b :: "(_, (_ :: {Bogus, Mergeableb, Okay, Pordc_all})) state"
-  fix x
-  assume Xin : "x \<in> {x. case x of Si x \<Rightarrow> True
-                   | _ \<Rightarrow> False} "
-  assume Bin : "b \<in> ok_S"
-  show "is_sup
-            ((\<lambda>g. g x b) `
-             {with_baseline cond_sem_l,
-              with_baseline imp_sem_l})
-            (with_baseline imp_sem_l x b)"
-  proof(simp; rule is_sup_pair)
-    show "with_baseline cond_sem_l x b <[
-    with_baseline imp_sem_l x b"
-      using Xin Bin
-  unfolding calc_lift_def calc_schemi_def calc_schemo_def
-            mem_lift_def mem_lift1_def no_control_lifting_def schem_lift_defs with_baseline_def
-mem_sem_l_def calc_sem_l_def cond_sem_l_def baseline_l_def baseline_f_def cond_lift_def cond_sem_def
-imp_sem_l_def imp_sem_l_gen_def lift_map_s_def imp_ctl_sem_def get_cond_def imp_sem_lifting_gen_def
-seq_sem_l_def seq_sem_l_gen_def seq_sem_lifting_gen_def
-       apply(auto split: prod.splits md_prio.splits option.splits syn.splits md_triv.splits list.splits)
-  apply(auto simp add: schem_lift_defs lifter_instances
-    prod_ok_S prio_ok_S option_ok_S triv_ok_S
-  prio_pleq triv_pleq
-  prod_pleq leq_refl lift_map_s_def option_pleq
-  prod_bsup prio_bsup option_bsup triv_bsup schem_lift_defs imp_prio_def
-split: option.splits md_triv.splits prod.splits list.splits )
-  done
+  show "\<exists>tg g. f = toggle tg g \<and> (\<forall>s. s \<in> {x. imp_toggle x = True} \<longrightarrow> \<not> tg s)"
+    using F1 F2 Imp_Calc Imp_Cond Imp_Mem
+    unfolding sems'_def calc_sem_l_def mem_sem_l_def cond_sem_l_def imp_sem_l_def
+      lift_map_t_s_toggle
+    by(auto)
 qed
-qed
+    
 
 
 (* testing *)

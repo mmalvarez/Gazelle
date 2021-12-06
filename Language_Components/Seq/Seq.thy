@@ -48,28 +48,36 @@ definition seq_sem_lifting_schem1 where
 definition seq_sem_lifting_schem2 where
 "seq_sem_lifting_schem2 = (SP (SPRI (SO NC)) NX)"
 
-(* TODO: is this the correct priority calculation? *)
+fun seq_prio :: "syn \<Rightarrow> nat" where
+"seq_prio _ = 2"
+
 definition seq_sem_lifting_gen :: "(syn, 'x state', ('x, 'a :: Pordb) control) lifting"
   where
 "seq_sem_lifting_gen = schem_lift
-    NC (SP (SPRI (SO NC)) NX) "
+    NC (SP (SPRC seq_prio (SO NC)) NX) "
 
 (* alternate definition that doesn't rely on auto lifter *)
 definition seq_sem_lifting' :: "(syn, 'x state', 'x state' md_triv option md_prio) lifting"
   where
 "seq_sem_lifting' =
-  (prio_l (\<lambda> _ . 0) (\<lambda> _ z . 1 + z) (option_l (triv_l)))"
+  (prio_l (\<lambda> _ . 0) (\<lambda> _ z . 2 + z) (option_l (triv_l)))"
 
 lemma fst_l_S_univ : 
   "(fst_l_S (\<lambda> _ . UNIV)) = (\<lambda> _ . UNIV)"
   unfolding fst_l_S_def
   by(blast)
 
-lemma seq_sem_lifting_gen_validb :
-  "lifting_valid_base (seq_sem_lifting_gen :: (syn, 'x state', ('x, _ :: Pordb) control) lifting) 
+lemma seq_sem_lifting_gen_valid :
+  "lifting_valid_base_ok (seq_sem_lifting_gen :: (syn, 'x state', ('x, _ :: Pordb) control) lifting) 
                   (schem_lift_S seq_sem_lifting_schem1 seq_sem_lifting_schem2)" unfolding seq_sem_lifting_gen_def seq_sem_lifting_schem1_def seq_sem_lifting_schem2_def
   unfolding seq_sem_lifting'_def schem_lift_defs schem_lift_S_defs
-  by(fastforce intro: lifting_valid_noaxiom lifting_ortho_noaxiom)
+  by(fastforce intro: lifting_valid_fast)
+
+lemma seq_sem_lifting_gen_valid' :
+  "lifting_valid_ok (seq_sem_lifting_gen :: (syn, 'x state', ('x, _ :: Pordb) control) lifting) 
+                  (schem_lift_S seq_sem_lifting_schem1 seq_sem_lifting_schem2)" unfolding seq_sem_lifting_gen_def seq_sem_lifting_schem1_def seq_sem_lifting_schem2_def
+  unfolding seq_sem_lifting'_def schem_lift_defs schem_lift_S_defs
+  by(fastforce intro: lifting_valid_fast)
 
 definition seq_sem_l_gen ::
   "('s \<Rightarrow> syn) \<Rightarrow>

@@ -19,19 +19,35 @@ begin
  * by playing the same parametricity trick as with the control languages?
  *)
 
-definition no_control_lifting :: "('a, 'b1, 'b2 :: {Bogus, Pord}) lifting \<Rightarrow>
+definition no_control_lifting :: "('a, 'b1, 'b2 :: {Bogus, Pord, Okay}) lifting \<Rightarrow>
+  ('a \<Rightarrow> 'b2 set) \<Rightarrow>
   ('a, 'b1 , ('x, 'b2) control) lifting" where
-"no_control_lifting l =
-  schem_lift NC (SP NX (SP NX (SINJ l NC)))"
+"no_control_lifting l S =
+  schem_lift NC (SP NX (SP NX (SINJ l S NC)))"
+
+definition no_control_lifting_S ::"('a, 'b1, 'b2 :: {Bogus, Pord, Okay}) lifting \<Rightarrow>
+  ('a \<Rightarrow> 'b2 set) \<Rightarrow>
+  ('a \<Rightarrow> ('x, 'b2) control set)" where
+"no_control_lifting_S l S =
+  schem_lift_S NC (SP NX (SP NX (SINJ l S NC)))"
 
 (* something is weird with the pord constraint here. *)
 definition no_control_l :: "
-('a, 'b1, 'b2 :: {Bogus, Pord}) lifting \<Rightarrow>
-('a \<Rightarrow> 'b1 \<Rightarrow> 'b1 :: {Bogus, Pord}) \<Rightarrow>
-('a \<Rightarrow> ('x, 'b2 :: {Bogus, Pord}) control \<Rightarrow> ('x, 'b2 ) control)" where
-"no_control_l l f =
-  lift_map_s id (no_control_lifting l) f"
+('a, 'b1, 'b2 :: {Bogus, Pord, Okay}) lifting \<Rightarrow>
+  ('a \<Rightarrow> 'b2 set) \<Rightarrow>
+('a \<Rightarrow> 'b1 \<Rightarrow> 'b1 :: {Bogus, Pord, Okay}) \<Rightarrow>
+('a \<Rightarrow> ('x, 'b2 :: {Bogus, Pord, Okay}) control \<Rightarrow> ('x, 'b2 ) control)" where
+"no_control_l l S f =
+  lift_map_s id (no_control_lifting l S) f"
 
+lemma no_control_l_valid :
+  assumes H : "lifting_valid_ok l S"
+  shows "lifting_valid_ok (no_control_lifting l S) (no_control_lifting_S l S)"
+  using H
+  unfolding no_control_lifting_def no_control_lifting_S_def schem_lift_defs schem_lift_S_defs
+  by(fastforce intro: lifting_valid_fast lifting_ortho_fast
+  dest: lifting_valid_locale_axioms
+)
   (*
 lemma HTS_imp_HT' :
   fixes fs :: "('b \<Rightarrow> ('b, 'c) control \<Rightarrow> ('b, 'c :: {Bogus, Mergeableb, Okay}) control) list"
@@ -301,7 +317,7 @@ lemma HTS_imp_HT'' :
   assumes H: "f % {{P'}} (l' x) {{Q'}}"
   (* TODO: can we weaken this to lifting_valid_weak_ok *)
   assumes Valid : "lifting_valid_ok l S"
-  assumes Hf' : "f' = lift_map_t_s l' (no_control_lifting  l) tg f"
+  assumes Hf' : "f' = lift_map_t_s l' (no_control_lifting  l S) tg f"
   assumes H0 : "gs = pcomps fs"
   assumes Hpres : "sups_pres (set fs) (\<lambda> _ . ok_S)"
   assumes Hseq : "seq_sem_l_gen lfts \<in> set fs"

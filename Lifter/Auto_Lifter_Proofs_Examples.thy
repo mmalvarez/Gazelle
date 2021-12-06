@@ -11,13 +11,13 @@ value [simp] "schem_lift NA NA"
 
 lemma tlv1 : "lifting_valid_weak (schem_lift NA (SP NX NA)) (\<lambda> _. UNIV)"
   unfolding schem_lift_defs
-   by(fastforce simp add: lifting_valid_set_defs intro: lifting_valid_noaxiom )
+   by(fastforce simp add: lifting_valid_set_defs intro: lifting_valid_standard)
 
 
 lemma opt :
   "\<exists> S . lifting_valid_weak_base (schem_lift NA (SO NA)) S"
   unfolding schem_lift_defs
-  by(fastforce intro: lifting_valid_noaxiom)
+  by(fastforce intro: lifting_valid_fast)
 
 (* could change to: fst_l_S (\<lambda> x . UNIV) = UNIV 
    this will be true for most of the lifting sets (but not all.)*)
@@ -36,14 +36,14 @@ term "(schem_lift (SP NA NB) (SP (SO NA) (SO NB)))"
 lemma mrg :
   "\<exists> S . lifting_valid (schem_lift (SP NA NB) (SP (SPRI (SO NA)) (SPRI (SO NB)))) S"
   unfolding schem_lift_defs     
-   by(fastforce intro: lifting_valid_noaxiom_nog lifting_ortho_noaxiom split: soption.splits)
+   by(fastforce intro: lifting_valid_fast lifting_ortho_fast split: soption.splits)
 
 lemma mrg2 :
   obtains Z where
   "lifting_valid (schem_lift (SP NC (SP NB NA)) 
     (SP (SPRI (SO NA)) (SP (SPRI (SO NB)) (SPRI (SO NC))))) Z"
   unfolding schem_lift_defs     
-    by(fastforce intro: lifting_valid_noaxiom_nog lifting_ortho_noaxiom_nog split: soption.splits)
+    by(fastforce intro: lifting_valid_standard lifting_ortho_standard split: soption.splits)
 
 
 
@@ -53,7 +53,15 @@ lemma mrg2' :
 (schem_lift_S (SP NC (SP NB NA)) 
     (SP (SPRI (SO NA)) (SP (SPRC (\<lambda> _ . 1) (SO NB)) (SPRI (SO NC))))) "
   unfolding schem_lift_defs schem_lift_S_defs
-  by(fastforce intro: lifting_valid_noaxiom lifting_ortho_noaxiom )
+  by(fastforce intro: lifting_valid_standard lifting_ortho_standard )
+
+lemma mrg2'' :
+  "lifting_valid (schem_lift (SP NC (SP NB NA)) 
+    (SP (SPRI (SO NA)) (SP (SPRC (\<lambda> _ . 1) (SO NB)) (SPRI (SO NC)))))
+(schem_lift_S (SP NC (SP NB NA)) 
+    (SP (SPRI (SO NA)) (SP (SPRC (\<lambda> _ . 1) (SO NB)) (SPRI (SO NC))))) "
+  unfolding schem_lift_defs schem_lift_S_defs
+  by(fastforce intro: lifting_valid_slower lifting_ortho_standard )
 
 
 (*

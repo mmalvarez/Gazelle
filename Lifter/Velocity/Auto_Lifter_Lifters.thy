@@ -1334,7 +1334,7 @@ definition schem_lift_inject ::
   " ('n, ('x, 'a, 'b, 'n) sinject, 'x, 'a, 'b) schem_lift" where
 "schem_lift_inject n s =
   (case s of
-    SINJ l ls \<Rightarrow> l)"
+    SINJ l _ ls \<Rightarrow> l)"
 
 
 (*

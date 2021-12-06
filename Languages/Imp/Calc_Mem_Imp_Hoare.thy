@@ -10,16 +10,13 @@ begin
 (* Deriving a set of Hoare logic rules useful for reasoning about imperative code in Imp.
  * then, proceeding with an example.
  *)
-
+(*
 abbreviation sems where
 "sems \<equiv> {calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l}"
 
 abbreviation sems_nos where
 "sems_nos \<equiv> {calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l}"
-
-definition sem_final' :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
-"sem_final' =
-  pcomps [with_baseline calc_sem_l, with_baseline mem_sem_l, with_baseline cond_sem_l, with_baseline imp_sem_l, with_baseline seq_sem_l]"
+*)
 
 
 (*lemma idea:
@@ -56,6 +53,7 @@ lemma sups_pres_calc :
 
 lemma pres :
 "sups_pres sems (\<lambda> _ . ok_S)"
+  unfolding sems_def
   by(rule sups_pres_finite_all; auto)
 
 (*
@@ -171,10 +169,10 @@ definition prog1 :: "int \<Rightarrow> int \<Rightarrow> syn gensyn" where
     ]
   ]
 "
-
-term "sem_run sem_final"
-
-value "sem_run sem_final 100 (start_state prog0)"
+term "start_state"
+term "sem_run sem_final :: nat \<Rightarrow> cstate \<Rightarrow> cstate + String.literal"
+term "sem_final :: syn \<Rightarrow> cstate \<Rightarrow> cstate"
+value [simp] "sem_run (sem_final :: syn \<Rightarrow> cstate \<Rightarrow> cstate) 100 (start_state prog0)"
 
 (* calc_sem_l and cond_sem_l
 *)

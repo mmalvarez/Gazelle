@@ -39,7 +39,7 @@ datatype 'a sid =
 
 (* convenience function for injecting existing liftings *)
 datatype ('x, 'da, 'db, 'a) sinject =
-  SINJ "('x, 'da, 'db) lifting" "'a"
+  SINJ "('x, 'da, 'db) lifting" "'x \<Rightarrow> 'db set" "'a"
 
 (* dealing with the situation where we need to merge multiple (LHS) fields
    into one (RHS) field. this is very important in making the automation convenient! *)

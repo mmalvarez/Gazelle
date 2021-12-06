@@ -77,4 +77,12 @@ instance proof
 qed
 end
 
+instantiation unit :: Pordps begin
+instance proof
+  fix a b c :: unit
+  show "has_sup {a, b, c}"
+    by(auto simp add: unit_pleq has_sup_def is_sup_def is_least_def is_ub_def)
+qed
+end
+
 end

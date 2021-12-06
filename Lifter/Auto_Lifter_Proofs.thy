@@ -74,7 +74,8 @@ lemmas lifting_defs =
   prio_l_incN_def
   prio_l_case_inc_def
 
-(* definitions for breaking up compound locales *)
+(* definitions for breaking up compound locales
+ * useful with "fastforce intros..." and similar *)
 lemmas lifting_valid_locale_intro = 
   lifting_valid.intro
   lifting_valid_weak_base.intro
@@ -108,22 +109,63 @@ lemmas lifting_valid_locale_intro =
   lifting_valid_weak_base_ok_pres_pairwise.intro
   lifting_valid_base_ok_pres_pairwise.intro
 
+(* definitions for breaking up compound locales above the line
+ * useful with "fastforce dest..." and similar *)
+lemmas lifting_valid_locale_axioms = 
+  lifting_valid.axioms
+  lifting_valid_weak_base.axioms
+  lifting_valid_base.axioms
+  lifting_valid_weak_ok.axioms
+  lifting_valid_ok.axioms
+  lifting_valid_weak_base_ok.axioms
+  lifting_valid_base_ok.axioms
+  lifting_valid_weak_pres.axioms
+  lifting_valid_pres.axioms
+  lifting_valid_weak_base_pres.axioms
+  lifting_valid_base_pres.axioms
+  lifting_valid_weak_ok_pres.axioms
+  lifting_valid_ok_pres.axioms
+  lifting_valid_weak_base_ok_pres.axioms
+  lifting_valid_base_ok_pres.axioms
+  lifting_valid_weak_pairwise.axioms
+  lifting_valid_pairwise.axioms
+  lifting_valid_weak_base_pairwise.axioms
+  lifting_valid_base_pairwise.axioms
+  lifting_valid_weak_ok_pairwise.axioms
+  lifting_valid_ok_pairwise.axioms
+  lifting_valid_weak_base_ok_pairwise.axioms
+  lifting_valid_base_ok_pairwise.axioms
+  lifting_valid_weak_pres_pairwise.axioms
+  lifting_valid_pres_pairwise.axioms
+  lifting_valid_weak_base_pres_pairwise.axioms
+  lifting_valid_base_pres_pairwise.axioms
+  lifting_valid_weak_ok_pres_pairwise.axioms
+  lifting_valid_ok_pres_pairwise.axioms
+  lifting_valid_weak_base_ok_pres_pairwise.axioms
+  lifting_valid_base_ok_pres_pairwise.axioms
+
 (* TODO: do we need putonly instances? *)
 (* TODO: do we need ax or just ax_g? *)
 
 (* to build up our lemmas list, we first include some rules we pretty much always want. *)
 lemmas lifting_valid_basic =
 lifting_valid_locale_intro 
-
+(*
   id_l.lifting_putonly_axioms
   id_l.lifting_valid_weak_axioms
+*)
 
+  triv_l_valid_oc_ext.ax
 
+(*
   triv_l.lifting_putonly_axioms
   triv_l.lifting_valid_weak_axioms
   triv_l.lifting_valid_pres_ext_axioms
   triv_l.lifting_valid_ok_ext_axioms
   triv_l.lifting_valid_pairwise_ext_axioms
+*)
+
+  
 
   option_l_valid_weak.intro
 
@@ -210,6 +252,11 @@ merge_l_valid_pairwise_ext.intro
 lemmas lifting_valid_fast =
   lifting_valid_basic 
 
+  triv_l_valid_weak.ax
+  triv_l_valid_ok_ext.ax
+  triv_l_valid_pres_ext.ax
+  triv_l_valid_ok_ext.ax
+
   option_l_valid_weak.ax
   option_l_valid_ok_ext.ax
   option_l_valid_pres_ext.ax
@@ -217,25 +264,31 @@ lemmas lifting_valid_fast =
   option_l_valid_pairwise_ext.ax
 
   prio_l_valid_weak.ax
-prio_l_valid_ok_ext.ax
-prio_l_valid_base_ok_pres.ax
-prio_l_valid_pairwise_ext.ax
-
-fst_l_valid_weak.ax
-fst_l_valid_pres_ext.ax
-fst_l_valid_base_pres_ext.ax
-
-snd_l_valid_weak.ax
-snd_l_valid_pres_ext.ax
-snd_l_valid_base_pres_ext.ax
-
-merge_l_valid_ok_ext.ax
-merge_l_valid_pairwise_ext.ax
+  prio_l_valid_ok_ext.ax
+  prio_l_valid_base_ok_pres.ax
+  prio_l_valid_pairwise_ext.ax
+  
+  fst_l_valid_weak.ax
+  fst_l_valid_pres_ext.ax
+  fst_l_valid_base_pres_ext.ax
+  
+  snd_l_valid_weak.ax
+  snd_l_valid_pres_ext.ax
+  snd_l_valid_base_pres_ext.ax
+  
+  merge_l_valid_ok_ext.ax
+  merge_l_valid_pairwise_ext.ax
   merge_l_valid_weak.ax
 
 
 lemmas lifting_valid_standard_no_merge =
 lifting_valid_basic
+
+  triv_l_valid_weak.ax_g
+  triv_l_valid_ok_ext.ax_g
+  triv_l_valid_pres_ext.ax_g
+  triv_l_valid_ok_ext.ax_g
+
 
   option_l_valid_weak.ax_g
   option_l_valid_ok_ext.ax_g
@@ -255,9 +308,6 @@ fst_l_valid_base_pres_ext.ax_g
 snd_l_valid_weak.ax_g
 snd_l_valid_pres_ext.ax_g
 snd_l_valid_base_pres_ext.ax_g
-
-(*merge_l_valid_weak.ax_g (* this is slow, so we move it to a different automation set *)*)
-merge_l_valid_weak.ax
 
 merge_l_valid_ok_ext.ax_g
 merge_l_valid_pairwise_ext.ax_g
@@ -391,6 +441,12 @@ lemmas ok_S_defs =
   option_ok_S
   prio_ok_S
   prod_ok_S
+
+lemmas bot_defs =
+  option_bot
+  prio_bot
+  prod_bot
+
 
 (* lifting instance definitions *)
 lemmas lifter_instances =

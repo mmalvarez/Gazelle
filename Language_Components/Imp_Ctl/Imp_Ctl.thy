@@ -52,12 +52,13 @@ type_synonym ('s) cstate =
   "('s, unit option) state"
 
 
-
+(* seq will give a priority of +2 on everything, so 
+ * we use +3 to override that *)
 definition imp_prio :: "(syn' \<Rightarrow> nat)" where
 "imp_prio x =
 (case x of
-    Sskip \<Rightarrow> 0
-    | _ \<Rightarrow> 2)"
+    Sskip \<Rightarrow> 1
+    | _ \<Rightarrow> 3)"
 
 
 definition imp_sem_lifting_gen :: "(syn', 'x imp_state', 
@@ -72,6 +73,35 @@ definition imp_sem_l_gen :: "('s \<Rightarrow> syn') \<Rightarrow> 's \<Rightarr
   lift_map_s lfts
     imp_sem_lifting_gen
   imp_ctl_sem"
+
+
+lemma imp_prio_pos :
+  "\<And> s . 0 < imp_prio s"
+proof-
+  fix s
+  show "0  < imp_prio s"
+    by(cases s; auto simp add: imp_prio_def)
+qed
+
+lemma imp_sem_lifting_gen_valid :
+  "lifting_valid_ok
+  (schem_lift (SP NA NB)
+             (SP (SPRC imp_prio (SO NA)) (SP NX (SP (SPRI (SO NB)) NX))) ::
+    (syn', ('x :: {Okay, Bogus, Mergeableb, Pordps} imp_state'), ('x, 
+    ('y ::  {Okay, Bogus, Mergeableb, Pordps})) state) lifting)
+  (schem_lift_S (SP NA NB)
+             (SP (SPRC imp_prio (SO NA)) (SP NX (SP (SPRI (SO NB)) NX))))"
+  unfolding imp_sem_lifting_gen_def schem_lift_defs schem_lift_S_defs
+  by(fastforce simp add: imp_prio_pos intro: lifting_valid_fast lifting_ortho_fast)
+
+(* sanity check *)
+lemma imp_sem_lifting_gen_valid2 :
+  "lifting_valid_ok
+  imp_sem_lifting_gen
+  (schem_lift_S (SP NA NB)
+             (SP (SPRC imp_prio (SO NA)) (SP NX (SP (SPRI (SO NB)) NX))))"
+  unfolding imp_sem_lifting_gen_def schem_lift_defs schem_lift_S_defs
+  by(fastforce simp add: imp_prio_pos intro: lifting_valid_fast lifting_ortho_fast)
 
 
 definition get_cond :: 
