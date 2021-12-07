@@ -74,7 +74,6 @@ fun imp_toggle :: "syn \<Rightarrow> bool" where
  * control stuff (at end and probably don't need to care)
  *)
 
-
 type_synonym ('s, 'x) state =
   "('s, 'x) Mem_Simple.state"
 
@@ -98,7 +97,7 @@ declare calc_schemo_def [simp]
 (* need no_control_lifting_S *)
 definition calc_lift :: "(Calc.calc, Calc.calc_state, ('s, 'x :: {Bogus, Pord, Mergeableb, Okay, Pordps}) Mem_Simple.state) lifting" where
 "calc_lift = 
-  no_control_lifting (schem_lift calc_schemi calc_schemo) (schem_lift_S calc_schemi calc_schemo)"
+  no_control_lifting (schem_lift calc_schemi calc_schemo)"
 
 definition calc_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
 "calc_sem_l =
@@ -113,27 +112,6 @@ proof-
     by(cases s; auto)
 qed
 
-(*
-lemma calc_valid :
-  "lifting_valid_ok ((schem_lift calc_schemi calc_schemo) ::
-  ((calc, 'a::Bogus \<times> 'd::Bogus \<times> 'c::Bogus,
-       'b::{Mergeableb, Okay, Pordps} \<times>
-       'c::Bogus md_triv option md_prio \<times>
-       'a::Bogus md_triv option md_prio \<times>
-       'd::Bogus md_triv option md_prio \<times>
-       'e::{Mergeableb, Okay, Pordps}) lifting)) (schem_lift_S calc_schemi calc_schemo)"
-*)
-(* Need a pordps instance for Unit *)
-(*
-lemma calc_valid :
-  "lifting_valid_ok (schem_lift calc_schemi calc_schemo
-::
-    (calc, Mem_Simple.state0, _ :: {Bogus, Okay, Mergeableb, Pordps}) lifting)
-    (schem_lift_S calc_schemi calc_schemo) "
-  unfolding calc_lift_def schem_lift_defs schem_lift_S_defs
-no_control_lifting_def calc_schemi_def calc_schemo_def 
-*)
-(* can't show base validity...?*)
 lemma calc_valid :
   "lifting_valid_ok ((schem_lift calc_schemi calc_schemo)
 ::
@@ -144,7 +122,7 @@ no_control_lifting_def calc_schemi_def calc_schemo_def
   by(fastforce simp add: calc_prio_pos intro: lifting_valid_fast lifting_ortho_fast)
 
 lemma calc_valid_full' :
-  "lifting_valid_ok (no_control_lifting (schem_lift calc_schemi calc_schemo) (schem_lift_S calc_schemi calc_schemo) ::
+  "lifting_valid_ok (no_control_lifting (schem_lift calc_schemi calc_schemo)  ::
 (Calc.calc, Calc.calc_state, ('s, 'x :: {Bogus, Pord, Mergeableb, Okay, Pordps}) Mem_Simple.state) lifting)
                     (no_control_lifting_S (schem_lift calc_schemi calc_schemo) (schem_lift_S calc_schemi calc_schemo))"
   using no_control_l_valid[OF calc_valid]
@@ -267,8 +245,7 @@ definition cond_lift :: "(Cond.cond, Cond.cond_state, ('s, 'x :: {Bogus, Pord, M
 "cond_lift = 
   no_control_lifting (schem_lift (SP NA NB) (SP (SPRC cond_prio (SO NA)) 
                      (SP (SPRI (SO NB)) NX)) :: (Cond.cond, Cond.cond_state, ('x :: {Okay, Bogus, Mergeableb, Pordps}) state1) lifting)
-(schem_lift_S (SP NA NB) (SP (SPRC cond_prio (SO NA)) 
-                     (SP (SPRI (SO NB)) NX)))"
+"
 
 definition cond_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
 "cond_sem_l =
@@ -296,8 +273,6 @@ no_control_lifting_def calc_schemi_def calc_schemo_def
 lemma cond_valid_full' :
   "lifting_valid_ok 
   (no_control_lifting (schem_lift (SP NA NB) (SP (SPRC cond_prio (SO NA)) 
-                     (SP (SPRI (SO NB)) NX)))
-  (schem_lift_S (SP NA NB) (SP (SPRC cond_prio (SO NA)) 
                      (SP (SPRI (SO NB)) NX))))
   (no_control_lifting_S (schem_lift (SP NA NB) (SP (SPRC cond_prio (SO NA)) 
                      (SP (SPRI (SO NB)) NX)))
@@ -328,7 +303,7 @@ definition seq_sem_l :: "syn \<Rightarrow> ('s, _ ::{Okay, Bogus, Mergeableb, Po
 "seq_sem_l = seq_sem_l_gen seq_trans"
 
 definition mem_lift :: "(Mem_Simple.syn, Mem_Simple.state0, ('s, _ ::{Okay, Bogus, Mergeableb, Pordps}) state) lifting" where
-"mem_lift = no_control_lifting mem_lift1 mem_lift1_S"
+"mem_lift = no_control_lifting mem_lift1"
 
 lemma mem_prio_reg_pos : "\<And> r s . 0 < mem_prio_reg r s"
 proof-
@@ -361,24 +336,113 @@ definition mem_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) s
 
 definition imp_sem_lifting_spec where
 "imp_sem_lifting_spec = 
-  (imp_sem_lifting_gen :: (_, _, (_, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state) lifting)"
+  (imp_sem_lifting_gen :: (_, _, (_, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state) lifting)"
 
-definition imp_sem_l :: "syn \<Rightarrow> ('s, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state \<Rightarrow> ('s, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state" where
+definition imp_sem_l :: "syn \<Rightarrow> ('s, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state" where
 "imp_sem_l = lift_map_t_s imp_trans imp_sem_lifting_spec imp_toggle imp_ctl_sem"
 
-definition sem_final :: "syn \<Rightarrow> ('s, (_ :: Pordc_all)) state \<Rightarrow> ('s, (_ :: Pordc_all)) state" where
+definition sem_final :: "syn \<Rightarrow> ('s, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state" where
 "sem_final =
   pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
 
 definition sems ::
-  "(syn \<Rightarrow> ('s, (_ :: Pordc_all)) state \<Rightarrow> ('s, (_)) state) set" where
+  "(syn \<Rightarrow> ('s, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state \<Rightarrow> ('s, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state) set" where
 "sems = {calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l}"
 
 (* sems without seq - this is used for certain Hoare facts. *)
 
 definition sems' ::
-  "(syn \<Rightarrow> ('s, (_ :: Pordc_all)) state \<Rightarrow> ('s, (_ :: Pordc_all)) state) set" where
+  "(syn \<Rightarrow> ('s, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state \<Rightarrow> ('s, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state) set" where
 "sems' = {calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l}"
+
+(* For a rather annoying technical reason we have to show that the other semantics
+ * functions aren't equal to the Seq function (this is because we use sets in places
+ * to reason about the semantics functions) 
+ * Fortunately this is usually not hard to prove, but it feels like there should be
+ * a way around it.*)
+lemma calc_sem_l_noteq_seq :
+  "(calc_sem_l :: (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c )) state)) \<noteq>
+   (seq_sem_l :: (syn \<Rightarrow> ('s, ('c)) state \<Rightarrow> ('s, ('c)) state))"
+proof
+  assume H : "(calc_sem_l :: (syn \<Rightarrow> ('s, ('c)) state \<Rightarrow> ('s, ('c)) state)) =
+   (seq_sem_l :: (syn \<Rightarrow> ('s, ('c)) state \<Rightarrow> ('s, ('c)) state))"
+
+  have
+    "(calc_sem_l :: (syn \<Rightarrow> ('s, ('c)) state \<Rightarrow> ('s, ('c)) state)) (Sc Cadd) \<bottom> =
+   (seq_sem_l :: (syn \<Rightarrow> ('s, ('c)) state \<Rightarrow> ('s, ('c)) state))
+    (Sc Cadd) \<bottom>"
+    using fun_cong[OF fun_cong[OF H, of "Sc Cadd"], of \<bottom>]
+    by(auto)
+  then show False
+    by(auto simp add: seq_sem_l_def calc_sem_l_def bot_defs
+lift_map_t_s_def seq_sem_l_gen_def seq_sem_lifting_gen_def lift_map_s_def calc_lift_def no_control_lifting_def
+schem_lift_defs lifter_instances)
+qed
+
+lemma mem_sem_l_noteq_seq :
+  "(mem_sem_l :: (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) \<noteq>
+   (seq_sem_l :: (syn \<Rightarrow> ('s, ('c)) state \<Rightarrow> ('s, ('c)) state))"
+proof
+  assume H : 
+    "(mem_sem_l :: (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) =
+      (seq_sem_l ::  (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state))"
+
+  have "(mem_sem_l :: (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) Ssk \<bottom> = seq_sem_l Ssk \<bottom>"
+    using fun_cong[OF fun_cong[OF H, of "Ssk"], of \<bottom>]
+    by(auto)
+  then show False
+    by(auto simp add: seq_sem_l_def calc_sem_l_def mem_sem_l_def bot_defs
+lift_map_t_s_def seq_sem_l_gen_def seq_sem_lifting_gen_def lift_map_s_def calc_lift_def no_control_lifting_def
+schem_lift_defs lifter_instances)
+qed
+
+lemma cond_sem_l_noteq_seq :
+  "(cond_sem_l :: (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) \<noteq>
+   (seq_sem_l :: (syn \<Rightarrow> ('s, ('c)) state \<Rightarrow> ('s, ('c)) state))"
+proof
+  assume H : 
+    "(cond_sem_l :: (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) =
+      (seq_sem_l ::  (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state))"
+
+  have "(cond_sem_l :: (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) Ssk \<bottom> = seq_sem_l Ssk \<bottom>"
+    using fun_cong[OF fun_cong[OF H, of "Ssk"], of \<bottom>]
+    by(auto)
+  then show False
+    by(auto simp add: seq_sem_l_def cond_sem_l_def mem_sem_l_def bot_defs
+lift_map_t_s_def seq_sem_l_gen_def seq_sem_lifting_gen_def lift_map_s_def calc_lift_def no_control_lifting_def
+schem_lift_defs lifter_instances)
+qed
+
+lemma imp_sem_l_noteq_seq :
+  "(imp_sem_l :: (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) \<noteq>
+   (seq_sem_l :: (syn \<Rightarrow> ('s, ('c)) state \<Rightarrow> ('s, ('c)) state))"
+proof
+  assume H : 
+    "(imp_sem_l :: (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) =
+      (seq_sem_l ::  (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state))"
+
+  have "(imp_sem_l :: (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) Ssk \<bottom> = seq_sem_l Ssk \<bottom>"
+    using fun_cong[OF fun_cong[OF H, of "Ssk"], of \<bottom>]
+    by(auto)
+  then show False
+    by(auto simp add: seq_sem_l_def imp_sem_l_def calc_sem_l_def mem_sem_l_def bot_defs
+lift_map_t_s_def seq_sem_l_gen_def seq_sem_lifting_gen_def lift_map_s_def calc_lift_def no_control_lifting_def
+schem_lift_defs lifter_instances)
+qed
+
+
+
+lemma sems'_eq :
+  shows "sems' = sems - {seq_sem_l}"
+proof
+  show "sems - {seq_sem_l} \<subseteq> sems'"
+    unfolding sems_def sems'_def
+    by auto
+next
+  show "sems' \<subseteq> sems - {seq_sem_l}"
+    unfolding sems'_def sems_def
+    by(auto simp add: imp_sem_l_noteq_seq calc_sem_l_noteq_seq mem_sem_l_noteq_seq cond_sem_l_noteq_seq)
+qed
 
 (* Domination facts needed for proof. *)
 lemma calc_dom :

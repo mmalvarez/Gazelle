@@ -521,10 +521,10 @@ definition schem_lift_S_recL ::
 (*(\<lambda> syn . (recl s1l s2) syn \<inter> (recr s1r s2) syn)*)
 
 definition schem_lift_S_inject ::
-  " ('n, ('x, 'a, 'b, 'n) sinject, 'x, 'b) schem_lift_S" where
+  " ('n, ('x, 'a, 'b, 'n) sinjects, 'x, 'b) schem_lift_S" where
 "schem_lift_S_inject n s =
   (case s of
-    SINJ _ S ls \<Rightarrow> S)"
+    SINJS _ S ls \<Rightarrow> S)"
 
 
 adhoc_overloading schem_lift_S

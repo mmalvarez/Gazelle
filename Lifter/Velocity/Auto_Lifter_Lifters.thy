@@ -262,6 +262,12 @@ begin
 instance proof qed
 end
 
+instantiation sinjects :: (_ , _, _, schem) schem
+begin
+instance proof qed
+end
+
+
 instantiation sid :: (schem) schem
 begin
 instance proof qed
@@ -749,6 +755,41 @@ end
 instantiation sinject :: (_, _, _, hasntK) hasntK begin
 instance proof qed
 end
+
+instantiation sinjects :: (_, _, _, hasntA) hasntA begin
+instance proof qed
+end
+instantiation sinjects :: (_, _, _, hasntB) hasntB begin
+instance proof qed
+end
+instantiation sinjects :: (_, _, _, hasntC) hasntC begin
+instance proof qed
+end
+instantiation sinjects :: (_, _, _, hasntD) hasntD begin
+instance proof qed
+end
+instantiation sinjects :: (_, _, _, hasntE) hasntE begin
+instance proof qed
+end
+instantiation sinjects :: (_, _, _, hasntF) hasntF begin
+instance proof qed
+end
+instantiation sinjects :: (_, _, _, hasntG) hasntG begin
+instance proof qed
+end
+instantiation sinjects :: (_, _, _, hasntH) hasntH begin
+instance proof qed
+end
+instantiation sinjects :: (_, _, _, hasntI) hasntI begin
+instance proof qed
+end
+instantiation sinjects :: (_, _, _, hasntJ) hasntJ begin
+instance proof qed
+end
+instantiation sinjects :: (_, _, _, hasntK) hasntK begin
+instance proof qed
+end
+
 
 instantiation sid :: (hasntA) hasntA begin
 instance proof qed
@@ -1334,7 +1375,7 @@ definition schem_lift_inject ::
   " ('n, ('x, 'a, 'b, 'n) sinject, 'x, 'a, 'b) schem_lift" where
 "schem_lift_inject n s =
   (case s of
-    SINJ l _ ls \<Rightarrow> l)"
+    SINJ l ls \<Rightarrow> l)"
 
 
 (*
@@ -1442,8 +1483,6 @@ adhoc_overloading schem_lift
 "schem_lift_recL schem_lift schem_lift"
 
 "schem_lift_inject"
-
-
 
 (* convenience abbreviations for priorities *)
 abbreviation SPR0 where

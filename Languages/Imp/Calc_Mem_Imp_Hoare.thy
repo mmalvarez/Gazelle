@@ -105,7 +105,7 @@ type_synonym cstate = "(syn, unit) Mem_Simple.state"
 definition start_state :: "syn gensyn \<Rightarrow> (syn, unit) Mem_Simple.state" where
 "start_state prog =
   ( Swr [prog]
-  , mdp 0 None
+  , mdp 0 (Some (mdt None))
   , Swr 0, Swr 0, Swr 0, Swr 0
   , Swr empty
   , ())"
@@ -169,17 +169,24 @@ definition prog1 :: "int \<Rightarrow> int \<Rightarrow> syn gensyn" where
     ]
   ]
 "
-term "start_state"
-term "sem_run sem_final :: nat \<Rightarrow> cstate \<Rightarrow> cstate + String.literal"
-term "sem_final :: syn \<Rightarrow> cstate \<Rightarrow> cstate"
-value [simp] "sem_run (sem_final :: syn \<Rightarrow> cstate \<Rightarrow> cstate) 100 (start_state prog0)"
+
 
 (* calc_sem_l and cond_sem_l
 *)
-value "sem_run (pcomps [calc_sem_l, mem_sem_l, seq_sem_l, cond_sem_l]) 100 (start_state prog_mini)"
+
+definition wat where
+"wat = sem_run (pcomps [calc_sem_l, mem_sem_l, seq_sem_l, cond_sem_l]) 100 (start_state prog_mini)"
 
 
-value "sem_run sem_final 100 (start_state prog_mini)"
+
+value [simp] "sem_run (pcomps [calc_sem_l, mem_sem_l, seq_sem_l, cond_sem_l]) 100 (start_state prog_mini)"
+
+(* TODO: figure out why codegen is not working *)
+declare [[ML_source_trace]]
+value [nbe] "sem_run sem_final 100 (start_state prog_mini)"
+
+(* TODO: we need to monomorphize no_control_l
+ * in order to not upset the code generator *)
 
 value "sem_run sem_final 100 (start_state (prog1 2 3))"
 
@@ -778,9 +785,19 @@ qed
 
 term "sem_final"
 
+(*
 definition calc_lift' where
 "calc_lift' =  (schem_lift (SP NA (SP NB NC)) (SP NX (SP (SPRC calc_prio (SO NC)) (SP (SPRI (SO NA)) (SP (SPRI (SO NB)) NX)))))"
+*)
 
+definition calc_lift' :: "
+    (Calc.calc, Calc.calc_state, ('x :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all}) state1) lifting" where
+"calc_lift' = (schem_lift calc_schemi calc_schemo)"
+
+definition calc_lift'_S where
+"calc_lift'_S = (schem_lift_S calc_schemi calc_schemo)"
+
+(*
 term "mem_sem_lifting_gen"
 term "calc_lift'"
 (* TODO: the requirement that new and old reg_a and reg_b be equal is a hack. *)
@@ -798,21 +815,105 @@ lemma Calc_Final :
   apply(rule HTS_imp_HT'')
             apply(rule_tac HCalc_calc)
   sorry
+*)
 
-(* Allows us to use the fact that the original inputs are unchanged.
- * if this ends up helping we need to find a way to generalize/standardize this. *)
-lemma Add_Final : 
+(* NB: old versions of these "final" lemmas looked like this
+
+lemma Sub_Final : 
   fixes gs :: "syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb})) state"
   assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
-  assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut calc_lift' Cadd st)"
+  assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut calc_lift' Csub st)"
 
-  shows "|gs| {~ (\<lambda> st . P st) ~} [G (Sc (Cadd)) z] 
+  shows "|gs| {~ (\<lambda> st . P st) ~} [G (Sc (Csub)) z] 
     {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> (case small_new of
-                                  (c1, c2, x) \<Rightarrow> x = c1 + c2 \<and> (\<exists>old. P' (c1, c2, old) \<and> LOut calc_lift' Cadd old_big = (c1, c2, old))) \<and>
-                                 st = LUpd calc_lift' Cadd small_new old_big) ~}"
+                                  (c1, c2, x) \<Rightarrow> x = c1 - c2 \<and> (\<exists>old. P' (c1, c2, old) \<and> LOut calc_lift' Cadd old_big = (c1, c2, old))) \<and>
+                                 st = LUpd calc_lift' Csub small_new old_big) ~}"
 (*  apply(rule HTS_imp_HT'') *)
 (*            apply(rule_tac HCalc_Cadd) *)
   sorry
+
+the problem is that they don't fit into HTS_imp_HT''. hopefully the extra LOut clause does not add anything. that is the only difference
+
+*)
+(* Allows us to use the fact that the original inputs are unchanged.
+ * if this ends up helping we need to find a way to generalize/standardize this. *)
+lemma Add_Final : 
+  fixes gs :: "syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state"
+  assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
+  assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut calc_lift' Cadd st)"
+  assumes Y : "y = Cadd"
+  (* problem: use of old_big inside "Q'" predicate *)
+  shows "|sem_final| {~ (\<lambda> st . P st) ~} [G (Sc (Cadd)) z] 
+    {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> 
+      (case small_new of
+        (c1, c2, x) \<Rightarrow> x = c1 + c2 \<and> (\<exists> old . P' (c1, c2, old))) \<and> st = LUpd calc_lift' Cadd small_new old_big)  ~}"
+proof(rule HTS_imp_HT'')
+  show "calc_sem % {{P'}} Cadd {{(\<lambda>a. case a of
+                              (c1, c2, x) \<Rightarrow>
+                                x = c1 + c2 \<and> (\<exists>old. P' (c1, c2, old)))}}"
+  
+    by(rule HCalc_Cadd)
+next
+  show "lifting_valid_ok calc_lift' (schem_lift_S calc_schemi calc_schemo)"
+    unfolding calc_lift'_def calc_lift'_S_def
+    by(rule calc_valid)
+next
+(* Problem! this shouldn't be constant function (\<lambda> _ . Cadd) *)
+  show "lift_map_t_s (\<lambda>a. Cadd) (no_control_lifting calc_lift') calc_toggle
+     calc_sem = lift_map_t_s (\<lambda>a. Cadd) (no_control_lifting calc_lift') calc_toggle
+     calc_sem"
+    by simp
+next
+  show "sem_final = pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
+    by(simp add: sem_final_def)
+next
+  show "sups_pres
+     (set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l])
+     (\<lambda>_. ok_S)"
+    by(rule sups_pres_finite_all; auto)
+next
+  show "seq_sem_l_gen seq_trans
+    \<in> set [calc_sem_l, mem_sem_l, cond_sem_l,
+            imp_sem_l, seq_sem_l]"
+    by(simp add: seq_sem_l_def)
+next
+  show "seq_trans (Sc Cadd) = Seq.syn.Sskip"
+    by(clarsimp)
+next
+  show "calc_toggle (Sc Cadd) = True"
+    by simp
+next
+  show "Sc Cadd \<in> { x . (calc_toggle x = True)}"
+    by auto
+next
+  show "calc_sem_l \<in> set [calc_sem_l, mem_sem_l, cond_sem_l,
+               imp_sem_l, seq_sem_l] -
+          {seq_sem_l_gen seq_trans}"
+    using calc_sem_l_noteq_seq
+    by(auto simp add: seq_sem_l_def)
+next
+  show "lift_map_t_s (\<lambda>a. Cadd)
+     (no_control_lifting calc_lift') calc_toggle
+     calc_sem \<downharpoonleft> (set [calc_sem_l, mem_sem_l, cond_sem_l,
+                      imp_sem_l, seq_sem_l] -
+                 {seq_sem_l_gen
+                   seq_trans}) {x. calc_toggle x = True}"
+    using calc_dom
+    unfolding calc_sem_l_def sems'_eq sems_def calc_lift_def calc_lift'_def seq_sem_l_def
+    apply(clarsimp)
+    sorry
+next
+  show "\<And>st. P st \<Longrightarrow> P' (LOut calc_lift' Cadd st)"
+    using HP
+    by auto
+qed
+  
+(*
+  shows "|gs| {~ (\<lambda> st . P st) ~} [G (Sc (Cadd)) z] 
+    {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> 
+      (case small_new of
+        (c1, c2, x) \<Rightarrow> x = c1 + c2Q' small_new \<and> st = LUpd l (l' x) small_new old_big)  ~}"
+*)
 
 lemma Sub_Final : 
   fixes gs :: "syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb})) state"

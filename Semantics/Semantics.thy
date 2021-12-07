@@ -20,7 +20,7 @@ begin
 
 (* 'mstate augmented with control information used by the semantics *)
 type_synonym ('full, 'mstate) control =
-  "('full gensyn list md_triv option md_prio * String.literal md_triv option md_prio * 'mstate)"
+  "('full gensyn list md_triv option md_prio * String.literal option md_triv option md_prio * 'mstate)"
 
 (* TODO: having separate 'syn and 'full type parameters may be unnecessary *)
 type_synonym ('syn, 'full, 'mstate) sem = 
@@ -53,7 +53,9 @@ definition cont :: "('full, 'mstate) control \<Rightarrow> ('full gensyn list or
 "cont m \<equiv>
   (case m of
     ((mdp _ (Some (mdt x))), (mdp _ (Some (mdt msg))), _) \<Rightarrow> 
-      (if msg = (STR '''') then Inl x else Inr msg)
+      (case msg of
+        None \<Rightarrow> Inl x
+        | Some msg \<Rightarrow> Inr msg)
     | ((mdp _ None), _, _) \<Rightarrow> Inr (STR ''Hit bottom in continuation field'') 
     | ((mdp _ _), (mdp _ None), _) \<Rightarrow> Inr (STR ''Hit bottom in message field''))"
 

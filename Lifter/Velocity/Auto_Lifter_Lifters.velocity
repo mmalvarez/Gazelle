@@ -132,6 +132,12 @@ begin
 instance proof qed
 end
 
+instantiation sinjects :: (_ , _, _, schem) schem
+begin
+instance proof qed
+end
+
+
 instantiation sid :: (schem) schem
 begin
 instance proof qed
@@ -215,6 +221,13 @@ instantiation sinject :: (_, _, _, hasnt${n}) hasnt${n} begin
 instance proof qed
 end
 #end
+
+#foreach ($n in $names)
+instantiation sinjects :: (_, _, _, hasnt${n}) hasnt${n} begin
+instance proof qed
+end
+#end
+
 
 #foreach ($n in $names)
 instantiation sid :: (hasnt${n}) hasnt${n} begin
@@ -400,7 +413,7 @@ definition schem_lift_inject ::
   " ('n, ('x, 'a, 'b, 'n) sinject, 'x, 'a, 'b) schem_lift" where
 "schem_lift_inject n s =
   (case s of
-    SINJ l _ ls \<Rightarrow> l)"
+    SINJ l ls \<Rightarrow> l)"
 
 
 (*
@@ -456,8 +469,6 @@ adhoc_overloading schem_lift
 "schem_lift_recL schem_lift schem_lift"
 
 "schem_lift_inject"
-
-
 
 (* convenience abbreviations for priorities *)
 abbreviation SPR0 where
