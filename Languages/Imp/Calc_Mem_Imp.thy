@@ -263,7 +263,8 @@ qed
 
 lemma cond_valid :
   "lifting_valid_ok ((schem_lift (SP NA NB) (SP (SPRC cond_prio (SO NA)) 
-                     (SP (SPRI (SO NB)) NX))))
+                     (SP (SPRI (SO NB)) NX))) ::
+    (Cond.cond, Cond.cond_state, ('x :: {Okay, Bogus, Mergeableb, Pordps}) state1) lifting)
     (schem_lift_S (SP NA NB) (SP (SPRC cond_prio (SO NA)) 
                      (SP (SPRI (SO NB)) NX))) "
   unfolding calc_lift_def schem_lift_defs schem_lift_S_defs
@@ -273,7 +274,7 @@ no_control_lifting_def calc_schemi_def calc_schemo_def
 lemma cond_valid_full' :
   "lifting_valid_ok 
   (no_control_lifting (schem_lift (SP NA NB) (SP (SPRC cond_prio (SO NA)) 
-                     (SP (SPRI (SO NB)) NX))))
+                     (SP (SPRI (SO NB)) NX)) :: (Cond.cond, Cond.cond_state, ('x :: {Okay, Bogus, Mergeableb, Pordps}) state1) lifting))
   (no_control_lifting_S (schem_lift (SP NA NB) (SP (SPRC cond_prio (SO NA)) 
                      (SP (SPRI (SO NB)) NX)))
   (schem_lift_S (SP NA NB) (SP (SPRC cond_prio (SO NA))
@@ -446,7 +447,7 @@ qed
 
 (* Domination facts needed for proof. *)
 lemma calc_dom :
-  "calc_sem_l \<downharpoonleft> sems' { x . (calc_toggle x = True)}"
+  "(calc_sem_l :: (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) \<downharpoonleft> sems' { x . (calc_toggle x = True)}"
   unfolding calc_sem_l_def
 proof(rule dominant_toggles)
   show "lifting_valid calc_lift 

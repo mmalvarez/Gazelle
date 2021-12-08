@@ -244,7 +244,7 @@ proof(rule HTSI)
 
   show "case cond_sem c a of
          (x1, x2) \<Rightarrow> (\<exists>x1'. P1 (x1', x2)) \<and> (\<forall>x1'. cond_sem c (x1', x2) = cond_sem c a)"
-    using Hc H
+    using  Hc H
     by(cases c; cases a; auto simp add: cond_sem_def split: prod.splits)
 qed
 
@@ -837,30 +837,29 @@ the problem is that they don't fit into HTS_imp_HT''. hopefully the extra LOut c
 *)
 (* Allows us to use the fact that the original inputs are unchanged.
  * if this ends up helping we need to find a way to generalize/standardize this. *)
-lemma Add_Final : 
-  fixes gs :: "syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state"
+
+lemma Add_Final' : 
   assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
   assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut calc_lift' Cadd st)"
-  assumes Y : "y = Cadd"
   (* problem: use of old_big inside "Q'" predicate *)
-  shows "|sem_final| {~ (\<lambda> st . P st) ~} [G (Sc (Cadd)) z] 
+  shows "|(sem_final :: syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state)| {~ (\<lambda> st . P st) ~} [G (Sc (Cadd)) z] 
     {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> 
       (case small_new of
-        (c1, c2, x) \<Rightarrow> x = c1 + c2 \<and> (\<exists> old . P' (c1, c2, old))) \<and> st = LUpd calc_lift' Cadd small_new old_big)  ~}"
+        (c1, c2, x) \<Rightarrow> x = c1 + c2 \<and> (\<exists> old . P' (c1, c2, old))) \<and> 
+        st = LUpd calc_lift' (calc_trans (Sc Cadd)) small_new old_big)  ~}"
 proof(rule HTS_imp_HT'')
-  show "calc_sem % {{P'}} Cadd {{(\<lambda>a. case a of
+  show "calc_sem % {{P'}} (calc_trans (Sc Cadd)) {{(\<lambda>a. case a of
                               (c1, c2, x) \<Rightarrow>
                                 x = c1 + c2 \<and> (\<exists>old. P' (c1, c2, old)))}}"
-  
+    unfolding calc_trans.simps
     by(rule HCalc_Cadd)
 next
   show "lifting_valid_ok calc_lift' (schem_lift_S calc_schemi calc_schemo)"
     unfolding calc_lift'_def calc_lift'_S_def
     by(rule calc_valid)
 next
-(* Problem! this shouldn't be constant function (\<lambda> _ . Cadd) *)
-  show "lift_map_t_s (\<lambda>a. Cadd) (no_control_lifting calc_lift') calc_toggle
-     calc_sem = lift_map_t_s (\<lambda>a. Cadd) (no_control_lifting calc_lift') calc_toggle
+  show "lift_map_t_s calc_trans (no_control_lifting calc_lift') calc_toggle
+     calc_sem = lift_map_t_s calc_trans (no_control_lifting calc_lift') calc_toggle
      calc_sem"
     by simp
 next
@@ -892,22 +891,37 @@ next
     using calc_sem_l_noteq_seq
     by(auto simp add: seq_sem_l_def)
 next
-  show "lift_map_t_s (\<lambda>a. Cadd)
+  show "(lift_map_t_s calc_trans
      (no_control_lifting calc_lift') calc_toggle
-     calc_sem \<downharpoonleft> (set [calc_sem_l, mem_sem_l, cond_sem_l,
+     calc_sem ::
+        (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) \<downharpoonleft> 
+        (set [calc_sem_l, mem_sem_l, cond_sem_l,
                       imp_sem_l, seq_sem_l] -
                  {seq_sem_l_gen
                    seq_trans}) {x. calc_toggle x = True}"
     using calc_dom
+    unfolding sems'_eq
     unfolding calc_sem_l_def sems'_eq sems_def calc_lift_def calc_lift'_def seq_sem_l_def
-    apply(clarsimp)
-    sorry
+    by(simp)
 next
-  show "\<And>st. P st \<Longrightarrow> P' (LOut calc_lift' Cadd st)"
+  show "\<And>st. P st \<Longrightarrow> P' (LOut calc_lift' (calc_trans (Sc Cadd)) st)"
     using HP
     by auto
 qed
-  
+
+lemma Add_Final : 
+  assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
+  assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut calc_lift' Cadd st)"
+  (* problem: use of old_big inside "Q'" predicate *)
+  shows "|(sem_final :: syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state)| {~ (\<lambda> st . P st) ~} [G (Sc (Cadd)) z] 
+    {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> 
+      (case small_new of
+        (c1, c2, x) \<Rightarrow> x = c1 + c2 \<and> (\<exists> old . P' (c1, c2, old))) \<and> 
+        st = LUpd calc_lift' (Cadd) small_new old_big)  ~}"
+  using assms Add_Final'
+  unfolding calc_trans.simps
+  by blast
+
 (*
   shows "|gs| {~ (\<lambda> st . P st) ~} [G (Sc (Cadd)) z] 
     {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> 
@@ -915,101 +929,316 @@ qed
         (c1, c2, x) \<Rightarrow> x = c1 + c2Q' small_new \<and> st = LUpd l (l' x) small_new old_big)  ~}"
 *)
 
-lemma Sub_Final : 
-  fixes gs :: "syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb})) state"
+lemma Sub_Final' : 
   assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
   assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut calc_lift' Csub st)"
+  shows "|(sem_final :: syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state)| {~ (\<lambda> st . P st) ~} [G (Sc (Csub)) z] 
+    {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> 
+      (case small_new of
+        (c1, c2, x) \<Rightarrow> x = c1 - c2 \<and> (\<exists> old . P' (c1, c2, old))) \<and> 
+        st = LUpd calc_lift' (calc_trans (Sc Csub)) small_new old_big)  ~}"
+proof(rule HTS_imp_HT'')
+  show "calc_sem % {{P'}} (calc_trans (Sc Csub)) {{(\<lambda>a. case a of
+                              (c1, c2, x) \<Rightarrow>
+                                x = c1 - c2 \<and> (\<exists>old. P' (c1, c2, old)))}}"
+    unfolding calc_trans.simps
+    by(rule HCalc_Csub)
+next
+  show "lifting_valid_ok calc_lift' (schem_lift_S calc_schemi calc_schemo)"
+    unfolding calc_lift'_def calc_lift'_S_def
+    by(rule calc_valid)
+next
+  show "lift_map_t_s calc_trans (no_control_lifting calc_lift') calc_toggle
+     calc_sem = lift_map_t_s calc_trans (no_control_lifting calc_lift') calc_toggle
+     calc_sem"
+    by simp
+next
+  show "sem_final = pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
+    by(simp add: sem_final_def)
+next
+  show "sups_pres
+     (set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l])
+     (\<lambda>_. ok_S)"
+    by(rule sups_pres_finite_all; auto)
+next
+  show "seq_sem_l_gen seq_trans
+    \<in> set [calc_sem_l, mem_sem_l, cond_sem_l,
+            imp_sem_l, seq_sem_l]"
+    by(simp add: seq_sem_l_def)
+next
+  show "seq_trans (Sc Csub) = Seq.syn.Sskip"
+    by(clarsimp)
+next
+  show "calc_toggle (Sc Csub) = True"
+    by simp
+next
+  show "Sc Csub \<in> { x . (calc_toggle x = True)}"
+    by auto
+next
+  show "calc_sem_l \<in> set [calc_sem_l, mem_sem_l, cond_sem_l,
+               imp_sem_l, seq_sem_l] -
+          {seq_sem_l_gen seq_trans}"
+    using calc_sem_l_noteq_seq
+    by(auto simp add: seq_sem_l_def)
+next
+  show "(lift_map_t_s calc_trans
+     (no_control_lifting calc_lift') calc_toggle
+     calc_sem ::
+        (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) \<downharpoonleft> 
+        (set [calc_sem_l, mem_sem_l, cond_sem_l,
+                      imp_sem_l, seq_sem_l] -
+                 {seq_sem_l_gen
+                   seq_trans}) {x. calc_toggle x = True}"
+    using calc_dom
+    unfolding sems'_eq
+    unfolding calc_sem_l_def sems'_eq sems_def calc_lift_def calc_lift'_def seq_sem_l_def
+    by(simp)
+next
+  show "\<And>st. P st \<Longrightarrow> P' (LOut calc_lift' (calc_trans (Sc Csub)) st)"
+    using HP
+    by auto
+qed
 
-  shows "|gs| {~ (\<lambda> st . P st) ~} [G (Sc (Csub)) z] 
-    {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> (case small_new of
-                                  (c1, c2, x) \<Rightarrow> x = c1 - c2 \<and> (\<exists>old. P' (c1, c2, old) \<and> LOut calc_lift' Cadd old_big = (c1, c2, old))) \<and>
-                                 st = LUpd calc_lift' Csub small_new old_big) ~}"
-(*  apply(rule HTS_imp_HT'') *)
-(*            apply(rule_tac HCalc_Cadd) *)
-  sorry
+lemma Sub_Final : 
+  assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
+  assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut calc_lift' Csub st)"
+  (* problem: use of old_big inside "Q'" predicate *)
+  shows "|(sem_final :: syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state)| {~ (\<lambda> st . P st) ~} [G (Sc (Csub)) z] 
+    {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> 
+      (case small_new of
+        (c1, c2, x) \<Rightarrow> x = c1 - c2 \<and> (\<exists> old . P' (c1, c2, old))) \<and> 
+        st = LUpd calc_lift' (Csub) small_new old_big)  ~}"
+  using assms Sub_Final'
+  unfolding calc_trans.simps
+  by blast
 
 
 definition cond_lift' where
-"cond_lift' = (schem_lift (SP NA NB) (SP (SPRC cond_prio (SO NA)) (SP (SPRK (SO NB)) NX)))"
+"cond_lift' = (schem_lift (SP NA NB) (SP (SPRC cond_prio (SO NA)) (SP (SPRC (\<lambda> _ . 1) (SO NB)) NX)))"
 
-lemma Cond_Final : 
-  fixes gs :: "syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb})) state"
+(* Sb y ? *)
+lemma Cond_Final' : 
   assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
-  assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut cond_lift' y st)"
-
-  shows "|gs| {~ (\<lambda> st . P st) ~} [G (Sb y) z] 
+  assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut cond_lift' c st)"
+  assumes Hc : "cond_trans (Sb c) \<noteq> Cond.Sskip_cond"
+  shows "|(sem_final :: syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state)| {~ (\<lambda> st . P st) ~}
+    [G (Sb c) z] 
     {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> (case small_new of
                                   (x1', x2) \<Rightarrow>
                                     (\<exists>x1'. P' (x1', x2) ) \<and>
-                                    (\<forall>x1'. cond_sem y (x1', x2) = small_new)) \<and>
-                                 st = LUpd cond_lift' y small_new old_big) ~}"
-  apply(rule HTS_imp_HT'')
-            apply(rule_tac HCond_cond)
-  sorry
+                                    (\<forall>x1'. cond_sem (cond_trans (Sb c)) (x1', x2) = small_new)) \<and>
+                                 st = LUpd cond_lift' (cond_trans (Sb c)) small_new old_big) ~}"
+proof(rule HTS_imp_HT'')
+  show "cond_sem % {{P'}} (cond_trans
+                  (Sb c)) {{(\<lambda>a. case a of
+                           (x1', x2) \<Rightarrow>
+                             (\<exists>x1'. P' (x1', x2)) \<and>
+                             (\<forall>x1'. cond_sem (cond_trans (Sb c)) (x1', x2) = a))}}"
+  unfolding cond_trans.simps
+    by(rule_tac HCond_cond; auto simp add: Hc[unfolded cond_trans.simps])
+next
+  show "lifting_valid_ok (cond_lift' :: (Cond.cond, Cond.cond_state, ('x :: {Okay, Bogus, Mergeableb, Pordps}) state1) lifting)
+(schem_lift_S (SP NA NB) (SP (SPRC cond_prio (SO NA)) 
+                     (SP (SPRI (SO NB)) NX)))"
+    using cond_valid
+    unfolding cond_lift'_def
+    by(blast)
+next
+  show "lift_map_t_s cond_trans
+     (no_control_lifting cond_lift') cond_toggle cond_sem = lift_map_t_s cond_trans
+     (no_control_lifting cond_lift') cond_toggle cond_sem"
+    by(rule refl)
+next
+  next
+  show "sem_final = pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
+    by(simp add: sem_final_def)
+next
+  show "sups_pres
+     (set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l])
+     (\<lambda>_. ok_S)"
+    by(rule sups_pres_finite_all; auto)
+next
+  show "seq_sem_l_gen seq_trans
+    \<in> set [calc_sem_l, mem_sem_l, cond_sem_l,
+            imp_sem_l, seq_sem_l]"
+    by(simp add: seq_sem_l_def)
+next
+  show "seq_trans (Sb c) = Seq.syn.Sskip"
+    by(clarsimp)
+next
+  show "cond_toggle (Sb c) = True"
+    by simp
+next
+  show "Sb c \<in> { x . (cond_toggle x = True)}"
+    by auto
+next
+  show "calc_sem_l \<in> set [calc_sem_l, mem_sem_l, cond_sem_l,
+               imp_sem_l, seq_sem_l] -
+          {seq_sem_l_gen seq_trans}"
+    using calc_sem_l_noteq_seq
+    by(auto simp add: seq_sem_l_def)
+next
 
-(* As with arith. Need to see if we can standardize this. *)
-lemma Gtz_Final :
-  fixes gs :: "syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb})) state"
+  show " lift_map_t_s cond_trans
+     (no_control_lifting cond_lift') cond_toggle
+     cond_sem \<downharpoonleft> (set [calc_sem_l, mem_sem_l,
+                      cond_sem_l, imp_sem_l,
+                      seq_sem_l] -
+                 {seq_sem_l_gen
+                   seq_trans}) {x.
+     cond_toggle x = True}"
+    using cond_dom
+    unfolding sems'_eq
+    unfolding cond_sem_l_def cond_lift_def sems'_eq sems_def cond_lift'_def seq_sem_l_def
+    by(simp)
+
+next
+  show "\<And>st. P st \<Longrightarrow> P' (LOut cond_lift' (cond_trans (Sb c)) st)"
+    using HP
+    by auto
+qed
+
+  
+lemma Cond_Final : 
   assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
-  assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut cond_lift' (Sgtz) st)"
-
-  shows "|gs| {~ (\<lambda> st . P st) ~} [G (Sb y) z] 
+  assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut cond_lift' c st)"
+  assumes Hc : "cond_trans (Sb c) \<noteq> Cond.Sskip_cond"
+  shows "|(sem_final :: syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state)| {~ (\<lambda> st . P st) ~}
+    [G (Sb c) z] 
     {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> (case small_new of
-                                  (x1', x2) \<Rightarrow> x1' = encode_bool (x2 > 0) \<and> (\<exists> old . P' (old, x2) \<and> LOut cond_lift' Sgtz (old_big) = (old, x2)))
-                                    \<and>
-                                 st = LUpd cond_lift' Sgtz small_new old_big) ~}"
-  sorry
+                                  (x1', x2) \<Rightarrow>
+                                    (\<exists>x1'. P' (x1', x2) ) \<and>
+                                    (\<forall>x1'. cond_sem c (x1', x2) = small_new)) \<and>
+                                 st = LUpd cond_lift' c small_new old_big) ~}"
+  using assms Cond_Final'
+  unfolding cond_trans.simps
+  by blast
 
 
-(* TODO: correctly capture case where variable is empty 
- * do we need HGet, or don't we?*)
-lemma Mem_Read_Final : 
-  fixes gs :: "syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb})) state"
+lemma Mem_Read_Final' : 
   assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
-  assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut mem_lift1 (Sread v r) st)"
-(*
-  assumes Hget : "\<And> st . P st \<Longrightarrow>
-    (case st of (_, _, _, _, m, _) \<Rightarrow>
-      (case m of
-        mdp p (Some (mdt m')) \<Rightarrow> 
-          (case get m' v of
-            Some _ \<Rightarrow> True
-            | _ \<Rightarrow> False)
-         | _ \<Rightarrow> False))"
-*)
-(*
-  shows "|gs| {~ (\<lambda> st . P st) ~} [G (Sm (Sread v r)) z] 
-    {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> (case small_new of
-                                  (reg_flag, reg_c, reg_a, reg_b, m) \<Rightarrow>
-                                        case get m ?s of None \<Rightarrow> ?P1.0 st
-                                        | Some v \<Rightarrow>
-                                            case ?r of Reg_a \<Rightarrow> reg_a = v \<and> (\<exists>old. ?P1.0 (reg_flag, reg_c, old, reg_b, m))
-                                            | Reg_b \<Rightarrow> reg_b = v \<and> (\<exists>old. ?P1.0 (reg_flag, reg_c, reg_a, old, m)) | Reg_c \<Rightarrow> reg_c = v \<and> (\<exists>old. ?P1.0 (reg_flag, old, reg_a, reg_b, m))
-                                            | Reg_flag \<Rightarrow> reg_flag = v \<and> (\<exists>old. ?P1.0 (old, reg_c, reg_a, reg_b, m))) \<and>
-                                 st = LUpd mem_sem_lifting_inner y small_new old_big) ~}"
-*)
-shows " |gs| {~P~} [G (Calc_Mem_Imp.syn.Sm (Sread v r))
+  assumes HP : "\<And> st . P st \<Longrightarrow> 
+    P' (LOut mem_lift1 (Sread v r) st)"
+
+shows " |(sem_final :: syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state)| {~P~}
+  [G (Calc_Mem_Imp.syn.Sm (Sread v r))
                  z] {~(\<lambda>st. \<exists>old_big small_new.
                                  P old_big \<and>
                                  (case small_new of
 (reg_flag, reg_c, reg_a, reg_b, m) \<Rightarrow>
-  case get m v of None \<Rightarrow> False
+  case get m v of None \<Rightarrow> P' small_new
   | Some v \<Rightarrow>
       case r of Reg_a \<Rightarrow> reg_a = v \<and> (\<exists>old. P' (reg_flag, reg_c, old, reg_b, m))
       | Reg_b \<Rightarrow> reg_b = v \<and> (\<exists>old. P' (reg_flag, reg_c, reg_a, old, m))
       | Reg_c \<Rightarrow> reg_c = v \<and> (\<exists>old. P' (reg_flag, old, reg_a, reg_b, m))
       | Reg_flag \<Rightarrow> reg_flag = v \<and> (\<exists>old. P' (old, reg_c, reg_a, reg_b, m))) \<and>
                                  st =
-                                 LUpd mem_lift1 (Sread v r) small_new
-old_big)~}"
-  using HTS_imp_HT''[where l' = mem_trans, where x = "Sm (Sread v r)",
-unfolded mem_trans.simps, OF HMem_Sread]
+                                 LUpd mem_lift1 (mem_trans (Sm (Sread v r))) small_new old_big)~}"
+proof(rule HTS_imp_HT'')
+  show "mem0_sem % {{P'}} mem_trans
+                  (Sm  (Sread v r)) {{(\<lambda>b.
+       case b of
+       (reg_flag, reg_c, reg_a, reg_b, m) \<Rightarrow>
+         (case get m v of None \<Rightarrow> P' b
+         | Some v \<Rightarrow>
+             case r of
+             Reg_a \<Rightarrow>
+               reg_a = v \<and>
+               (\<exists>old. P' (reg_flag, reg_c, old,
+                          reg_b, m))
+             | Reg_b \<Rightarrow>
+                 reg_b = v \<and>
+                 (\<exists>old. P' (reg_flag, reg_c, reg_a,
+ old, m))
+             | Reg_c \<Rightarrow>
+                 reg_c = v \<and>
+                 (\<exists>old. P' (reg_flag, old, reg_a,
+ reg_b, m))
+             | Reg_flag \<Rightarrow>
+                 reg_flag = v \<and>
+                 (\<exists>old. P' (old, reg_c, reg_a, reg_b,
+ m))))}}"
+    unfolding mem_trans.simps
+    by(rule HMem_Sread)
+next
+  show "lifting_valid_ok mem_lift1 mem_lift1_S"
+    by(rule mem_valid)
+next
+  show "lift_map_t_s mem_trans (no_control_lifting mem_lift1) mem_toggle mem0_sem = lift_map_t_s mem_trans (no_control_lifting mem_lift1) mem_toggle mem0_sem"
+    by(rule refl)
+next
+  next
+  show "sem_final = pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
+    by(simp add: sem_final_def)
+next
+  show "sups_pres
+     (set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l])
+     (\<lambda>_. ok_S)"
+    by(rule sups_pres_finite_all; auto)
+next
+  show "seq_sem_l_gen seq_trans
+    \<in> set [calc_sem_l, mem_sem_l, cond_sem_l,
+            imp_sem_l, seq_sem_l]"
+    by(simp add: seq_sem_l_def)
+next
+  show "seq_trans (Sm (Sread v r)) = Seq.syn.Sskip"
+    by(clarsimp)
+next
+  show "mem_toggle (Sm (Sread v r)) = True"
+    by simp
+next
+  show "Sm (Sread v r) \<in> { x . (mem_toggle x = True)}"
+    by auto
+next
+  show "mem_sem_l \<in> set [calc_sem_l, mem_sem_l, cond_sem_l,
+               imp_sem_l, seq_sem_l] -
+          {seq_sem_l_gen seq_trans}"
+    using mem_sem_l_noteq_seq
+    by(auto simp add: seq_sem_l_def)
+next
 
-  sorry
+  show "lift_map_t_s mem_trans (no_control_lifting mem_lift1) mem_toggle
+     mem0_sem \<downharpoonleft> (set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l,
+                      seq_sem_l] -
+                 {seq_sem_l_gen seq_trans}) {x. mem_toggle x = True}"
+    using mem_dom
+    unfolding sems'_eq
+    unfolding cond_sem_l_def mem_sem_l_def cond_lift_def sems'_eq sems_def 
+        cond_lift'_def seq_sem_l_def mem_lift_def
+    by(simp)
+
+next
+  show "\<And>st. P st \<Longrightarrow> P' (LOut mem_lift1 (mem_trans (Sm (Sread v r))) st)"
+    using HP
+    by auto
+qed
+
+lemma Mem_Read_Final : 
+  assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
+  assumes HP : "\<And> st . P st \<Longrightarrow> 
+    P' (LOut mem_lift1 (Sread v r) st)"
+
+shows " |(sem_final :: syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state)| {~P~}
+  [G (Calc_Mem_Imp.syn.Sm (Sread v r))
+                 z] {~(\<lambda>st. \<exists>old_big small_new.
+                                 P old_big \<and>
+                                 (case small_new of
+(reg_flag, reg_c, reg_a, reg_b, m) \<Rightarrow>
+  case get m v of None \<Rightarrow> P' small_new
+  | Some v \<Rightarrow>
+      case r of Reg_a \<Rightarrow> reg_a = v \<and> (\<exists>old. P' (reg_flag, reg_c, old, reg_b, m))
+      | Reg_b \<Rightarrow> reg_b = v \<and> (\<exists>old. P' (reg_flag, reg_c, reg_a, old, m))
+      | Reg_c \<Rightarrow> reg_c = v \<and> (\<exists>old. P' (reg_flag, old, reg_a, reg_b, m))
+      | Reg_flag \<Rightarrow> reg_flag = v \<and> (\<exists>old. P' (old, reg_c, reg_a, reg_b, m))) \<and>
+                                 st =
+                                 LUpd mem_lift1 (Sread v r) small_new old_big)~}"
+  using assms Mem_Read_Final'
+  unfolding mem_trans.simps
+  by blast
+
 
 (* TODO: write version of Read_Final lemma *)
-lemma Mem_Write_Final : 
-  fixes gs :: "syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb})) state"
+lemma Mem_Write_Final' : 
   assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
   assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut mem_lift1 (Swrite v r) st)"
 
@@ -1024,7 +1253,8 @@ lemma Mem_Write_Final :
                                             | Reg_flag \<Rightarrow> reg_flag = v \<and> (\<exists>old. ?P1.0 (old, reg_c, reg_a, reg_b, m))) \<and>
                                  st = LUpd mem_sem_lifting_inner y small_new old_big) ~}"
 *)
-shows " |gs| {~P~} [G (Calc_Mem_Imp.syn.Sm (Swrite v r))
+shows "|(sem_final :: syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state)| {~P~}
+         [G (Calc_Mem_Imp.syn.Sm (Swrite v r))
                  z] {~(\<lambda>st. \<exists>old_big small_new.
                                  P old_big \<and>
                                  (case small_new of
@@ -1036,21 +1266,98 @@ shows " |gs| {~P~} [G (Calc_Mem_Imp.syn.Sm (Swrite v r))
                                     ((\<exists>old. P' (reg_flag, reg_c, reg_a, reg_b,
  update v old m)) \<or>
                                      P' (reg_flag, reg_c, reg_a, reg_b, delete v m))) \<and>
-                                 st = LUpd mem_lift1 (Swrite v r) small_new old_big)~}"
+                                 st = LUpd mem_lift1 (mem_trans (Sm (Swrite v r)))  small_new old_big)~}"
+(*
   using HTS_imp_HT''[where l' = mem_trans, where x = "Sm (Swrite v r)",
 unfolded mem_trans.simps, OF HMem_Swrite]
-
-  sorry
-
-(* TODO: need to figure out how the lifting works. *)
-
-(*
-lemma Merge_Out :
-  shows "LOut (merge_l l1 l2) = (\<lambda> a b . (LOut (fst_l l1) a b, LOut (snd_l l2) a b))"
-
-  term "l2"
-  sorry
 *)
+proof(rule HTS_imp_HT'')
+  show "mem0_sem % {{P'}} mem_trans
+                  (Sm (Swrite v
+                        r)) {{(\<lambda>a. case a of
+                                    (reg_flag, reg_c, reg_a, reg_b, m) \<Rightarrow>
+                                      (case r of Reg_a \<Rightarrow> get m v = Some reg_a
+                                       | Reg_b \<Rightarrow> get m v = Some reg_b
+                                       | Reg_c \<Rightarrow> get m v = Some reg_c
+                                       | Reg_flag \<Rightarrow> get m v = Some reg_flag) \<and>
+                                      ((\<exists>old.
+P' (reg_flag, reg_c, reg_a, reg_b, update v old m)) \<or>
+                                       P' (reg_flag, reg_c, reg_a, reg_b,
+delete v m)))}}"
+    unfolding mem_trans.simps
+    by(rule HMem_Swrite)
+next
+next
+  show "lifting_valid_ok mem_lift1 mem_lift1_S"
+    by(rule mem_valid)
+next
+  show "lift_map_t_s mem_trans (no_control_lifting mem_lift1) mem_toggle mem0_sem = lift_map_t_s mem_trans (no_control_lifting mem_lift1) mem_toggle mem0_sem"
+    by(rule refl)
+next
+  next
+  show "sem_final = pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
+    by(simp add: sem_final_def)
+next
+  show "sups_pres
+     (set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l])
+     (\<lambda>_. ok_S)"
+    by(rule sups_pres_finite_all; auto)
+next
+  show "seq_sem_l_gen seq_trans
+    \<in> set [calc_sem_l, mem_sem_l, cond_sem_l,
+            imp_sem_l, seq_sem_l]"
+    by(simp add: seq_sem_l_def)
+next
+  show "seq_trans (Sm (Swrite v r)) = Seq.syn.Sskip"
+    by(clarsimp)
+next
+  show "mem_toggle (Sm (Swrite v r)) = True"
+    by simp
+next
+  show "Sm (Swrite v r) \<in> { x . (mem_toggle x = True)}"
+    by auto
+next
+  show "mem_sem_l \<in> set [calc_sem_l, mem_sem_l, cond_sem_l,
+               imp_sem_l, seq_sem_l] -
+          {seq_sem_l_gen seq_trans}"
+    using mem_sem_l_noteq_seq
+    by(auto simp add: seq_sem_l_def)
+next
 
+  show "lift_map_t_s mem_trans (no_control_lifting mem_lift1) mem_toggle
+     mem0_sem \<downharpoonleft> (set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l,
+                      seq_sem_l] -
+                 {seq_sem_l_gen seq_trans}) {x. mem_toggle x = True}"
+    using mem_dom
+    unfolding sems'_eq
+    unfolding cond_sem_l_def mem_sem_l_def cond_lift_def sems'_eq sems_def 
+        cond_lift'_def seq_sem_l_def mem_lift_def
+    by(simp)
 
+next
+  show "\<And>st. P st \<Longrightarrow> P' (LOut mem_lift1 (mem_trans (Sm (Swrite v r))) st)"
+    using HP
+    by auto
+qed
+
+lemma Mem_Write_Final : 
+  assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
+  assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut mem_lift1 (Swrite v r) st)"
+  shows "|(sem_final :: syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state)| {~P~}
+         [G (Calc_Mem_Imp.syn.Sm (Swrite v r))
+                 z] {~(\<lambda>st. \<exists>old_big small_new.
+                                 P old_big \<and>
+                                 (case small_new of
+                                  (reg_flag, reg_c, reg_a, reg_b, m) \<Rightarrow>
+                                    (case r of Reg_a \<Rightarrow> get m v = Some reg_a
+                                     | Reg_b \<Rightarrow> get m v = Some reg_b
+                                     | Reg_c \<Rightarrow> get m v = Some reg_c
+                                     | Reg_flag \<Rightarrow> get m v = Some reg_flag) \<and>
+                                    ((\<exists>old. P' (reg_flag, reg_c, reg_a, reg_b,
+ update v old m)) \<or>
+                                     P' (reg_flag, reg_c, reg_a, reg_b, delete v m))) \<and>
+                                 st = LUpd mem_lift1 (Swrite v r)  small_new old_big)~}"
+  using assms Mem_Write_Final'
+  unfolding mem_trans.simps
+  by blast
 end
