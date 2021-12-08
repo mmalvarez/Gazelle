@@ -1114,6 +1114,100 @@ lemma Cond_Final :
   unfolding cond_trans.simps
   by blast
 
+lemma Calc_Final' : 
+  assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
+  assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut calc_lift' c st)"
+  assumes Hc : "calc_trans (Sc c) \<noteq> Calc.Cskip"
+  shows "|(sem_final :: syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state)| {~ (\<lambda> st . P st) ~}
+     [G (Sc c) z] 
+    {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> (case small_new of
+                                  (x1, x2, x3) \<Rightarrow>
+                                    (\<exists>x3'. P' (x1, x2, x3')) \<and>
+                                    (\<forall>x3'. calc_sem (calc_trans (Sc c)) (x1, x2, x3') = small_new)) \<and>
+                                 st = LUpd calc_lift' (calc_trans (Sc c)) small_new old_big) ~}"
+proof(rule HTS_imp_HT'')
+  show "calc_sem % {{P'}} calc_trans
+                  (Sc c) {{(\<lambda>a.
+          case a of
+          (x1, x2, x3) \<Rightarrow>
+            (\<exists>x3'. P' (x1, x2, x3')) \<and>
+            (\<forall>x3'. calc_sem
+                    (calc_trans (Sc c))
+                    (x1, x2, x3') =
+                   a))}}"
+  unfolding cond_trans.simps
+  by(rule_tac HCalc_calc; auto simp add: Hc[unfolded calc_trans.simps])
+next
+  show "lifting_valid_ok calc_lift' (schem_lift_S calc_schemi calc_schemo)"
+    unfolding calc_lift'_def calc_lift'_S_def
+    by(rule calc_valid)
+next
+  show "lift_map_t_s calc_trans (no_control_lifting calc_lift') calc_toggle
+     calc_sem = lift_map_t_s calc_trans (no_control_lifting calc_lift') calc_toggle
+     calc_sem"
+    by simp
+next
+  show "sem_final = pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
+    by(simp add: sem_final_def)
+next
+  show "sups_pres
+     (set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l])
+     (\<lambda>_. ok_S)"
+    by(rule sups_pres_finite_all; auto)
+next
+  show "seq_sem_l_gen seq_trans
+    \<in> set [calc_sem_l, mem_sem_l, cond_sem_l,
+            imp_sem_l, seq_sem_l]"
+    by(simp add: seq_sem_l_def)
+next
+  show "seq_trans (Sc c) = Seq.syn.Sskip"
+    by(clarsimp)
+next
+  show "calc_toggle (Sc c) = True"
+    by simp
+next
+  show "Sc c \<in> { x . (calc_toggle x = True)}"
+    by auto
+next
+  show "calc_sem_l \<in> set [calc_sem_l, mem_sem_l, cond_sem_l,
+               imp_sem_l, seq_sem_l] -
+          {seq_sem_l_gen seq_trans}"
+    using calc_sem_l_noteq_seq
+    by(auto simp add: seq_sem_l_def)
+next
+  show "(lift_map_t_s calc_trans
+     (no_control_lifting calc_lift') calc_toggle
+     calc_sem ::
+        (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) \<downharpoonleft> 
+        (set [calc_sem_l, mem_sem_l, cond_sem_l,
+                      imp_sem_l, seq_sem_l] -
+                 {seq_sem_l_gen
+                   seq_trans}) {x. calc_toggle x = True}"
+    using calc_dom
+    unfolding sems'_eq
+    unfolding calc_sem_l_def sems'_eq sems_def calc_lift_def calc_lift'_def seq_sem_l_def
+    by(simp)
+next
+  show "\<And>st. P st \<Longrightarrow> P' (LOut calc_lift'
+               (calc_trans (Sc c)) st)"
+    using HP unfolding calc_trans.simps
+    by auto
+qed
+
+lemma Calc_Final : 
+  assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
+  assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut calc_lift' c st)"
+  assumes Hc : "calc_trans (Sc c) \<noteq> Calc.Cskip"
+  shows "|(sem_final :: syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state)| {~ (\<lambda> st . P st) ~}
+     [G (Sc c) z] 
+    {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> (case small_new of
+                                  (x1, x2, x3) \<Rightarrow>
+                                    (\<exists>x3'. P' (x1, x2, x3')) \<and>
+                                    (\<forall>x3'. calc_sem c(x1, x2, x3') = small_new)) \<and>
+                                 st = LUpd calc_lift' c small_new old_big) ~}"
+  using Calc_Final' assms
+  unfolding calc_trans.simps
+  by blast
 
 lemma Mem_Read_Final' : 
   assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
