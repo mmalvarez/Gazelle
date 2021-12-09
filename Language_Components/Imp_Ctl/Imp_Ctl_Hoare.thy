@@ -16,13 +16,13 @@ begin
  * Note that we mostly use HxIf in practice (since it works better with our other rules
  * that use the indexed abstraction
  *)
-
+(*
 lemma HIf :
   assumes H0 : "gs = pcomps fs"
   assumes HF : "f = imp_sem_l_gen lfts"
-  assumes Hpres : "sups_pres (set fs)"
+  assumes Hpres : "sups_pres (set fs) (\<lambda> _ . ok_S)"
   assumes Hnemp : "g \<in> set fs"
-  assumes Hdom : "(f \<downharpoonleft> (set fs) Sif')"
+  assumes Hdom : "(f \<downharpoonleft> (set fs) {Sif'})"
   assumes Hsyn : "lfts Sif' = Sif"
   assumes P1_valid : "\<And> st.  P1 st \<Longrightarrow> get_cond st \<noteq> None"
   assumes P2_valid : "\<And> st . P2 st \<Longrightarrow> get_cond st \<noteq> None"
@@ -46,6 +46,7 @@ proof
   proof
     fix m :: "('a, 'b) state"
 
+    assume Ok : "m \<in> ok_S"
     assume M : "P1 (payload m)"
     assume CM : "cont m = Inl ([G Sif' [cond, body]] @ c')"
 
@@ -61,13 +62,13 @@ proof
       case (Inl m')
 
       have F_eq : "sem_step f m = Inl m'"
-        using sym[OF dominant_pcomps[OF Hpres Hnemp Hdom]] CM Inl H0
+        using sym[OF dominant_pcomps[OF Hpres Hnemp Hdom _ Ok]] CM Inl H0
         by(simp add: sem_step_def)
 
       have CM' : "cont m' = Inl ([cond] @ ([ G Sif' [body]] @ c'))" 
         using CM Hsyn F_eq unfolding HF
         by(cases m; auto simp add: cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
-           schem_lift_defs 
+           schem_lift_defs lift_map_s_def
           merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def
           split: md_prio.splits md_triv.splits option.splits)
 
@@ -76,8 +77,8 @@ proof
 
       have Sm' : "payload m = payload m'"
         using CM Hsyn F_eq M'_valid  unfolding HF
-        by(cases m; auto simp add: cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
-           schem_lift_defs 
+        apply(cases m; auto simp add: cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
+           schem_lift_defs lift_map_s_def
           merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
           split: md_prio.splits md_triv.splits option.splits)
 
@@ -294,16 +295,22 @@ proof
     qed
   qed
 qed
-
+*)
+(*
+fun payload_incr :: "('x md_prio * 'y) \<Rightarrow> ('x md_prio * 'y)" where
+*)
 lemma HxIf :
   assumes H0 : "gs = pcomps fs"
   assumes HF : "f = imp_sem_l_gen lfts"
-  assumes Hpres : "sups_pres (set fs)"
+  assumes Hpres : "sups_pres (set fs) (\<lambda> _ . ok_S)"
   assumes Hnemp : "g \<in> set fs"
-  assumes Hdom : "(f \<downharpoonleft> (set fs) Sif')"
+  assumes Hdom : "(f \<downharpoonleft> (set fs) {Sif'})"
   assumes Hsyn : "lfts Sif' = Sif"
   assumes P1_valid : "\<And> st.  P1 st \<Longrightarrow> get_cond st \<noteq> None"
   assumes P2_valid : "\<And> st . P2 st \<Longrightarrow> get_cond st \<noteq> None"
+  assumes P1_oblivious : "\<And> p p' x rest . P1 (mdp p x, rest) \<Longrightarrow> P1 (mdp p' x, rest)"
+  assumes P2_oblivious : "\<And> p p' x rest . P2 (mdp p x, rest) \<Longrightarrow> P2 (mdp p' x, rest)"
+
 
   assumes Hcond : "|gs| {~ P1 ~} [cond] {~ P2 ~}"
   assumes Htrue : "|gs| {~ (\<lambda> st . P2 st \<and> get_cond st = Some True) ~} [body]
@@ -360,7 +367,8 @@ proof(rule HT'I)
     show "|#gs#| {#P1, npre#} ([G Sif' [cond, body]] @ c')"
     proof
       fix m :: "('a, 'b) state"
-  
+
+      assume Ok : "m \<in> ok_S"
       assume M : "P1 (payload m)"
       assume CM : "cont m = Inl ([G Sif' [cond, body]] @ c')"
   
@@ -376,34 +384,41 @@ proof(rule HT'I)
         case (Inl m')
   
         have F_eq : "sem_step f m = Inl m'"
-          using sym[OF dominant_pcomps[OF Hpres Hnemp Hdom]] CM Inl H0
+          using sym[OF dominant_pcomps[OF Hpres Hnemp Hdom _ Ok]] CM Inl H0
           by(simp add: sem_step_def)
   
         have CM' : "cont m' = Inl ([cond] @ ([ G Sif' [body]] @ c'))" 
           using CM Hsyn F_eq unfolding HF
           by(cases m; auto simp add: cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
-             schem_lift_defs 
+             schem_lift_defs lift_map_s_def
             merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def
             split: md_prio.splits md_triv.splits option.splits)
-  
+
         have M'_valid : "\<And> p . fst (payload m) \<noteq> mdp p None" using P1_valid[OF M]
           by(auto simp add: get_cond_def split:prod.splits)
-  
-        have Sm' : "payload m = payload m'"
-          using CM Hsyn F_eq M'_valid  unfolding HF
-          by(cases m; auto simp add: cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
-             schem_lift_defs 
+        (* ok, so this is kind of annoying... we need to adjust for the fact that
+         * priority has incremented *)
+        have Sm' : "payload m' = (case payload m of (mdp pm vm, w) \<Rightarrow> (mdp (1 + pm) vm, w))"
+        (*have Sm' : "payload m = payload m'"*)
+
+          using CM CM' Hsyn F_eq M'_valid  unfolding HF
+          by(cases m; cases m'; auto simp add: cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
+             schem_lift_defs lift_map_s_def
             merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
-            split: md_prio.splits md_triv.splits option.splits)
+            split: md_prio.splits md_triv.splits option.splits list.split_asm if_splits)
   
-        hence P1sm' : "P1 (payload m')" using M unfolding Sm' by auto
+        hence P1sm' : "P1 (payload m')" 
+          using P1_oblivious
+          using M unfolding Sm' 
+          by(cases m; auto split: md_prio.splits)
   
         (* step to the end of cond. *)
   
         have Sub : "|#gs#| {#P2, npre#} ([G Sif' [body]] @ c')"
         proof
           fix mp2 :: "('a, 'b) state"
-  
+
+          assume Ok2 : "mp2 \<in> ok_S"
           assume MP2 : "P2 (payload mp2)"
   
           assume Cont2 : "cont mp2 = Inl ([G Sif' [body]] @ c')"
@@ -431,24 +446,51 @@ proof(rule HT'I)
               case (Inl mp2')
   
               have F_eq' : "sem_step f mp2 = Inl mp2'"
-                using sym[OF dominant_pcomps[OF Hpres Hnemp Hdom]] Cont2 Inl H0
+                using sym[OF dominant_pcomps[OF Hpres Hnemp Hdom _ Ok2]] Cont2 Inl H0
                 by(simp add: sem_step_def)
-  
-              have Mp2'_p2 : "P2 (payload mp2')"
+
+              have Smp2' : "payload mp2' = (case payload mp2 of (mdp pm vm, w) \<Rightarrow> (mdp (1 + pm) vm, w))"
                 using Cont2 Hsyn H0 MP2 F_eq' P2_valid[OF MP2] Some' unfolding HF
                 by(cases mp2; 
                     auto simp add: cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
                     schem_lift_defs 
                     merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
-                    get_cond_def
+                    get_cond_def lift_map_s_def
                     split: md_prio.splits md_triv.splits option.splits)
+
+              hence Mp2'_p2 : "P2 (payload mp2')" 
+                using P2_oblivious
+                using MP2 unfolding Smp2' 
+                by(cases mp2; auto split: md_prio.splits)
+
+              have Mp2'_ok : "mp2' \<in> ok_S"
+                using Cont2 Hsyn H0 MP2 F_eq' P2_valid[OF MP2] Some' Ok2 unfolding HF
+                by(cases mp2; 
+                    auto simp add: cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
+                    schem_lift_defs 
+                    merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
+                    get_cond_def lift_map_s_def
+                    prod_ok_S option_ok_S triv_ok_S prio_ok_S
+
+                    split: md_prio.splits md_triv.splits option.splits)
+
+(*
+              have Mp2'_p2 : "P2 (payload mp2')"
+                using Cont2 Hsyn H0 MP2 F_eq' P2_valid[OF MP2] Some' unfolding HF
+                apply(cases mp2; 
+                    auto simp add: cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
+                    schem_lift_defs 
+                    merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
+                    get_cond_def lift_map_s_def
+                    split: md_prio.splits md_triv.splits option.splits)
+*)
   
               show ?thesis
               proof(cases cnd)
                 case True
           
                 have Mp2'_cond : "get_cond (payload mp2') = Some True" 
-                  using Cont2 Hsyn H0 MP2 F_eq' P2_valid[OF MP2] True Some' unfolding HF
+                  using Cont2 Hsyn H0 MP2 F_eq' P2_valid[OF MP2] True Some' Smp2' unfolding HF
                   by(cases mp2; 
                       auto simp add: cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
                       schem_lift_defs 
@@ -466,7 +508,7 @@ proof(rule HT'I)
                       auto simp add: cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
                       schem_lift_defs 
                       merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
-                      get_cond_def
+                      get_cond_def lift_map_s_def
                       split: md_prio.splits md_triv.splits option.splits)
 
                 have Gtrue : "|#gs#| {# (\<lambda>st. P2 st \<and> get_cond st = Some True), npre #} ([body] @ c')"
@@ -474,7 +516,7 @@ proof(rule HT'I)
                   by auto
 
                 have Mp2'_safe : "safe_for gs mp2' npre"
-                  using guardediD[OF Gtrue Mp2'_p2_true Mp2'_cont] by auto
+                  using guardediD[OF Gtrue Mp2'_ok Mp2'_p2_true Mp2'_cont] by auto
 
                 have Exec1 : "sem_exec_c_p gs mp2 1 mp2'"
                   using Excp_1[of gs mp2 mp2'] Inl unfolding sem_step_p_eq
@@ -492,7 +534,7 @@ proof(rule HT'I)
                       auto simp add: cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
                       schem_lift_defs 
                       merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
-                      get_cond_def
+                      get_cond_def lift_map_s_def
                       split: md_prio.splits md_triv.splits option.splits)
   
                 have Mp2'_p2_false :  "P2 (payload mp2') \<and> get_cond (payload mp2') = Some False"
@@ -505,14 +547,14 @@ proof(rule HT'I)
                       auto simp add: cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
                       schem_lift_defs 
                       merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
-                      get_cond_def
+                      get_cond_def lift_map_s_def
                       split: md_prio.splits md_triv.splits option.splits if_splits)
 
                 have Gfalse : "|#gs#| {#(\<lambda>st. P2 st \<and> get_cond st = Some False), npre#} ([] @ c')"
                   using HTiE[OF Nfalse Guard] by auto
 
                 have Mp2'_safe : "safe_for gs mp2' npre"
-                  using guardediD[OF Gfalse Mp2'_p2_false Mp2'_cont] by auto
+                  using guardediD[OF Gfalse Mp2'_ok Mp2'_p2_false Mp2'_cont] by auto
 
                 have Exec1 : "sem_exec_c_p gs mp2 1 mp2'"
                   using Excp_1[of gs mp2 mp2'] Inl unfolding sem_step_p_eq
@@ -529,7 +571,18 @@ proof(rule HT'I)
           using HTiE[OF Ncond Sub]
           by auto
 
-        have Safe' : "safe_for gs m' (ncond + npre)" using guardediD[OF Guard' P1sm' CM'] by auto
+        have M'_ok : "m' \<in> ok_S"
+          using CM CM' Hsyn F_eq M'_valid Ok  unfolding HF
+          by(cases m; cases m'; auto simp add: cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
+             schem_lift_defs lift_map_s_def
+            prod_ok_S option_ok_S triv_ok_S prio_ok_S
+
+            merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
+            split: md_prio.splits md_triv.splits option.splits list.split_asm if_splits)
+  
+
+        have Safe' : "safe_for gs m' (ncond + npre)" 
+          using guardediD[OF Guard' M'_ok P1sm' CM'] by auto
 
         have Exec1 : "sem_exec_c_p gs m 1 m'"
           using Excp_1[of gs m m'] Inl unfolding sem_step_p_eq
@@ -551,11 +604,12 @@ qed
 lemma HxWhileC' :
   assumes H0 : "gs = pcomps fs"
   assumes HF : "f = imp_sem_l_gen lfts"
-  assumes Hpres : "sups_pres (set fs)"
+  assumes Hpres : "sups_pres (set fs) (\<lambda> _ . ok_S)"
   assumes Hnemp : "g \<in> set fs"
-  assumes Hdom : "(f \<downharpoonleft> (set fs) SwhileC')"
+  assumes Hdom : "(f \<downharpoonleft> (set fs) {SwhileC'})"
   assumes Hsyn : "lfts SwhileC' = SwhileC"
   assumes PX_valid : "\<And> st.  PX st \<Longrightarrow> get_cond st \<noteq> None"
+  assumes PX_oblivious : "\<And> p p' x rest . PX (mdp p x, rest) \<Longrightarrow> PX (mdp p' x, rest)"
 (*  assumes Htrue : "\<And> nb2 . \<exists> nb1' . |#gs#| {#- PX, (nb1' + nb2) -#} [body] {#- PX, nb2 -#}" *)
   assumes Htrue : "\<And> nb2 . \<exists> nb1' . |#gs#| {#- (\<lambda> st. PX st \<and> get_cond st = Some True), (nb1' + nb2) -#} [body] {#- PX, nb2 -#}" 
   assumes NLs : "nl1 \<le> nl2"
@@ -592,6 +646,8 @@ proof
     show ?case 
     proof
       fix m :: "('a, 'b) state"
+
+      assume Ok : "m \<in> ok_S"
       assume Hm : "PX (payload m)" 
 
       assume Hcontm : "cont m = Inl ([G SwhileC' [body]] @ c')" 
@@ -608,7 +664,7 @@ proof
         case (Inl m')
 
         have F_eq : "sem_step f m = Inl m'"
-          using sym[OF dominant_pcomps[OF Hpres Hnemp Hdom]] Hcontm Inl H0
+          using sym[OF dominant_pcomps[OF Hpres Hnemp Hdom _ Ok]] Hcontm Inl H0
           by(simp add: sem_step_def)
   
         have M_P1 : "PX (payload m)" using Hm Hcontm by auto
@@ -616,14 +672,15 @@ proof
         have M'_valid : "\<And> p . fst (payload m) \<noteq> mdp p None" using PX_valid[OF M_P1]
           by(auto simp add: get_cond_def split:prod.splits)
   
-        have Sm' : "payload m = payload m'"
+        have Sm' : "payload m' = (case payload m of (mdp pm vm, w) \<Rightarrow> (mdp (1 + pm) vm, w))"
           using Hcontm Hsyn F_eq M'_valid  unfolding HF
           by(cases m; auto simp add: cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
-             schem_lift_defs 
+             schem_lift_defs lift_map_s_def
             merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
             split: md_prio.splits md_triv.splits option.splits)
   
-        have M' : "PX (payload m')" using Sm' M_P1 by auto
+        have M' : "PX (payload m')" using Sm' M_P1 PX_oblivious 
+          by (cases "payload m"; auto split: md_prio.splits)
 
         show "safe_for gs m nl1"
         proof(cases "get_cond (payload m)")
@@ -639,12 +696,13 @@ proof
           have Helper : "|#gs#| {#(\<lambda> st . PX st \<and> get_cond st = Some False), nl2'#} c'"
           proof
             fix ml :: "('a, 'b) state"
+            assume Ok_ml : "ml \<in> ok_S"
             assume Hpay : "PX (payload ml) \<and> get_cond (payload ml) = Some False"
 
             assume Hcont : "cont ml = Inl c'"
 
             have Conc' : "safe_for gs ml (Suc nl2')"
-              using guardediD[OF Suc.prems(1) Hpay Hcont]
+              using guardediD[OF Suc.prems(1) Ok_ml Hpay Hcont]
               by auto
 
             show "safe_for gs ml nl2'"
@@ -660,7 +718,7 @@ proof
                 by(cases m; auto simp add: cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
                   schem_lift_defs 
                   merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
-                  get_cond_def
+                  get_cond_def lift_map_s_def
                   split: md_prio.splits md_triv.splits option.splits)
 
             have G1 : "|#gs#| {#PX, nl2'#} ([G SwhileC' [body]] @ c')"
@@ -681,12 +739,27 @@ proof
                     True), (nb + nl2')#} ([body] @ [G SwhileC' [body]] @ c')" 
               using HTiE[OF NB G1] by auto
 
+            have Sm'' : "payload m' = (case payload m of (mdp pm vm, w) \<Rightarrow> (mdp (1 + pm) vm, w))"
+              using M' True Some' Sm' PX_oblivious
+              by(cases m; cases m';  auto split: md_prio.splits prod.splits)
+
             have M'' : "PX (payload m') \<and> get_cond (payload m') = Some True"
-              using M' True Some' Sm'
-              by auto
+              using M' True Some' Sm' PX_oblivious
+              by(cases m; cases m';  auto simp add: get_cond_def split: md_prio.splits prod.splits option.splits)
+
+            have M''_ok : "m' \<in> ok_S"
+              using Ok
+                using Hsyn H0 M' F_eq True Some' Hcontm  unfolding HF
+                by(cases m; auto simp add: cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
+                  schem_lift_defs 
+                  merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
+                  get_cond_def lift_map_s_def
+                    prod_ok_S option_ok_S triv_ok_S prio_ok_S
+                  split: md_prio.splits md_triv.splits option.splits)
+
 
             have Almost :  "safe_for gs m' (nb + nl2')" using guardediD[OF Ggood] M'
-              using guardediD[OF Ggood M''] M'_cont
+              using guardediD[OF Ggood M''_ok M''] M'_cont
               by auto
 
             have Step : "sem_step_p gs m m'" using Inl
@@ -712,15 +785,30 @@ proof
                 by(cases m; auto simp add: cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
                   schem_lift_defs 
                   merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
-                  get_cond_def
+                  get_cond_def lift_map_s_def
                   split: md_prio.splits md_triv.splits option.splits if_splits)
 
+            have Sm'' : "payload m' = (case payload m of (mdp pm vm, w) \<Rightarrow> (mdp (1 + pm) vm, w))"
+              using M' False Some' Sm' PX_oblivious
+              by(cases m; cases m';  auto split: md_prio.splits prod.splits)
+
             have M'_full' : "PX (payload m') \<and> get_cond (payload m') = Some False"
-              using M' False Some' unfolding Suc.prems(1) Sm'
-              by auto
+              using M' False Some' Sm'' PX_oblivious unfolding Suc.prems(1) Sm'
+              by(cases m; cases m';  auto simp add: get_cond_def split: md_prio.splits prod.splits option.splits)
+
+            have M''_ok : "m' \<in> ok_S"
+              using Ok
+                using Hsyn H0 M' F_eq False Some' Hcontm  unfolding HF
+                by(cases m; auto simp add: cont_def sem_step_def imp_sem_l_gen_def imp_ctl_sem_def imp_sem_lifting_gen_def
+                  schem_lift_defs 
+                  merge_l_def fst_l_def snd_l_def prio_l_def triv_l_def option_l_def LNew_def
+                  get_cond_def lift_map_s_def
+                    prod_ok_S option_ok_S triv_ok_S prio_ok_S
+                  split: md_prio.splits md_triv.splits option.splits)
+
 
             have Almost : "safe_for gs m' (Suc nl2')"
-              using guardediD[OF Suc.prems(1) M'_full' M'_cont] by auto
+              using guardediD[OF Suc.prems(1) M''_ok M'_full' M'_cont] by auto
 
             have Step : "sem_step_p gs m m'" using Inl
               unfolding sem_step_p_eq
@@ -743,14 +831,27 @@ proof
   qed
 qed
 
+(*
+  assumes H0 : "gs = pcomps fs"
+  assumes HF : "f = imp_sem_l_gen lfts"
+  assumes Hpres : "sups_pres (set fs) (\<lambda> _ . ok_S)"
+  assumes Hnemp : "g \<in> set fs"
+  assumes Hdom : "(f \<downharpoonleft> (set fs) {SwhileC'})"
+  assumes Hsyn : "lfts SwhileC' = SwhileC"
+  assumes PX_valid : "\<And> st.  PX st \<Longrightarrow> get_cond st \<noteq> None"
+  assumes PX_oblivious : "\<And> p p' x rest . PX (mdp p x, rest) \<Longrightarrow> PX (mdp p' x, rest)"
+(*  assumes Htrue : "\<And> nb2 . \<exists> nb1' . |#gs#| {#- PX, (nb1' + nb2) -#} [body] {#- PX, nb2 -#}" *)
+  assumes Htrue : "\<And> nb2 . \<exists> nb1' . |#gs#| {#- (\<lambda> st. PX st \<and> get_cond st = Some True), (nb1' + nb2) -#} [body] {#- PX, nb2 -#}" 
+*)
 lemma HxWhileC :
   assumes H0 : "gs = pcomps fs"
   assumes HF : "f = imp_sem_l_gen lfts"
-  assumes Hpres : "sups_pres (set fs)"
+  assumes Hpres : "sups_pres (set fs) (\<lambda> _ . ok_S)"
   assumes Hnemp : "g \<in> set fs"
-  assumes Hdom : "(f \<downharpoonleft> (set fs) SwhileC')"
+  assumes Hdom : "(f \<downharpoonleft> (set fs) {SwhileC'})"
   assumes Hsyn : "lfts SwhileC' = SwhileC"
   assumes PX_valid : "\<And> st.  PX st \<Longrightarrow> get_cond st \<noteq> None"
+  assumes PX_oblivious : "\<And> p p' x rest . PX (mdp p x, rest) \<Longrightarrow> PX (mdp p' x, rest)"
   assumes Htrue : "|gs| {~ (\<lambda> st . (PX st \<and> get_cond st = Some True))~} [body] {~ PX~}"
   shows "|gs| {~PX~} [G SwhileC' [body]] {~ (\<lambda> st . PX st \<and> get_cond st = Some False)~}"
 proof(rule HT'I)
@@ -761,7 +862,7 @@ proof(rule HT'I)
 
   have Conc' : "|#gs#| {#-PX, (0 + npost)-#} [G SwhileC' [body]] {#-(\<lambda>st. PX st \<and> get_cond st = Some False), npost-#}"
     unfolding add_0
-    using HxWhileC'[OF H0 HF Hpres Hnemp Hdom Hsyn _ Htrue', of npost npost] PX_valid
+    using HxWhileC'[OF H0 HF Hpres Hnemp Hdom Hsyn _ _ Htrue', of npost npost] PX_valid PX_oblivious
     by blast
 
   then show "\<exists>npre. |#gs#| {#-PX, (npre + npost)-#} [G SwhileC' [body]] {#-(\<lambda>st. PX st \<and> get_cond st = Some False), npost-#}"

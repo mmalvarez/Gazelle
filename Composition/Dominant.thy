@@ -319,6 +319,45 @@ proof
     by auto
 qed
 
+lemma dominant_toggle_other :
+  assumes Valid : "lifting_valid l1 S1"
+  assumes Toggle : "\<And> s . s \<in> X \<Longrightarrow> t1 s \<and> \<not> (t2 s)"
+  shows  "(lift_map_s l'1 l1 f1) \<downharpoonleft> {toggle t2 f2, (lift_map_s l'1 l1 f1)} X"
+proof
+  fix b
+  fix x :: 'd
+  assume Xin : "x \<in> X"
+
+  interpret V : lifting_valid l1 S1
+    using Valid.
+
+  have T1 : "t1 x" and T2 : "\<not> t2 x"
+    using Toggle[OF Xin]
+    by auto
+
+  have Res1 : 
+    "lift_map_s l'1 l1 f1 x b = LUpd l1 (l'1 x) (f1 (l'1 x) (LOut l1 (l'1 x) b)) b"
+    using T1
+    by(auto simp add: lift_map_t_s_def lift_map_s_def)
+
+  have Res2 : "toggle t2 f2 x b = b"
+    using T2
+    by(auto simp add: toggle_def)
+
+  have Conc' : "toggle t2 f2 x b <[ lift_map_s l'1 l1 f1 x b"
+    using V.get_put
+    unfolding Res1 Res2
+    by auto
+
+  show "is_sup
+            ((\<lambda>g. g x b) `
+             {toggle t2 f2, lift_map_s l'1 l1 f1})
+            (lift_map_s l'1 l1 f1 x b)"
+    using is_sup_pair[OF Conc']
+    by auto
+qed
+
+
 lemma dominant_subset :
   assumes Dom : "f \<downharpoonleft> Fs X"
   assumes Fs' : "Fs' \<subseteq> Fs"
@@ -578,6 +617,159 @@ proof
             (lift_map_st_s l'1 l1 t1 f1 x b)"
     using is_sup_pair[OF Conc']
     by auto
+qed
+
+
+lemma dominant_toggle_others' :
+  assumes Valid : "lifting_valid l1 S1"
+  assumes Fs_fin : "finite (Fs :: (_ \<Rightarrow> (_ :: Mergeable) \<Rightarrow> _) set)"
+  assumes Fs_sub : "Fs_sub \<subseteq> Fs"
+  assumes Fs_f1 : "lift_map_s l'1 l1 f1 \<in> Fs_sub"
+  assumes Toggle1 : "\<And> s . s \<in> X \<Longrightarrow> t1 s"
+  assumes Toggles : "\<And> f . f \<in> Fs \<Longrightarrow> f \<noteq> lift_map_s l'1 l1 f1 \<Longrightarrow>
+    (\<exists> tg g . f = toggle tg g \<and> (\<forall> s . s \<in> X \<longrightarrow> \<not> tg s))"
+  shows  "(lift_map_s l'1 l1 f1) \<downharpoonleft> Fs_sub X"
+proof-
+
+  interpret V : lifting_valid l1 S1
+    using Valid.
+
+  obtain c where C: "c = card Fs"
+    by auto
+
+(* TODO: this could just be a case-split instead of induction lol *)
+  show "(lift_map_s l'1 l1 f1) \<downharpoonleft> Fs_sub X"
+    using Fs_fin Fs_f1 Toggle1 Toggles C Fs_sub
+  proof(induction c arbitrary: Fs Fs_sub)
+  case 0
+    then show ?case by auto
+  next
+    case (Suc c')
+    then show ?case
+    proof(cases c')
+      case Z' : 0
+
+      then have "card Fs = Suc 0"
+        using Suc.prems
+        by auto
+
+      then obtain f where F:
+        "Fs = {f}"
+        unfolding card_1_singleton_iff
+        by auto
+        
+      then have "Fs = {lift_map_s l'1 l1 f1}"
+        using  Suc.prems  by auto
+
+      then have "Fs_sub = {lift_map_s l'1 l1 f1}"
+        using Suc.prems by auto
+
+      then show ?thesis using dominant_singleton[of "lift_map_s l'1 l1 f1" X]
+        by auto
+    next
+      case Suc' : (Suc c'')
+
+      obtain Fs_nf where Fs_nf : "Fs_nf = Fs - {lift_map_s l'1 l1 f1}"
+        by auto
+
+      then have Fs_nf_fin : "finite Fs_nf"
+        using Suc.prems by auto
+
+      have F1_in : "lift_map_s l'1 l1 f1 \<in> Fs"
+        using Suc.prems
+        by auto
+
+      have Fs_n'f_cd : "card Fs_nf = c'"
+        using card_Diff_singleton[OF Suc.prems(1) F1_in] 
+        Suc.prems(5) Suc'
+        unfolding Fs_nf
+        by(auto)
+
+      then obtain f2 where F2 :
+        "f2 \<in> Fs_nf"
+        using Suc' card_gt_0_iff[of Fs_nf]
+        by auto
+
+      then have F2_neq : "f2 \<noteq> lift_map_s l'1 l1 f1"
+        using Fs_nf by auto
+
+      have F2_in_Fs : "f2 \<in> Fs"
+        using F2 Fs_nf by auto
+
+      obtain Fs_tl where Fs_tl : "Fs_tl = Fs - {f2}"
+        by auto
+
+      have Fs_tl_cd : "card Fs_tl = c'"
+        using card_Diff_singleton[OF Suc.prems(1) F2_in_Fs] 
+        Suc.prems(5) Suc'
+        unfolding Fs_tl
+        by(auto)
+
+      have F_fs_tl : "lift_map_s l'1 l1 f1 \<in> Fs_tl"
+        using F1_in F2_neq Fs_tl
+        by auto
+
+      show ?thesis
+      proof(rule dominant_pairwise)
+        show "finite Fs_sub"
+          using finite_subset Suc.prems
+          by auto
+      next
+        show "lift_map_s l'1 l1 f1 \<in> Fs_sub"
+          using Suc.prems
+          by(auto)
+      next
+        fix f3
+        assume F3 : "f3 \<in> Fs_sub"
+
+        have F3_in' : "f3 \<in> Fs"
+          using Suc.prems F3
+          by auto
+
+        show "lift_map_s l'1 l1 f1 \<downharpoonleft> {f3, lift_map_s l'1 l1 f1} X"
+        proof(cases "f3 = lift_map_s l'1 l1 f1")
+          case True
+
+          show ?thesis
+            using dominant_singleton[of "lift_map_s l'1 l1 f1"]
+            unfolding True
+            by auto
+        next
+          case False
+
+
+          then obtain tg g where F3_toggle :
+            "f3 = toggle tg g" "\<And> s . s \<in> X \<Longrightarrow> \<not> tg s"
+            using Suc.prems(4)[OF F3_in']
+            by auto
+  
+          have Toggles : "(\<And>s. s \<in> X \<Longrightarrow> t1 s \<and> \<not> tg s)"
+            using F3_toggle Suc.prems(3)
+            by auto
+  
+          show "lift_map_s l'1 l1 f1 \<downharpoonleft> {f3, lift_map_s l'1 l1 f1} X"
+            using dominant_toggle_other[OF Valid Toggles, of X id]
+            unfolding F3_toggle(1)
+            by(auto)
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma dominant_toggle_others :
+  assumes Valid : "lifting_valid l1 S1"
+  assumes Fs_fin : "finite (Fs :: (_ \<Rightarrow> (_ :: Mergeable) \<Rightarrow> _) set)"
+  assumes Fs_f1 : "lift_map_s l'1 l1 f1 \<in> Fs"
+  assumes Toggle1 : "\<And> s . s \<in> X \<Longrightarrow> t1 s"
+  assumes Toggles: "\<And> f . f \<in> Fs \<Longrightarrow> f \<noteq> lift_map_s l'1 l1 f1 \<Longrightarrow>
+    (\<exists> tg g . f = toggle tg g \<and> (\<forall> s . s \<in> X \<longrightarrow> \<not> tg s))"
+  shows  "(lift_map_s l'1 l1 f1) \<downharpoonleft> Fs X"
+proof-
+
+  show "lift_map_s l'1 l1 f1 \<downharpoonleft> Fs X"
+    using dominant_toggle_others'[OF Valid Fs_fin _ Fs_f1 Toggle1 Toggles, of id]
+    by(simp)
 qed
 
 

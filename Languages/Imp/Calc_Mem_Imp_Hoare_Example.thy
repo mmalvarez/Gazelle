@@ -853,6 +853,21 @@ split: md_triv.splits option.splits)
     apply(blast)
 
     done
+(*
+  have Add_Alt :
+      "\<And> P P' z .
+        (\<And> st . P st \<Longrightarrow> st \<in> ok_S) \<Longrightarrow>
+        (\<And> st . P st \<Longrightarrow> P' (LOut calc_lift' Cadd st)) \<Longrightarrow>
+    |(sem_final :: syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state)|
+     {~ (\<lambda> st . P st) ~} [G (Sc (Cadd)) z] 
+    {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> (case small_new of
+                                  (c1, c2, x) \<Rightarrow> x = c1 + c2 \<and> (\<exists>old. P' (c1, c2, old) \<and> LOut calc_lift' Cadd old_big = (c1, c2, old))) \<and>
+                                 st = LUpd calc_lift' Cadd small_new old_big) ~}"
+    sorry
+*)
+(*  apply(rule HTS_imp_HT'') *)
+(*            apply(rule_tac HCalc_Cadd) *)
+
 
   have Body3 :
 (*
@@ -924,13 +939,23 @@ and P' = "\<lambda> st . case st of (reg_a, reg_b, reg_c) \<Rightarrow>
           (\<exists> (idx :: int) . i2 \<ge> idx \<and> idx > 0 \<and> reg_b = i1 * (i2 - idx))"
 in Calc_Final)
 *)
+    apply(rule_tac Add_Final_Strong[of "?B2" "\<lambda> st . case st of (reg_a, reg_b, reg_c) \<Rightarrow>
+          reg_a = i1 \<and>
+          (\<exists> (idx :: int) . i2 \<ge> idx \<and> idx > 0 \<and> reg_b = i1 * (i2 - idx))"])
 
+
+(*
     apply(rule_tac P = ?B2
 and P' = "\<lambda> st . case st of (reg_a, reg_b, reg_c) \<Rightarrow>
           reg_a = i1 \<and>
-          (\<exists> (idx :: int) . i2 \<ge> idx \<and> idx > 0 \<and> reg_b = i1 * (i2 - idx))"
+          (\<exists> (idx :: int) . i2 \<ge> idx \<and> idx > 0 \<and> reg_b = i1 * (i2 - idx) \<and>
+          (\<forall> st_big st0 . ?B2 st_big \<longrightarrow> 
+             (case LOut mem_lift1 (Sread STR ''acc'' Reg_b) st_big of
+                     (reg_flag, reg_c, reg_a, reg_b',  m) \<Rightarrow>
+(reg_b = reg_b' \<longrightarrow>
+                     get m (STR ''arg2'') = Some idx))))"
 in Add_Final)
-
+*)
 
   apply(force simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
 mem_sem_lifting_inner_def Inv_def
@@ -988,13 +1013,8 @@ fst_l_def snd_l_def prio_l_def option_l_def triv_l_def
 option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
  LNew_def split: md_triv.splits
 ) 
-
-    apply(clarify)
-
-    apply(auto split: md_triv.splits)
-(* idxb vs idx *)
-
     done
+
 
   have Body4 :
 "|sem_final| {~ ?B3 ~}
@@ -1202,7 +1222,7 @@ split: md_triv.splits md_prio.splits)
     apply(rule_tac P = ?B6
 and P' = "\<lambda> st . case st of (reg_a', reg_b', reg_c') \<Rightarrow>
             \<exists> (idx :: int) . i2 \<ge>  idx \<and> idx > 0 \<and> reg_b' = 1  \<and> reg_a' = idx"
-in Sub_Final)
+in Sub_Final_Strong)
   apply(force simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
 mem_sem_lifting_inner_def Inv_def
 fst_l_def snd_l_def prio_l_def option_l_def triv_l_def 
@@ -1376,7 +1396,7 @@ split: md_triv.splits option.splits)
         apply(rule_tac
 P = ?B9 and
 P' = "\<lambda> st . (case st of (b, x) \<Rightarrow> \<exists> idx . i2 \<ge>  idx \<and> idx > 0 \<and> x = (idx - 1))" in
- Gtz_Final)
+ Gtz_Final_Strong)
   apply(force simp add: cond_lift'_def schem_lift_defs merge_l_def mem_lift1_def
 mem_sem_lifting_inner_def Inv_def
 fst_l_def snd_l_def prio_l_def option_l_def triv_l_def 
@@ -1426,7 +1446,90 @@ split: md_triv.splits)
     done
 
 
+  show "|sem_final| {~ (\<lambda> st . st \<in> ok_S) ~}
+                   [prog1 i1 i2]
+                   {~ (\<lambda> st . st \<in> ok_S \<and>
+                      (case st of
+                        (reg_flag, reg_c, reg_a, reg_b, mem, xz) \<Rightarrow>
+                          (case mem of
+                            (mdp p (Some (mdt mem'))) \<Rightarrow> get mem'(STR ''acc'') = Some (i1 * i2)
+                            | _ \<Rightarrow> False)))
+  ~}"
+    unfolding prog1_def
+  proof(rule HxSeq)
+    show "sem_final = pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
+      using sem_final_def by simp
+  next
+    show "seq_sem_l_gen seq_trans = seq_sem_l_gen seq_trans"
+      by simp
+  next
+    show "sups_pres (set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]) (\<lambda>_. ok_S)"
+      by(rule sups_pres_finite_all; auto)
+  next
+    show "seq_sem_l \<in> set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
+      by auto
+  next
+    show "seq_sem_l_gen
+     seq_trans \<downharpoonleft> set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l] {Ss Sseq}"
+      using seq_dom unfolding sems_def seq_sem_l_def
+      by(auto)
+  next    
+    show "seq_trans (Ss Sseq) = Sseq"
+      by auto
+  next
+    show 
+"|sem_final| {~(\<lambda>st. st \<in> ok_S)~} [G (Sc (Cnum i1)) [],
+      G (Sm (Swrite STR ''arg1'' Reg_c)) [], G (Sc (Cnum i2)) [],
+      G (Sm (Swrite STR ''arg2'' Reg_c)) [], G (Sc (Cnum 1)) [],
+      G (Sm (Swrite STR ''one'' Reg_c)) [], G (Sc (Cnum 0)) [],
+      G (Sm (Swrite STR ''acc'' Reg_c)) [],
+      G (Sm (Sread STR ''arg2'' Reg_c)) [], G (Sb Sgtz) [],
+      G (Si SwhileC)
+       [G (Ss Sseq)
+         [G (Sm (Sread STR ''arg1'' Reg_a)) [],
+          G (Sm (Sread STR ''acc'' Reg_b)) [], G (Sc Cadd) [],
+          G (Sm (Swrite STR ''acc'' Reg_c)) [],
+          G (Sm (Sread STR ''arg2'' Reg_a)) [],
+          G (Sm (Sread STR ''one'' Reg_b)) [], G (Sc Csub) [],
+          G (Sm (Swrite STR ''arg2'' Reg_c)) [],
+          G (Sm (Sread STR ''arg2'' Reg_c)) [],
+          G (Sb Sgtz)
+           []]]] {~(\<lambda>st. st \<in> ok_S \<and>
+                          (case st of
+                           (reg_flag, reg_c, reg_a, reg_b,
+                            mdp p None, xz) \<Rightarrow>
+                             False
+                           | (reg_flag, reg_c, reg_a, reg_b,
+                              mdp p (Some (mdt mem')), xz) \<Rightarrow>
+                               get mem' STR ''acc'' =
+                               Some (i1 * i2)))~}"
+      apply(rule HT'Cons)
 (* TODO: is our loop invariant correct? *)
+
+       apply(rule 1)
+      apply(rule HT'Cons)
+       apply(rule 2)
+      apply(rule HT'Cons)
+       apply(rule 3)
+      apply(rule HT'Cons)
+       apply(rule 4)
+      apply(rule HT'Cons)
+       apply(rule 5)
+      apply(rule HT'Cons)
+       apply(rule 6)
+      apply(rule HT'Cons)
+       apply(rule 7)
+      apply(rule HT'Cons)
+       apply(rule 8)
+      apply(rule HT'Cons)
+       apply(rule 9)
+      apply(rule HT'Cons)
+      apply(rule 10)
+
+
+
+
+
 
 
 (*

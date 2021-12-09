@@ -2,6 +2,7 @@ theory Calc_Mem_Imp_Hoare
   imports Calc_Mem_Imp "../../Hoare/Hoare_Step" "../../Hoare/Hoare_Lift" 
     "../../Language_Components/Mem/Mem_Simple"
     "../../Lifter/Auto_Lifter_Proofs" "../../Composition/Composition_Lifter"
+    "../../Language_Components/Imp_Ctl/Imp_Ctl_Hoare"
 begin
 
 (* final definitions that perhaps should be in mem_simple (TODO) *)
@@ -1013,9 +1014,18 @@ lemma Sub_Final :
   by blast
 
 
-definition cond_lift' where
+definition cond_lift' ::
+    "(Cond.cond, Cond.cond_state, ('x :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all}) state1) lifting"
+    where
 "cond_lift' = (schem_lift (SP NA NB) (SP (SPRC cond_prio (SO NA)) (SP (SPRC (\<lambda> _ . 1) (SO NB)) NX)))"
 
+(*definition calc_lift' :: "
+    (Calc.calc, Calc.calc_state, ('x :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all}) state1) lifting" where
+"calc_lift' = (schem_lift calc_schemi calc_schemo)"
+
+definition calc_lift'_S where
+"calc_lift'_S = (schem_lift_S calc_schemi calc_schemo)"
+*)
 (* Sb y ? *)
 lemma Cond_Final' : 
   assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
@@ -1037,7 +1047,7 @@ proof(rule HTS_imp_HT'')
   unfolding cond_trans.simps
     by(rule_tac HCond_cond; auto simp add: Hc[unfolded cond_trans.simps])
 next
-  show "lifting_valid_ok (cond_lift' :: (Cond.cond, Cond.cond_state, ('x :: {Okay, Bogus, Mergeableb, Pordps}) state1) lifting)
+  show "lifting_valid_ok (cond_lift' :: (Cond.cond, Cond.cond_state, ('x :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all}) state1) lifting)
 (schem_lift_S (SP NA NB) (SP (SPRC cond_prio (SO NA)) 
                      (SP (SPRI (SO NB)) NX)))"
     using cond_valid
@@ -1454,4 +1464,444 @@ lemma Mem_Write_Final :
   using assms Mem_Write_Final'
   unfolding mem_trans.simps
   by blast
+
+(*
+lemma Add_Final_Strong :
+  assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
+  assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut calc_lift' Cadd st)"
+  shows "  |(sem_final :: syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state)|
+     {~ (\<lambda> st . P st) ~} [G (Sc (Cadd)) z] 
+    {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> (case small_new of
+                                  (c1, c2, x) \<Rightarrow> x = c1 + c2 \<and> (\<exists>old. P' (c1, c2, old) \<and> LOut calc_lift' Cadd old_big = (c1, c2, old))) \<and>
+                                 st = LUpd calc_lift' Cadd small_new old_big) ~}"
+    unfolding calc_trans.simps
+*)
+lemma Add_Final_Strong' :
+  assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
+  assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut calc_lift' Cadd st)"
+  shows "  |(sem_final :: syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state)|
+     {~ (\<lambda> st . P st) ~} [G (Sc (Cadd)) z] 
+    {~ (\<lambda> st . \<exists> old_big . P old_big \<and> 
+                           P' (LOut calc_lift' (calc_trans (Sc Cadd)) old_big) \<and>
+                           (\<lambda>st. case st of (c1, c2, x) \<Rightarrow> x = c1 + c2 \<and> (\<exists>old. P' (c1, c2, old))) (LOut calc_lift' (calc_trans (Sc Cadd)) st) \<and>
+                           st = LUpd calc_lift' (calc_trans (Sc Cadd))
+                            (calc_sem (calc_trans (Sc Cadd)) (LOut calc_lift' (calc_trans (Sc Cadd)) old_big)) old_big) ~}"
+(*    unfolding calc_trans.simps*)
+(*
+  using HTS_imp_HT'''[where gs = "(sem_final :: syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state)",
+      where P = P, where l = calc_lift', where l' = calc_trans, where x = "Sc Cadd"
+      , where P' = P', where Q' = "(\<lambda>st. case st of (c1, c2, x) \<Rightarrow> x = c1 + c2 \<and> (\<exists>old. P' (c1, c2, old)))"
+          ]
+*)
+proof(rule HTS_imp_HT''')
+  show "calc_sem % {{P'}} calc_trans
+                       (Sc Cadd) {{(\<lambda>a.
+       case a of
+       (c1, c2, x) \<Rightarrow>
+         x = c1 + c2 \<and> (\<exists>old. P' (c1, c2, old)))}}"
+    using HCalc_Cadd[of P']
+    by auto
+next
+  show "lifting_valid_ok calc_lift' (schem_lift_S calc_schemi calc_schemo)"
+    unfolding calc_lift'_def calc_lift'_S_def
+    by(rule calc_valid)
+next
+  show "lift_map_t_s calc_trans (no_control_lifting calc_lift') calc_toggle
+     calc_sem = lift_map_t_s calc_trans (no_control_lifting calc_lift') calc_toggle
+     calc_sem"
+    by simp
+next
+  show "sem_final = pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
+    by(simp add: sem_final_def)
+next
+  show "sups_pres
+     (set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l])
+     (\<lambda>_. ok_S)"
+    by(rule sups_pres_finite_all; auto)
+next
+  show "seq_sem_l_gen seq_trans
+    \<in> set [calc_sem_l, mem_sem_l, cond_sem_l,
+            imp_sem_l, seq_sem_l]"
+    by(simp add: seq_sem_l_def)
+next
+  show "seq_trans (Sc Cadd) = Seq.syn.Sskip"
+    by(clarsimp)
+next
+  show "calc_toggle (Sc Cadd) = True"
+    by simp
+next
+  show "Sc Cadd \<in> { x . (calc_toggle x = True)}"
+    by auto
+next
+  show "calc_sem_l \<in> set [calc_sem_l, mem_sem_l, cond_sem_l,
+               imp_sem_l, seq_sem_l] -
+          {seq_sem_l_gen seq_trans}"
+    using calc_sem_l_noteq_seq
+    by(auto simp add: seq_sem_l_def)
+next
+  show "(lift_map_t_s calc_trans
+     (no_control_lifting calc_lift') calc_toggle
+     calc_sem ::
+        (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) \<downharpoonleft> 
+        (set [calc_sem_l, mem_sem_l, cond_sem_l,
+                      imp_sem_l, seq_sem_l] -
+                 {seq_sem_l_gen
+                   seq_trans}) {x. calc_toggle x = True}"
+    using calc_dom
+    unfolding sems'_eq
+    unfolding calc_sem_l_def sems'_eq sems_def calc_lift_def calc_lift'_def seq_sem_l_def
+    by(simp)
+next
+  show "\<And>st. P st \<Longrightarrow> P' (LOut calc_lift'
+               (calc_trans (Sc Cadd)) st)"
+    using HP unfolding calc_trans.simps
+    by auto
+qed
+
+lemma Add_Final_Strong :
+  assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
+  assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut calc_lift' Cadd st)"
+  shows "  |(sem_final :: syn \<Rightarrow> (syn, ('x ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state)|
+     {~ (\<lambda> st . P st) ~} [G (Sc (Cadd)) z] 
+    {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> (case small_new of
+                                  (c1, c2, x) \<Rightarrow> x = c1 + c2 \<and> (\<exists>old. P' (c1, c2, old) \<and> LOut calc_lift' Cadd old_big = (c1, c2, old))) \<and>
+                                 st = LUpd calc_lift' Cadd small_new old_big) ~}"
+proof(rule HT'Conseq[OF Add_Final_Strong', of P P'])
+  show "\<And>st. P st \<Longrightarrow> st \<in> ok_S"
+    using P1_ok by auto
+next
+  show "\<And> st . P st \<Longrightarrow> P' (LOut calc_lift' Cadd st)"
+    using HP by auto
+next
+  show "\<And> st . P st \<Longrightarrow> P st"
+    by auto
+next
+  fix st
+
+  assume "\<exists>old_big.
+             P old_big \<and>
+             P' (LOut calc_lift' (calc_trans (Sc Cadd)) old_big) \<and>
+             (case LOut calc_lift' (calc_trans (Sc Cadd)) st of
+              (c1, c2, x) \<Rightarrow> x = c1 + c2 \<and> (\<exists>old. P' (c1, c2, old))) \<and>
+             st =
+             LUpd calc_lift' (calc_trans (Sc Cadd))
+              (calc_sem (calc_trans (Sc Cadd))
+                (LOut calc_lift' (calc_trans (Sc Cadd)) old_big))
+              old_big"
+  then obtain old_big where Hold :
+     "P old_big \<and>
+             P' (LOut calc_lift' (calc_trans (Sc Cadd)) old_big) \<and>
+             (case LOut calc_lift' (calc_trans (Sc Cadd)) st of
+              (c1, c2, x) \<Rightarrow> x = c1 + c2 \<and> (\<exists>old. P' (c1, c2, old))) \<and>
+             st =
+             LUpd calc_lift' (calc_trans (Sc Cadd))
+              (calc_sem (calc_trans (Sc Cadd))
+                (LOut calc_lift' (calc_trans (Sc Cadd)) old_big))
+              old_big"
+    by fastforce
+
+  then show "\<exists>old_big small_new.
+             P old_big \<and>
+             (case small_new of
+              (c1, c2, x) \<Rightarrow>
+                x = c1 + c2 \<and>
+                (\<exists>old. P' (c1, c2, old) \<and>
+                       LOut calc_lift' Cadd old_big = (c1, c2, old))) \<and>
+             st = LUpd calc_lift' Cadd small_new old_big"
+(*
+    using lifting_valid_weak.put_get[OF lifting_valid_locale_axioms(1)[OF lifting_valid_locale_axioms(9)[OF calc_valid]]]
+*)
+(* TODO: applying auto instead of clarsimp here seems to break things badly. *)
+    apply(rule_tac x = old_big in exI)
+     apply(case_tac "LOut calc_lift' Cadd old_big")
+    apply(clarsimp)
+    done
+qed
+
+lemma Sub_Final_Strong' :
+  assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
+  assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut calc_lift' Csub st)"
+  shows "  |(sem_final :: syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state)|
+     {~ (\<lambda> st . P st) ~} [G (Sc (Csub)) z] 
+    {~ (\<lambda> st . \<exists> old_big . P old_big \<and> 
+                           P' (LOut calc_lift' (calc_trans (Sc Csub)) old_big) \<and>
+                           (\<lambda>st. case st of (c1, c2, x) \<Rightarrow> x = c1 - c2 \<and> (\<exists>old. P' (c1, c2, old))) (LOut calc_lift' (calc_trans (Sc Csub)) st) \<and>
+                           st = LUpd calc_lift' (calc_trans (Sc Csub))
+                            (calc_sem (calc_trans (Sc Csub)) (LOut calc_lift' (calc_trans (Sc Csub)) old_big)) old_big) ~}"
+(*    unfolding calc_trans.simps*)
+(*
+  using HTS_imp_HT'''[where gs = "(sem_final :: syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state)",
+      where P = P, where l = calc_lift', where l' = calc_trans, where x = "Sc Cadd"
+      , where P' = P', where Q' = "(\<lambda>st. case st of (c1, c2, x) \<Rightarrow> x = c1 + c2 \<and> (\<exists>old. P' (c1, c2, old)))"
+          ]
+*)
+proof(rule HTS_imp_HT''')
+  show "calc_sem % {{P'}} calc_trans
+                       (Sc Csub) {{(\<lambda>a.
+       case a of
+       (c1, c2, x) \<Rightarrow>
+         x = c1 - c2 \<and> (\<exists>old. P' (c1, c2, old)))}}"
+    using HCalc_Csub[of P']
+    by auto
+next
+  show "lifting_valid_ok calc_lift' (schem_lift_S calc_schemi calc_schemo)"
+    unfolding calc_lift'_def calc_lift'_S_def
+    by(rule calc_valid)
+next
+  show "lift_map_t_s calc_trans (no_control_lifting calc_lift') calc_toggle
+     calc_sem = lift_map_t_s calc_trans (no_control_lifting calc_lift') calc_toggle
+     calc_sem"
+    by simp
+next
+  show "sem_final = pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
+    by(simp add: sem_final_def)
+next
+  show "sups_pres
+     (set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l])
+     (\<lambda>_. ok_S)"
+    by(rule sups_pres_finite_all; auto)
+next
+  show "seq_sem_l_gen seq_trans
+    \<in> set [calc_sem_l, mem_sem_l, cond_sem_l,
+            imp_sem_l, seq_sem_l]"
+    by(simp add: seq_sem_l_def)
+next
+  show "seq_trans (Sc Csub) = Seq.syn.Sskip"
+    by(clarsimp)
+next
+  show "calc_toggle (Sc Csub) = True"
+    by simp
+next
+  show "Sc Csub \<in> { x . (calc_toggle x = True)}"
+    by auto
+next
+  show "calc_sem_l \<in> set [calc_sem_l, mem_sem_l, cond_sem_l,
+               imp_sem_l, seq_sem_l] -
+          {seq_sem_l_gen seq_trans}"
+    using calc_sem_l_noteq_seq
+    by(auto simp add: seq_sem_l_def)
+next
+  show "(lift_map_t_s calc_trans
+     (no_control_lifting calc_lift') calc_toggle
+     calc_sem ::
+        (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) \<downharpoonleft> 
+        (set [calc_sem_l, mem_sem_l, cond_sem_l,
+                      imp_sem_l, seq_sem_l] -
+                 {seq_sem_l_gen
+                   seq_trans}) {x. calc_toggle x = True}"
+    using calc_dom
+    unfolding sems'_eq
+    unfolding calc_sem_l_def sems'_eq sems_def calc_lift_def calc_lift'_def seq_sem_l_def
+    by(simp)
+next
+  show "\<And>st. P st \<Longrightarrow> P' (LOut calc_lift'
+               (calc_trans (Sc Csub)) st)"
+    using HP unfolding calc_trans.simps
+    by auto
+qed
+
+lemma Sub_Final_Strong :
+  assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
+  assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut calc_lift' Csub st)"
+  shows "  |(sem_final :: syn \<Rightarrow> (syn, ('x ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state)|
+     {~ (\<lambda> st . P st) ~} [G (Sc (Csub)) z] 
+    {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> (case small_new of
+                                  (c1, c2, x) \<Rightarrow> x = c1 - c2 \<and> (\<exists>old. P' (c1, c2, old) \<and> LOut calc_lift' Csub old_big = (c1, c2, old))) \<and>
+                                 st = LUpd calc_lift' Csub small_new old_big) ~}"
+proof(rule HT'Conseq[OF Sub_Final_Strong', of P P'])
+  show "\<And>st. P st \<Longrightarrow> st \<in> ok_S"
+    using P1_ok by auto
+next
+  show "\<And> st . P st \<Longrightarrow> P' (LOut calc_lift' Csub st)"
+    using HP by auto
+next
+  show "\<And> st . P st \<Longrightarrow> P st"
+    by auto
+next
+  fix st
+
+  assume "\<exists>old_big.
+             P old_big \<and>
+             P' (LOut calc_lift' (calc_trans (Sc Csub)) old_big) \<and>
+             (case LOut calc_lift' (calc_trans (Sc Csub)) st of
+              (c1, c2, x) \<Rightarrow> x = c1 - c2 \<and> (\<exists>old. P' (c1, c2, old))) \<and>
+             st =
+             LUpd calc_lift' (calc_trans (Sc Csub))
+              (calc_sem (calc_trans (Sc Csub))
+                (LOut calc_lift' (calc_trans (Sc Csub)) old_big))
+              old_big"
+  then obtain old_big where Hold :
+     "P old_big \<and>
+             P' (LOut calc_lift' (calc_trans (Sc Csub)) old_big) \<and>
+             (case LOut calc_lift' (calc_trans (Sc Csub)) st of
+              (c1, c2, x) \<Rightarrow> x = c1 - c2 \<and> (\<exists>old. P' (c1, c2, old))) \<and>
+             st =
+             LUpd calc_lift' (calc_trans (Sc Csub))
+              (calc_sem (calc_trans (Sc Csub))
+                (LOut calc_lift' (calc_trans (Sc Csub)) old_big))
+              old_big"
+    by fastforce
+
+  then show "\<exists>old_big small_new.
+             P old_big \<and>
+             (case small_new of
+              (c1, c2, x) \<Rightarrow>
+                x = c1 - c2 \<and>
+                (\<exists>old. P' (c1, c2, old) \<and>
+                       LOut calc_lift' Csub old_big = (c1, c2, old))) \<and>
+             st = LUpd calc_lift' Csub small_new old_big"
+(*
+    using lifting_valid_weak.put_get[OF lifting_valid_locale_axioms(1)[OF lifting_valid_locale_axioms(9)[OF calc_valid]]]
+*)
+(* TODO: applying auto instead of clarsimp here seems to break things badly. *)
+    apply(rule_tac x = old_big in exI)
+     apply(case_tac "LOut calc_lift' Csub old_big")
+    apply(clarsimp)
+    done
+qed
+(*
+declare [[show_types]]
+declare [[show_sorts]]
+*)
+lemma Gtz_Final_Strong' :
+  assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
+  assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut cond_lift' (Sgtz) st)"
+  shows "|(sem_final :: syn \<Rightarrow> (syn, ('x ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state)|
+    {~ (\<lambda> st . P st) ~} [G (Sb Sgtz) z] 
+    {~ (\<lambda> st . \<exists> old_big . P old_big \<and>
+                           P' (LOut cond_lift' (cond_trans (Sb Sgtz)) old_big) \<and>
+                           (\<lambda> st . case st of (b, i) \<Rightarrow> b = encode_bool (i > 0) \<and> (\<exists> old . P' (old, i))) (LOut cond_lift' (cond_trans (Sb Sgtz)) (st))\<and>
+                                 st = LUpd cond_lift' (cond_trans (Sb Sgtz))
+                              (cond_sem (cond_trans (Sb Sgtz)) (LOut cond_lift' (cond_trans (Sb Sgtz)) old_big)) old_big) ~}"
+proof(rule HTS_imp_HT''')
+  show "cond_sem % {{P'}} cond_trans
+                       (Sb Sgtz) {{(\<lambda>a. case a of
+                                         (b, i) \<Rightarrow> b = encode_bool (0 < i) \<and> (\<exists>old. P' (old, i)))}}"
+    using HCond_Sgtz[of P']
+    by auto
+next
+  show "lifting_valid_ok cond_lift' 
+     (schem_lift_S (SP NA NB) (SP (SPRC cond_prio (SO NA)) (SP (SPRC (\<lambda>_. 1) (SO NB)) NX)))"
+    unfolding cond_lift'_def
+    by(rule cond_valid)
+next
+  show "lift_map_t_s cond_trans (no_control_lifting cond_lift') cond_toggle
+     cond_sem = lift_map_t_s cond_trans (no_control_lifting cond_lift') cond_toggle
+     cond_sem"
+    by simp
+next
+  show "sem_final = pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
+    by(simp add: sem_final_def)
+next
+  show "sups_pres
+     (set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l])
+     (\<lambda>_. ok_S)"
+    by(rule sups_pres_finite_all; auto)
+next
+  show "seq_sem_l_gen seq_trans
+    \<in> set [calc_sem_l, mem_sem_l, cond_sem_l,
+            imp_sem_l, seq_sem_l]"
+    by(simp add: seq_sem_l_def)
+next
+  show "seq_trans (Sb Sgtz) = Seq.syn.Sskip"
+    by(clarsimp)
+next
+  show "cond_toggle (Sb Sgtz) = True"
+    by simp
+next
+  show "Sb Sgtz \<in> { x . (cond_toggle x = True)}"
+    by auto
+next
+  show "calc_sem_l \<in> set [calc_sem_l, mem_sem_l, cond_sem_l,
+               imp_sem_l, seq_sem_l] -
+          {seq_sem_l_gen seq_trans}"
+    using calc_sem_l_noteq_seq
+    by(auto simp add: seq_sem_l_def)
+next
+  show "(lift_map_t_s cond_trans
+     (no_control_lifting cond_lift') cond_toggle
+     cond_sem ::
+        (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) \<downharpoonleft> 
+        (set [calc_sem_l, mem_sem_l, cond_sem_l,
+                      imp_sem_l, seq_sem_l] -
+                 {seq_sem_l_gen
+                   seq_trans}) {x. cond_toggle x = True}"
+    using cond_dom
+    unfolding sems'_eq
+    unfolding cond_sem_l_def sems'_eq sems_def cond_lift_def cond_lift'_def seq_sem_l_def
+    by(simp)
+next
+  show "\<And>st. P st \<Longrightarrow> P' (LOut cond_lift' (cond_trans (Sb Sgtz)) st)"
+    using HP unfolding calc_trans.simps
+    by auto
+qed
+
+lemma Gtz_Final_Strong :
+  assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
+  assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut cond_lift' Sgtz st)"
+  shows "  |(sem_final :: syn \<Rightarrow> (syn, ('x ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state)|
+     {~ (\<lambda> st . P st) ~} [G (Sb (Sgtz)) z] 
+    {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> (case small_new of
+                                  (b, i) \<Rightarrow> b = encode_bool (0 < i) \<and> (\<exists>old. P' (old, i) \<and> LOut cond_lift' Sgtz old_big = (old, i))) \<and>
+                                 st = LUpd cond_lift' Sgtz small_new old_big) ~}"
+proof(rule HT'Conseq[OF Gtz_Final_Strong', of P P'])
+  show "\<And>st. P st \<Longrightarrow> st \<in> ok_S"
+    using P1_ok by auto
+next
+  show "\<And> st . P st \<Longrightarrow> P' (LOut cond_lift' Sgtz st)"
+    using HP by auto
+next
+  show "\<And> st . P st \<Longrightarrow> P st"
+    by auto
+next
+  fix st
+
+  assume "\<exists>old_big.
+             P old_big \<and>
+             P' (LOut cond_lift' (cond_trans (Sb Sgtz)) old_big) \<and>
+             (case LOut cond_lift' (cond_trans (Sb Sgtz)) st of
+              (b, i) \<Rightarrow> b = encode_bool (0 < i) \<and> (\<exists>old. P' (old, i))) \<and>
+             st =
+             LUpd cond_lift' (cond_trans (Sb Sgtz))
+              (cond_sem (cond_trans (Sb Sgtz)) (LOut cond_lift' (cond_trans (Sb Sgtz)) old_big))
+              old_big"
+  then obtain old_big where Hold :
+     "P old_big \<and>
+             P' (LOut cond_lift' (cond_trans (Sb Sgtz)) old_big) \<and>
+             (case LOut cond_lift' (cond_trans (Sb Sgtz)) st of
+              (b, i) \<Rightarrow> b = encode_bool (0 < i) \<and> (\<exists>old. P' (old, i))) \<and>
+             st =
+             LUpd cond_lift' (cond_trans (Sb Sgtz))
+              (cond_sem (cond_trans (Sb Sgtz)) (LOut cond_lift' (cond_trans (Sb Sgtz)) old_big))
+              old_big"
+    by fastforce
+
+  then show "\<exists>old_big small_new.
+             P old_big \<and>
+             (case small_new of
+              (b, i) \<Rightarrow>
+                b = encode_bool (0 < i) \<and>
+                (\<exists>old. P' (old, i) \<and> LOut cond_lift' Sgtz old_big = (old, i))) \<and>
+             st = LUpd cond_lift' Sgtz small_new old_big"
+(*
+    using lifting_valid_weak.put_get[OF lifting_valid_locale_axioms(1)[OF lifting_valid_locale_axioms(9)[OF calc_valid]]]
+*)
+(* TODO: applying auto instead of clarsimp here seems to break things badly. *)
+    apply(rule_tac x = old_big in exI)
+    apply(case_tac "LOut cond_lift' Sgtz old_big")
+    apply(clarsimp)
+    apply(simp add: cond_sem_def)
+    done
+qed
+
+(*
+    {~ (\<lambda> st . \<exists> old_big . P old_big \<and> 
+                           P' (LOut calc_lift' (calc_trans (Sc Csub)) old_big) \<and>
+                           (\<lambda>st. case st of (c1, c2, x) \<Rightarrow> x = c1 - c2 \<and> (\<exists>old. P' (c1, c2, old))) (LOut calc_lift' (calc_trans (Sc Csub)) st) \<and>
+                           st = LUpd calc_lift' (calc_trans (Sc Csub))
+                            (calc_sem (calc_trans (Sc Csub)) (LOut calc_lift' (calc_trans (Sc Csub)) old_big)) old_big) ~}"
+
+*)
+
+
 end

@@ -595,7 +595,8 @@ proof(rule HT'I)
                   st = LUpd l (l' x) small_new old_big), npost-#}"
     by blast
 qed
-(*
+
+
 lemma HTS_imp_HT''' :
   fixes fs :: "('b \<Rightarrow> ('b, 'c) control \<Rightarrow> ('b, 'c :: {Bogus, Mergeableb, Okay}) control) list"
   assumes H: "f % {{P'}} (l' x) {{Q'}}"
@@ -613,10 +614,17 @@ lemma HTS_imp_HT''' :
   assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut l (l' x) st)"
 
   shows "|gs| {~ (\<lambda> st . P st) ~} [G x z] 
-    {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> 
-        Q' small_new \<and> 
-        (\<exists> small_old . P' small_
-        st = LUpd l (l' x) small_new old_big) ~}"
+    {~ (\<lambda> st . \<exists> old_big . P old_big \<and> 
+        P' (LOut l (l' x) old_big) \<and>
+        Q' (LOut l (l' x) st) \<and> 
+        st = LUpd l (l' x) (f (l' x) (LOut l (l' x) old_big)) old_big)
+         ~}"
+(*
+{~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> (case small_new of
+                                  (c1, c2, x) \<Rightarrow> x = c1 + c2 \<and> 
+(\<exists>old. P' (c1, c2, old) \<and> LOut calc_lift' Cadd old_big = (c1, c2, old))) \<and>
+                                 st = LUpd calc_lift' Cadd small_new old_big) ~}
+*)
   (*shows "\<And> P1 . |gs| {~ P1 ~} [G c z] {~ (liftt_conc id l c P2 P1) ~}"*)
 proof(rule HT'I)
   fix npost
@@ -624,20 +632,20 @@ proof(rule HT'I)
   interpret V : lifting_valid_ok l S
     using Valid .
 
-  have "|#gs#| {#-(\<lambda>st. P st), (0 + npost)-#} [G x z] {#-(\<lambda>st. \<exists>old_big small_new.
-            P old_big \<and>
-            Q' small_new \<and>
-            st = LUpd l (l' x)  small_new old_big), npost-#}"
+  have "|#gs#| {#-(\<lambda>st. P st), (0 + npost)-#} [G x z] {#-(\<lambda>st. \<exists>old_big.
+                 P old_big \<and>
+                 P' (LOut l (l' x) old_big) \<and>
+                 Q' ((LOut l (l' x) st)) \<and>
+                 st = LUpd l (l' x) (f (l' x) (LOut l (l' x) old_big)) old_big), npost-#}"
     unfolding add_0
   proof
     fix c'
 
-    assume Guard : " |#gs#| {#(\<lambda>st. \<exists>old_big small_new.
-                            P old_big \<and>
-                            Q' small_new \<and>
-                            st =
-                            LUpd l (l' x) small_new
-                             old_big), npost#} c'"
+    assume Guard : " |#gs#| {#(\<lambda>st. \<exists>old_big.
+                 P old_big \<and>
+                 P' (LOut l (l' x) old_big) \<and>
+                 Q' ((LOut l (l' x) st)) \<and>
+                 st = LUpd l (l' x) (f (l' x) (LOut l (l' x) old_big)) old_big), npost#} c'"
     show "|#gs#| {#P, npost#} ([G x z] @ c')"
     proof
       fix m :: "('b, 'c) control"
@@ -837,11 +845,14 @@ proof(rule HT'I)
           using Hpay' Pay_final Hpay_S Hpay
           by(auto)
 
-        then have Guard_Hyp : "\<exists>old_big small_new.
-             P old_big \<and>
-             Q' small_new \<and>
-             payload m' = LUpd l (l' x) small_new old_big"
-          by auto
+        then have Guard_Hyp : "\<exists>old_big.
+           P old_big \<and>
+           P' (LOut l (l' x) old_big) \<and>
+           Q' (LOut l (l' x) (payload m')) \<and>
+           payload m' = LUpd l (l' x) (f (l' x) (LOut l (l' x) old_big)) old_big"
+          apply(rule_tac x = "(payload m)" in exI)
+          by(cases m; cases m'; auto simp add: V.put_get HP)
+          
 
         have M'_ok : "m' \<in> ok_S"
           using Hcont Msplit Skip Inl Gs_alt' Dominate1 Hf' Msplit Cont_final' Pay_final
@@ -875,13 +886,16 @@ proof(rule HT'I)
 
   thus "\<exists>npre.
           |#gs#| {#-P, (npre +
-                        npost)-#} [G x
-  z] {#-(\<lambda>st. \<exists>old_big small_new.
-                  P old_big \<and>
-                  Q' small_new \<and>
-                  st = LUpd l (l' x) small_new old_big), npost-#}"
+                        npost)-#} [G x z] {#-(\<lambda>st.
+            \<exists>old_big.
+               P old_big \<and>
+               P' (LOut l (l' x) old_big) \<and>
+               Q' (LOut l (l' x) st) \<and>
+               st =
+               LUpd l (l' x) (f (l' x) (LOut l (l' x) old_big))
+                old_big), npost-#}"
     by blast
 qed
-*)
+
 
 end

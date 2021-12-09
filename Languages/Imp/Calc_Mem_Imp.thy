@@ -664,7 +664,75 @@ next
       lift_map_t_s_toggle
     by(auto)
 qed
-    
+
+lemma seq_sem_lifting_gen_valid'' :
+  "lifting_valid_ok (seq_sem_lifting_gen :: (Seq.syn, 'x state', ('x, _ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all}) control) lifting) 
+                  (schem_lift_S seq_sem_lifting_schem1 seq_sem_lifting_schem2)" unfolding seq_sem_lifting_gen_def seq_sem_lifting_schem1_def seq_sem_lifting_schem2_def
+  unfolding seq_sem_lifting'_def schem_lift_defs schem_lift_S_defs
+  by(fastforce intro: lifting_valid_fast)
+
+lemma seq_dom :
+  "((seq_sem_l :: (syn \<Rightarrow> ('s, _ ::{Okay, Bogus, Mergeableb, Pordps, Pordc_all}) state \<Rightarrow> ('s, _) state)) \<downharpoonleft> sems { Ss Sseq})"
+  unfolding seq_sem_l_def seq_sem_l_gen_def
+proof(rule dominant_toggle_others)
+  show "lifting_valid 
+    (seq_sem_lifting_gen ::
+    (Seq.syn, 'x state', ('x, (_  :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) control) lifting)
+    (schem_lift_S seq_sem_lifting_schem1 seq_sem_lifting_schem2)"
+    using lifting_valid_ok.axioms(1)[OF seq_sem_lifting_gen_valid'']
+    unfolding seq_sem_lifting_gen_def 
+    by(auto)
+next
+  show "finite sems"
+    unfolding sems_def
+    by auto
+next
+  show "lift_map_s seq_trans seq_sem_lifting_gen seq_sem \<in> sems"
+    unfolding sems_def
+    seq_sem_l_gen_def seq_sem_l_def
+    by auto
+next
+  show "\<And>s. s \<in> {Ss Sseq} \<Longrightarrow> (\<lambda> x . x = (Ss Sseq)) s"
+    by auto
+next
+  fix f s z
+  assume F1 :"f \<in> sems"
+  assume F2 :"f \<noteq> lift_map_s seq_trans seq_sem_lifting_gen seq_sem"
+
+  have Seq_Calc : "(\<forall>s. s = Ss Sseq \<longrightarrow> \<not> calc_toggle s)"
+  proof
+    fix s
+    show "s = Ss Sseq \<longrightarrow> \<not> calc_toggle s"
+      by(cases s; auto)
+  qed
+
+  have Seq_Cond : "(\<forall>s. s = Ss Sseq \<longrightarrow> \<not> cond_toggle s)"
+  proof
+    fix s
+    show "s = Ss Sseq  \<longrightarrow> \<not> cond_toggle s"
+      by(cases s; auto)
+  qed
+
+  have Seq_Mem : "(\<forall>s. s = Ss Sseq \<longrightarrow> \<not> mem_toggle s)"
+  proof
+    fix s
+    show "s = Ss Sseq \<longrightarrow> \<not> mem_toggle s"
+      by(cases s; auto)
+  qed
+
+  have Seq_Imp : "(\<forall>s. s = Ss Sseq \<longrightarrow> \<not> imp_toggle s)"
+  proof
+    fix s
+    show "s = Ss Sseq \<longrightarrow> \<not> imp_toggle s"
+      by(cases s; auto)
+  qed
+
+  show "\<exists>tg g. f = toggle tg g \<and> (\<forall>s. s \<in> {Ss Sseq} \<longrightarrow> \<not> tg s)"
+    using F1 F2 Seq_Calc Seq_Cond Seq_Mem
+    unfolding sems_def sems'_def calc_sem_l_def mem_sem_l_def cond_sem_l_def imp_sem_l_def
+      lift_map_t_s_toggle seq_sem_l_def seq_sem_l_gen_def
+    by(auto)
+qed
 
 
 (* testing *)
