@@ -408,4 +408,24 @@ proof-
     using HConseq[OF Npre, of P npost Q npost] by auto
 qed
 
+lemma HT'Nil :
+  shows "|gs| {~P1~} [] {~P1~}"
+proof(rule HT'I)
+  fix npost
+
+  have "|#gs#| {#-P1, (npost)-#} [] {#-P1, npost-#}"
+  proof
+    fix c'
+    assume "|#gs#| {#P1, npost#} c'"
+    then show "|#gs#| {#P1, npost#} ([] @ c')"
+      by auto
+  qed
+
+  then have "|#gs#| {#-P1, (0 + npost)-#} [] {#-P1, npost-#}"
+    by simp
+
+  then show "\<exists>npre. |#gs#| {#-P1, (npre + npost)-#} [] {#-P1, npost-#}"
+    by blast
+qed
+
 end
