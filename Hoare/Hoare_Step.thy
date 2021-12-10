@@ -463,20 +463,6 @@ proof(rule HT'I)
         have Dominate1 : "pcomps fs_sub x m = f' x m"
           using dominant_pcomps[OF Pres'[unfolded sym[OF Fs_sub]] Hnemp[unfolded sym[OF Fs_sub]] Hdom' Xin Ok]
           by auto
-(*
-        (* Can we weaken our definition of dominant? *)
-        have Dominate1_weak :
-          "LOut (no_control_lifting l) (l' x) (pcomps fs_sub x m) =
-           LOut (no_control_lifting l) (l' x) (f' x m)"
-          sorry
-*)
-
-(* YOU ARE HERE. *)
-(* problem: seems like we still need to know something about the validity of the initial state.
-   maybe this is OK, but i worry that it will create problems.
-   the obvious solution is just to throw the validity condition into the pre and post conditions.
-   but let's think about whether that will have unintended consequences.
- *)
         obtain pri1 pri2 rest where Msplit :
           "m = (mdp pri1 (Some (mdt (G x z # c'))), mdp pri2 (Some (mdt None)), rest)" and Rest : "rest \<in> ok_S"
           using Gs_alt' Dominate1 (*Dominate1_weak*) Skip Hpay Hcont Hf' Hpay_S
@@ -758,20 +744,6 @@ proof(rule HT'I)
         have Dominate1 : "pcomps fs_sub x m = f' x m"
           using dominant_pcomps[OF Pres'[unfolded sym[OF Fs_sub]] Hnemp[unfolded sym[OF Fs_sub]] Hdom' Xin Ok]
           by auto
-(*
-        (* Can we weaken our definition of dominant? *)
-        have Dominate1_weak :
-          "LOut (no_control_lifting l) (l' x) (pcomps fs_sub x m) =
-           LOut (no_control_lifting l) (l' x) (f' x m)"
-          sorry
-*)
-
-(* YOU ARE HERE. *)
-(* problem: seems like we still need to know something about the validity of the initial state.
-   maybe this is OK, but i worry that it will create problems.
-   the obvious solution is just to throw the validity condition into the pre and post conditions.
-   but let's think about whether that will have unintended consequences.
- *)
         obtain pri1 pri2 rest where Msplit :
           "m = (mdp pri1 (Some (mdt (G x z # c'))), mdp pri2 (Some (mdt None)), rest)" and Rest : "rest \<in> ok_S"
           using Gs_alt' Dominate1 (*Dominate1_weak*) Skip Hpay Hcont Hf' Hpay_S

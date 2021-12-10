@@ -57,48 +57,6 @@ lemma pres :
   unfolding sems_def
   by(rule sups_pres_finite_all; auto)
 
-(*
-proof(rule sups_presI)
-
-  fix x :: "('a, 'b) state"
-  fix sup :: "('a, 'b) state"
-  fix syn :: syn
-  fix Xs :: "('a, 'b) state set"
-  fix Fs' :: "(syn \<Rightarrow> ('a, 'b) state \<Rightarrow> ('a, 'b) state) set"
-  fix f :: "(syn \<Rightarrow> ('a, 'b) state \<Rightarrow> ('a, 'b) state)"
-  assume In_Xs : "x \<in> Xs"
-  assume Fin_Xs : "finite Xs"
-  assume Sup : "is_sup Xs sup"
-  assume Fs' : "Fs' \<subseteq> (sems :: (syn \<Rightarrow> ('a, 'b) state \<Rightarrow> ('a, 'b) state) set)"
-  assume "f \<in> Fs'"
-  show "\<exists>sup'.
-          is_sup ((\<lambda>f. f syn sup) ` Fs') sup' \<and> is_sup (scross ((\<lambda>f. f syn) ` Fs') Xs) sup'"
-    using Fs'
-    apply(auto simp add: is_sup_def is_least_def is_ub_def)
-  sorry
-*)
-
-(*
-lemma calc_dom :
-  "\<And> c . calc_sem_l \<downharpoonleft> sems_nos (Sc c)"
-  sorry
-
-lemma cond_dom :
-  "\<And> b . cond_sem_l \<downharpoonleft> sems_nos (Sb b)"
-  sorry
-
-lemma mem_dom :
-  "\<And> m . mem_sem_l \<downharpoonleft> sems_nos (Sm m)"
-  sorry
-
-lemma seq_dom :
-  "\<And> s . seq_sem_l \<downharpoonleft> sems (Ss s)"
-  sorry
-
-lemma imp_dom :
-  "\<And> i . imp_sem_l \<downharpoonleft> sems (Si i)"
-  sorry
-*)
 
 (* concrete state *)
 type_synonym cstate = "(syn, unit) Mem_Simple.state"
@@ -798,44 +756,6 @@ definition calc_lift' :: "
 definition calc_lift'_S where
 "calc_lift'_S = (schem_lift_S calc_schemi calc_schemo)"
 
-(*
-term "mem_sem_lifting_gen"
-term "calc_lift'"
-(* TODO: the requirement that new and old reg_a and reg_b be equal is a hack. *)
-lemma Calc_Final : 
-  fixes gs :: "syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb})) state"
-  assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
-  assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut calc_lift' y st)"
-
-  shows "|gs| {~ (\<lambda> st . P st) ~} [G (Sc y) z] 
-    {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> (case small_new of
-                                  (x1, x2, x3) \<Rightarrow>
-                                    (\<exists>x3'. P' (x1, x2, x3')) \<and>
-                                    (\<forall>x3'. calc_sem y (x1, x2, x3') = small_new)) \<and>
-                                 st = LUpd calc_lift' y small_new old_big) ~}"
-  apply(rule HTS_imp_HT'')
-            apply(rule_tac HCalc_calc)
-  sorry
-*)
-
-(* NB: old versions of these "final" lemmas looked like this
-
-lemma Sub_Final : 
-  fixes gs :: "syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb})) state"
-  assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
-  assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut calc_lift' Csub st)"
-
-  shows "|gs| {~ (\<lambda> st . P st) ~} [G (Sc (Csub)) z] 
-    {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> (case small_new of
-                                  (c1, c2, x) \<Rightarrow> x = c1 - c2 \<and> (\<exists>old. P' (c1, c2, old) \<and> LOut calc_lift' Cadd old_big = (c1, c2, old))) \<and>
-                                 st = LUpd calc_lift' Csub small_new old_big) ~}"
-(*  apply(rule HTS_imp_HT'') *)
-(*            apply(rule_tac HCalc_Cadd) *)
-  sorry
-
-the problem is that they don't fit into HTS_imp_HT''. hopefully the extra LOut clause does not add anything. that is the only difference
-
-*)
 (* Allows us to use the fact that the original inputs are unchanged.
  * if this ends up helping we need to find a way to generalize/standardize this. *)
 

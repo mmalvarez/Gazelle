@@ -853,20 +853,6 @@ split: md_triv.splits option.splits)
     apply(blast)
 
     done
-(*
-  have Add_Alt :
-      "\<And> P P' z .
-        (\<And> st . P st \<Longrightarrow> st \<in> ok_S) \<Longrightarrow>
-        (\<And> st . P st \<Longrightarrow> P' (LOut calc_lift' Cadd st)) \<Longrightarrow>
-    |((sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state)) :: syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state)|
-     {~ (\<lambda> st . P st) ~} [G (Sc (Cadd)) z] 
-    {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> (case small_new of
-                                  (c1, c2, x) \<Rightarrow> x = c1 + c2 \<and> (\<exists>old. P' (c1, c2, old) \<and> LOut calc_lift' Cadd old_big = (c1, c2, old))) \<and>
-                                 st = LUpd calc_lift' Cadd small_new old_big) ~}"
-    sorry
-*)
-(*  apply(rule HTS_imp_HT'') *)
-(*            apply(rule_tac HCalc_Cadd) *)
 
 
   have Body3 :
