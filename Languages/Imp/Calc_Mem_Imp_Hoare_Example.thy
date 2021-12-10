@@ -1524,7 +1524,40 @@ split: md_triv.splits)
       apply(rule HT'Cons)
        apply(rule 9)
       apply(rule HT'Cons)
-      apply(rule 10)
+       apply(rule 10)
+      using HxWhileC[where PX = Inv]
+    proof(rule_tac HT'Conseq[OF HxWhileC])
+      show "sem_final = pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
+        using sem_final_def by simp
+    next
+      show "lift_map_t_s imp_trans imp_sem_lifting_gen imp_toggle imp_ctl_sem = lift_map_t_s imp_trans imp_sem_lifting_gen imp_toggle imp_ctl_sem"
+        unfolding imp_sem_lifting_spec_def
+        by simp
+    next
+      show "imp_toggle (Si SwhileC) = True"
+        by simp
+    next
+      show "sups_pres (set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l])
+     (\<lambda>_. ok_S)"
+        by(rule sups_pres_finite_all; auto)
+    next
+      show "imp_sem_l \<in> set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
+        by simp
+    next
+      show "lift_map_t_s imp_trans imp_sem_lifting_gen imp_toggle
+     imp_ctl_sem \<downharpoonleft> set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l,
+                        seq_sem_l] {Si SwhileC}"
+        using imp_dom unfolding imp_sem_l_def imp_sem_lifting_spec_def sems'_def
+        sorry (* need to show imp dominates seq *)
+    next
+      show "imp_trans (Si SwhileC) = SwhileC"
+        by simp
+    next
+      fix st
+      assume Inv : "Inv st"
+      show  "get_cond st \<noteq> None"
+(* TODO: need a toggle argument for Hoare rules for imp
+   (since imp language is now a lift_map_t_s *)
 
 
 

@@ -608,10 +608,12 @@ next
       lift_map_t_s_toggle
     by(auto)
 qed
-    
+
+(*
 lemma imp_dom :
-  "imp_sem_l \<downharpoonleft> sems' { x . (imp_toggle x = True)}"
+  "imp_sem_l \<downharpoonleft> sems' { x . (imp_toggle x = True \<and>)}"
   unfolding imp_sem_l_def
+*)
 proof(rule dominant_toggles)
   show "lifting_valid imp_sem_lifting_spec
          (schem_lift_S (SP NA NB)
@@ -733,6 +735,24 @@ next
       lift_map_t_s_toggle seq_sem_l_def seq_sem_l_gen_def
     by(auto)
 qed
+
+lemma imp_dom_seq :
+  "(imp_sem_l :: syn \<Rightarrow> ('s, 'a ::{Okay, Bogus, Mergeableb, Pordps, Pordc_all}) state \<Rightarrow> ('s, _) state) \<downharpoonleft> {imp_sem_l, seq_sem_l} { x . (imp_toggle x = True)}"
+proof(rule dominantI)
+  fix x :: syn
+  fix b :: "('s, 'a ::{Okay, Bogus, Mergeableb, Pordps, Pordc_all}) state"
+  assume X: "imp_toggle x = True"
+
+  then obtain x' where X' : "x = Si x'"
+    by (cases x; auto)
+
+  then have "seq_sem_l x b <[ imp_sem_l x b"
+    apply(cases x'; auto simp add: seq_sem_l_def imp_sem_l_def
+seq_sem_l_gen_def lift_map_s_def lift_map_t_s_def seq_sem_lifting_gen_def schem_lift_defs
+imp_sem_lifting_spec_def imp_sem_lifting_gen_def lifter_instances
+seq_sem_def imp_prio_def imp_ctl_sem_def
+prod_pleq prio_pleq leq_refl list_bogus
+split: prod.splits option.splits md_triv.splits md_prio.splits Seq.syn.splits)
 
 
 (* testing *)
