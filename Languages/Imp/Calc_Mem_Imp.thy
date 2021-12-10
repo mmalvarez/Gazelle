@@ -63,7 +63,7 @@ fun imp_trans :: "syn \<Rightarrow> Imp_Ctl.syn'" where
 | "imp_trans _ = Imp_Ctl.Sskip"
 
 fun imp_toggle :: "syn \<Rightarrow> bool" where
-"imp_toggle (Si _) = True"
+"imp_toggle (Si x) = (x \<noteq> Imp_Ctl.Sskip)"
 | "imp_toggle _ = False"
 
 (* layout of state:
@@ -609,11 +609,9 @@ next
     by(auto)
 qed
 
-(*
 lemma imp_dom :
-  "imp_sem_l \<downharpoonleft> sems' { x . (imp_toggle x = True \<and>)}"
+  "imp_sem_l \<downharpoonleft> sems' { x . (imp_toggle x = True )}"
   unfolding imp_sem_l_def
-*)
 proof(rule dominant_toggles)
   show "lifting_valid imp_sem_lifting_spec
          (schem_lift_S (SP NA NB)
@@ -735,27 +733,87 @@ next
       lift_map_t_s_toggle seq_sem_l_def seq_sem_l_gen_def
     by(auto)
 qed
-
 lemma imp_dom_seq :
-  "(imp_sem_l :: syn \<Rightarrow> ('s, 'a ::{Okay, Bogus, Mergeableb, Pordps, Pordc_all}) state \<Rightarrow> ('s, _) state) \<downharpoonleft> {imp_sem_l, seq_sem_l} { x . (imp_toggle x = True)}"
+  "(imp_sem_l :: syn \<Rightarrow> ('s, 'a ::{Okay, Bogus, Mergeableb, Pordps, Pordc_all}) state \<Rightarrow> ('s, 'a) state) \<downharpoonleft> {imp_sem_l, seq_sem_l} { x . (imp_toggle x = True)}"
 proof(rule dominantI)
-  fix x :: syn
+  fix x :: Calc_Mem_Imp.syn
   fix b :: "('s, 'a ::{Okay, Bogus, Mergeableb, Pordps, Pordc_all}) state"
-  assume X: "imp_toggle x = True"
 
-  then obtain x' where X' : "x = Si x'"
+  assume X: "x \<in> {x. imp_toggle x = True}"
+
+  then obtain x' where X' : "x = Si x'" "x' \<noteq> Imp_Ctl.Sskip"
     by (cases x; auto)
 
   then have "seq_sem_l x b <[ imp_sem_l x b"
-    apply(cases x'; auto simp add: seq_sem_l_def imp_sem_l_def
+    by(cases x'; auto simp add: seq_sem_l_def imp_sem_l_def
 seq_sem_l_gen_def lift_map_s_def lift_map_t_s_def seq_sem_lifting_gen_def schem_lift_defs
 imp_sem_lifting_spec_def imp_sem_lifting_gen_def lifter_instances
 seq_sem_def imp_prio_def imp_ctl_sem_def
 prod_pleq prio_pleq leq_refl list_bogus
 split: prod.splits option.splits md_triv.splits md_prio.splits Seq.syn.splits)
 
+  then have Conc' : "is_sup
+            (
+             {seq_sem_l x b, imp_sem_l x b})
+            (imp_sem_l x b)"
+    using is_sup_pair
+    by auto
 
-(* testing *)
+  have Comm : "{imp_sem_l x b, seq_sem_l x b} = {seq_sem_l x b, imp_sem_l x b}"
+    by auto
+
+  have Eq : "{seq_sem_l x b, imp_sem_l x b} =
+((\<lambda>g. g x b) `
+             {(imp_sem_l) 
+              , seq_sem_l})"
+    by auto
+
+  show
+    "is_sup
+            ((\<lambda>g. g x b) `
+             {(imp_sem_l) 
+              , seq_sem_l})
+            (imp_sem_l x b)"
+    using Conc'
+    unfolding Comm Eq
+    by auto
+qed
+   
+lemma imp_dom_all :
+  "imp_sem_l \<downharpoonleft> sems { x . (imp_toggle x = True )}"
+proof(rule dominant_pairwise)
+  show "finite sems"
+    by(auto simp add: sems_def)
+next
+  show "imp_sem_l \<in> sems"
+    by(auto simp add: sems_def)
+next
+  fix f'
+  assume "f' \<in> sems"
+
+  then consider (F'_s')  "f' \<in> sems'" |
+           (F'_seq) "f' = seq_sem_l"
+    unfolding sems'_def sems_def
+    by auto
+  then 
+  show "imp_sem_l \<downharpoonleft> {f', imp_sem_l} {x. imp_toggle x = True}"
+  proof cases
+    case F'_s'
+    then show ?thesis 
+      using dominant_subset[OF imp_dom, of "{f', imp_sem_l}"]
+      unfolding sems'_def
+      by(auto)
+  next
+    case F'_seq
+
+    have Comm : "{imp_sem_l, seq_sem_l} = {seq_sem_l, imp_sem_l}"
+      by auto
+
+    then show ?thesis 
+      using imp_dom_seq unfolding Comm F'_seq
+      by auto
+  qed
+qed
 
 
 

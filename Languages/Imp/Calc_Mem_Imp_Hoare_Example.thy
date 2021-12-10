@@ -212,7 +212,7 @@ while (arg2 > 0) {
 
 *)
 
-shows "|sem_final| {~ (\<lambda> st . st \<in> ok_S) ~}
+shows "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ (\<lambda> st . st \<in> ok_S) ~}
                    [prog1 i1 i2]
                    {~ (\<lambda> st . st \<in> ok_S \<and>
                       (case st of
@@ -228,12 +228,12 @@ shows "|sem_final| {~ (\<lambda> st . st \<in> ok_S) ~}
 proof-
   fix gs P z l
 
-  have 1: "|sem_final| {~(\<lambda> st . st \<in> ok_S) ~}
+  have 1: "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~(\<lambda> st . st \<in> ok_S) ~}
 [ G (Sc (Cnum i1)) []] 
   {~(\<lambda> st . st \<in> ok_S \<and> 
     (case st of (reg_flag, reg_c, reg_a, reg_b, mem, xz) \<Rightarrow>
       (case reg_c of mdp p reg_c' \<Rightarrow> reg_c' = Some (mdt i1))))~}"
-(is "|sem_final| {~ ?P0 ~}
+(is "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ ?P0 ~}
 [ G (Sc (Cnum i1)) []] 
   {~ ?P1~}")
 
@@ -249,7 +249,7 @@ fst_l_def snd_l_def prio_l_def option_l_def triv_l_def
 option_ok_S prod_ok_S prio_ok_S triv_ok_S)
     done
 
-  have 2 : "|sem_final| 
+  have 2 : "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| 
     {~ ?P1 ~}
     [G (Sm (Swrite (STR ''arg1'') (Reg_c))) []]
 {~(\<lambda>st. st \<in> ok_S \<and> (case st of
@@ -257,7 +257,7 @@ option_ok_S prod_ok_S prio_ok_S triv_ok_S)
                       (case m of
                         mdp p (Some (mdt m')) \<Rightarrow> get m' (STR ''arg1'') = Some i1
                          | _ \<Rightarrow> False)))~}"
-(is "|sem_final| 
+(is "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| 
     {~ ?P1 ~}
     [G (Sm (Swrite (STR ''arg1'') (Reg_c))) []]
   {~ ?P2 ~}")
@@ -289,11 +289,11 @@ option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
     done
 
 (* TODO: need assumption about mem being empty? *)
-  have 3: "|sem_final| {~ ?P2~}
+  have 3: "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ ?P2~}
 [ G (Sc (Cnum i2)) []] 
   {~(\<lambda> st . ?P2 st \<and> (case st of (reg_flag, reg_c, reg_a, reg_b, mem, xz) \<Rightarrow>
       (case reg_c of mdp p reg_c' \<Rightarrow> reg_c' = Some (mdt i2))))~}"
-(is "|sem_final| {~ ?P2 ~}
+(is "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ ?P2 ~}
 [ G (Sc (Cnum i2)) []] 
   {~ ?P3~}")
     apply(rule HT'Conseq)
@@ -320,7 +320,7 @@ option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
 split: md_triv.splits) 
     done
 
-  have 4 : "|sem_final| 
+  have 4 : "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| 
     {~ ?P3 ~}
     [G (Sm (Swrite (STR ''arg2'') (Reg_c))) []]
 {~(\<lambda>st. st \<in> ok_S \<and> (case st of
@@ -329,7 +329,7 @@ split: md_triv.splits)
                         mdp p (Some (mdt m')) \<Rightarrow> 
                           get m' (STR ''arg1'') = Some i1 \<and> get m' (STR ''arg2'') = Some i2
                          | _ \<Rightarrow> False)))~}"
-(is "|sem_final| 
+(is "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| 
     {~ ?P3 ~}
     [G (Sm (Swrite (STR ''arg2'') (Reg_c))) []]
   {~ ?P4 ~}")
@@ -363,12 +363,12 @@ option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
 split:md_triv.splits) 
     done
 
-  have 5 : "|sem_final| 
+  have 5 : "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| 
     {~ ?P4 ~}
     [G (Calc_Mem_Imp.syn.Sc (Cnum 1)) []]
 {~(\<lambda>st. st \<in> ok_S \<and> ?P4 st \<and> (case st of (reg_flag, reg_c, reg_a, reg_b, mem, xz) \<Rightarrow>
       (case reg_c of mdp p reg_c \<Rightarrow> reg_c = Some (mdt 1))))~}"
-(is "|sem_final| 
+(is "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| 
     {~ ?P4 ~}
     _
   {~ ?P5 ~}")
@@ -408,7 +408,7 @@ split: md_triv.splits)
 
     done
 
-  have 6 : "|sem_final| 
+  have 6 : "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| 
     {~ ?P5 ~}
     [G (Calc_Mem_Imp.syn.Sm (Swrite STR ''one'' Reg_c)) []]
 {~(\<lambda>st. st \<in> ok_S \<and> (case st of
@@ -417,7 +417,7 @@ split: md_triv.splits)
                         mdp p (Some (mdt m')) \<Rightarrow> 
                           get m' (STR ''arg1'') = Some i1 \<and> get m' (STR ''arg2'') = Some i2 \<and> get m' (STR ''one'') = Some 1
                          | _ \<Rightarrow> False)))~}"
-(is "|sem_final| 
+(is "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| 
     {~ ?P5 ~}
     _
   {~ ?P6 ~}")
@@ -451,12 +451,12 @@ split: md_triv.splits)
 
     done
 
-  have 7 : "|sem_final| 
+  have 7 : "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| 
     {~ ?P6 ~}
     [G (Calc_Mem_Imp.syn.Sc (Cnum 0)) []]
 {~(\<lambda>st. st \<in> ok_S \<and> ?P6 st \<and> (case st of (reg_flag, reg_c, reg_a, reg_b, mem, xz) \<Rightarrow>
       (case reg_c of mdp p reg_c \<Rightarrow> reg_c = Some (mdt 0))))~}"
-(is "|sem_final| 
+(is "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| 
     {~ ?P6 ~}
     _
   {~ ?P7 ~}")
@@ -497,7 +497,7 @@ split: md_triv.splits)
 
     done
 
-  have 8 : "|sem_final| 
+  have 8 : "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| 
     {~ ?P7 ~}
     [G (Calc_Mem_Imp.syn.Sm (Swrite STR ''acc'' Reg_c)) []]
 {~(\<lambda>st. st \<in> ok_S \<and> (case st of
@@ -506,7 +506,7 @@ split: md_triv.splits)
                         mdp p (Some (mdt m')) \<Rightarrow> 
                           get m' (STR ''arg1'') = Some i1 \<and> get m' (STR ''arg2'') = Some i2 \<and> get m' (STR ''one'') = Some 1 \<and> get m' (STR ''acc'') = Some 0
                          | _ \<Rightarrow> False)))~}"
-(is "|sem_final| 
+(is "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| 
     {~ ?P7 ~}
     _
   {~ ?P8 ~}")
@@ -544,7 +544,7 @@ option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
 
 (* TODO: we need to strengthen mem_read_final
 along the same lines as mem_write_final. *)
-  have 9 : "|sem_final| 
+  have 9 : "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| 
     {~ ?P8 ~}
     [G (Calc_Mem_Imp.syn.Sm (Sread STR ''arg2'' Reg_c)) []]
 {~ (\<lambda> st . st \<in> ok_S \<and> (case st of
@@ -556,7 +556,7 @@ along the same lines as mem_write_final. *)
                       (case reg_c of 
                         mdp p (Some (mdt x)) \<Rightarrow> x = i2
                         | _ \<Rightarrow> False))) ~}"
-(is "|sem_final| 
+(is "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| 
     {~ ?P8 ~}
     _
   {~ ?P9 ~}")
@@ -618,7 +618,7 @@ invariant: acc = i1 * (arg2 - i2)
 *)
 
 
-  have 10 : "|sem_final| 
+  have 10 : "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| 
     {~ ?P9 ~}
     [G (Sb Sgtz) []]
     {~ (\<lambda> st . st \<in> ok_S \<and> (case st of
@@ -631,7 +631,7 @@ invariant: acc = i1 * (arg2 - i2)
                             (reg_flag' = 0 \<and> i2 \<le> 0) \<or> (reg_flag' = 1 \<and> i2 > 0)
                           | _ \<Rightarrow> False)
                          | _ \<Rightarrow> False))) ~}"
-(is "|sem_final|{~ ?P9 ~}
+(is "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))|{~ ?P9 ~}
     [G (Sb Sgtz) []]
     {~ ?P10 ~}")
     apply(rule HT'Conseq)
@@ -709,7 +709,7 @@ split: md_triv.splits)
 
 (* while loop body *)
   have Body1 : 
-"|sem_final| {~ (\<lambda> st . 
+"|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ (\<lambda> st . 
                   Inv st \<and>
                   (case st of (mdp p (Some (mdt reg_flag')), _) \<Rightarrow>
                     reg_flag' = 1
@@ -728,7 +728,7 @@ get m' (STR ''arg2'') = Some idx \<and>
                      i2 \<ge> idx \<and>idx > 0)
           | _ \<Rightarrow> False)
         | _ \<Rightarrow> False))) ~}"
-(is "|sem_final| {~ ?B0 ~} _ {~ ?B1 ~}")
+(is "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ ?B0 ~} _ {~ ?B1 ~}")
     apply(rule HT'Conseq)
     apply(rule_tac P = ?B0
 and P' = "\<lambda> st . (case st of
@@ -782,7 +782,7 @@ split: md_triv.splits option.splits)
                                        i2 \<ge> idx \<and>idx \<ge> 0))))
 *)
   have Body2 :
-"|sem_final| {~ ?B1 ~}
+"|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ ?B1 ~}
   [G (Calc_Mem_Imp.syn.Sm (Sread STR ''acc'' Reg_b)) []]
   {~ (\<lambda> st . ?B1 st \<and> (case st of (reg_flag, reg_c, reg_a, reg_b,  m, xz) \<Rightarrow> 
       (case reg_b of
@@ -796,7 +796,7 @@ split: md_triv.splits option.splits)
                       | _ \<Rightarrow> False)
                     | _ \<Rightarrow> False))) ~}"
 
-(is "|sem_final| {~ _ ~} _ {~ ?B2 ~}")
+(is "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ _ ~} _ {~ ?B2 ~}")
     apply(rule HT'Conseq)
     apply(rule_tac P = ?B1
 and P' = "\<lambda> st . (case st of
@@ -858,7 +858,7 @@ split: md_triv.splits option.splits)
       "\<And> P P' z .
         (\<And> st . P st \<Longrightarrow> st \<in> ok_S) \<Longrightarrow>
         (\<And> st . P st \<Longrightarrow> P' (LOut calc_lift' Cadd st)) \<Longrightarrow>
-    |(sem_final :: syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state)|
+    |((sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state)) :: syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state)|
      {~ (\<lambda> st . P st) ~} [G (Sc (Cadd)) z] 
     {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> (case small_new of
                                   (c1, c2, x) \<Rightarrow> x = c1 + c2 \<and> (\<exists>old. P' (c1, c2, old) \<and> LOut calc_lift' Cadd old_big = (c1, c2, old))) \<and>
@@ -871,7 +871,7 @@ split: md_triv.splits option.splits)
 
   have Body3 :
 (*
-"|sem_final| {~ ?B2 ~}
+"|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ ?B2 ~}
   [G (Calc_Mem_Imp.syn.Sc Cadd) []]
   {~ (\<lambda> st . st \<in> ok_S \<and>(case st of (reg_flag, reg_c, reg_a, reg_b,  m, xz) \<Rightarrow> 
       (case (reg_a, reg_b, reg_c) of
@@ -883,10 +883,10 @@ split: md_triv.splits option.splits)
                      i2 \<ge> idx \<and> idx \<ge> 0)
           | _ \<Rightarrow> False)
         | _ \<Rightarrow> False))) ~}"
-(is "|sem_final| {~ _ ~} _ {~ ?B3 ~}")
+(is "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ _ ~} _ {~ ?B3 ~}")
 *)
 (*
-"|sem_final| {~ ?B2 ~}
+"|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ ?B2 ~}
   [G (Calc_Mem_Imp.syn.Sc Cadd) []]
   {~ (\<lambda> st . ?B2 st \<and>(case st of (reg_flag, reg_c, reg_a, reg_b,  m, xz) \<Rightarrow> 
       (case (reg_a, reg_b, reg_c) of
@@ -902,7 +902,7 @@ split: md_triv.splits option.splits)
         | _ \<Rightarrow> False))) ~}"
 *)
 (*
-"|sem_final| {~ ?B2 ~}
+"|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ ?B2 ~}
   [G (Calc_Mem_Imp.syn.Sc Cadd) []]
   {~ (\<lambda> st . ?B2 st \<and>(case st of (reg_flag, reg_c, reg_a, reg_b,  m, xz) \<Rightarrow> 
       (case (reg_a, reg_b, reg_c) of
@@ -912,7 +912,7 @@ split: md_triv.splits option.splits)
         | _ \<Rightarrow> False))) ~}"
 *)
 (*maybe we need a different calc rule(unchanged stuff *)
-"|sem_final| {~ ?B2 ~}
+"|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ ?B2 ~}
   [G (Calc_Mem_Imp.syn.Sc Cadd) []]
   {~ (\<lambda> st . ?B2 st \<and>(case st of (reg_flag, reg_c, reg_a, reg_b,  m, xz) \<Rightarrow> 
       (case (reg_a, reg_b, reg_c) of
@@ -920,7 +920,7 @@ split: md_triv.splits option.splits)
         reg_c' = reg_a' + reg_b'
                 | _ \<Rightarrow> False))) ~}"
 
-(is "|sem_final| {~ _ ~} _ {~ ?B3 ~}")
+(is "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ _ ~} _ {~ ?B3 ~}")
 
     apply(rule HT'Conseq)
 (*
@@ -1017,7 +1017,7 @@ option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
 
 
   have Body4 :
-"|sem_final| {~ ?B3 ~}
+"|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ ?B3 ~}
   [G (Calc_Mem_Imp.syn.Sm (Swrite STR ''acc'' Reg_c)) []]
   {~ (\<lambda> st .  st \<in> ok_S \<and> (case st of (reg_flag, reg_c, reg_a, reg_b,  m, xz) \<Rightarrow> 
       (case (reg_a, reg_b, reg_c, m) of
@@ -1029,7 +1029,7 @@ option_ok_S prod_ok_S prio_ok_S triv_ok_S oalist_ok_S
             get m' (STR ''acc'') = Some ( i1 + i1 * (i2 - idx))
         | _ \<Rightarrow> False))) ~}"
 
-(is "|sem_final| {~ _ ~} _ {~ ?B4 ~}")
+(is "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ _ ~} _ {~ ?B4 ~}")
 
     apply(rule HT'Conseq)
 (*
@@ -1074,7 +1074,7 @@ split: md_triv.splits)
     done
 
   have Body5 : 
-    "|sem_final| {~ ?B4 ~}
+    "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ ?B4 ~}
   [G (Calc_Mem_Imp.syn.Sm (Sread STR ''arg2'' Reg_a)) []]
   {~ (\<lambda> st .  st \<in> ok_S \<and> (case st of (reg_flag, reg_c, reg_a, reg_b,  m, xz) \<Rightarrow> 
       (case (reg_a, reg_b, reg_c, m) of
@@ -1086,7 +1086,7 @@ split: md_triv.splits)
             get m' (STR ''acc'') = Some ( i1 + i1 * (i2 - idx))
         | _ \<Rightarrow> False))) ~}"
 
-(is "|sem_final| {~ _ ~} _ {~ ?B5 ~}")
+(is "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ _ ~} _ {~ ?B5 ~}")
     apply(rule HT'Conseq)
     apply(rule_tac P = ?B4
 and P' = "\<lambda> st . case st of (reg_flag', reg_c', reg_a', reg_b', m') \<Rightarrow>
@@ -1141,7 +1141,7 @@ split: md_triv.splits md_prio.splits)
 
 
   have Body6 :
-    "|sem_final| {~ ?B5 ~}
+    "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ ?B5 ~}
   [G (Calc_Mem_Imp.syn.Sm (Sread STR ''one'' Reg_b)) []]
   {~ (\<lambda> st .  st \<in> ok_S \<and> (case st of (reg_flag, reg_c, reg_a, reg_b,  m, xz) \<Rightarrow> 
       (case (reg_a, reg_b, reg_c, m) of
@@ -1152,7 +1152,7 @@ split: md_triv.splits md_prio.splits)
             get m' (STR ''one'') = Some (1) \<and>
             get m' (STR ''acc'') = Some ( i1 + i1 * (i2 - idx))
         | _ \<Rightarrow> False))) ~}"
-(is "|sem_final| {~ _ ~} _ {~ ?B6 ~}")
+(is "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ _ ~} _ {~ ?B6 ~}")
     apply(rule HT'Conseq)
     apply(rule_tac P = ?B5
 and P' = "\<lambda> st . case st of (reg_flag', reg_c', reg_a', reg_b', m') \<Rightarrow>
@@ -1206,7 +1206,7 @@ split: md_triv.splits md_prio.splits)
     done
 
   have Body7 :
-    "|sem_final| {~ ?B6 ~}
+    "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ ?B6 ~}
   [G (Calc_Mem_Imp.syn.Sc Csub) []]
   {~ (\<lambda> st .  st \<in> ok_S \<and> (case st of (reg_flag, reg_c, reg_a, reg_b,  m, xz) \<Rightarrow> 
       (case (reg_a, reg_b, reg_c, m) of
@@ -1217,7 +1217,7 @@ split: md_triv.splits md_prio.splits)
             get m' (STR ''one'') = Some (1) \<and>
             get m' (STR ''acc'') = Some ( i1 + i1 * (i2 - idx))
         | _ \<Rightarrow> False))) ~}"
-(is "|sem_final| {~ _ ~} _ {~ ?B7 ~}")
+(is "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ _ ~} _ {~ ?B7 ~}")
     apply(rule HT'Conseq)
     apply(rule_tac P = ?B6
 and P' = "\<lambda> st . case st of (reg_a', reg_b', reg_c') \<Rightarrow>
@@ -1269,7 +1269,7 @@ split: md_triv.splits)
     done
 
     have Body8 :
-    "|sem_final| {~ ?B7 ~}
+    "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ ?B7 ~}
   [G (Calc_Mem_Imp.syn.Sm (Swrite STR ''arg2'' Reg_c)) []]
   {~ (\<lambda> st .  st \<in> ok_S \<and> (case st of (reg_flag, reg_c, reg_a, reg_b,  m, xz) \<Rightarrow> 
       (case (reg_a, reg_b, reg_c, m) of
@@ -1280,7 +1280,7 @@ split: md_triv.splits)
             get m' (STR ''one'') = Some (1) \<and>
             get m' (STR ''acc'') = Some ( i1 + i1 * (i2 - idx))
         | _ \<Rightarrow> False))) ~}"
-(is "|sem_final| {~ _ ~} _ {~ ?B8 ~}")
+(is "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ _ ~} _ {~ ?B8 ~}")
       apply(rule_tac HT'Conseq)
     apply(rule_tac P = ?B7
 and P' = "\<lambda> st . case st of (reg_flag', reg_c', reg_a', reg_b', m') \<Rightarrow>
@@ -1319,7 +1319,7 @@ split: md_triv.splits)
       done
 
     have Body9 :
-    "|sem_final| {~ ?B8 ~}
+    "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ ?B8 ~}
   [G (Calc_Mem_Imp.syn.Sm (Sread STR ''arg2'' Reg_c)) []]
   {~ (\<lambda> st .  st \<in> ok_S \<and> (case st of (reg_flag, reg_c, reg_a, reg_b,  m, xz) \<Rightarrow> 
       (case (reg_a, reg_b, reg_c, m) of
@@ -1330,7 +1330,7 @@ split: md_triv.splits)
             get m' (STR ''one'') = Some (1) \<and>
             get m' (STR ''acc'') = Some ( i1 + i1 * (i2 - idx))
         | _ \<Rightarrow> False))) ~}"
-(is "|sem_final| {~ _ ~} _ {~ ?B9 ~}")
+(is "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ _ ~} _ {~ ?B9 ~}")
       apply(rule_tac HT'Conseq)
     apply(rule_tac P = ?B8
 and P' = "\<lambda> st . case st of (reg_flag', reg_c', reg_a', reg_b', m') \<Rightarrow>
@@ -1388,10 +1388,10 @@ split: md_triv.splits option.splits)
     qed
 
     have Body10:
-    "|sem_final| {~ ?B9 ~}
+    "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ ?B9 ~}
   [G (Sb Sgtz) []]
   {~ Inv ~}"
-(is "|sem_final| {~ _ ~} _ {~ _ ~}")
+(is "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ _ ~} _ {~ _ ~}")
       apply(rule_tac HT'Conseq)
         apply(rule_tac
 P = ?B9 and
@@ -1446,7 +1446,7 @@ split: md_triv.splits)
     done
 
 
-  show "|sem_final| {~ (\<lambda> st . st \<in> ok_S) ~}
+  show "|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ (\<lambda> st . st \<in> ok_S) ~}
                    [prog1 i1 i2]
                    {~ (\<lambda> st . st \<in> ok_S \<and>
                       (case st of
@@ -1457,7 +1457,7 @@ split: md_triv.splits)
   ~}"
     unfolding prog1_def
   proof(rule HxSeq)
-    show "sem_final = pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
+    show "(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state)) = pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
       using sem_final_def by simp
   next
     show "seq_sem_l_gen seq_trans = seq_sem_l_gen seq_trans"
@@ -1478,7 +1478,7 @@ split: md_triv.splits)
       by auto
   next
     show 
-"|sem_final| {~(\<lambda>st. st \<in> ok_S)~} [G (Sc (Cnum i1)) [],
+"|(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~(\<lambda>st. st \<in> ok_S)~} [G (Sc (Cnum i1)) [],
       G (Sm (Swrite STR ''arg1'' Reg_c)) [], G (Sc (Cnum i2)) [],
       G (Sm (Swrite STR ''arg2'' Reg_c)) [], G (Sc (Cnum 1)) [],
       G (Sm (Swrite STR ''one'' Reg_c)) [], G (Sc (Cnum 0)) [],
@@ -1525,9 +1525,8 @@ split: md_triv.splits)
        apply(rule 9)
       apply(rule HT'Cons)
        apply(rule 10)
-      using HxWhileC[where PX = Inv]
     proof(rule_tac HT'Conseq[OF HxWhileC])
-      show "sem_final = pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
+      show "(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state)) = pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
         using sem_final_def by simp
     next
       show "lift_map_t_s imp_trans imp_sem_lifting_gen imp_toggle imp_ctl_sem = lift_map_t_s imp_trans imp_sem_lifting_gen imp_toggle imp_ctl_sem"
@@ -1545,19 +1544,76 @@ split: md_triv.splits)
         by simp
     next
       show "lift_map_t_s imp_trans imp_sem_lifting_gen imp_toggle
-     imp_ctl_sem \<downharpoonleft> set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l,
+      imp_ctl_sem \<downharpoonleft> set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l,
                         seq_sem_l] {Si SwhileC}"
-        using imp_dom unfolding imp_sem_l_def imp_sem_lifting_spec_def sems'_def
-        sorry (* need to show imp dominates seq *)
+      proof(rule dominant_syn_subset)
+        show "lift_map_t_s imp_trans imp_sem_lifting_gen imp_toggle
+         imp_ctl_sem \<downharpoonleft> set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l,
+                            seq_sem_l] {x. imp_toggle x = True}"
+          using imp_dom_all unfolding imp_sem_l_def imp_sem_lifting_spec_def sems_def
+          by auto
+      next
+        show "{Si SwhileC} \<subseteq> {x. imp_toggle x = True}"
+          by simp
+      qed
     next
-      show "imp_trans (Si SwhileC) = SwhileC"
-        by simp
+      show "imp_trans (Si SwhileC) = SwhileC" by simp
     next
-      fix st
-      assume Inv : "Inv st"
-      show  "get_cond st \<noteq> None"
-(* TODO: need a toggle argument for Hoare rules for imp
-   (since imp language is now a lift_map_t_s *)
+      show "|sem_final| {~(\<lambda>st. Inv st \<and>
+                         get_cond st =
+                         Some
+                          True)~} [G (Ss Sseq)
+                                    [G (Sm (Sread STR ''arg1'' Reg_a)) [],
+                                     G (Sm (Sread STR ''acc'' Reg_b)) [], G (Sc Cadd) [],
+                                     G (Sm (Swrite STR ''acc'' Reg_c)) [],
+                                     G (Sm (Sread STR ''arg2'' Reg_a)) [],
+                                     G (Sm (Sread STR ''one'' Reg_b)) [], G (Sc Csub) [],
+                                     G (Sm (Swrite STR ''arg2'' Reg_c)) [],
+                                     G (Sm (Sread STR ''arg2'' Reg_c)) [],
+                                     G (Sb Sgtz) []]] {~Inv~}"
+  proof(rule HxSeq)
+    show "(sem_final :: (syn \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state)) = pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
+      using sem_final_def by simp
+  next
+    show "seq_sem_l_gen seq_trans = seq_sem_l_gen seq_trans"
+      by simp
+  next
+    show "sups_pres (set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]) (\<lambda>_. ok_S)"
+      by(rule sups_pres_finite_all; auto)
+  next
+    show "seq_sem_l \<in> set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
+      by auto
+  next
+    show "seq_sem_l_gen
+     seq_trans \<downharpoonleft> set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l] {Ss Sseq}"
+      using seq_dom unfolding sems_def seq_sem_l_def
+      by(auto)
+  next    
+    show "seq_trans (Ss Sseq) = Sseq"
+      by auto
+  next
+    show "|sem_final| {~(\<lambda>st. Inv st \<and>
+                         get_cond st =
+                         Some
+                          True)~} [G (Sm (Sread STR ''arg1'' Reg_a)) [],
+                                   G (Sm (Sread STR ''acc'' Reg_b)) [], G (Sc Cadd) [],
+                                   G (Sm (Swrite STR ''acc'' Reg_c)) [],
+                                   G (Sm (Sread STR ''arg2'' Reg_a)) [],
+                                   G (Sm (Sread STR ''one'' Reg_b)) [], G (Sc Csub) [],
+                                   G (Sm (Swrite STR ''arg2'' Reg_c)) [],
+                                   G (Sm (Sread STR ''arg2'' Reg_c)) [],
+                                   G (Sb Sgtz) []] {~Inv~}"
+      apply(rule HT'Cons)
+       apply(rule HT'Conseq)
+         apply(rule Body1)
+
+        apply(case_tac st; clarsimp)
+        apply(case_tac ae; clarsimp)
+        apply(case_tac x2; clarsimp)
+         apply(simp add: get_cond_def)
+      apply(case_tac a; clarsimp)
+        apply(simp add: get_cond_def )
+      apply(fastforce)
 
 
 

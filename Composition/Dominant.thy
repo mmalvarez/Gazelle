@@ -395,6 +395,20 @@ proof
   qed
 qed
 
+lemma dominant_syn_subset :
+  assumes Dom : "f \<downharpoonleft> Fs X"
+  assumes X'' : "X' \<subseteq> X"
+  shows "f \<downharpoonleft> Fs X'"
+proof
+  fix b x
+  assume "x \<in> X'"
+  then have X: "x \<in> X" using X'' by auto
+  then show "is_sup ((\<lambda>g. g x b) ` Fs) (f x b)"
+    using dominantE[OF Dom X, of b]
+    by auto
+qed
+
+
 lemma dominant_toggles' :
   
   assumes Valid : "lifting_valid l1 S1"
