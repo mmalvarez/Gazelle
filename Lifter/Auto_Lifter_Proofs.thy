@@ -416,7 +416,6 @@ lemmas lifting_ortho_slow =
   merge_l_ortho.ax_g
   merge_l_ortho.ax_g_comm
 
-
 (* typeclass instance definitions *)
 lemmas bogus_defs =
   md_triv_bogus

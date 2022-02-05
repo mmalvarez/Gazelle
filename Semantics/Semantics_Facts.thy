@@ -273,5 +273,205 @@ next
   qed
 qed
 
+(* Facts relating executable interpreters to propositional ones *)
+lemma sem_exec_c_p_exec' :
+  assumes "sem_exec gs n m = Inl m'"
+  shows "sem_exec_c_p gs m n m'"
+  using assms
+proof(induction n arbitrary: m m')
+  case 0
+
+  then have Meq : "m = m'" 
+    by(cases "cont m"; auto split: list.splits)
+
+  show ?case unfolding Meq 0
+    by(auto intro:sem_exec_c_p.intros)
+next
+
+  case (Suc n)
+
+  then obtain m1 where M1: "sem_step gs m = Inl m1"
+    by(auto split: sum.splits list.splits simp add: sem_step_def)
+
+  then have Rest : "sem_exec gs n m1 = Inl m'" using Suc
+    by(auto split: sum.splits list.splits simp add: sem_step_def)
+
+  have Rest' : "sem_exec_c_p gs m1 n m'"
+    using Suc.IH[OF Rest] by auto
+
+
+  have Conc' : "sem_exec_c_p gs m (1 + n) m'"
+  proof(rule Excp_Suc_gen)
+    show "sem_exec_c_p gs m 1 m1"
+      using Excp_1[OF M1[unfolded sym[OF sem_step_p_eq]]]
+      by auto
+  next
+    show "sem_exec_c_p gs m1 n m'"
+      using Rest' by auto
+  qed
+
+  then show ?case by auto
+qed
+
+lemma sem_exec_c_p_run:
+  assumes "sem_exec_c_p gs m n m'"
+  assumes "cont m' = Inl l"
+  shows "sem_run gs n m = Inl m'"
+  using assms
+proof(induction arbitrary: l rule: sem_exec_c_p.induct)
+  case (Excp_0 m)
+  then show ?case 
+    by(auto split: sum.splits list.splits)
+next
+  case (Excp_Suc m1 m2 n m3)
+  show ?case
+  proof(cases "cont m1")
+    case (Inr msg)
+
+    then show ?thesis using Excp_Suc
+      by(auto simp add: sem_step_p_eq sem_step_def)
+
+  next
+
+    case (Inl l1)
+
+    show ?thesis
+    proof(cases l1)
+
+      case Nil
+
+      then show ?thesis using Excp_Suc Inl
+        by(auto simp add: sem_step_p_eq sem_step_def)
+    next
+      case (Cons l1h l1t)
+
+      then show ?thesis using Excp_Suc Inl
+        by(auto simp add: sem_step_p_eq sem_step_def)
+    qed
+  qed
+qed
+
+(* problem. sem_exec_c_p tries to run
+exactly that many steps. *)
+lemma sem_exec_c_p_run' :
+  assumes "sem_run gs n m = Inl m'"
+  shows "\<exists> nmin . nmin \<le> n \<and> sem_exec_c_p gs m nmin m'"
+  using assms
+proof(induction n arbitrary: m m')
+  case 0
+
+  then have "m = m'"
+    by(auto split: sum.splits list.splits)
+
+  then show ?case
+    by(auto intro: sem_exec_c_p.intros)
+
+next
+
+  case (Suc n)
+
+  show ?case
+  proof(cases "cont m")
+    case (Inr msg)
+
+    then show ?thesis using Suc
+      by(auto simp add: sem_step_p_eq sem_step_def)
+
+  next
+
+    case (Inl l1)
+
+    show ?thesis
+    proof(cases l1)
+      case Nil
+
+      then have Eq: "m = m'" using Suc.prems Inl
+        by(auto)
+
+      have Conc' : "sem_exec_c_p gs m 0 m'"
+        unfolding Eq
+        by(auto intro: sem_exec_c_p.intros)
+
+      then show ?thesis
+        by fastforce
+    next
+
+      case (Cons l1h l1t)
+
+      then obtain m1 where M1 : "sem_step gs m = Inl m1"
+        using Suc.prems Inl
+        by(auto simp add: sem_step_def)
+
+      then have Rest: "sem_run gs n m1 = Inl m'"
+        using Suc.prems Cons Inl
+        by(auto simp add: sem_step_def)
+
+      then obtain nmin where Nmin :
+        "sem_exec_c_p gs m1 nmin m'" "nmin \<le> n"
+        using Suc.IH[OF Rest] 
+        by(auto)
+
+      then have Conc' : "sem_exec_c_p gs m (1 + nmin) m'"
+        using sem_exec_c_p.intros(2)
+          [OF sem_step_sem_step_p[OF M1] Nmin(1)]
+        by auto
+
+      then show ?thesis using Nmin(2)by fastforce
+    qed
+  qed
+qed
+
+(*
+  proof(cases l)
+    case Nil
+
+    then show ?thesis using Excp_Suc 
+      by(auto simp add: sem_step_p_eq sem_step_def split:sum.splits list.splits)
+  next
+    case (Cons lh lt)
+
+    have Rest : "sem_run gs n m2 = Inl m3"
+      using Excp_Suc
+      by auto
+
+    then show ?thesis using Excp_Suc.prems Rest Cons
+      apply(auto split: sum.splits list.splits)
+*)
+(*
+  case 0
+
+  then have Meq : "m = m'" 
+    by(cases "cont m"; auto split: list.splits)
+
+  show ?case unfolding Meq 0
+    by(auto intro:sem_exec_c_p.intros)
+next
+
+  case (Suc n)
+
+  then obtain m1 where M1: "sem_step gs m = Inl m1"
+    by(auto split: sum.splits list.splits simp add: sem_step_def)
+
+  then have Rest : "sem_exec gs n m1 = Inl m'" using Suc
+    by(auto split: sum.splits list.splits simp add: sem_step_def)
+
+  have Rest' : "sem_exec_c_p gs m1 n m'"
+    using Suc.IH[OF Rest] by auto
+
+
+  have Conc' : "sem_exec_c_p gs m (1 + n) m'"
+  proof(rule Excp_Suc_gen)
+    show "sem_exec_c_p gs m 1 m1"
+      using Excp_1[OF M1[unfolded sym[OF sem_step_p_eq]]]
+      by auto
+  next
+    show "sem_exec_c_p gs m1 n m'"
+      using Rest' by auto
+  qed
+
+  then show ?case by auto
+qed
+*)
+
 
 end
