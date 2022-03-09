@@ -44,9 +44,9 @@ locale dominant2 = dominant2_sig +
 *)
 definition dominant ::
   "('a \<Rightarrow> 'c \<Rightarrow> ('c :: Pord_Weak)) \<Rightarrow> ('a \<Rightarrow> 'c \<Rightarrow> 'c) set \<Rightarrow> 'a set \<Rightarrow> bool"
-("_ \<downharpoonleft> _ _" [250, 252, 254])
+("_ \<down> _ _" [250, 252, 254])
 where
-"(f \<downharpoonleft> S X) =
+"(f \<down> S X) = 
   (\<forall> x b . x \<in> X \<longrightarrow>
    (is_sup ((\<lambda> g . g x b) ` S) (f x b)))"
 
@@ -57,11 +57,11 @@ where
 lemma dominantI [intro] :
   assumes "\<And> b x . x \<in> X \<Longrightarrow> 
     (is_sup ((\<lambda> g . g x b) ` S) (f x b))"
-  shows "(f \<downharpoonleft> S X)" using assms
+  shows "(f \<down> S X)" using assms
   unfolding dominant_def by auto
 
 lemma dominantE [elim] :
-  assumes "(f \<downharpoonleft> S X)"
+  assumes "(f \<down> S X)"
   assumes "x \<in> X"
   shows "is_sup ((\<lambda> g . g x b) ` S) (f x b)" using assms
   unfolding dominant_def by auto
@@ -77,7 +77,7 @@ lemma dominantE [elim] :
 lemma dominant_pcomps :
   assumes Hpres : "sups_pres (set fs) (\<lambda> _ . ok_S)"
   assumes Hne : "z \<in> set fs"
-  assumes H : "(f \<downharpoonleft> (set fs) X)"
+  assumes H : "(f \<down> (set fs) X)"
   assumes Xin : "x \<in> X"
   assumes Bin : "b \<in> ok_S"
   shows "(pcomps fs x b) = (f x b)"
@@ -112,7 +112,7 @@ qed
 lemma dominant_pcomps_set :
   assumes Hpres : "sups_pres Fs (\<lambda> _ . ok_S)"
   assumes Hne : "z \<in> Fs"
-  assumes H : "(f \<downharpoonleft> Fs X)"
+  assumes H : "(f \<down> Fs X)"
   assumes L : "set fs = Fs"
   assumes Xin: "x \<in> X"
   assumes Bin : "b \<in> ok_S"
@@ -133,18 +133,18 @@ lemma dominant_pcomps_set :
 (*
 definition dominantP ::
   "('a \<Rightarrow> ('b :: Mergeable) \<Rightarrow> 'b) \<Rightarrow> ('a \<Rightarrow> 'b set) \<Rightarrow> ('a \<Rightarrow> ('b :: Mergeable) \<Rightarrow> 'b) set \<Rightarrow> 'a \<Rightarrow> bool"
-("_; _ \<downharpoonleft> _ _" [280, 282, 284, 286])
+("_; _ \<down> _ _" [280, 282, 284, 286])
 where
-"(f; P \<downharpoonleft> S x) =
+"(f; P \<down> S x) =
  (\<forall> b . is_sup ((\<lambda> g . g x b) ` S) (f x b))"
 
 lemma dominantI [intro] :
   assumes "\<And> b . is_sup ((\<lambda> g . g x b) ` S) (f x b)"
-  shows "(f \<downharpoonleft> S x)" using assms
+  shows "(f \<down> S x)" using assms
   unfolding dominant_def by auto
 
 lemma dominantE [elim] :
-  assumes "(f \<downharpoonleft> S x)"
+  assumes "(f \<down> S x)"
   shows "is_sup ((\<lambda> g . g x b) ` S) (f x b)" using assms
   unfolding dominant_def by auto
 *)
@@ -156,7 +156,7 @@ lemma dominant2_dominant:
   fixes l1 :: "('a1, 'b1, 'c :: {Mergeable, Okay}) lifting"
   fixes l2 :: "('a2, 'b2, 'c) lifting"
   assumes HDom : "dominant2 l1 t1 l2 t2 X"
-  shows "l1 (lift_map_s t1 l1 f1) \<downharpoonleft> {lift_map_s t1 l1 f1, lift_map_s t2 l2 f2} X"
+  shows "l1 (lift_map_s t1 l1 f1) \<down> {lift_map_s t1 l1 f1, lift_map_s t2 l2 f2} X"
 proof
   fix b :: 'c
   fix x :: 'a
@@ -208,7 +208,7 @@ qed
 *)
 lemma dominant_singleton :
   fixes f :: "'a \<Rightarrow> ('b :: {Mergeable}) \<Rightarrow> 'b"
-  shows "f \<downharpoonleft> {f} X"
+  shows "f \<down> {f} X"
 proof
   fix b :: 'b
   fix x :: 'a
@@ -239,8 +239,8 @@ lemma dominant_pairwise :
   fixes Fs :: "('a \<Rightarrow> ('b :: {Pord}) \<Rightarrow> 'b) set"
   assumes Hfin : "finite Fs"
   assumes HFs_f : "f \<in> Fs"
-  assumes H: "\<And> f' . f' \<in> Fs \<Longrightarrow> f \<downharpoonleft> {f', f} X"
-  shows "f \<downharpoonleft> Fs X"
+  assumes H: "\<And> f' . f' \<in> Fs \<Longrightarrow> f \<down> {f', f} X"
+  shows "f \<down> Fs X"
 proof
   fix b :: 'b
   fix x :: 'a
@@ -260,7 +260,7 @@ proof
     then obtain f0 where F0 : "y = f0 x b" "f0 \<in> Fs"
       by auto
 
-    have Dom: "f \<downharpoonleft> {f0, f} X"
+    have Dom: "f \<down> {f0, f} X"
       using H[OF F0(2)]
       by auto
 
@@ -284,7 +284,7 @@ qed
 lemma dominant_toggle :
   assumes Valid : "lifting_valid l1 S1"
   assumes Toggle : "\<And> s . s \<in> X \<Longrightarrow> t1 s \<and> \<not> (t2 s)"
-  shows  "(lift_map_t_s l'1 l1 t1 f1) \<downharpoonleft> {toggle t2 f2, (lift_map_t_s l'1 l1 t1 f1)} X"
+  shows  "(lift_map_t_s l'1 l1 t1 f1) \<down> {toggle t2 f2, (lift_map_t_s l'1 l1 t1 f1)} X"
 proof
   fix b
   fix x :: 'd
@@ -322,7 +322,7 @@ qed
 lemma dominant_toggle_other :
   assumes Valid : "lifting_valid l1 S1"
   assumes Toggle : "\<And> s . s \<in> X \<Longrightarrow> t1 s \<and> \<not> (t2 s)"
-  shows  "(lift_map_s l'1 l1 f1) \<downharpoonleft> {toggle t2 f2, (lift_map_s l'1 l1 f1)} X"
+  shows  "(lift_map_s l'1 l1 f1) \<down> {toggle t2 f2, (lift_map_s l'1 l1 f1)} X"
 proof
   fix b
   fix x :: 'd
@@ -359,10 +359,10 @@ qed
 
 
 lemma dominant_subset :
-  assumes Dom : "f \<downharpoonleft> Fs X"
+  assumes Dom : "f \<down> Fs X"
   assumes Fs' : "Fs' \<subseteq> Fs"
   assumes F_in : "f \<in> Fs'"
-  shows "f \<downharpoonleft> Fs' X"
+  shows "f \<down> Fs' X"
 proof
   fix x b
   assume Xin : "x \<in> X"
@@ -396,9 +396,9 @@ proof
 qed
 
 lemma dominant_syn_subset :
-  assumes Dom : "f \<downharpoonleft> Fs X"
+  assumes Dom : "f \<down> Fs X"
   assumes X'' : "X' \<subseteq> X"
-  shows "f \<downharpoonleft> Fs X'"
+  shows "f \<down> Fs X'"
 proof
   fix b x
   assume "x \<in> X'"
@@ -418,7 +418,7 @@ lemma dominant_toggles' :
   assumes Toggle1 : "\<And> s . s \<in> X \<Longrightarrow> t1 s"
   assumes Toggles : "\<And> f . f \<in> Fs \<Longrightarrow> f \<noteq> lift_map_t_s l'1 l1 t1 f1 \<Longrightarrow>
     (\<exists> tg g . f = toggle tg g \<and> (\<forall> s . s \<in> X \<longrightarrow> \<not> tg s))"
-  shows  "(lift_map_t_s l'1 l1 t1 f1) \<downharpoonleft> Fs_sub X"
+  shows  "(lift_map_t_s l'1 l1 t1 f1) \<down> Fs_sub X"
 proof-
 
   interpret V : lifting_valid l1 S1
@@ -428,7 +428,7 @@ proof-
     by auto
 
 (* TODO: this could just be a case-split instead of induction lol *)
-  show "(lift_map_t_s l'1 l1 t1 f1) \<downharpoonleft> Fs_sub X"
+  show "(lift_map_t_s l'1 l1 t1 f1) \<down> Fs_sub X"
     using Fs_fin Fs_f1 Toggle1 Toggles C Fs_sub
   proof(induction c arbitrary: Fs Fs_sub)
   case 0
@@ -516,7 +516,7 @@ proof-
           using Suc.prems F3
           by auto
 
-        show "lift_map_t_s l'1 l1 t1 f1 \<downharpoonleft> {f3, lift_map_t_s l'1 l1 t1 f1} X"
+        show "lift_map_t_s l'1 l1 t1 f1 \<down> {f3, lift_map_t_s l'1 l1 t1 f1} X"
         proof(cases "f3 = lift_map_t_s l'1 l1 t1 f1")
           case True
 
@@ -537,7 +537,7 @@ proof-
             using F3_toggle Suc.prems(3)
             by auto
   
-          show "lift_map_t_s l'1 l1 t1 f1 \<downharpoonleft> {f3, lift_map_t_s l'1 l1 t1 f1} X"
+          show "lift_map_t_s l'1 l1 t1 f1 \<down> {f3, lift_map_t_s l'1 l1 t1 f1} X"
             using dominant_toggle[OF Valid Toggles, of X id]
             unfolding F3_toggle(1)
             by(auto)
@@ -554,10 +554,10 @@ lemma dominant_toggles :
   assumes Toggle1 : "\<And> s . s \<in> X \<Longrightarrow> t1 s"
   assumes Toggles: "\<And> f . f \<in> Fs \<Longrightarrow> f \<noteq> lift_map_t_s l'1 l1 t1 f1 \<Longrightarrow>
     (\<exists> tg g . f = toggle tg g \<and> (\<forall> s . s \<in> X \<longrightarrow> \<not> tg s))"
-  shows  "(lift_map_t_s l'1 l1 t1 f1) \<downharpoonleft> Fs X"
+  shows  "(lift_map_t_s l'1 l1 t1 f1) \<down> Fs X"
 proof-
 
-  show "lift_map_t_s l'1 l1 t1 f1 \<downharpoonleft> Fs X"
+  show "lift_map_t_s l'1 l1 t1 f1 \<down> Fs X"
     using dominant_toggles'[OF Valid Fs_fin _ Fs_f1 Toggle1 Toggles]
     by blast
 qed
@@ -569,7 +569,7 @@ lemma dominant_toggles2 :
   assumes Toggle1 : "\<And> s . s \<in> X \<Longrightarrow> t1 s"
   assumes Toggles: "\<And> f s z . f \<in> Fs \<Longrightarrow> f s z \<noteq> lift_map_t_s l'1 l1 t1 f1 s z \<Longrightarrow>
     (\<exists> tg g . f = toggle tg g \<and> (\<forall> s . s \<in> X \<longrightarrow> \<not> tg s))"
-  shows  "(lift_map_t_s l'1 l1 t1 f1) \<downharpoonleft> Fs X"
+  shows  "(lift_map_t_s l'1 l1 t1 f1) \<down> Fs X"
 proof-
   have Toggles' : "\<And> f . f \<in> Fs \<Longrightarrow> f  \<noteq> lift_map_t_s l'1 l1 t1 f1 \<Longrightarrow>
     (\<exists> tg g . f = toggle tg g \<and> (\<forall> s . s \<in> X \<longrightarrow> \<not> tg s))"
@@ -589,7 +589,7 @@ proof-
       by auto
   qed
 
-  show "lift_map_t_s l'1 l1 t1 f1 \<downharpoonleft> Fs X"
+  show "lift_map_t_s l'1 l1 t1 f1 \<down> Fs X"
     using dominant_toggles'[OF Valid Fs_fin _ Fs_f1 Toggle1 Toggles']
     by blast
 qed
@@ -598,7 +598,7 @@ qed
 lemma dominant_toggle' :
   assumes Valid : "lifting_valid l1 S1"
   assumes Toggle : "\<And> s . s \<in> X \<Longrightarrow> t1 (l'1 s) \<and> \<not> (t2 (l'2 s))"
-  shows  "(lift_map_st_s l'1 l1 t1 f1) \<downharpoonleft> {(lift_map_st_s l'2 l2 t2 f2), (lift_map_st_s l'1 l1 t1 f1)} X"
+  shows  "(lift_map_st_s l'1 l1 t1 f1) \<down> {(lift_map_st_s l'2 l2 t2 f2), (lift_map_st_s l'1 l1 t1 f1)} X"
 proof
   fix b
   fix x :: 'd
@@ -642,7 +642,7 @@ lemma dominant_toggle_others' :
   assumes Toggle1 : "\<And> s . s \<in> X \<Longrightarrow> t1 s"
   assumes Toggles : "\<And> f . f \<in> Fs \<Longrightarrow> f \<noteq> lift_map_s l'1 l1 f1 \<Longrightarrow>
     (\<exists> tg g . f = toggle tg g \<and> (\<forall> s . s \<in> X \<longrightarrow> \<not> tg s))"
-  shows  "(lift_map_s l'1 l1 f1) \<downharpoonleft> Fs_sub X"
+  shows  "(lift_map_s l'1 l1 f1) \<down> Fs_sub X"
 proof-
 
   interpret V : lifting_valid l1 S1
@@ -652,7 +652,7 @@ proof-
     by auto
 
 (* TODO: this could just be a case-split instead of induction lol *)
-  show "(lift_map_s l'1 l1 f1) \<downharpoonleft> Fs_sub X"
+  show "(lift_map_s l'1 l1 f1) \<down> Fs_sub X"
     using Fs_fin Fs_f1 Toggle1 Toggles C Fs_sub
   proof(induction c arbitrary: Fs Fs_sub)
   case 0
@@ -740,7 +740,7 @@ proof-
           using Suc.prems F3
           by auto
 
-        show "lift_map_s l'1 l1 f1 \<downharpoonleft> {f3, lift_map_s l'1 l1 f1} X"
+        show "lift_map_s l'1 l1 f1 \<down> {f3, lift_map_s l'1 l1 f1} X"
         proof(cases "f3 = lift_map_s l'1 l1 f1")
           case True
 
@@ -761,7 +761,7 @@ proof-
             using F3_toggle Suc.prems(3)
             by auto
   
-          show "lift_map_s l'1 l1 f1 \<downharpoonleft> {f3, lift_map_s l'1 l1 f1} X"
+          show "lift_map_s l'1 l1 f1 \<down> {f3, lift_map_s l'1 l1 f1} X"
             using dominant_toggle_other[OF Valid Toggles, of X id]
             unfolding F3_toggle(1)
             by(auto)
@@ -778,10 +778,10 @@ lemma dominant_toggle_others :
   assumes Toggle1 : "\<And> s . s \<in> X \<Longrightarrow> t1 s"
   assumes Toggles: "\<And> f . f \<in> Fs \<Longrightarrow> f \<noteq> lift_map_s l'1 l1 f1 \<Longrightarrow>
     (\<exists> tg g . f = toggle tg g \<and> (\<forall> s . s \<in> X \<longrightarrow> \<not> tg s))"
-  shows  "(lift_map_s l'1 l1 f1) \<downharpoonleft> Fs X"
+  shows  "(lift_map_s l'1 l1 f1) \<down> Fs X"
 proof-
 
-  show "lift_map_s l'1 l1 f1 \<downharpoonleft> Fs X"
+  show "lift_map_s l'1 l1 f1 \<down> Fs X"
     using dominant_toggle_others'[OF Valid Fs_fin _ Fs_f1 Toggle1 Toggles, of id]
     by(simp)
 qed

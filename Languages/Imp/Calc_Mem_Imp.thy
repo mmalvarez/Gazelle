@@ -447,7 +447,7 @@ qed
 
 (* Domination facts needed for proof. *)
 lemma calc_dom :
-  "(calc_sem_l :: (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) \<downharpoonleft> sems' { x . (calc_toggle x = True)}"
+  "(calc_sem_l :: (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) \<down> sems' { x . (calc_toggle x = True)}"
   unfolding calc_sem_l_def
 proof(rule dominant_toggles)
   show "lifting_valid calc_lift 
@@ -502,7 +502,7 @@ next
 qed
 
 lemma mem_dom :
-  "mem_sem_l \<downharpoonleft> sems' { x . (mem_toggle x = True)}"
+  "mem_sem_l \<down> sems' { x . (mem_toggle x = True)}"
   unfolding mem_sem_l_def
 proof(rule dominant_toggles)
   show "lifting_valid mem_lift (no_control_lifting_S mem_lift1 mem_lift1_S)"
@@ -555,7 +555,7 @@ next
 qed
 
 lemma cond_dom :
-  "cond_sem_l \<downharpoonleft> sems' { x . (cond_toggle x = True)}"
+  "cond_sem_l \<down> sems' { x . (cond_toggle x = True)}"
   unfolding cond_sem_l_def
 proof(rule dominant_toggles)
   show "lifting_valid cond_lift (no_control_lifting_S (schem_lift (SP NA NB) (SP (SPRC cond_prio (SO NA)) 
@@ -610,7 +610,7 @@ next
 qed
 
 lemma imp_dom :
-  "imp_sem_l \<downharpoonleft> sems' { x . (imp_toggle x = True )}"
+  "imp_sem_l \<down> sems' { x . (imp_toggle x = True )}"
   unfolding imp_sem_l_def
 proof(rule dominant_toggles)
   show "lifting_valid imp_sem_lifting_spec
@@ -672,7 +672,7 @@ lemma seq_sem_lifting_gen_valid'' :
   by(fastforce intro: lifting_valid_fast)
 
 lemma seq_dom :
-  "((seq_sem_l :: (syn \<Rightarrow> ('s, _ ::{Okay, Bogus, Mergeableb, Pordps, Pordc_all}) state \<Rightarrow> ('s, _) state)) \<downharpoonleft> sems { Ss Sseq})"
+  "((seq_sem_l :: (syn \<Rightarrow> ('s, _ ::{Okay, Bogus, Mergeableb, Pordps, Pordc_all}) state \<Rightarrow> ('s, _) state)) \<down> sems { Ss Sseq})"
   unfolding seq_sem_l_def seq_sem_l_gen_def
 proof(rule dominant_toggle_others)
   show "lifting_valid 
@@ -734,7 +734,7 @@ next
     by(auto)
 qed
 lemma imp_dom_seq :
-  "(imp_sem_l :: syn \<Rightarrow> ('s, 'a ::{Okay, Bogus, Mergeableb, Pordps, Pordc_all}) state \<Rightarrow> ('s, 'a) state) \<downharpoonleft> {imp_sem_l, seq_sem_l} { x . (imp_toggle x = True)}"
+  "(imp_sem_l :: syn \<Rightarrow> ('s, 'a ::{Okay, Bogus, Mergeableb, Pordps, Pordc_all}) state \<Rightarrow> ('s, 'a) state) \<down> {imp_sem_l, seq_sem_l} { x . (imp_toggle x = True)}"
 proof(rule dominantI)
   fix x :: Calc_Mem_Imp.syn
   fix b :: "('s, 'a ::{Okay, Bogus, Mergeableb, Pordps, Pordc_all}) state"
@@ -780,7 +780,7 @@ split: prod.splits option.splits md_triv.splits md_prio.splits Seq.syn.splits)
 qed
    
 lemma imp_dom_all :
-  "imp_sem_l \<downharpoonleft> sems { x . (imp_toggle x = True )}"
+  "imp_sem_l \<down> sems { x . (imp_toggle x = True )}"
 proof(rule dominant_pairwise)
   show "finite sems"
     by(auto simp add: sems_def)
@@ -796,7 +796,7 @@ next
     unfolding sems'_def sems_def
     by auto
   then 
-  show "imp_sem_l \<downharpoonleft> {f', imp_sem_l} {x. imp_toggle x = True}"
+  show "imp_sem_l \<down> {f', imp_sem_l} {x. imp_toggle x = True}"
   proof cases
     case F'_s'
     then show ?thesis 

@@ -244,7 +244,6 @@ locale lifting_valid_oc_ext =
     "\<And> (Xs :: 'b set) (supr :: 'b) (w :: 'b) (s :: 'syn) (r :: 'a) . 
       w \<in> Xs \<Longrightarrow>
       is_sup Xs supr \<Longrightarrow>
-      \<comment> \<open> supr \<in> S s \<Longrightarrow> \<close>
       (\<And> x . x \<in> Xs \<Longrightarrow> LOut l s x = r) \<Longrightarrow>
       LOut l s supr = r"
      

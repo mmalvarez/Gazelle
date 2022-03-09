@@ -65,7 +65,7 @@ lemma HTS_imp_HT' :
   assumes Skip : "lfts c = Sskip"
   assumes Cin : "c \<in> X"
   assumes Hnemp : "g \<in> (set fs - {seq_sem_l_gen lfts})"
-  assumes Hdom : "(f' \<downharpoonleft> (set fs - {seq_sem_l_gen lfts}) X)"
+  assumes Hdom : "(f' \<down> (set fs - {seq_sem_l_gen lfts}) X)"
   shows "|gs| {~ (lift_pred_valid_ok_s id l c P1) ~} [G c z] {~ (lift_pred_valid_ok_s id l c P2) ~}"
 proof(rule HT'I)
   fix npost
@@ -184,7 +184,7 @@ proof(rule HT'I)
           unfolding append.simps H0
           by auto
 
-        have Hdom' :  "f' \<downharpoonleft> (set fs_sub) X"
+        have Hdom' :  "f' \<down> (set fs_sub) X"
           using Fs_sub Hdom by auto
 
         have Dominate1 : "pcomps fs_sub c m = f' c m" 
@@ -325,7 +325,7 @@ lemma HTS_imp_HT'' :
   assumes Active : "tg x = True"
   assumes Xin : "x \<in> X"
   assumes Hnemp : "g \<in> (set fs - {seq_sem_l_gen lfts})"
-  assumes Hdom : "(f' \<downharpoonleft> (set fs - {seq_sem_l_gen lfts}) X)"
+  assumes Hdom : "(f' \<down> (set fs - {seq_sem_l_gen lfts}) X)"
   assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut l (l' x) st)"
 
   shows "|gs| {~ (\<lambda> st . P st) ~} [G x z] 
@@ -457,7 +457,7 @@ proof(rule HT'I)
           unfolding append.simps H0
           by auto
 
-        have Hdom' :  "f' \<downharpoonleft> (set fs_sub) X"
+        have Hdom' :  "f' \<down> (set fs_sub) X"
           using Fs_sub Hdom by auto
 
         have Dominate1 : "pcomps fs_sub x m = f' x m"
@@ -596,7 +596,7 @@ lemma HTS_imp_HT''' :
   assumes Active : "tg x = True"
   assumes Xin : "x \<in> X"
   assumes Hnemp : "g \<in> (set fs - {seq_sem_l_gen lfts})"
-  assumes Hdom : "(f' \<downharpoonleft> (set fs - {seq_sem_l_gen lfts}) X)"
+  assumes Hdom : "(f' \<down> (set fs - {seq_sem_l_gen lfts}) X)"
   assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut l (l' x) st)"
 
   shows "|gs| {~ (\<lambda> st . P st) ~} [G x z] 
@@ -738,7 +738,7 @@ proof(rule HT'I)
           unfolding append.simps H0
           by auto
 
-        have Hdom' :  "f' \<downharpoonleft> (set fs_sub) X"
+        have Hdom' :  "f' \<down> (set fs_sub) X"
           using Fs_sub Hdom by auto
 
         have Dominate1 : "pcomps fs_sub x m = f' x m"

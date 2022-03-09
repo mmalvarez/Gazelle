@@ -29,7 +29,7 @@ abbreviation sems_nos where
 *)
 (*
 lemma dominant_sups_pres2 ::
-  assumes "f \<downharpoonleft> {} x"
+  assumes "f \<down> {} x"
 *)  
 
 (*
@@ -815,7 +815,7 @@ next
   show "(lift_map_t_s calc_trans
      (no_control_lifting calc_lift') calc_toggle
      calc_sem ::
-        (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) \<downharpoonleft> 
+        (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) \<down> 
         (set [calc_sem_l, mem_sem_l, cond_sem_l,
                       imp_sem_l, seq_sem_l] -
                  {seq_sem_l_gen
@@ -905,7 +905,7 @@ next
   show "(lift_map_t_s calc_trans
      (no_control_lifting calc_lift') calc_toggle
      calc_sem ::
-        (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) \<downharpoonleft> 
+        (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) \<down> 
         (set [calc_sem_l, mem_sem_l, cond_sem_l,
                       imp_sem_l, seq_sem_l] -
                  {seq_sem_l_gen
@@ -1011,7 +1011,7 @@ next
 
   show " lift_map_t_s cond_trans
      (no_control_lifting cond_lift') cond_toggle
-     cond_sem \<downharpoonleft> (set [calc_sem_l, mem_sem_l,
+     cond_sem \<down> (set [calc_sem_l, mem_sem_l,
                       cond_sem_l, imp_sem_l,
                       seq_sem_l] -
                  {seq_sem_l_gen
@@ -1108,7 +1108,7 @@ next
   show "(lift_map_t_s calc_trans
      (no_control_lifting calc_lift') calc_toggle
      calc_sem ::
-        (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) \<downharpoonleft> 
+        (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) \<down> 
         (set [calc_sem_l, mem_sem_l, cond_sem_l,
                       imp_sem_l, seq_sem_l] -
                  {seq_sem_l_gen
@@ -1222,7 +1222,7 @@ next
 next
 
   show "lift_map_t_s mem_trans (no_control_lifting mem_lift1) mem_toggle
-     mem0_sem \<downharpoonleft> (set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l,
+     mem0_sem \<down> (set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l,
                       seq_sem_l] -
                  {seq_sem_l_gen seq_trans}) {x. mem_toggle x = True}"
     using mem_dom
@@ -1349,7 +1349,7 @@ next
 next
 
   show "lift_map_t_s mem_trans (no_control_lifting mem_lift1) mem_toggle
-     mem0_sem \<downharpoonleft> (set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l,
+     mem0_sem \<down> (set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l,
                       seq_sem_l] -
                  {seq_sem_l_gen seq_trans}) {x. mem_toggle x = True}"
     using mem_dom
@@ -1462,7 +1462,7 @@ next
   show "(lift_map_t_s calc_trans
      (no_control_lifting calc_lift') calc_toggle
      calc_sem ::
-        (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) \<downharpoonleft> 
+        (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) \<down> 
         (set [calc_sem_l, mem_sem_l, cond_sem_l,
                       imp_sem_l, seq_sem_l] -
                  {seq_sem_l_gen
@@ -1604,7 +1604,7 @@ next
   show "(lift_map_t_s calc_trans
      (no_control_lifting calc_lift') calc_toggle
      calc_sem ::
-        (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) \<downharpoonleft> 
+        (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) \<down> 
         (set [calc_sem_l, mem_sem_l, cond_sem_l,
                       imp_sem_l, seq_sem_l] -
                  {seq_sem_l_gen
@@ -1741,7 +1741,7 @@ next
   show "(lift_map_t_s cond_trans
      (no_control_lifting cond_lift') cond_toggle
      cond_sem ::
-        (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) \<downharpoonleft> 
+        (syn \<Rightarrow> ('s, ('c :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, ('c)) state)) \<down> 
         (set [calc_sem_l, mem_sem_l, cond_sem_l,
                       imp_sem_l, seq_sem_l] -
                  {seq_sem_l_gen
