@@ -26,8 +26,10 @@ begin
 
 (* We will be presented with a list of language semantics, but will prefer to work
  * with sets whenever possible. *)
+text_raw \<open>%Snippet gazelle__composition__composition_core__langcomps\<close>
 type_synonym ('a, 'b) langcomps =
   "('a \<Rightarrow> 'b \<Rightarrow> 'b) list"
+text_raw \<open>%EndSnippet\<close>
 
 (* Pcomps ("Parallel CompositionS") will calculate the merged semantics using bsup -
  * but is only guaranteed to be well-behaved under certain conditions (corresponding
@@ -36,11 +38,13 @@ type_synonym ('a, 'b) langcomps =
  * The idea is that in such cases, the ordering of composition doesn't matter
  * (since our composition operator bsup will coincide with sup; thus will be commutative
  * and associative) so we can just fold along the list in the natural order. *)
+text_raw \<open>%Snippet gazelle__composition__composition_core__pcomps\<close>
 fun pcomps :: "('a, 'b :: Mergeable) langcomps \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> 'b)" where
 "pcomps [] a b = b"
 | "pcomps [lh] a b = lh a b"
 | "pcomps (lh#lt) a b =
    [^ lh a b, pcomps lt a b ^]"
+text_raw \<open>%EndSnippet\<close>
 
 (* Map a set of functions over inputs drawn from another set *)
 definition scross :: "('a \<Rightarrow> 'b) set \<Rightarrow> 'a set \<Rightarrow> 'b set" where

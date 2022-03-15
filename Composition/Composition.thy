@@ -54,7 +54,7 @@ definition sups_pres ::
      is_sup (scross ((\<lambda> f . f syn) ` Fs') Xs) sup' \<and>
      sup' \<in> S))"
 *)
-
+text_raw \<open>%Snippet gazelle__composition__composition__sups_pres\<close>
 definition sups_pres ::
   "('a \<Rightarrow> ('b :: Pord) \<Rightarrow> 'b) set \<Rightarrow> ('a \<Rightarrow> 'b  set) \<Rightarrow> bool" where
 "sups_pres Fs S =
@@ -63,7 +63,7 @@ definition sups_pres ::
     Fs' \<subseteq> Fs \<longrightarrow>
     f \<in> Fs' \<longrightarrow>
     (has_sup ((\<lambda> f . f syn x) ` Fs')))"
-
+text_raw \<open>%EndSnippet\<close>
 
 lemma sups_presI [intro] :
   assumes "\<And> x syn Fs' f . 
@@ -1190,6 +1190,7 @@ lemma pcomps_removeAll :
     pcomps_removeAll'[OF H Hf Hl1 Hx]
   by auto
 
+text_raw \<open>%Snippet gazelle__composition__composition__pcomps_set_eq\<close>
 lemma pcomps_set_eq :
   assumes H : "sups_pres Fs S"
   assumes Hf : "f \<in> Fs"
@@ -1197,6 +1198,7 @@ lemma pcomps_set_eq :
   assumes Hl2 : "set l2 = Fs"
   assumes Hx : "x \<in> S syn"
   shows "pcomps l1 syn x = pcomps l2 syn x"
+text_raw \<open>%EndSnippet\<close>
   using assms
 proof(induction l1 arbitrary: Fs f l2)
   case Nil1_1 : Nil

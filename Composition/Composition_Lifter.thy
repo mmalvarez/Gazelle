@@ -430,18 +430,16 @@ qed
 (* this is how we merge functions that don't obey the stricter criteria of
  * being l_ortho. (e.g. prio's that update the same field)
  *)
+text_raw \<open>%Snippet gazelle__composition__composition_lifter__sups_pres_insert\<close>
 lemma sups_pres_insert :
   fixes Fs
   fixes f
   fixes S :: "'syn \<Rightarrow> ('x :: Mergeableps) set"
   assumes Hf : "sups_pres {f} S"
   assumes HFs : "sups_pres (set fs) S"
-(*  assumes Pairwise_S : "lifting_pairwise S"*)
   assumes Pairwise : "\<And> g . g \<in> set fs \<Longrightarrow> sups_pres {g, f} S"
-(*  assumes Pairwise2 : "\<And> "
-
-*)
   shows "sups_pres (set (f#fs) ) S"
+text_raw \<open>%EndSnippet\<close>
   using Hf HFs Pairwise
 proof(induction fs arbitrary: f)
   case Nil
@@ -731,9 +729,11 @@ next
   qed
 qed
 
+text_raw \<open>%Snippet gazelle__composition__composition_lifter__sups_pres_singletonI\<close>
 lemma sups_pres_singletonI :
   "\<And> S f . 
     sups_pres {f} S"
+text_raw \<open>%EndSnippet\<close>
 proof
   fix S :: "'a \<Rightarrow> 'b set"
   fix f :: "'a \<Rightarrow> 'b \<Rightarrow> 'b" 
@@ -759,13 +759,14 @@ proof
     by(auto simp add: has_sup_def)
 qed
 
+text_raw \<open>%Snippet gazelle__composition__composition_lifter__sups_pres_pairI\<close>
 lemma sups_pres_pairI :
   fixes Fs
   fixes f
   fixes S :: "'a \<Rightarrow> ('b :: Pord) set"
   assumes Sups : "\<And> x s . x \<in> S s \<Longrightarrow> has_sup {f1 s x, f2 s x}"
-(*  assumes Pairwise_S : "lifting_pairwise S"*)
   shows "sups_pres {f1, f2} S"
+text_raw \<open>%EndSnippet\<close>
 proof
   fix f :: "'a \<Rightarrow> 'b \<Rightarrow> 'b" 
   fix x syn Fs' f'
@@ -803,11 +804,13 @@ qed
 (*
   if we are in a type where all sups exist, this becomes much easier
 *)
+text_raw \<open>%Snippet gazelle__composition__composition_lifter__sups_pres_finite_all\<close>
 lemma sups_pres_finite_all:
   fixes Fs :: "('a \<Rightarrow> ('b :: Pordc_all) \<Rightarrow> 'b) set"
   assumes Nemp : "f \<in> Fs"
   assumes Fin : "finite Fs"
   shows "sups_pres Fs S"
+text_raw \<open>%EndSnippet\<close>
 proof(rule sups_presI)
   fix x :: 'b 
   fix syn :: 'a

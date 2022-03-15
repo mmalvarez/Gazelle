@@ -22,6 +22,10 @@ session Gazelle = "HOL-Library" +
     "Languages/Imp/Calc_Mem_Imp_Hoare"
     "Paper_Examples/Intro_Example"
     "Paper_Examples/Intro_Example_Gazelle"
+    "Paper_Examples/Composition1"
+    "Paper_Examples/Composition_Tuple_Components"
+    "Paper_Examples/Composition_Option"
+    "Paper_Examples/Composition_Priority"
   document_files
     "root.tex"
 

@@ -5,9 +5,11 @@ begin
 (* Trivial ordering: (x <[ x \<leftrightarrow> x = x)
  * md_triv is complete, but lacks a least element.
  *)
+text_raw \<open>%Snippet gazelle__mergeable__instances__mg_triv__pord_weak\<close>
 instantiation md_triv :: (_) Pord_Weak
 begin
 definition triv_pleq : "(a :: 'a md_triv) <[ b = (a = b)"
+text_raw \<open>%EndSnippet\<close>
   instance proof
     fix a :: "'a md_triv"
     show "a <[ a" unfolding triv_pleq
@@ -81,11 +83,12 @@ begin
 instance proof qed
 end
 
+text_raw \<open>%Snippet gazelle__mergeable__instances__mg_triv__mergeable\<close>
 instantiation md_triv :: (_) Mergeable 
 begin
 
 definition triv_bsup : "[^(a :: 'a md_triv), b^] = a"
-
+text_raw \<open>%EndSnippet\<close>
 instance proof
     fix a b :: "'a md_triv"
     show "is_bsup a b (bsup a b)" unfolding triv_pleq triv_bsup

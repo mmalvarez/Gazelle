@@ -6,6 +6,7 @@ begin
  * allow one language component's semantics to "override" the behavior of another,
  * disregarding the ordering of the data being output by the two semantics.
  *)
+text_raw \<open>%Snippet gazelle__mergeable__instances__mg_prio__pord_weak\<close>
 instantiation md_prio :: (Pord_Weak) Pord_Weak
 begin
 definition prio_pleq :
@@ -15,7 +16,7 @@ definition prio_pleq :
                     mdp yi y' \<Rightarrow> (if (xi \<le> yi) then
                                       (if (yi \<le> xi) then pleq x' y' else True)
                                     else False)))"
-
+text_raw \<open>%EndSnippet\<close>
 instance proof
   fix a :: "'a md_prio"
   show "pleq a a" by (auto simp add:prio_pleq leq_refl split:md_prio.splits)
@@ -57,11 +58,13 @@ instance proof
 qed
 end
 
+text_raw \<open>%Snippet gazelle__mergeable__instances__mg_prio__pord_weakb\<close>
 instantiation md_prio :: (Pord_Weakb) Pord_Weakb
 begin
 
 definition prio_bot :
 "\<bottom> = mdp 0 bot"
+text_raw \<open>%EndSnippet\<close>
 
 instance proof
   fix a :: "'a md_prio"
@@ -559,6 +562,7 @@ instance proof
 qed
 end
 
+text_raw \<open>%Snippet gazelle__mergeable__instances__mg_prio__mergeableb\<close>
 instantiation md_prio :: (Mergeableb) Mergeableb
 begin
 
@@ -573,7 +577,7 @@ definition prio_bsup :
                                          else mdp (1 + ai) bot)
                                                  else mdp bi b')
                                else mdp ai a')))"
-
+text_raw \<open>%EndSnippet\<close>
 instance proof
   fix a b :: "('a md_prio)"
   obtain ai and a' where Ha : "a = mdp ai a'" by (cases a; auto)

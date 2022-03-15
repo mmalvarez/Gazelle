@@ -6,11 +6,13 @@ begin
  * bsup a b (written [^ a, b ^]) is guaranteed to exist (it really, really should also
  * be computable, since we use this for code generation)
  *)
+text_raw \<open>%Snippet gazelle__mergeable__mergeable__mergeable\<close>
 class Mergeable =
   Pordc + 
   fixes bsup :: "('a :: Pordc) \<Rightarrow> 'a \<Rightarrow> 'a" ("[^ _, _ ^]")
 assumes bsup_spec :
   "\<And> a b . is_bsup a b (bsup a b)"
+text_raw \<open>%EndSnippet\<close>
 
 (* Utility lemmas for reasoning directly about [^ a, b ^] rather than the
  * predicate version bsup a b
@@ -149,9 +151,10 @@ proof(-)
 
 qed
 
-
+text_raw \<open>%Snippet gazelle__mergeable__mergeable__mergeableb\<close>
 class Mergeableb = Mergeable +
   Pordbc
+text_raw \<open>%EndSnippet\<close>
 
 class Mergeableps = Mergeable +
   Pordpsc

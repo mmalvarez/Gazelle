@@ -13,7 +13,7 @@ begin
  * is lexicographic (see below)
  *)
 
-
+text_raw \<open>%Snippet gazelle__mergeable__instances__mg_prod__pord_weak\<close>
 instantiation prod :: (Pord_Weak, Pord_Weak) Pord_Weak
 begin
   definition prod_pleq : 
@@ -21,6 +21,8 @@ begin
     (case x of
         (x1, x2) \<Rightarrow> (case y of
                       (y1, y2) \<Rightarrow> (pleq x1 y1 \<and> pleq x2 y2)))"
+text_raw \<open>%EndSnippet\<close>
+
 instance proof
   fix a :: "('a * 'b)"
   show "pleq a a" by (auto simp add:prod_pleq leq_refl split:prod.splits)
@@ -649,11 +651,13 @@ instance proof
 qed
 end
 
-
+text_raw \<open>%Snippet gazelle__mergeable__instances__mg_prod__pord_weakb\<close>
 instantiation prod :: (Pord_Weakb, Pord_Weakb) Pord_Weakb
 begin
 definition prod_bot : 
   "(bot :: 'a * 'b) = (bot, bot)"
+text_raw \<open>%EndSnippet\<close>
+
 instance proof
   fix a :: "'a * 'b"
   show "pleq bot a"
@@ -667,6 +671,7 @@ instance proof
 qed
 end
 
+text_raw \<open>%Snippet gazelle__mergeable__instances__mg_prod__mergeableb\<close>
 instantiation prod :: (Mergeableb, Mergeableb) Mergeableb
 begin
 
@@ -675,6 +680,7 @@ definition prod_bsup :
   (case a of
     (a1, a2) \<Rightarrow> (case b of
                   (b1, b2) \<Rightarrow> (bsup a1 b1, bsup a2 b2)))"
+text_raw \<open>%EndSnippet\<close>
 
 instance proof
   fix a :: "'a  * 'b"

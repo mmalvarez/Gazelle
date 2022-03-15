@@ -4,6 +4,7 @@ begin
 
 (* Option is used to express a pointed ordering with a least element (None).
  * It can be seen as lifting an ordering on 'a to a pointed ordering on 'a option *)
+text_raw \<open>%Snippet gazelle__mergeable__instances__mg_option__pord_weak\<close>
 instantiation option :: (Pord_Weak) Pord_Weak
 begin
 definition option_pleq : "(x :: 'a option) <[ y =
@@ -13,6 +14,7 @@ definition option_pleq : "(x :: 'a option) <[ y =
         (case y of
           None \<Rightarrow> False
           | Some y' \<Rightarrow> (pleq x' y')))"
+text_raw \<open>%EndSnippet\<close>
 
 instance proof
   show "\<And> (a :: 'a option) . pleq a a"
@@ -434,10 +436,12 @@ instance proof
 qed
 end
 
+text_raw \<open>%Snippet gazelle__mergeable__instances__mg_option__pord_weakb\<close>
 instantiation option :: (Pord_Weak) Pord_Weakb
 begin
 
 definition option_bot : "bot = (None :: 'a option)"
+text_raw \<open>%EndSnippet\<close>
 
 instance proof
 next
@@ -458,6 +462,7 @@ begin
 instance proof qed
 end
 
+text_raw \<open>%Snippet gazelle__mergeable__instances__mg_option__mergeable\<close>
 instantiation option :: (Mergeable) Mergeableb
 begin
 definition option_bsup: "[^(x :: 'a option), y^] =
@@ -466,6 +471,8 @@ definition option_bsup: "[^(x :: 'a option), y^] =
     | Some x' \<Rightarrow> (case y of
                        None \<Rightarrow> Some x'
                        | Some y' \<Rightarrow> Some (bsup x' y')))"
+text_raw \<open>%EndSnippet\<close>
+
 instance proof
   fix a b :: "'a option"
   show "is_bsup a b (bsup a b)"

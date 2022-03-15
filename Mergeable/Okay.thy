@@ -3,15 +3,19 @@ begin
 (* Okay typeclass - attaches a set of "valid" values to a type
  * (useful in specifying liftings.
  *)
+text_raw \<open>%Snippet gazelle__mergeable__okay__okay\<close>
 class Okay =
   fixes ok_S :: "('a) set"
+text_raw \<open>%EndSnippet\<close>
 
 (* Instances of ok typeclass *)
+text_raw \<open>%Snippet gazelle__mergeable__okay__option\<close>
 instantiation option :: (Okay) Okay
 begin
 definition option_ok_S : "(ok_S :: 'a option set) = (Some ` ok_S)"
 instance proof qed
 end
+text_raw \<open>%EndSnippet\<close>
 
 instantiation prod :: (Okay, Okay) Okay
 begin

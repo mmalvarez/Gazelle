@@ -10,9 +10,10 @@ begin
 (* md_triv = "Mergeable Data: Trivial"
  * this imposes a trivial ordering (x <[ x \<leftrightarrow> x = x)
  *)
-
+text_raw \<open>%Snippet gazelle__mergeable__wrappers__md_triv\<close>
 datatype 'a md_triv =
   mdt 'a
+text_raw \<open>%EndSnippet\<close>
 
 definition mdt_get :: "'a md_triv \<Rightarrow> 'a" where
 "mdt_get x = (case x of (mdt x') \<Rightarrow> x')"
@@ -26,10 +27,10 @@ declare mdt_get_def mdt_put_def [simp]
  * We pair a datum with a natural number representing "priority".
  * When comparing elements we will first compare priorities, then enclosed data.
  *)
-
+text_raw \<open>%Snippet gazelle__mergeable__wrappers__md_prio\<close>
 datatype 'a md_prio =
   mdp nat 'a
-
+text_raw \<open>%EndSnippet\<close>
 definition mdp_get :: "'a md_prio \<Rightarrow> (nat * 'a)" where
 "mdp_get x = (case x of (mdp n y) \<Rightarrow> (n, y))"
 

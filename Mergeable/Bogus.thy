@@ -6,15 +6,18 @@ begin
  * (datatypes where we can pull out a specified member
  * instead of crashing with undefined)
  *)
-
+text_raw \<open>%Snippet gazelle__mergeable__bogus__bogus\<close>
 class Bogus =
   fixes bogus :: "'a"
+text_raw \<open>%EndSnippet\<close>
 
 (* Instances of bogus typeclass *)
+text_raw \<open>%Snippet gazelle__mergeable__bogus__nat\<close>
 instantiation nat :: Bogus begin
 definition nat_bogus : "bogus = (0 :: nat)"
 instance proof qed
 end
+text_raw \<open>%EndSnippet\<close>
 
 instantiation bool :: Bogus begin
 definition bool_bogus : "bogus = True"
@@ -41,12 +44,12 @@ definition sum_bogus : "bogus = Inl bogus"
 instance proof qed
 end
 
+text_raw \<open>%Snippet gazelle__mergeable__bogus__option\<close>
 instantiation option :: (Bogus) Bogus begin
 definition option_bogus : "bogus = Some bogus"
 instance proof qed
 end
-
-
+text_raw \<open>%EndSnippet\<close>
 
 (* TODO: why not [bogus]? *)
 instantiation list :: (_) Bogus begin

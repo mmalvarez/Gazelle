@@ -683,8 +683,10 @@ class Pordbc =  Pordc + Pordb
 
 class Pordbpsc = Pordbc + Pordps
 
+text_raw \<open>%Snippet gazelle__mergeable__pord__pordc_all\<close>
 class Pordc_all = Pordc +
   assumes ub2_all : "\<And> a b . has_ub {a, b}"
+text_raw \<open>%EndSnippet\<close>
 
 lemma sup2_all :
   fixes a b :: "'a :: Pordc_all"
