@@ -2,7 +2,7 @@ theory Intro_Example
   imports Main "../Lib/Oalist/Oalist" "../Syntax/Gensyn"
 begin
 
-text_raw \<open>%Snippet calc_intro_example\<close>
+text_raw \<open>%Snippet paper_examples__intro_example__calc\<close>
 datatype calc =
   Add
   | Sub
@@ -23,7 +23,7 @@ fun calc_sem :: "calc \<Rightarrow> calc_state \<Rightarrow> calc_state" where
 | "calc_sem (Skip_Calc) t = t"
 text_raw \<open>%EndSnippet\<close>
 
-text_raw \<open>%Snippet mem_intro_example\<close>
+text_raw \<open>%Snippet paper_examples__intro_example__mem\<close>
 
 datatype reg_id =
   Reg_a
@@ -55,7 +55,7 @@ fun mem_sem :: "mem \<Rightarrow> mem_state \<Rightarrow> mem_state" where
 
 text_raw \<open>%EndSnippet\<close>
 
-text_raw \<open>%Snippet seq_intro_example\<close>
+text_raw \<open>%Snippet paper_examples__intro_example__seq\<close>
 
 datatype seq =
   Seq
@@ -63,7 +63,7 @@ datatype seq =
 
 text_raw \<open>%EndSnippet\<close>
 
-text_raw \<open>%Snippet count_intro_example\<close>
+text_raw \<open>%Snippet paper_examples__intro_example__count\<close>
 
 datatype count =
   Op
@@ -77,7 +77,7 @@ fun count_sem :: "count \<Rightarrow> count_state \<Rightarrow> count_state" whe
 
 text_raw \<open>%EndSnippet\<close>
 
-text_raw \<open>%Snippet handwritten_composition_intro_example\<close>
+text_raw \<open>%Snippet paper_examples__intro_example__handwritten_composition\<close>
 
 type_synonym composed_state =
   "(int * int * int * (String.literal, int) oalist * int)"
@@ -102,7 +102,7 @@ fun composed_sem ::
 
 text_raw \<open>%EndSnippet\<close>
 
-text_raw \<open>%Snippet handwritten_composition_run_intro_example\<close>
+text_raw \<open>%Snippet paper_examples__intro_example__handwritten_composition_run\<close>
 definition example_prog :: "composed" where
 "example_prog =
   Sq

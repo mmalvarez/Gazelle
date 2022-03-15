@@ -7,7 +7,7 @@ theory Intro_Example_Gazelle
     "../Hoare/Hoare_Step"
 begin
 
-text_raw \<open>%Snippet gazelle_composition_intro_example\<close>
+text_raw \<open>%Snippet paper_examples__intro_example_gazelle__composition\<close>
 
 datatype composed =
   Calc calc
@@ -101,7 +101,7 @@ definition composed_sem :: "composed \<Rightarrow> (composed, _) composed_state 
 
 text_raw \<open>%EndSnippet\<close>
 
-text_raw \<open>%Snippet gazelle_composition_run_intro_example\<close>
+text_raw \<open>%Snippet paper_examples__intro_example_gazelle__composition_run\<close>
 
 definition example_prog :: "composed gensyn" where
 "example_prog =

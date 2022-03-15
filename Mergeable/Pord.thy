@@ -46,27 +46,31 @@ lemma ord_leq_d : "\<And> ox oy a b .
    typeclass adds antisymmetry.
 *)
 
+text_raw \<open>%Snippet gazelle__mergeable__pord__pord_weak\<close>
 class Pord_Weak =
   fixes pleq :: "'a \<Rightarrow> 'a \<Rightarrow> bool" (infixl \<open><[\<close> 71)
   assumes
     leq_refl : "pleq a a"
   assumes
     leq_trans : "pleq a b \<Longrightarrow> pleq b c \<Longrightarrow> pleq a c"
-
+text_raw \<open>%EndSnippet\<close>
 
 (* Notions common to partial orders - upper bounds, lower bounds, infs and sups *)
 definition is_lb :: "('a :: Pord_Weak) set \<Rightarrow> 'a \<Rightarrow> bool" where
 "is_lb A a =
   (\<forall> x \<in> A . a <[ x)"
 
+text_raw \<open>%Snippet gazelle__mergeable__pord__is_greatest\<close>
 definition is_greatest :: "(('a :: Pord_Weak) \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> bool" where
 "is_greatest P a =
   (P a \<and>
    (\<forall> a' . P a' \<longrightarrow> pleq a' a))"
+text_raw \<open>%EndSnippet\<close>
 
 definition is_inf :: "('a :: Pord_Weak) set \<Rightarrow> 'a \<Rightarrow> bool" where
 "is_inf A a = is_greatest (is_lb A) a"
 
+text_raw \<open>%Snippet gazelle__mergeable__pord__ub_least_sup\<close>
 definition is_ub :: "('a :: Pord_Weak) set \<Rightarrow> 'a \<Rightarrow> bool" where
 "is_ub A a =
   (\<forall> x \<in> A . pleq x a)"
@@ -85,7 +89,7 @@ definition has_sup :: "('a :: Pord_Weak) set \<Rightarrow> bool" where
 
 definition has_ub :: "('a :: Pord_Weak) set \<Rightarrow> bool" where
 "has_ub A = (\<exists> s . is_ub A s)"
-
+text_raw \<open>%EndSnippet\<close>
 
 (* A key definition: bub = "Biased Upper Bound". The idea is that for any two objects of type
    a and b of type 'a, bub a b is "the closest we can get" to a common (least) upper bound
@@ -106,7 +110,7 @@ definition has_ub :: "('a :: Pord_Weak) set \<Rightarrow> bool" where
    that is, where the existence of _any_ upper bound between a and bd guarantees the existence
    of a least upper bound sd.
 *)
-
+text_raw \<open>%Snippet gazelle__mergeable__pord__bub\<close>
 definition is_bub :: "('a :: Pord_Weak) \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
 "is_bub a b s =
   (pleq a s \<and>
@@ -117,6 +121,7 @@ definition is_bub :: "('a :: Pord_Weak) \<Rightarrow> 'a \<Rightarrow> 'a \<Righ
 definition is_bsup :: "('a :: Pord_Weak) \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
 "is_bsup a b s =
   is_least (is_bub a b) s"
+text_raw \<open>%EndSnippet\<close>
 
 (* Monotonicity for predicates *)
 definition is_monop1 :: "(('a :: Pord_Weak) \<Rightarrow> bool) \<Rightarrow> bool" where
@@ -234,10 +239,11 @@ lemma is_bsupD3 :
   shows "pleq ub ub'"
   using H1 H2 by (auto simp add:is_bsup_def is_least_def)
 
+text_raw \<open>%Snippet gazelle__mergeable__pord__pord\<close>
 class Pord =
     Pord_Weak +
     assumes leq_antisym : "pleq a b \<Longrightarrow> pleq b a \<Longrightarrow> a = b"
-
+text_raw \<open>%EndSnippet\<close>
 
 (* facts about Pord *)
 lemma is_greatest_unique :
@@ -332,11 +338,13 @@ liftings.
 
 *)
 
+text_raw \<open>%Snippet gazelle__mergeable__pord__pordps\<close>
 class Pordps =
   Pord +
   assumes pairwise_sup :
     "has_sup {a, b} \<Longrightarrow> has_sup {b, c} \<Longrightarrow> has_sup {a, c} \<Longrightarrow>
      has_sup {a, b, c}"
+text_raw \<open>%EndSnippet\<close>
 
 class Pordok = Pord + Okay
 
@@ -353,11 +361,13 @@ class Pordpsok = Pordok + Pordps +
  * (intuitively, we know we will always be merging a finite number of language components
  * to get our final result)
 *)
+text_raw \<open>%Snippet gazelle__mergeable__pord__pordc\<close>
 class Pordc =
   Pord +
   assumes complete2: "has_ub {a, b} \<Longrightarrow> has_sup {a, b}"
 
 (* helper lemmas for our proof that bsup equals sup, in the event sup exists *)
+text_raw \<open>%EndSnippet\<close>
 
 lemma bsup_compare1:
   fixes a b bs_ab a' b' bs_a'b :: "'a :: Pordc"
@@ -654,12 +664,14 @@ qed
  * stands for "partial"
  *)
 
+text_raw \<open>%Snippet gazelle__mergeable__pord__pordb\<close>
 class Pord_Weakb = Pord_Weak +
 fixes bot :: "'a" ("\<bottom>")
 assumes bot_spec :
   "\<And> (a :: 'a ) .  pleq bot a"
 
 class Pordb =  Pord + Pord_Weakb
+text_raw \<open>%EndSnippet\<close>
 
 class Pordbps = Pordb + Pordps
 
