@@ -5,9 +5,10 @@ begin
  * A general-purpose datatype for expressing recursive syntax
  * Used as the syntax for language-components.
  *)
-
+text_raw \<open>%Snippet gazelle__syntax__gensyn__gensyn\<close>
 datatype ('x) gensyn =
   G "'x" "(('x) gensyn) list"
+text_raw \<open>%EndSnippet\<close>
 
 type_synonym gensyn_skel = "(unit) gensyn"
 
