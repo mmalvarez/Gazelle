@@ -313,10 +313,12 @@ next
   then show ?case by auto
 qed
 
+text_raw \<open>%Snippet gazelle__semantics__semantics_facts__sem_exec_c_p_run\<close>
 lemma sem_exec_c_p_run:
   assumes "sem_exec_c_p gs m n m'"
   assumes "cont m' = Inl l"
   shows "sem_run gs n m = Inl m'"
+text_raw \<open>%EndSnippet\<close>
   using assms
 proof(induction arbitrary: l rule: sem_exec_c_p.induct)
   case (Excp_0 m)
@@ -353,9 +355,11 @@ qed
 
 (* problem. sem_exec_c_p tries to run
 exactly that many steps. *)
+text_raw \<open>%Snippet gazelle__semantics__semantics_facts__sem_exec_c_p_run'\<close>
 lemma sem_exec_c_p_run' :
   assumes "sem_run gs n m = Inl m'"
   shows "\<exists> nmin . nmin \<le> n \<and> sem_exec_c_p gs m nmin m'"
+text_raw \<open>%EndSnippet\<close>
   using assms
 proof(induction n arbitrary: m m')
   case 0

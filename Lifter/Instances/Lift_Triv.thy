@@ -10,10 +10,17 @@ begin
  * problems with triv in the presence of certain kinds of polymorphism.
  * i wonder if we need an explicit type paramete?
  *)
+text_raw \<open>%Snippet gazelle__lifter__instances__lift_triv__triv_l\<close>
 definition triv_l ::
   "('x, 'a :: Bogus, 'a md_triv) lifting" where
 "triv_l =
   LMake (\<lambda> s a _ . mdt a) (\<lambda> s b . (case b of (mdt b') \<Rightarrow> b')) (\<lambda> s . mdt bogus)"
+text_raw \<open>%EndSnippet\<close>
+
+text_raw \<open>%Snippet gazelle__lifter__instances__lift_triv__triv_l_S\<close>
+definition triv_l_S :: "'x \<Rightarrow> 'a md_triv set" where
+"triv_l_S = (\<lambda>   _ . UNIV)"
+text_raw \<open>%EndSnippet\<close>
 
 locale triv_l_valid_weak =
   fixes T :: "('a :: Bogus) itself"

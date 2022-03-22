@@ -19,6 +19,7 @@ begin
  *)
 
 (* 'mstate augmented with control information used by the semantics *)
+text_raw \<open>%Snippet gazelle__semantics__semantics__control_type\<close>
 type_synonym ('full, 'mstate) control =
   "('full gensyn list md_triv option md_prio * String.literal option md_triv option md_prio * 'mstate)"
 
@@ -29,13 +30,16 @@ type_synonym ('syn, 'full, 'mstate) sem =
 type_synonym 'x orerror =
   "('x + String.literal)"
 
-(* semc = "closed" sem: we force 'syn and 'full to be equal  *)
 type_synonym ('syn, 'mstate) semc = "('syn, 'syn, 'mstate) sem"
+text_raw \<open>%EndSnippet\<close>
+(* semc = "closed" sem: we force 'syn and 'full to be equal  *)
 
+text_raw \<open>%Snippet gazelle__semantics__semantics__payload\<close>
 definition payload :: "('full, 'mstate) control \<Rightarrow> 'mstate" where
 "payload c =
   (case c of
     (_, _, m) \<Rightarrow> m)"
+text_raw \<open>%EndSnippet\<close>
 
 declare payload_def [simp add]
 
@@ -48,7 +52,7 @@ definition cont :: "('full, 'mstate) control \<Rightarrow> ('full gensyn list or
     | ((mdp _ _), (mdp _ None), _) \<Rightarrow> Inr (STR ''Hit bottom in message field'') 
     | ((mdp _ _), (mdp _ (Some (mdt msg))), _) \<Rightarrow> Inr msg)"
 *)
-
+text_raw \<open>%Snippet gazelle__semantics__semantics__cont\<close>
 definition cont :: "('full, 'mstate) control \<Rightarrow> ('full gensyn list orerror)" where
 "cont m \<equiv>
   (case m of
@@ -58,9 +62,10 @@ definition cont :: "('full, 'mstate) control \<Rightarrow> ('full gensyn list or
         | Some msg \<Rightarrow> Inr msg)
     | ((mdp _ None), _, _) \<Rightarrow> Inr (STR ''Hit bottom in continuation field'') 
     | ((mdp _ _), (mdp _ None), _) \<Rightarrow> Inr (STR ''Hit bottom in message field''))"
-
+text_raw \<open>%EndSnippet\<close>
 
 (* Small-step semantics *)
+text_raw \<open>%Snippet gazelle__semantics__semantics__sem_step\<close>
 definition sem_step ::
   "('syn, 'mstate) semc \<Rightarrow>
    ('syn, 'mstate) control \<Rightarrow>
@@ -70,6 +75,7 @@ definition sem_step ::
     Inr msg \<Rightarrow> Inr msg
     | Inl [] \<Rightarrow> Inr (STR ''Halted'')
     | Inl ((G x l)#tt) \<Rightarrow> Inl (gs x m))"
+text_raw \<open>%EndSnippet\<close>
 
 (* Executable version of interpreter as a series of small-steps *)
 (* TODO: show correspondence between this and sem_exec_p *)
@@ -91,6 +97,7 @@ fun sem_exec ::
 
 (* Easier-to-use interpreter, does not require exact fuel.
  * TODO: show correspondence between this and sem_exec *)
+text_raw \<open>%Snippet gazelle__semantics__semantics__sem_run\<close>
 fun sem_run :: "('syn, 'mstate) semc \<Rightarrow> nat \<Rightarrow>
 ('syn, 'mstate) control \<Rightarrow>
    (('syn, 'mstate) control orerror)" where
@@ -104,19 +111,24 @@ fun sem_run :: "('syn, 'mstate) semc \<Rightarrow> nat \<Rightarrow>
     Inr msg \<Rightarrow> Inr msg
     | Inl [] \<Rightarrow> Inl m
     | Inl ((G x l)#tt) \<Rightarrow> sem_run gs n (gs x m))"
+text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet gazelle__semantics__semantics__sem_step_p\<close>
 inductive sem_step_p ::
   "('syn, 'mstate) semc  \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> bool"
   where
 "\<And> gs m x l  tt .
  cont m = Inl ((G x l)#tt) \<Longrightarrow> 
  sem_step_p gs m (gs x m)"
+text_raw \<open>%EndSnippet\<close>
 
 (* We can express sem_exec equivalently as a reflexive-transitive closure of taking a step *)
+text_raw \<open>%Snippet gazelle__semantics__semantics__sem_exec_p\<close>
 definition sem_exec_p ::
   "('syn, 'mstate) semc  \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> bool" where
 "sem_exec_p gs \<equiv>
   (rtranclp (sem_step_p gs))"
+text_raw \<open>%EndSnippet\<close>
 
 declare sem_exec_p_def [simp add]
 
@@ -134,8 +146,10 @@ lemma sem_step_sem_step_p :
   shows "sem_step_p gs m m'" using H
   by(auto simp add: sem_step_def split: list.splits option.splits sum.splits intro: sem_step_p.intros)
 
+text_raw \<open>%Snippet gazelle__semantics__semantics__sem_step_p_eq\<close>
 lemma sem_step_p_eq :
   "(sem_step_p gs m m') = (sem_step gs m = Inl m') "
+text_raw \<open>%EndSnippet\<close>
   using sem_step_p_sem_step[of gs m m'] sem_step_sem_step_p[of gs m m']
   by(auto)
 
@@ -171,6 +185,7 @@ qed
 
 (* An alternate execution relation with an explicit step-count (hence the "c")
  * We then prove it equivalent to sem_exec_p *)
+text_raw \<open>%Snippet gazelle__semantics__semantics__sem_exec_c_p\<close>
 inductive sem_exec_c_p ::
   "('syn, 'mstate) semc  \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> nat \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> bool"
   for gs :: "('syn, 'mstate) semc" 
@@ -180,10 +195,13 @@ Excp_0 :"sem_exec_c_p gs m 0 m"
   "sem_step_p gs m1 m2 \<Longrightarrow>
    sem_exec_c_p gs m2 n m3 \<Longrightarrow>
    sem_exec_c_p gs m1 (Suc n) m3"
+text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet gazelle__semantics__semantics__exec_c_p_imp_exec_p\<close>
 lemma exec_c_p_imp_exec_p :
   assumes H : "sem_exec_c_p gs m n m'"
   shows "sem_exec_p gs m m'" using H
+text_raw \<open>%EndSnippet\<close>
 proof(induction rule: sem_exec_c_p.induct)
   case (Excp_0 m)
   then show ?case unfolding sem_exec_p_def by auto
@@ -211,9 +229,11 @@ lemma Excp_1 :
   shows "sem_exec_c_p gs m1 1 m2" using H
   by(auto intro: sem_exec_c_p.intros)
 
+text_raw \<open>%Snippet gazelle__semantics__semantics__exec_p_imp_exec_c_p\<close>
 lemma exec_p_imp_exec_c_p :
   assumes H : "sem_exec_p gs m m'"
   shows "\<exists> n . sem_exec_c_p gs m n m'" using H
+text_raw \<open>%EndSnippet\<close>
   unfolding sem_exec_p_def
 proof(induction rule:rtranclp_induct)
   case base

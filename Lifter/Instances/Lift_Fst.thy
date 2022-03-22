@@ -5,7 +5,7 @@ begin
 (*
  * fst
  *)
-
+text_raw \<open>%Snippet gazelle__lifter__instances__lift_fst__fst_l\<close>
 definition fst_l ::
   "('x, 'a, 'b1 :: Pord_Weak) lifting \<Rightarrow>
    ('x, 'a, 'b1 * ('b2 :: Pord_Weakb)) lifting" where
@@ -13,10 +13,13 @@ definition fst_l ::
   LMake (\<lambda> s a b . (case b of (b1, b2) \<Rightarrow> (LUpd t s a b1, b2)))
             (\<lambda> s x . (LOut t s (fst x)))
             (\<lambda> s . (LBase t s, \<bottom>))"
+text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet gazelle__lifter__instances__lift_fst__fst_l_S\<close>
 definition fst_l_S :: "('x, 'b1 :: Pord_Weak) valid_set \<Rightarrow> ('x, ('b1 * 'b2 :: Pord_Weakb)) valid_set" where
 "fst_l_S S s =
   { b . case b of (b1, _) \<Rightarrow> (b1 \<in> S s) }"
+text_raw \<open>%EndSnippet\<close>
 
 locale fst_l_valid_weak = lifting_valid_weak
 

@@ -5,6 +5,7 @@ begin
 (*
  * prio
  *)
+text_raw \<open>%Snippet gazelle__lifter__instances__lift_prio__prio_l\<close>
 definition prio_l ::
  "('x \<Rightarrow> nat) \<Rightarrow>
   ('x \<Rightarrow> nat \<Rightarrow> nat) \<Rightarrow>
@@ -16,18 +17,22 @@ definition prio_l ::
             (\<lambda> s p . (case p of
                        mdp m b \<Rightarrow> LOut t s b))
             (\<lambda> s . mdp (f0 s) (LBase t s))"
+text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet gazelle__lifter__instances__lift_prio__prio_l_S\<close>
 definition prio_l_S :: "('x, 'b) valid_set \<Rightarrow> ('x, 'b md_prio) valid_set" where
 "prio_l_S S s =
   { p . (case p of
           mdp n x \<Rightarrow> x \<in> S s) }"
+text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet gazelle__lifter__instances__lift_prio__prio_l_valid_weak'\<close>
 locale prio_l_valid_weak' =
   fixes l :: "('syn, 'a, 'b) lifting"
   fixes f0 :: "'syn \<Rightarrow> nat"
   fixes f1 :: "'syn \<Rightarrow> nat \<Rightarrow> nat"
   assumes f1_nondecrease : "\<And> s p . p \<le> f1 s p"
-
+text_raw \<open>%EndSnippet\<close>
 
 locale prio_l_valid_weak = prio_l_valid_weak' + lifting_valid_weak
 
@@ -80,12 +85,14 @@ lemma (in prio_l_valid_ext) ax :
   using out.lifting_valid_ext_axioms
   by auto
 
+text_raw \<open>%Snippet lifter__instances__lift_prio__prio_l_valid_ext_strong'\<close>
 locale prio_l_valid_ext_strong' =
   fixes l :: "('syn, 'a, ('b :: Pord_Weak)) lifting"
   fixes S :: "'syn \<Rightarrow> 'b set"
   fixes f0 :: "'syn \<Rightarrow> nat"
   fixes f1 :: "'syn \<Rightarrow> nat \<Rightarrow> nat"
   assumes f1_increase : "\<And> s p . p < f1 s p"
+text_raw \<open>%EndSnippet\<close>
 
 locale prio_l_valid_ext_strong = prio_l_valid_ext_strong'
 

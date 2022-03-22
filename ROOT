@@ -20,12 +20,31 @@ session Gazelle = "HOL-Library" +
     D*)
   theories
     "Languages/Imp/Calc_Mem_Imp_Hoare"
+    
     "Paper_Examples/Intro_Example"
     "Paper_Examples/Intro_Example_Gazelle"
+    
     "Paper_Examples/Composition1"
     "Paper_Examples/Composition_Tuple_Components"
     "Paper_Examples/Composition_Option"
     "Paper_Examples/Composition_Priority"
+
+    "Paper_Examples/Lens"
+    
+    "Paper_Examples/Adhoc1"
+    "Paper_Examples/Adhoc2"
+    "Paper_Examples/Adhoc3"
+    "Paper_Examples/Adhoc4"
+    "Paper_Examples/Adhoc5"
+    "Paper_Examples/Auto_Lift_Snippets_Bad_Prod1"
+    "Paper_Examples/Auto_Lift_Snippets_Bad_Prod2"
+    "Paper_Examples/Auto_Lift_Snippets"
+    "Paper_Examples/My_Lift"
+
+    "Paper_Examples/Lifting_Valid_Example"
+
+    "Paper_Examples/Need_Toggle"
+
   document_files
     "root.tex"
 

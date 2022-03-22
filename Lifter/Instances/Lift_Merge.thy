@@ -6,7 +6,7 @@ begin
  * merge 
  *)
 
-
+text_raw \<open>%Snippet gazelle__lifter__instances__lift_merge__merge_l\<close>
 definition merge_l ::
   "('x, 'a1, 'b) lifting \<Rightarrow>
    ('x, 'a2, 'b) lifting \<Rightarrow>
@@ -18,6 +18,15 @@ definition merge_l ::
           LUpd t1 s a1 (LUpd t2 s a2 b )))
       (\<lambda> s b . (LOut t1 s b, LOut t2 s b))
       (\<lambda> s . LBase t1 s)"
+text_raw \<open>%EndSnippet\<close>
+
+text_raw \<open>%Snippet gazelle__lifter__instances__lift_merge__merge_l_S\<close>
+definition merge_l_S ::
+"('x, 'b :: Pord_Weak) valid_set \<Rightarrow> 
+ ('x, 'b :: Pord_Weak) valid_set \<Rightarrow>
+ ('x, 'b) valid_set" where
+"merge_l_S S1 S2 s = S1 s \<inter> S2 s"  
+text_raw \<open>%EndSnippet\<close>
 
 locale merge_l_valid_weak' = 
   fixes l1 :: "('x, 'a1, 'b) lifting" 

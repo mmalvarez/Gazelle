@@ -5,6 +5,7 @@ begin
 (*
  * option
  *)
+text_raw \<open>%Snippet gazelle__lifter__instances__lift_option__option_l\<close>
 definition option_l ::
   "('x, 'a, 'b) lifting \<Rightarrow> ('x, 'a, 'b option) lifting" where
 "option_l t =
@@ -15,10 +16,12 @@ definition option_l ::
             (\<lambda> s b . (case b of Some b' \<Rightarrow> LOut t s b'
                         | None \<Rightarrow> LOut t s (LBase t s)))
             (\<lambda> s . None)"
+text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet gazelle__lifter__instances__lift_option__option_l_S\<close>
 definition option_l_S :: "('s, 'b) valid_set \<Rightarrow> ('s, 'b option) valid_set" where
 "option_l_S S s = (Some ` S s)"
-
+text_raw \<open>%EndSnippet\<close>
 
 (* TODO: clean up mergeable instances so that we are consistently using Weakb instances
    where needed. *)
