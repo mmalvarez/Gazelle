@@ -12,10 +12,12 @@ begin
  *)
 
 (* Captures being safe for a certain number of steps *)
+text_raw \<open>%Snippet gazelle__hoare__hoare_indexed__safe_for\<close>
 definition safe_for :: "('syn, 'mstate) semc \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> nat \<Rightarrow> bool" where
 "safe_for gs full n =
   ((\<exists> n0 full' . n0 \<le> n \<and> sem_exec_c_p gs full n0 full' \<and> cont full' = Inl []) \<or>
    (\<forall> n0 . n0 \<le> n \<longrightarrow> (\<exists> full' h t . sem_exec_c_p gs full n0 full' \<and> cont full' = Inl (h#t))))"
+text_raw \<open>%EndSnippet\<close>
 
 lemma safe_forI_halt :
   assumes "n0 \<le> n"
@@ -211,11 +213,13 @@ qed
 (* Indexed version of guarded (capturing the idea that starting in a state satisfying P
  * means we are safe for a certain number of steps)
  *)
+text_raw \<open>%Snippet gazelle__hoare__hoare_indexed__guarded\<close>
 definition guarded :: "('syn, 'mstate :: Okay) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> 'syn gensyn list \<Rightarrow> bool"
 ("|#_#| {#_, _#} _" [210, 212, 214, 216])
  where
 "guarded gs P n c =
   (\<forall> m . m \<in> ok_S \<longrightarrow> P (payload m) \<longrightarrow> cont m = Inl c \<longrightarrow> safe_for gs m n)"
+text_raw \<open>%EndSnippet\<close>
 
 lemma guardediI [intro] :
   assumes H : "\<And> m . m \<in> ok_S \<Longrightarrow> P (payload m) \<Longrightarrow> cont m = Inl c \<Longrightarrow> safe_for gs m n"
@@ -234,11 +238,13 @@ lemma guardediD :
 (* Our indexed Hoare triple. The basic idea here is that we limit the number of steps we are
  * required to be safe for, both on the "input" (|gs| {Q, nq} (c')) 
  * and the "output" (|gs| {P, np} (c @ c')) *)
+text_raw \<open>%Snippet gazelle__hoare__hoare_indexed__HT\<close>
 definition HT :: "('syn, 'mstate :: Okay) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> 'syn gensyn list \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> bool" 
   ("|#_#| {#-_, _-#} _ {#-_, _-#}" [220, 222, 224, 226, 228, 230])
   where
 "HT gs P np c Q nq =
   (\<forall> c' . |#gs#| {#Q, nq#} (c') \<longrightarrow> |#gs#| {#P, np#} (c @ c'))"
+text_raw \<open>%EndSnippet\<close>
 
 lemma HTiI [intro] :
   assumes H : "\<And> c' . |#gs#| {#Q, nq#} (c') \<Longrightarrow> |#gs#| {#P, np#} (c @ c')"
@@ -252,6 +258,7 @@ lemma HTiE [elim]:
   unfolding HT_def
   by auto
 
+text_raw \<open>%Snippet gazelle__hoare__hoare_indexed__HConseq\<close>
 lemma HConseq :
   assumes H : "|#gs#| {#- P', np' -#} c {#-Q', nq'-#}"
   assumes HP1 : "\<And> st . P st \<Longrightarrow> P' st"
@@ -259,6 +266,7 @@ lemma HConseq :
   assumes HQ1 : "\<And> st . Q' st \<Longrightarrow> Q st"
   assumes HQ2 : "nq' \<le> nq"
   shows "|#gs#| {#-P, np-#} c {#-Q, nq-#}"
+text_raw \<open>%EndSnippet\<close>
 proof(rule HTiI)
   fix c'
   assume Exec : "|#gs#| {#Q, nq#} c'"
@@ -299,10 +307,12 @@ proof(rule HTiI)
   qed
 qed
 
+text_raw \<open>%Snippet gazelle__hoare__hoare_indexed__HCat\<close>
 lemma HCat :
   assumes H : "|#gs#| {#- P1, np1 -#} c1 {#- P2, np2 -#}"
   assumes H' : "|#gs#| {#- P2, np2 -#} c2 {#- P3, np3 -#}"
   shows "|#gs#| {#- P1, np1 -#} (c1 @ c2) {#- P3, np3 -#}"
+text_raw \<open>%EndSnippet\<close>
 proof(rule HTiI)
   fix c'
   assume HP3 : "|#gs#| {#P3, np3#} c'"
@@ -323,11 +333,13 @@ qed
  * for this to work like a normal Hoare triple, for any desired safe execution length npre,
  * we must be able to find a suffix execution
  * (safe for some npost number of steps) such that the concatenation is safe for npre. *)
+text_raw \<open>%Snippet gazelle__hoare__hoare_indexed__HT'\<close>
 definition HT' :: "('syn, 'mstate :: Okay) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'syn gensyn list \<Rightarrow> ('mstate \<Rightarrow> bool)\<Rightarrow> bool" 
   ("|_| {~_~} _ {~_~}" [250, 252, 254, 256])  
   where
 "HT' gs P c Q =
   ((\<forall> npost . \<exists> npre . |#gs#| {#- P, (npre + npost) -#} c {#- Q, npost -#}))"
+text_raw \<open>%EndSnippet\<close>
 
 lemma HT'I :
   assumes H : "(\<And> npost. \<exists> npre . |#gs#| {#- P, (npre + npost) -#} c {#- Q, npost -#})"

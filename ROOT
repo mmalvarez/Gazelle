@@ -43,6 +43,9 @@ session Gazelle = "HOL-Library" +
 
     "Paper_Examples/Lifting_Valid_Example"
 
+    "Paper_Examples/Hoare_Indexed_Complete"
+    "Paper_Examples/Mem_Sem_Excerpt"
+    "Paper_Examples/My_Hoare"
     "Paper_Examples/Need_Toggle"
 
   document_files

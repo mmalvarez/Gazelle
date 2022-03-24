@@ -249,9 +249,11 @@ lemma unsafe_imp_unsafe_for :
   using H safe_for_imp_safe
   by blast
 
+text_raw \<open>%Snippet gazelle__hoare__hoare_indexed_sound__HT'_imp_HT\<close>
 lemma HT'_imp_HT :
-  assumes H : "HT' gs P c Q"
+  assumes H : "|gs| {~P~} c {~Q~}"
   shows "|gs| {-P-} c {-Q-}"
+text_raw \<open>%EndSnippet\<close>
 proof
   fix c'
   assume Guard : "|gs| {Q} c'"

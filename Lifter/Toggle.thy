@@ -30,7 +30,7 @@ definition LtMap ::
 (* a variant that translates both the semantics and the toggle
  * (possibly more useful for multiple stages of language composition)
  *)
-
+text_raw \<open>%Snippet gazelle__lifter__toggle__lift_map_t_s\<close>
 definition
   lift_map_t_s ::
   "('b1 \<Rightarrow> 'a1) \<Rightarrow>
@@ -41,6 +41,7 @@ definition
 "lift_map_t_s l' l tg f syn st =
   (if tg syn then lift_map_s l' l f syn st
    else st)"
+text_raw \<open>%EndSnippet\<close>
 
 definition
   lift_map_st_s ::
@@ -55,12 +56,14 @@ definition
 
 (* old definition, harder to use in theorems because of the need to 
  * reuse syntax parameter in toggle-predicate and then again in function*)
+text_raw \<open>%Snippet gazelle__lifter__toggle__toggle\<close>
 definition toggle ::
   "('syn \<Rightarrow> bool) \<Rightarrow>
    ('syn \<Rightarrow> 'b \<Rightarrow> 'b) \<Rightarrow>
    ('syn \<Rightarrow> 'b \<Rightarrow> 'b)" where
 "toggle tg f syn st =
   (if (tg syn) then f syn st else st)"
+text_raw \<open>%EndSnippet\<close>
 
 (*
 definition toggle ::

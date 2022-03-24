@@ -10,6 +10,7 @@ theory Calc_Mem_Imp imports (*Calc_Mem*)
 "../../Lifter/Auto_Lifter"
 begin
 
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__syn\<close>
 datatype syn =
   Sc "calc"
   | Sm "Mem_Simple.syn"
@@ -17,10 +18,13 @@ datatype syn =
   | Si "Imp_Ctl.syn'"
   | Ss "Seq.syn"
   | Ssk
+text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__calc_trans\<close>
 fun calc_trans :: "syn \<Rightarrow> calc" where
 "calc_trans (Sc x ) = x"
 | "calc_trans _ = Cskip"
+text_raw \<open>%EndSnippet\<close>
 
 fun calc_prio :: "(Calc.calc \<Rightarrow> nat)" where
 "calc_prio (Cskip) = 1"
@@ -30,19 +34,22 @@ fun calc_toggle :: "syn \<Rightarrow> bool" where
 "calc_toggle (Sc _) = True"
 | "calc_toggle _ = False"
 
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__mem_trans\<close>
 fun mem_trans :: "syn \<Rightarrow> Mem_Simple.syn" where
 "mem_trans (Sm m) = m"
 | "mem_trans _ = Mem_Simple.Sskip"
+text_raw \<open>%EndSnippet\<close>
 
 fun mem_toggle :: "syn \<Rightarrow> bool" where
 "mem_toggle (Sm _) = True"
 | "mem_toggle _ = False"
 
 (* mem_prio not needed, handled by custom implementation (?still true?) *)
-
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__cond_trans\<close>
 fun cond_trans :: "syn \<Rightarrow> Cond.cond" where
 "cond_trans (Sb x) = x"
 | "cond_trans _ = Sskip_cond"
+text_raw \<open>%EndSnippet\<close>
 
 fun cond_prio :: "Cond.cond \<Rightarrow> nat" where
 "cond_prio (Sskip_cond) = 1"
@@ -52,15 +59,18 @@ fun cond_toggle :: "syn \<Rightarrow> bool" where
 "cond_toggle (Sb _) = True"
 | "cond_toggle _ = False"
 
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__seq_trans\<close>
 fun seq_trans :: "syn \<Rightarrow> Seq.syn" where
 "seq_trans (Ss x) = x"
 | "seq_trans _ = Seq.Sskip"
+text_raw \<open>%EndSnippet\<close>
 
 (* NB seq is always active; this is handled by special rules *)
-
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__imp_trans\<close>
 fun imp_trans :: "syn \<Rightarrow> Imp_Ctl.syn'" where
 "imp_trans (Si x) = x"
 | "imp_trans _ = Imp_Ctl.Sskip"
+text_raw \<open>%EndSnippet\<close>
 
 fun imp_toggle :: "syn \<Rightarrow> bool" where
 "imp_toggle (Si x) = (x \<noteq> Imp_Ctl.Sskip)"

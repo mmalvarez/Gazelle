@@ -18,6 +18,7 @@ begin
  *)
 
 (* This version does not take a valid set. It is usually not what we want. *)
+text_raw \<open>%Snippet gazelle__hoare__hoare_lift__lift_pred_noS_s\<close>
 definition lift_pred_noS_s ::
   "('a1, 'b1) syn_lifting \<Rightarrow>
    ('a1, 'a2, 'b2 :: Pord) lifting \<Rightarrow>
@@ -27,6 +28,7 @@ definition lift_pred_noS_s ::
   where
 "lift_pred_noS_s l' l syn P st =
  P (LOut l (l' syn) st)"
+text_raw \<open>%EndSnippet\<close>
 
 definition lift_pred_s ::
   "('a1, 'b1) syn_lifting \<Rightarrow>
@@ -43,11 +45,13 @@ definition lift_pred_s ::
  * we know that an analogous Hoare triple holds on the lifted function and
  * lifted predicates.
  *)
+text_raw \<open>%Snippet gazelle__hoare__hoare_lift__Vlift\<close>
 lemma Vlift :
   assumes Valid : "lifting_valid_weak l S" 
   assumes V: "(sem) % {{P}} x {{Q}}"
   assumes Syn : "l' x' = x"
   shows "(lift_map_s l' l sem) % {{lift_pred_noS_s l' l x' P}} x' {{lift_pred_noS_s l' l x' Q}}"
+text_raw \<open>%EndSnippet\<close>
 proof-
 
   interpret Valid : lifting_valid_weak l S
@@ -118,6 +122,7 @@ qed
  * This is why we have to weaken the conclusion, requiring only that there exists
  * a lesser (in the information-ordering sense) state on which the triple does hold.
  *)
+text_raw \<open>%Snippet gazelle__hoare__hoare_lift__Vmerge\<close>
 lemma Vmerge :
   assumes Pres : "sups_pres (set l) S"
   assumes Sem : "f \<in> set l"
@@ -127,6 +132,7 @@ lemma Vmerge :
          {{P}}
          x
          {{(\<lambda> st . \<exists> st_sub . Q st_sub \<and> st_sub <[ st)}}"
+text_raw \<open>%EndSnippet\<close>
 proof(rule HTSI)
   fix a 
   assume HP : "P a"
@@ -151,6 +157,7 @@ qed
     
 (* Another way of looking a vmerge: if we know the conclusion is monotonic,
  * then we know that a triple with that conclusion still holds after a merge *)
+text_raw \<open>%Snippet gazelle__hoare__hoare_lift__Vmerge_mono\<close>
 lemma Vmerge_mono :
   assumes Pres : "sups_pres (set l) S"
   assumes Sem : "f \<in> set l"
@@ -161,6 +168,7 @@ lemma Vmerge_mono :
          {{P}}
          x
          {{Q}}"
+text_raw \<open>%EndSnippet\<close>
 proof(-)
   have PC : "(pcomps l) % {{P}} x {{(\<lambda>st. \<exists>st_sub. Q st_sub \<and> st_sub <[ st)}}"
     using Vmerge[OF Pres Sem P_S V]

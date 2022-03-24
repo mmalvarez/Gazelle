@@ -17,8 +17,10 @@ begin
 type_synonym str = "String.literal"
 
 (* standard wrap *)
+text_raw \<open>%Snippet gazelle__language_components__mem__mem_simple__swr\<close>
 type_synonym 'a swr =
   "'a md_triv option md_prio"
+text_raw \<open>%EndSnippet\<close>
 
 datatype mem0 = 
   Mzread
@@ -26,6 +28,7 @@ datatype mem0 =
   | Mzskip
 
 (* 3 "registers" for use with Calc etc. *)
+text_raw \<open>%Snippet gazelle__language_components__mem__mem_simple__mem\<close>
 datatype reg_id =
   Reg_a
   | Reg_b
@@ -36,6 +39,7 @@ datatype syn =
   Sread "str" "reg_id"
   | Swrite "str" "reg_id"
   | Sskip
+text_raw \<open>%EndSnippet\<close>
 
 (*type_synonym state0 = "(int * int)"*)
 

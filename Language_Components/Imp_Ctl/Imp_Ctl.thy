@@ -20,13 +20,18 @@ begin
  * a fixed flag (a boolean shared between the cond language state and the
  * imp language state) is true. This makes the Hoare rule somewhat simpler to express.
  *)
+text_raw \<open>%Snippet gazelle__language_components__imp_ctl__imp_ctl__syn\<close>
 datatype syn' =
   Sif
   | Sskip
   | SwhileC
+text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet gazelle__language_components__imp_ctl__imp_ctl__imp_state\<close>
 type_synonym 'x imp_state' = "'x gensyn list * int"
+text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet gazelle__language_components__imp_ctl__imp_ctl__imp_ctl_sem\<close>
 definition imp_ctl_sem :: "syn' \<Rightarrow> 'x imp_state' \<Rightarrow> 'x imp_state'" where
 "imp_ctl_sem x st =
   (case st of
@@ -43,7 +48,7 @@ definition imp_ctl_sem :: "syn' \<Rightarrow> 'x imp_state' \<Rightarrow> 'x imp
         (case l of [body] \<Rightarrow> (if (b \<noteq> 0) then body # (G z [body]) # t else t)
          | _ \<Rightarrow> [] \<comment>\<open> error \<close>))
       , b))"
-
+text_raw \<open>%EndSnippet\<close>
 
 type_synonym ('s, 'x) state = 
   "('s, (int md_triv option md_prio * 'x)) control"

@@ -12,11 +12,13 @@ begin
 (*
  * Implementation of sequencing as a language component in Gazelle.
  *)
-
+text_raw \<open>%Snippet gazelle__language_components__seq__seq__syn\<close>
 datatype syn =
   Sseq
   | Sskip
+text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet gazelle__language_components__seq__seq__seq_sem\<close>
 type_synonym 'x state' = "'x gensyn list"
 
 definition seq_sem :: "syn \<Rightarrow> 'x state' \<Rightarrow> 'x state'" where
@@ -26,6 +28,7 @@ definition seq_sem :: "syn \<Rightarrow> 'x state' \<Rightarrow> 'x state'" wher
      (case x of
       Sskip \<Rightarrow> t
       | Sseq \<Rightarrow> l@t))"
+text_raw \<open>%EndSnippet\<close>
 
 type_synonym ('s, 'x) state = 
   "('s, 'x) control"

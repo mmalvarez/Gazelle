@@ -16,6 +16,7 @@ fun sem2 :: "(int md_triv option md_prio * int md_triv option md_prio) \<Rightar
 | "sem2 x = x"
 *)
 
+text_raw \<open>%Snippet paper_examples__need_toggle__langs\<close>
 datatype syn =
   Op1
   | Op2
@@ -43,7 +44,9 @@ definition sem1_lift :: "(syn, int, int md_triv option md_prio * ('a :: Mergeabl
 
 definition sem2_lift :: "(syn, (int * int), state) lifting" where
 "sem2_lift = schem_lift (SP NA NB) (SP (SPRI (SO NA)) (SPRC sem2_p (SO NB)))"
+text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet paper_examples__need_toggle__toggles\<close>
 fun sem1_toggle :: "syn \<Rightarrow> bool" where
 "sem1_toggle Op1 = True"
 | "sem1_toggle Op2 = False"
@@ -57,8 +60,9 @@ definition sems :: "(syn \<Rightarrow> state \<Rightarrow> state) set" where
         ,lift_map_t_s id sem2_lift sem2_toggle sem2}"
 
 lemma sem1_dominant :
-  "(lift_map_t_s id sem1_lift sem1_toggle sem1) \<downharpoonleft> sems ({Op1})"
+  "(lift_map_t_s id sem1_lift sem1_toggle sem1) \<down> sems ({Op1})"
 proof(rule dominant_toggles)
+text_raw \<open>%EndSnippet\<close>
   show "lift_map_t_s id sem1_lift
      sem1_toggle sem1
     \<in> sems"

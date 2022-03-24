@@ -39,9 +39,7 @@ locale dominant2 = dominant2_sig +
  * However, the difference probably isn't a big deal, and changing this
  * would require some changes to other proofs.
  *)
-(*
-(\<forall> b . is_sup ((\<lambda> g . g x b) ` S) (f x b))"
-*)
+text_raw \<open>%Snippet gazelle__composition__dominant__dominant\<close>
 definition dominant ::
   "('a \<Rightarrow> 'c \<Rightarrow> ('c :: Pord_Weak)) \<Rightarrow> ('a \<Rightarrow> 'c \<Rightarrow> 'c) set \<Rightarrow> 'a set \<Rightarrow> bool"
 ("_ \<down> _ _" [250, 252, 254])
@@ -49,6 +47,7 @@ where
 "(f \<down> S X) = 
   (\<forall> x b . x \<in> X \<longrightarrow>
    (is_sup ((\<lambda> g . g x b) ` S) (f x b)))"
+text_raw \<open>%EndSnippet\<close>
 
 (* TODO: might be a good idea to have a special version of dominant for lifters.
  * Similar e.g. to ortho.
@@ -74,6 +73,7 @@ lemma dominantE [elim] :
  * on that syntax.
  *)
 
+text_raw \<open>%Snippet gazelle__composition__dominant__dominant_pcomps\<close>
 lemma dominant_pcomps :
   assumes Hpres : "sups_pres (set fs) (\<lambda> _ . ok_S)"
   assumes Hne : "z \<in> set fs"
@@ -81,6 +81,7 @@ lemma dominant_pcomps :
   assumes Xin : "x \<in> X"
   assumes Bin : "b \<in> ok_S"
   shows "(pcomps fs x b) = (f x b)"
+text_raw \<open>%EndSnippet\<close>
 proof-
 
   have B : "is_sup {b} b"
@@ -408,9 +409,7 @@ proof
     by auto
 qed
 
-
 lemma dominant_toggles' :
-  
   assumes Valid : "lifting_valid l1 S1"
   assumes Fs_fin : "finite (Fs :: (_ \<Rightarrow> (_ :: Mergeable) \<Rightarrow> _) set)"
   assumes Fs_sub : "Fs_sub \<subseteq> Fs"
@@ -547,6 +546,7 @@ proof-
   qed
 qed
 
+text_raw \<open>%Snippet gazelle__composition__dominant__dominant_toggles\<close>
 lemma dominant_toggles :
   assumes Valid : "lifting_valid l1 S1"
   assumes Fs_fin : "finite (Fs :: (_ \<Rightarrow> (_ :: Mergeable) \<Rightarrow> _) set)"
@@ -561,6 +561,7 @@ proof-
     using dominant_toggles'[OF Valid Fs_fin _ Fs_f1 Toggle1 Toggles]
     by blast
 qed
+text_raw \<open>%EndSnippet\<close>
 
 lemma dominant_toggles2 :
   assumes Valid : "lifting_valid l1 S1"

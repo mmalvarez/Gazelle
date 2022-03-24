@@ -8,11 +8,12 @@ begin
  * This model of Hoare logic is based on the CPS-flavored version described in
  * _Program Logics for Certified Compilers_ and _Separation Logic for Small-Step Cminor_
  *)
-
+text_raw \<open>%Snippet gazelle__hoare__hoare__imm_safe\<close>
 definition imm_safe :: "('syn, 'mstate) semc \<Rightarrow> ('syn, 'mstate) control  \<Rightarrow> bool" where
 "imm_safe gs m \<equiv>
  ((cont m = Inl []) \<or>
   (\<exists> m' . sem_step_p gs m m'))"
+text_raw \<open>%EndSnippet\<close>
 
 lemma imm_safeI_Done :
   assumes H : "cont m = Inl []"
@@ -32,9 +33,11 @@ lemma imm_safeD :
   unfolding imm_safe_def by (auto)
 
 (* Safe means we terminate or diverge (partial correctness) *)
+text_raw \<open>%Snippet gazelle__hoare__hoare__safe\<close>
 definition safe :: "('syn, 'mstate) semc \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> bool" where
 "safe gs m \<equiv>
   (\<forall> m' . sem_exec_p gs m m' \<longrightarrow> imm_safe gs m')"
+text_raw \<open>%EndSnippet\<close>
 
 lemma safeI [intro]:
   assumes H : "\<And> m' . sem_exec_p gs m m' \<Longrightarrow> imm_safe gs m'"
@@ -48,11 +51,13 @@ lemma safeD :
   unfolding safe_def by blast
 
 (* Guarded: if we start in a state satisfying P, we are safe *)
+text_raw \<open>%Snippet gazelle__hoare__hoare__guarded\<close>
 definition guarded :: "('syn, ('mstate :: Okay)) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'syn gensyn list \<Rightarrow> bool"
 ("|_| {_} _" [200, 202, 204])
  where
 "guarded gs P c =
   (\<forall> m . m \<in> ok_S \<longrightarrow> P (payload m) \<longrightarrow> cont m = Inl c \<longrightarrow> safe gs m)"
+text_raw \<open>%EndSnippet\<close>
 
 lemma guardedI [intro] :
   assumes H : "\<And> m . m \<in> ok_S \<Longrightarrow> P (payload m) \<Longrightarrow> cont m = Inl c \<Longrightarrow> safe gs m"
@@ -72,11 +77,13 @@ lemma guardedD :
  * For any tail c' that is safe under condition Q (the postcondition of the triple),
  * the program c followed by the tail c' will be safe under P (the precondition)
  *)
+text_raw \<open>%Snippet gazelle__hoare__hoare__HT\<close>
 definition HT :: "('syn, ('mstate :: Okay)) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'syn gensyn list \<Rightarrow> ('mstate \<Rightarrow> bool)\<Rightarrow> bool" 
   ("|_| {-_-} _ {-_-}" [206, 208, 210])
   where
 "HT gs P c Q =
   (\<forall> c' .  |gs| {Q} (c') \<longrightarrow> |gs| {P} (c @ c'))"
+text_raw \<open>%EndSnippet\<close>
 
 lemma HTI [intro] :
   assumes H : "\<And> c' . |gs| {Q} (c') \<Longrightarrow> |gs| {P} (c @ c')"
@@ -90,11 +97,13 @@ lemma HTE [elim]:
   unfolding HT_def
   by auto
 
+text_raw \<open>%Snippet gazelle__hoare__hoare__HConseq\<close>
 lemma HConseq :
   assumes H : "|gs| {- P' -} c {-Q'-}"
   assumes H' : "\<And> st . P st \<Longrightarrow> P' st"
   assumes H'' : "\<And> st . Q' st \<Longrightarrow> Q st"
   shows "|gs| {-P-} c {-Q-}"
+text_raw \<open>%EndSnippet\<close>
 proof(rule HTI)
   fix c'
   assume Exec : "|gs| {Q} c'"
@@ -163,10 +172,12 @@ qed
 *)
 
 (* sequencing lemma *)
+text_raw \<open>%Snippet gazelle__hoare__hoare__HCat\<close>
 lemma HCat :
   assumes H : "|gs| {- P1 -} c1 {- P2 -}"
   assumes H' : "|gs| {- P2 -} c2 {- P3 -}"
   shows "|gs| {- P1 -} (c1 @ c2) {- P3 -}"
+text_raw \<open>%EndSnippet\<close>
 proof(rule HTI)
   fix c'
   assume HP3 : "|gs| {P3} c'"

@@ -6,11 +6,13 @@ begin
  * that do not affect control flow.
  *)
 
+text_raw \<open>%Snippet gazelle__hoare__hoare_direct__HT\<close>
 definition HT :: 
   "('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool" 
   ("{{_}} _ {{_}}" [0,0,0] 61) where
 "HT pre x post =
   (\<forall> a b . pre a \<longrightarrow> x a b \<longrightarrow> post b)"
+text_raw \<open>%EndSnippet\<close>
 
 lemma HTI :
   assumes H1 : 
@@ -26,6 +28,7 @@ lemma HTE :
   unfolding HT_def by auto
 
 (* Hoare triple for an executable semantics *)
+text_raw \<open>%Snippet gazelle__hoare__hoare_direct__HTS\<close>
 definition HTS ::
   "('x \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow>
    ('a \<Rightarrow> bool) \<Rightarrow> 'x \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool"
@@ -33,6 +36,7 @@ definition HTS ::
   where
 "HTS sem pre x post =
   HT pre (\<lambda> a b . sem x a = b) post"
+text_raw \<open>%EndSnippet\<close>
 
 lemma HTSI :
   assumes H1 : 
