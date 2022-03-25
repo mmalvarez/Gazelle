@@ -26,7 +26,7 @@ lemma HSeq :
 	assumes Hc2 : "{P2} c2 {P3}"
 	shows "{P1} c1 ; c2 {P3}"
 text_raw \<open>%EndSnippet\<close>
-	sorry
+	oops
 
 text_raw \<open>%Snippet paper_examples__my_hoare__HConseq\<close>
 lemma HConseq :
@@ -35,7 +35,7 @@ lemma HConseq :
 	assumes H : "{P} c {Q}"
 	shows "{P'} c {Q'}"	
 text_raw \<open>%EndSnippet\<close>
-	sorry
+	oops
 
 
 end

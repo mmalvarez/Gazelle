@@ -105,7 +105,7 @@ text_raw \<open>%Snippet paper_examples__intro_example_gazelle__composition_run\
 
 definition example_prog :: "composed gensyn" where
 "example_prog =
-  \<diamondsuit> Sq
+  \<diamond> Sq
   [ \<dagger> Calc (Const 1)
   , \<dagger> Mem (Write (STR ''x'') Reg_c)
   , \<dagger> Calc (Const 2)
