@@ -214,10 +214,9 @@ proof
   qed
 qed
 *)
-
+text_raw \<open>%Snippet gazelle__language_components__seq__seq_hoare__HxSeq\<close>
 lemma HxSeq :
   assumes H0 : "gs = pcomps fs "
-  (*assumes H1 : "seq_sem_l_gen lfts \<in> set fs" *)
   assumes HF : "f = seq_sem_l_gen lfts"
   assumes Hpres : "sups_pres (set fs) (\<lambda> _ . ok_S)"
   assumes Hnemp : "g \<in> set fs"
@@ -225,6 +224,7 @@ lemma HxSeq :
   assumes H2 : "lfts Sseq' = Sseq"
   assumes H : "|gs| {~ P1 ~} cs {~ P2 ~}"
   shows "|gs| {~ P1 ~} [G Sseq' cs] {~ P2 ~}"
+text_raw \<open>%EndSnippet\<close>
 proof(rule HT'I)
   fix npost 
 

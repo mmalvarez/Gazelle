@@ -18,12 +18,12 @@ begin
 (* However, we might be able to avoid reasoning about liftings at all in such cases (?)
  * by playing the same parametricity trick as with the control languages?
  *)
-
+text_raw \<open>%Snippet gazelle__hoare__hoare_step__no_control_lifting\<close>
 definition no_control_lifting :: "('a, 'b1, 'b2 :: {Bogus, Pord}) lifting \<Rightarrow>
   ('a, 'b1, ('x, 'b2) control) lifting" where
 "no_control_lifting l =
   schem_lift NC (SP NX (SP NX (SINJ l NC)))"
-
+text_raw \<open>%EndSnippet\<close>
 
 definition no_control_lifting_S ::"
 ('a, 'b1, 'b2 :: {Bogus, Pord}) lifting \<Rightarrow>
@@ -307,15 +307,10 @@ proof(rule HT'I)
 qed
 *)
 
+text_raw \<open>%Snippet gazelle__hoare__hoare_step__HTS_imp_HT''\<close>
 lemma HTS_imp_HT'' :
   fixes fs :: "('b \<Rightarrow> ('b, 'c) control \<Rightarrow> ('b, 'c :: {Bogus, Mergeableb, Okay}) control) list"
-(*
-  fixes f :: "'syn0 \<Rightarrow> 'st0 \<Rightarrow> 'st0"
-  fixes x :: "'syn1"
-  fixes l' :: "('syn1 \<Rightarrow> 'syn0)"
-*)
   assumes H: "f % {{P'}} (l' x) {{Q'}}"
-  (* TODO: can we weaken this to lifting_valid_weak_ok *)
   assumes Valid : "lifting_valid_ok l S"
   assumes Hf' : "f' = lift_map_t_s l' (no_control_lifting  l) tg f"
   assumes H0 : "gs = pcomps fs"
@@ -330,7 +325,7 @@ lemma HTS_imp_HT'' :
 
   shows "|gs| {~ (\<lambda> st . P st) ~} [G x z] 
     {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> Q' small_new \<and> st = LUpd l (l' x) small_new old_big) ~}"
-  (*shows "\<And> P1 . |gs| {~ P1 ~} [G c z] {~ (liftt_conc id l c P2 P1) ~}"*)
+text_raw \<open>%EndSnippet\<close>
 proof(rule HT'I)
   fix npost
 

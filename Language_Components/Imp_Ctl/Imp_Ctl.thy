@@ -59,19 +59,21 @@ type_synonym ('s) cstate =
 
 (* seq will give a priority of +2 on everything, so 
  * we use +3 to override that *)
+text_raw \<open>%Snippet gazelle__language_components__imp_ctl__imp_ctl__imp_prio\<close>
 definition imp_prio :: "(syn' \<Rightarrow> nat)" where
 "imp_prio x =
 (case x of
     Sskip \<Rightarrow> 1
     | _ \<Rightarrow> 3)"
+text_raw \<open>%EndSnippet\<close>
 
-
+text_raw \<open>%Snippet gazelle__language_components__imp_ctl__imp_ctl__imp_sem_lifting_gen\<close>
 definition imp_sem_lifting_gen :: "(syn', 'x imp_state', 
                                    ('x, _ ) state) lifting" where
 "imp_sem_lifting_gen = 
  (schem_lift (SP NA NB)
              (SP (SPRC imp_prio (SO NA)) (SP NX (SP (SPRI (SO NB)) NX))))"
-
+text_raw \<open>%EndSnippet\<close>
 
 definition imp_sem_l_gen :: "('s \<Rightarrow> syn') \<Rightarrow> 's \<Rightarrow> ('x, 'z :: Mergeableb) state \<Rightarrow> ('x, 'z) state" where
 "imp_sem_l_gen lfts =

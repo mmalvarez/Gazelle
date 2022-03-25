@@ -120,12 +120,11 @@ qed
 
 (* some nicer syntax for Gensyn *)
 
-notation G ("\<diamondsuit> _ _" [15, 16] )
+notation G ("\<diamond> _ _" [15, 16] )
 
 abbreviation G0 ::
   "'a \<Rightarrow> 'a gensyn" ("(\<dagger> _)" [80] 81)where
 "G0 x \<equiv> G x []"
-
 (*
 term "\<diamond> (1 :: nat)
       [ \<diamond> (2 :: nat) [\<dagger> (1 :: nat)]

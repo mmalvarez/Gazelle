@@ -97,39 +97,38 @@ definition prog00 :: "syn gensyn" where
 (* start with c = 0
  * add arg1 to c
  * decrement arg2 *)
-
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp_hoare_example__prog1\<close>
 definition prog1 :: "int \<Rightarrow> int \<Rightarrow> syn gensyn" where
 "prog1 i1 i2 =
-  G (Ss Sseq)
-  [ G (Sc (Cnum i1)) []
-  , G (Sm (Swrite (STR ''arg1'') (Reg_c))) []
-  , G (Sc (Cnum i2)) []
-  , G (Sm (Swrite (STR ''arg2'') (Reg_c))) []
-  , G (Sc (Cnum 1)) []
-  , G (Sm (Swrite (STR ''one'') (Reg_c))) []
-  , G (Sc (Cnum 0)) []
-  , G (Sm (Swrite (STR ''acc'') (Reg_c))) []
+  \<diamond> (Ss Sseq)
+  [ \<dagger> Sc (Cnum i1)
+  , \<dagger> Sm (Swrite (STR ''arg1'') (Reg_c))
+  , \<dagger> Sc (Cnum i2)
+  , \<dagger> Sm (Swrite (STR ''arg2'') (Reg_c))
+  , \<dagger> Sc (Cnum 1)
+  , \<dagger> Sm (Swrite (STR ''one'') (Reg_c))
+  , \<dagger> Sc (Cnum 0)
+  , \<dagger> Sm (Swrite (STR ''acc'') (Reg_c))
 
-  , G (Sm (Sread (STR ''arg2'') (Reg_c))) []
-  , G (Sb Sgtz) []
+  , \<dagger> Sm (Sread (STR ''arg2'') (Reg_c))
+  , \<dagger> Sb Sgtz
 
-  , G (Si SwhileC)
-    [ G (Ss Sseq)
-      [G (Sm (Sread (STR ''arg1'') (Reg_a))) []
-      , G (Sm (Sread (STR ''acc'') (Reg_b))) []
-      , G (Sc Cadd) []
-      , G (Sm (Swrite (STR ''acc'') (Reg_c))) []
-      , G (Sm (Sread (STR ''arg2'') (Reg_a))) []
-      , G (Sm (Sread (STR ''one'') (Reg_b))) []
-      , G (Sc Csub) []
-      , G (Sm (Swrite (STR ''arg2'') (Reg_c))) []
-      , G (Sm (Sread (STR ''arg2'') (Reg_c))) []
-      , G (Sb Sgtz) []
+  , \<diamond> (Si SwhileC)
+    [ \<diamond> (Ss Sseq)
+      [ \<dagger> Sm (Sread (STR ''arg1'') (Reg_a))
+      , \<dagger> Sm (Sread (STR ''acc'') (Reg_b))
+      , \<dagger> Sc Cadd
+      , \<dagger> Sm (Swrite (STR ''acc'') (Reg_c))
+      , \<dagger> Sm (Sread (STR ''arg2'') (Reg_a))
+      , \<dagger> Sm (Sread (STR ''one'') (Reg_b))
+      , \<dagger> Sc Csub
+      , \<dagger> Sm (Swrite (STR ''arg2'') (Reg_c))
+      , \<dagger> Sm (Sread (STR ''arg2'') (Reg_c))
+      , \<dagger> Sb Sgtz
       ]
     ]
-  ]
-"
-
+  ]"
+text_raw \<open>%EndSnippet\<close>
 (*
 term "sem_run sem_final"
 
@@ -194,24 +193,12 @@ proof-
     by(auto simp add: pred_option_def)
 qed
 
+(* TODO: Hi2 could be \<le>, but for (i think) a technical reason this makes things hard (existential quantifier related problems) *)
 
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp_hoare_example__prog1_spec\<close>
 lemma prog1_spec :
-  assumes Hi1 : "0 < i1" (* TODO: this should be \<le>, but for (i think) a technical reason this makes things hard (existential quantifier related problems) *)
+  assumes Hi1 : "0 < i1" 
   assumes Hi2 : "0 \<le> i2"
-
-(* prog1 *)
-(*
-arg1 := i1
-arg2 := i2
-one := 1
-acc := 0
-while (arg2 > 0) {
-  acc := acc + arg1
-  arg2 := arg2 - one
-}
-
-*)
-
 shows "|(sem_final :: (syn \<Rightarrow> (syn, ('x :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ (\<lambda> st . st \<in> ok_S) ~}
                    [prog1 i1 i2]
                    {~ (\<lambda> st . st \<in> ok_S \<and>
@@ -221,6 +208,7 @@ shows "|(sem_final :: (syn \<Rightarrow> (syn, ('x :: {Okay, Bogus, Mergeableb, 
                             (mdp p (Some (mdt mem'))) \<Rightarrow> get mem'(STR ''acc'') = Some (i1 * i2)
                             | _ \<Rightarrow> False)))
   ~}"
+text_raw \<open>%EndSnippet\<close>
 (*
   using HTS_imp_HT''[where l' = calc_trans, where x = "Calc_Mem_Imp.syn.Sc (Cnum i1)"
         , unfolded calc_trans.simps, OF HCalc_Cnum]

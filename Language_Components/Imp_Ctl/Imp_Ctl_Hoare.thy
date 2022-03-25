@@ -299,6 +299,7 @@ qed
 (*
 fun payload_incr :: "('x md_prio * 'y) \<Rightarrow> ('x md_prio * 'y)" where
 *)
+text_raw \<open>%Snippet gazelle__language_components__imp_ctl__imp_ctl_hoare__HxIf\<close>
 lemma HxIf :
   assumes H0 : "gs = pcomps fs"
   assumes HF : "f = lift_map_t_s lfts 
@@ -320,6 +321,7 @@ lemma HxIf :
                         {~ P3 ~}"
   assumes Hfalse : "|gs| {~ (\<lambda> st . P2 st \<and> get_cond st = Some False) ~} [] {~P3~}"
   shows "|gs| {~ P1 ~} [G Sif' [cond, body]] {~ P3 ~}"
+text_raw \<open>%EndSnippet\<close>
 proof(rule HT'I)
   fix npre
 
@@ -604,6 +606,7 @@ qed
 (*
 lift_map_t_s imp_trans imp_sem_lifting_spec imp_toggle imp_ctl_sem
 *)
+text_raw \<open>%Snippet gazelle__language_components__imp_ctl__imp_ctl_hoare__HxWhileC'\<close>
 lemma HxWhileC' :
   assumes H0 : "gs = pcomps fs"
   assumes HF : "f = lift_map_t_s lfts 
@@ -615,10 +618,10 @@ lemma HxWhileC' :
   assumes Hsyn : "lfts SwhileC' = SwhileC"
   assumes PX_valid : "\<And> st.  PX st \<Longrightarrow> get_cond st \<noteq> None"
   assumes PX_oblivious : "\<And> p p' x rest . PX (mdp p x, rest) \<Longrightarrow> PX (mdp p' x, rest)"
-(*  assumes Htrue : "\<And> nb2 . \<exists> nb1' . |#gs#| {#- PX, (nb1' + nb2) -#} [body] {#- PX, nb2 -#}" *)
   assumes Htrue : "\<And> nb2 . \<exists> nb1' . |#gs#| {#- (\<lambda> st. PX st \<and> get_cond st = Some True), (nb1' + nb2) -#} [body] {#- PX, nb2 -#}" 
   assumes NLs : "nl1 \<le> nl2"
   shows "|#gs#| {#- PX, nl1  -#} [G SwhileC' [body]] {#- (\<lambda> st . PX st \<and> get_cond st = Some False), nl2 -#}"
+text_raw \<open>%EndSnippet\<close>
 proof
   fix c'
 
@@ -848,6 +851,7 @@ qed
 (*  assumes Htrue : "\<And> nb2 . \<exists> nb1' . |#gs#| {#- PX, (nb1' + nb2) -#} [body] {#- PX, nb2 -#}" *)
   assumes Htrue : "\<And> nb2 . \<exists> nb1' . |#gs#| {#- (\<lambda> st. PX st \<and> get_cond st = Some True), (nb1' + nb2) -#} [body] {#- PX, nb2 -#}" 
 *)
+text_raw \<open>%Snippet gazelle__language_components__imp_ctl__imp_ctl_hoare__HxWhileC\<close>
 lemma HxWhileC :
   assumes H0 : "gs = pcomps fs"
   assumes HF : "f = lift_map_t_s lfts 
@@ -861,6 +865,7 @@ lemma HxWhileC :
   assumes PX_oblivious : "\<And> p p' x rest . PX (mdp p x, rest) \<Longrightarrow> PX (mdp p' x, rest)"
   assumes Htrue : "|gs| {~ (\<lambda> st . (PX st \<and> get_cond st = Some True))~} [body] {~ PX~}"
   shows "|gs| {~PX~} [G SwhileC' [body]] {~ (\<lambda> st . PX st \<and> get_cond st = Some False)~}"
+text_raw \<open>%EndSnippet\<close>
 proof(rule HT'I)
   fix npost
 

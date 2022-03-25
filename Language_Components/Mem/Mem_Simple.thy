@@ -79,16 +79,20 @@ type_synonym ('s, 'x) state = "('s, int swr * int swr * int swr * int swr * (Str
 
 (* TODO: we are updating the priority of the entire memory
  * this is inefficient *)
+text_raw \<open>%Snippet gazelle__language_components__mem_simple__mem_prio_mem\<close>
 fun mem_prio_mem ::
   "syn \<Rightarrow> nat" where
 "mem_prio_mem (Swrite _ _) = 2"
 | "mem_prio_mem _ = 1"
+text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet gazelle__language_components__mem_simple__mem_prio_reg\<close>
 fun mem_prio_reg ::
   "reg_id \<Rightarrow> syn \<Rightarrow> nat" where
 "mem_prio_reg r (Sread _ r') =
   (if r = r' then 2 else 1)"
 | "mem_prio_reg _ _ = 1"
+text_raw \<open>%EndSnippet\<close>
   
 definition mem_sem_lifting_inner ::
   "(syn, int, int md_triv option md_prio) lifting"
@@ -121,6 +125,7 @@ definition mem_lift1 ::
                   (SP (SINJ (oalist_map_l mem_sem_lifting_inner) (NE)) NX)))))"
 *)
 
+text_raw \<open>%Snippet gazelle__language_components__mem_simple__mem_lift1\<close>
 definition mem_lift1 ::
   "(syn, state0, (_ :: {Okay, Bogus, Mergeableb, Pordps}) state1) lifting" where
 "mem_lift1 =
@@ -130,6 +135,7 @@ definition mem_lift1 ::
                   (SP (SPRC (mem_prio_reg Reg_a) (SO NC))
                   (SP (SPRC (mem_prio_reg Reg_b) (SO ND))
                   (SP (SPRC mem_prio_mem (SO NE)) NX)))))"
+text_raw \<open>%EndSnippet\<close>
 
 definition mem_lift1_S ::
   "syn \<Rightarrow> (_ :: {Okay, Bogus, Mergeableb, Pordps}) state1 set" where

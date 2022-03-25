@@ -297,11 +297,13 @@ proof(rule HTSI)
     by(cases a; auto simp add: split: prod.splits)
 qed
 
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp_hoare__HCalc_Cadd\<close>
 lemma HCalc_Cadd :
   shows "Calc.calc_sem % {{P1}} (Cadd)
          {{(\<lambda> st . 
             case st of (c1, c2, x) \<Rightarrow> x = c1 + c2 \<and> 
             (\<exists> old . P1 (c1, c2, old)))}}"
+text_raw \<open>%EndSnippet\<close>
 proof(rule HTSI)
   fix a
   assume H : "P1 a"
@@ -758,7 +760,6 @@ definition calc_lift'_S where
 
 (* Allows us to use the fact that the original inputs are unchanged.
  * if this ends up helping we need to find a way to generalize/standardize this. *)
-
 lemma Add_Final' : 
   assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
   assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut calc_lift' Cadd st)"
@@ -830,6 +831,7 @@ next
     by auto
 qed
 
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp_hoare__Add_Final\<close>
 lemma Add_Final : 
   assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
   assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut calc_lift' Cadd st)"
@@ -839,6 +841,7 @@ lemma Add_Final :
       (case small_new of
         (c1, c2, x) \<Rightarrow> x = c1 + c2 \<and> (\<exists> old . P' (c1, c2, old))) \<and> 
         st = LUpd calc_lift' (Cadd) small_new old_big)  ~}"
+text_raw \<open>%EndSnippet\<close>
   using assms Add_Final'
   unfolding calc_trans.simps
   by blast

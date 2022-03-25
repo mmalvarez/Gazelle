@@ -48,6 +48,8 @@ session Gazelle = "HOL-Library" +
     "Paper_Examples/My_Hoare"
     "Paper_Examples/Need_Toggle"
 
+    "Paper_Examples/Prog1_Annotated"
+
   document_files
     "root.tex"
 

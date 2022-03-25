@@ -26,13 +26,17 @@ fun calc_trans :: "syn \<Rightarrow> calc" where
 | "calc_trans _ = Cskip"
 text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__calc_prio\<close>
 fun calc_prio :: "(Calc.calc \<Rightarrow> nat)" where
 "calc_prio (Cskip) = 1"
 | "calc_prio _ = 2"
+text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__calc_toggle\<close>
 fun calc_toggle :: "syn \<Rightarrow> bool" where
 "calc_toggle (Sc _) = True"
 | "calc_toggle _ = False"
+text_raw \<open>%EndSnippet\<close>
 
 text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__mem_trans\<close>
 fun mem_trans :: "syn \<Rightarrow> Mem_Simple.syn" where
@@ -40,9 +44,11 @@ fun mem_trans :: "syn \<Rightarrow> Mem_Simple.syn" where
 | "mem_trans _ = Mem_Simple.Sskip"
 text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__mem_toggle\<close>
 fun mem_toggle :: "syn \<Rightarrow> bool" where
 "mem_toggle (Sm _) = True"
 | "mem_toggle _ = False"
+text_raw \<open>%EndSnippet\<close>
 
 (* mem_prio not needed, handled by custom implementation (?still true?) *)
 text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__cond_trans\<close>
@@ -51,13 +57,17 @@ fun cond_trans :: "syn \<Rightarrow> Cond.cond" where
 | "cond_trans _ = Sskip_cond"
 text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__cond_prio\<close>
 fun cond_prio :: "Cond.cond \<Rightarrow> nat" where
 "cond_prio (Sskip_cond) = 1"
 | "cond_prio _ = 2"
+text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__cond_toggle\<close>
 fun cond_toggle :: "syn \<Rightarrow> bool" where
 "cond_toggle (Sb _) = True"
 | "cond_toggle _ = False"
+text_raw \<open>%EndSnippet\<close>
 
 text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__seq_trans\<close>
 fun seq_trans :: "syn \<Rightarrow> Seq.syn" where
@@ -72,9 +82,11 @@ fun imp_trans :: "syn \<Rightarrow> Imp_Ctl.syn'" where
 | "imp_trans _ = Imp_Ctl.Sskip"
 text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__imp_toggle\<close>
 fun imp_toggle :: "syn \<Rightarrow> bool" where
 "imp_toggle (Si x) = (x \<noteq> Imp_Ctl.Sskip)"
 | "imp_toggle _ = False"
+text_raw \<open>%EndSnippet\<close>
 
 (* layout of state:
  * boolean flag
@@ -84,12 +96,32 @@ fun imp_toggle :: "syn \<Rightarrow> bool" where
  * control stuff (at end and probably don't need to care)
  *)
 
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__entire_state\<close>
+type_synonym ('s, 'x) entire_state =
+  "('s gensyn list md_triv option md_prio *
+       String.literal option md_triv option md_prio *
+       int md_triv option md_prio *
+       int md_triv option md_prio *
+       int md_triv option md_prio *
+       int md_triv option md_prio *
+       (String.literal,
+        int) oalist md_triv option md_prio *
+       'x)"
+text_raw \<open>%EndSnippet\<close>
+
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__entire_state_alt\<close>
+type_synonym ('s, 'x) entire_state_alt =
+  "('s, 'x imp_state') control"
+text_raw \<open>%EndSnippet\<close>
+
 type_synonym ('s, 'x) state =
   "('s, 'x) Mem_Simple.state"
 
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__calc_schemi\<close>
 definition calc_schemi where
 "calc_schemi = (SP NA (SP NB NC))"
 declare calc_schemi_def [simp]
+text_raw \<open>%EndSnippet\<close>
 
 definition calc_lift_aux1 where
 "calc_lift_aux1 = 
@@ -100,20 +132,25 @@ definition calc_lift_aux2 where
 "calc_lift_aux2 =
   schem_lift NA (SP (SPRI (SO NA)) NX)"
 
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__calc_schemo\<close>
 definition calc_schemo where
 "calc_schemo = (SP NX (SP (SPRC calc_prio (SO NC)) (SP (SPRI (SO NA)) (SP (SPRI (SO NB)) NX))))"
 declare calc_schemo_def [simp]
+text_raw \<open>%EndSnippet\<close>
 
 (* need no_control_lifting_S *)
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__calc_lift\<close>
 definition calc_lift :: "(Calc.calc, Calc.calc_state, ('s, 'x :: {Bogus, Pord, Mergeableb, Okay, Pordps}) Mem_Simple.state) lifting" where
 "calc_lift = 
   no_control_lifting (schem_lift calc_schemi calc_schemo)"
+text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__calc_sem_l\<close>
 definition calc_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
 "calc_sem_l =
  lift_map_t_s calc_trans calc_lift calc_toggle
 calc_sem"
-
+text_raw \<open>%EndSnippet\<close>
 
 lemma calc_prio_pos : "\<And> s . 0 < calc_prio s"
 proof-
@@ -251,17 +288,21 @@ apply(fastforce intro: lifting_valid_noaxiom lifting_ortho_noaxiom)
                 apply(auto intro: lifting_valid_noaxiom lifting_ortho_noaxiom)
 *)
 
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__cond_lift\<close>
 definition cond_lift :: "(Cond.cond, Cond.cond_state, ('s, 'x :: {Bogus, Pord, Mergeableb, Okay, Pordps}) Mem_Simple.state) lifting" where
 "cond_lift = 
   no_control_lifting (schem_lift (SP NA NB) (SP (SPRC cond_prio (SO NA)) 
                      (SP (SPRI (SO NB)) NX)) :: (Cond.cond, Cond.cond_state, ('x :: {Okay, Bogus, Mergeableb, Pordps}) state1) lifting)
 "
+text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__cond_sem_l\<close>
 definition cond_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
 "cond_sem_l =
   lift_map_t_s cond_trans
     cond_lift cond_toggle
   cond_sem"
+text_raw \<open>%EndSnippet\<close>
 
 lemma cond_prio_pos :
   "\<And> s . 0 < cond_prio s"
@@ -310,11 +351,15 @@ definition imp_sem_l :: "syn \<Rightarrow> ('s, (_ :: Pordc_all)) state \<Righta
 *)
 
 
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__seq_sem_l\<close>
 definition seq_sem_l :: "syn \<Rightarrow> ('s, _ ::{Okay, Bogus, Mergeableb, Pordps}) state \<Rightarrow> ('s, _) state" where
 "seq_sem_l = seq_sem_l_gen seq_trans"
+text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__mem_lift\<close>
 definition mem_lift :: "(Mem_Simple.syn, Mem_Simple.state0, ('s, _ ::{Okay, Bogus, Mergeableb, Pordps}) state) lifting" where
 "mem_lift = no_control_lifting mem_lift1"
+text_raw \<open>%EndSnippet\<close>
 
 lemma mem_prio_reg_pos : "\<And> r s . 0 < mem_prio_reg r s"
 proof-
@@ -342,19 +387,27 @@ lemma mem_valid_full :
   unfolding mem_lift_def
   by auto
 
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__mem_sem_l\<close>
 definition mem_sem_l :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) state" where
 "mem_sem_l = lift_map_t_s mem_trans mem_lift mem_toggle mem0_sem"
+text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__imp_sem_lifting_spec\<close>
 definition imp_sem_lifting_spec where
 "imp_sem_lifting_spec = 
   (imp_sem_lifting_gen :: (_, _, (_, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state) lifting)"
+text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__imp_sem_l\<close>
 definition imp_sem_l :: "syn \<Rightarrow> ('s, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state" where
 "imp_sem_l = lift_map_t_s imp_trans imp_sem_lifting_spec imp_toggle imp_ctl_sem"
+text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__sem_final\<close>
 definition sem_final :: "syn \<Rightarrow> ('s, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state" where
 "sem_final =
   pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
+text_raw \<open>%EndSnippet\<close>
 
 definition sems ::
   "(syn \<Rightarrow> ('s, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state \<Rightarrow> ('s, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state) set" where
