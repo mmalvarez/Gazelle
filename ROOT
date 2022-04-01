@@ -20,6 +20,7 @@ session Gazelle = "HOL-Library" +
     D*)
   theories
     "Languages/Imp/Calc_Mem_Imp_Hoare"
+    "Languages/Imp/Calc_Mem_Imp_Hoare_Example"
     
     "Paper_Examples/Intro_Example"
     "Paper_Examples/Intro_Example_Gazelle"

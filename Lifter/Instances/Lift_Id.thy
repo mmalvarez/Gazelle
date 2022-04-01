@@ -3,7 +3,7 @@ begin
 (*
  * id
  *)
-text_raw \<open>%Snippet gazelle__lifter__instances_lift_id__id_l\<close>
+text_raw \<open>%Snippet gazelle__lifter__instances__lift_id__id_l\<close>
 definition id_l ::
   "('x, 'a :: {Pord, Bogus}, 'a) lifting" where
 "id_l =

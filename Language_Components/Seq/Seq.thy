@@ -86,7 +86,7 @@ lemma seq_sem_lifting_gen_valid' :
   unfolding seq_sem_lifting'_def schem_lift_defs schem_lift_S_defs
   by(fastforce intro: lifting_valid_fast)
 
-text_raw \<open>%Snippet gazelle__language_components__seq__seq_sem_l_gen\<close>
+text_raw \<open>%Snippet gazelle__language_components__seq__seq__seq_sem_l_gen\<close>
 definition seq_sem_l_gen ::
   "('s \<Rightarrow> syn) \<Rightarrow>
    's \<Rightarrow> (('x, 'y :: Pordb) control) \<Rightarrow> (('x, 'y :: Pordb) control)" where

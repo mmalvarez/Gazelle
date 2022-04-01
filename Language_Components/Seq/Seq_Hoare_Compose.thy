@@ -70,7 +70,7 @@ lemma HNo_Control_Seq :
   assumes H0 : "gs = pcomps fs"
   assumes Hpres : "sups_pres (set fs)"
   assumes Hnemp : "g \<in> set fs"
-  assumes Hdom : "(f' \<downharpoonleft> (set fs) c)"
+  assumes Hdom : "(f' \<down> (set fs) c)"
   shows "|gs| {~ lift_pred_valid_s id l S c P1 ~} [G c z] {~ lift_pred_valid_s id l S c P2 ~}"
 proof(rule HT'I)
   fix npost

@@ -13,7 +13,7 @@ definition tyn_nat :: "nat itself \<Rightarrow> char list" where
 
 value [nbe] "tyname (TYPE (nat))"
 
-text_raw \<open>%Snippet paper_examples__adhic3__tyname\<close>
+text_raw \<open>%Snippet paper_examples__adhoc3__tyname\<close>
 definition tyn_option ::
   "('a itself \<Rightarrow> char list) \<Rightarrow> ('a option itself \<Rightarrow> char list)" where
 "tyn_option t _ =

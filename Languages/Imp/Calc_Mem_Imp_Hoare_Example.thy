@@ -32,7 +32,7 @@ definition sem_final' :: "syn \<Rightarrow> ('s, _) state \<Rightarrow> ('s, _) 
 *)
 (*
 lemma dominant_sups_pres2 ::
-  assumes "f \<downharpoonleft> {} x"
+  assumes "f \<down> {} x"
 *)  
 
 (*
@@ -192,7 +192,7 @@ proof-
     using H oalist_unwrap'_keys[of list]
     by(auto simp add: pred_option_def)
 qed
-
+term "sem_final"
 (* TODO: Hi2 could be \<le>, but for (i think) a technical reason this makes things hard (existential quantifier related problems) *)
 
 text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp_hoare_example__prog1_spec\<close>
@@ -1444,7 +1444,7 @@ split: md_triv.splits)
       by auto
   next
     show "seq_sem_l_gen
-     seq_trans \<downharpoonleft> set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l] {Ss Sseq}"
+     seq_trans \<down> set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l] {Ss Sseq}"
       using seq_dom unfolding sems_def seq_sem_l_def
       by(auto)
   next    
@@ -1519,11 +1519,11 @@ split: md_triv.splits)
         by simp
     next
       show "lift_map_t_s imp_trans imp_sem_lifting_gen imp_toggle
-      imp_ctl_sem \<downharpoonleft> set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l,
+      imp_ctl_sem \<down> set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l,
                         seq_sem_l] {Si SwhileC}"
       proof(rule dominant_syn_subset)
         show "lift_map_t_s imp_trans imp_sem_lifting_gen imp_toggle
-         imp_ctl_sem \<downharpoonleft> set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l,
+         imp_ctl_sem \<down> set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l,
                             seq_sem_l] {x. imp_toggle x = True}"
           using imp_dom_all unfolding imp_sem_l_def imp_sem_lifting_spec_def sems_def
           by auto
@@ -1561,7 +1561,7 @@ split: md_triv.splits)
           by auto
       next
         show "seq_sem_l_gen
-         seq_trans \<downharpoonleft> set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l] {Ss Sseq}"
+         seq_trans \<down> set [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l] {Ss Sseq}"
           using seq_dom unfolding sems_def seq_sem_l_def
           by(auto)
       next    

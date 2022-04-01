@@ -21,7 +21,7 @@ definition tyn_option ::
 "tyn_option t _ =
   (t (TYPE( 'a))) @ '' OPTION''"
 
-text_raw \<open>%Snippet paper_examples__gazelle__tyname\<close>
+text_raw \<open>%Snippet paper_examples__adhoc4__tyname\<close>
 definition tyn_noname_bad :: "'a itself \<Rightarrow> char list" where
 "tyn_noname_bad _ = ''UHOH''"
 
