@@ -76,7 +76,7 @@ definition is_ub :: "('a :: Pord_Weak) set \<Rightarrow> 'a \<Rightarrow> bool" 
   (\<forall> x \<in> A . pleq x a)"
 text_raw \<open>%EndSnippet\<close>
 
-text_raw \<open>%Snippet gazelle__mergeable__pord__least\<close>
+text_raw \<open>%Snippet gazelle__mergeable__pord__is_least\<close>
 definition is_least :: "(('a :: Pord_Weak) \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> bool" where
 "is_least P a =
   (P a \<and>
