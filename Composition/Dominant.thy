@@ -555,13 +555,14 @@ lemma dominant_toggles :
   assumes Toggles: "\<And> f . f \<in> Fs \<Longrightarrow> f \<noteq> lift_map_t_s l'1 l1 t1 f1 \<Longrightarrow>
     (\<exists> tg g . f = toggle tg g \<and> (\<forall> s . s \<in> X \<longrightarrow> \<not> tg s))"
   shows  "(lift_map_t_s l'1 l1 t1 f1) \<down> Fs X"
+text_raw \<open>%EndSnippet\<close>
+
 proof-
 
   show "lift_map_t_s l'1 l1 t1 f1 \<down> Fs X"
     using dominant_toggles'[OF Valid Fs_fin _ Fs_f1 Toggle1 Toggles]
     by blast
 qed
-text_raw \<open>%EndSnippet\<close>
 
 lemma dominant_toggles2 :
   assumes Valid : "lifting_valid l1 S1"

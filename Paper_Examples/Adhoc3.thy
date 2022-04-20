@@ -25,7 +25,12 @@ adhoc_overloading tyname
  "tyn_option tyname"
 
 value [nbe] "tyname (TYPE (unit option))"
+\<comment> \<open>Result:\<close>
+text \<open>@{value "tyname (TYPE (unit option))"}\<close>
+
 value [nbe] "tyname (TYPE (unit option option))"
+\<comment> \<open>Result:\<close>
+text \<open>@{value "tyname (TYPE (unit option option))"}\<close>
 text_raw \<open>%EndSnippet\<close>
 
 end

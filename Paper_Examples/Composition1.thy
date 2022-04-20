@@ -20,11 +20,15 @@ datatype state = (* ... *)
 
 definition f1 :: "syn \<Rightarrow> state \<Rightarrow> state"
   where
-"f1 x st = undefined" (* ... f1 definition *)
+"f1 x st = 
+  \<comment> \<open>Actual implementation goes here\<close>
+  undefined" (* ... f1 definition *)
 
 definition f2 :: "syn \<Rightarrow> state \<Rightarrow> state"
   where
-"f2 x st = undefined" (* ... f2 definition *)
+"f2 x st = 
+  \<comment> \<open>Actual implementation goes here\<close>
+  undefined" (* ... f2 definition *)
 
 definition composed :: "syn \<Rightarrow> state \<Rightarrow> state" where
 "composed x st = (compose_states (f1 x st) (f2 x st))"(* composition of f1 and f2, described next *)

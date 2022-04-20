@@ -70,23 +70,31 @@ text_raw \<open>%EndSnippet\<close>
 definition is_inf :: "('a :: Pord_Weak) set \<Rightarrow> 'a \<Rightarrow> bool" where
 "is_inf A a = is_greatest (is_lb A) a"
 
-text_raw \<open>%Snippet gazelle__mergeable__pord__ub_least_sup\<close>
+text_raw \<open>%Snippet gazelle__mergeable__pord__is_ub\<close>
 definition is_ub :: "('a :: Pord_Weak) set \<Rightarrow> 'a \<Rightarrow> bool" where
 "is_ub A a =
   (\<forall> x \<in> A . pleq x a)"
+text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet gazelle__mergeable__pord__least\<close>
 definition is_least :: "(('a :: Pord_Weak) \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> bool" where
 "is_least P a =
   (P a \<and>
    (\<forall> a' . P a' \<longrightarrow> pleq a a'))"
+text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet gazelle__mergeable__pord__is_sup\<close>
 definition is_sup :: "('a :: Pord_Weak) set \<Rightarrow> 'a \<Rightarrow> bool" where
 "is_sup A a =
   is_least (is_ub A) a"
+text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet gazelle__mergeable__pord__has_sup\<close>
 definition has_sup :: "('a :: Pord_Weak) set \<Rightarrow> bool" where
 "has_sup A = (\<exists> s . is_sup A s)"
+text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet gazelle__mergeable__pord__has_ub\<close>
 definition has_ub :: "('a :: Pord_Weak) set \<Rightarrow> bool" where
 "has_ub A = (\<exists> s . is_ub A s)"
 text_raw \<open>%EndSnippet\<close>
@@ -110,14 +118,16 @@ text_raw \<open>%EndSnippet\<close>
    that is, where the existence of _any_ upper bound between a and bd guarantees the existence
    of a least upper bound sd.
 *)
-text_raw \<open>%Snippet gazelle__mergeable__pord__bub\<close>
+text_raw \<open>%Snippet gazelle__mergeable__pord__is_bub\<close>
 definition is_bub :: "('a :: Pord_Weak) \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
 "is_bub a b s =
   (pleq a s \<and>
     ((\<forall> bd sd . pleq bd (b) \<longrightarrow>
                 is_sup {a, bd} sd \<longrightarrow>
                 pleq sd (s))))"
+text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet gazelle__mergeable__pord__is_bsup\<close>
 definition is_bsup :: "('a :: Pord_Weak) \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
 "is_bsup a b s =
   is_least (is_bub a b) s"

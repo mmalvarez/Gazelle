@@ -35,8 +35,8 @@ adhoc_overloading tyname
   tyn_nat
   tyn_option_bad
 
-(* this produces a type error *)
-(* value [nbe] "tyname (TYPE (unit option))" *)
+\<comment> \<open>The following produces a type error:\<close>
+\<comment> \<open>value [nbe] "tyname (TYPE (unit option))" \<close>
 text_raw \<open>%EndSnippet\<close>
 
 end

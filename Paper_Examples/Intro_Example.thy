@@ -119,9 +119,12 @@ definition example_prog :: "composed" where
 definition init_state :: "composed_state" where
 "init_state =
   (0, 0, 0, empty, 0)"
+text_raw \<open>%EndSnippet\<close>
 
+text_raw \<open>%Snippet paper_examples__intro_example__handwritten_composition_run_value\<close>
 value "composed_sem example_prog init_state"
-
+\<comment> \<open>Result:\<close>
+text \<open>@{value "composed_sem example_prog init_state"}\<close>
 text_raw \<open>%EndSnippet\<close>
 
 end

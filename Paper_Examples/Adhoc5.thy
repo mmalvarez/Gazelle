@@ -40,7 +40,12 @@ adhoc_overloading tyname
  "tyn_option tyname"
 
 value [nbe] "tyname(TYPE (bool))"
+\<comment> \<open>Result:\<close>
+text \<open>@{value "tyname (TYPE (bool))"}\<close>
+
 value [nbe] "tyname(TYPE (bool option))"
+\<comment> \<open>Result:\<close>
+text \<open>@{value "tyname (TYPE (bool option))"}\<close>
 text_raw \<open>%EndSnippet\<close>
 
 end

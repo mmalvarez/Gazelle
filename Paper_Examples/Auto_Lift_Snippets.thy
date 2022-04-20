@@ -192,22 +192,40 @@ adhoc_overloading schem_lift
 "schem_lift_recL schem_lift schem_lift"
 text_raw \<open>%EndSnippet\<close>
 
-
 text_raw \<open>%Snippet paper_examples__auto_lift_snippets__option_l_valid_weak_intro\<close>
+text \<open>@{thm [display] option_l_valid_weak.intro}\<close>
+text_raw \<open>%EndSnippet\<close>
+
+(*
+text_raw \<open>%Snippet paper_examples__auto_lift_snippets__option_l_valid_weak_intro_nope\<close>
 lemma option_l_valid_weak.intro: "\<And> l S . lifting_valid_weak l S \<Longrightarrow> option_l_valid_weak l S"
   text_raw \<open>%EndSnippet\<close>
   oops
+*)
 
 text_raw \<open>%Snippet paper_examples__auto_lift_snippets__option_l_valid_weak_ax\<close>
+text \<open>@{thm [display] option_l_valid_weak.ax}\<close>
+text_raw \<open>%EndSnippet\<close>
+
+(*
+text_raw \<open>%Snippet paper_examples__auto_lift_snippets__option_l_valid_weak_ax_nope\<close>
 lemma option_l_valid_weak.ax: "\<And> l S . 
 	option_l_valid_weak l S \<Longrightarrow> lifting_valid_weak (option_l l) (option_l_S S)"
   text_raw \<open>%EndSnippet\<close>
   oops
+*)
 
 text_raw \<open>%Snippet paper_examples__auto_lift_snippets__option_l_valid_weak_ax_g\<close>
+text \<open>@{thm [display] option_l_valid_weak.ax_g}\<close>
+text_raw \<open>%EndSnippet\<close>
+
+
+(*
+text_raw \<open>%Snippet paper_examples__auto_lift_snippets__option_l_valid_weak_ax_g_nope\<close>
 lemma option_l_valid_weak.ax_g: "\<And> l s .
 	option_l_valid_weak l S \<Longrightarrow> S' = option_l_S S \<Longrightarrow> lifting_valid_weak (option_l l) S'"
 text_raw \<open>%EndSnippet\<close>
   oops
+*)
 
 end

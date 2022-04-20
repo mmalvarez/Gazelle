@@ -30,6 +30,8 @@ adhoc_overloading tyname
   tyn_nat
 
 value "tyname (TYPE (nat))"
+\<comment> \<open>Result:\<close>
+text \<open>@{value "tyname (TYPE (nat))"}\<close>
 text_raw \<open>%EndSnippet\<close>
 
 end

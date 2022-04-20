@@ -611,7 +611,8 @@ lemma HxWhileC' :
   assumes H0 : "gs = pcomps fs"
   assumes HF : "f = lift_map_t_s lfts 
     (imp_sem_lifting_gen :: (_, _, (_, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state) lifting)
- tg imp_ctl_sem"  assumes Tg : "tg (SwhileC') = True"
+ tg imp_ctl_sem"
+  assumes Tg : "tg (SwhileC') = True"
   assumes Hpres : "sups_pres (set fs) (\<lambda> _ . ok_S)"
   assumes Hnemp : "g \<in> set fs"
   assumes Hdom : "(f \<down> (set fs) {SwhileC'})"

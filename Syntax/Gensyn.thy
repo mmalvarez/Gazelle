@@ -119,12 +119,13 @@ proof-
 qed
 
 (* some nicer syntax for Gensyn *)
-
+text_raw \<open>%Snippet gazelle__syntax__gensyn__notations\<close>
 notation G ("\<diamond> _ _" [15, 16] )
 
 abbreviation G0 ::
   "'a \<Rightarrow> 'a gensyn" ("(\<dagger> _)" [80] 81)where
 "G0 x \<equiv> G x []"
+text_raw \<open>%EndSnippet\<close>
 (*
 term "\<diamond> (1 :: nat)
       [ \<diamond> (2 :: nat) [\<dagger> (1 :: nat)]
