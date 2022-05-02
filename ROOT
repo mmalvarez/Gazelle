@@ -24,6 +24,8 @@ session Gazelle = "HOL-Library" +
     
     "Paper_Examples/Intro_Example"
     "Paper_Examples/Intro_Example_Gazelle"
+
+    "Paper_Examples/Calc_Syntax_Example"
     
     "Paper_Examples/Composition1"
     "Paper_Examples/Composition_Tuple_Components"
