@@ -22,8 +22,8 @@ definition f2 :: "syn \<Rightarrow> state \<Rightarrow> state" where
 	(x1, x2, x3) \<Rightarrow>
 		(case s of
 			op1 \<Rightarrow> (x1, x2, x1 * x2)
-			| op2 \<Rightarrow> (x1, x2
-               , divide_nat_inst.divide_nat x1 x2)))"
+			| op2 \<Rightarrow> (x1, x2,
+               divide_nat_inst.divide_nat x1 x2)))"
 text_raw \<open>%EndSnippet\<close>
 
 text_raw \<open>%Snippet paper_examples__composition_priority__composed_f1_f2\<close>

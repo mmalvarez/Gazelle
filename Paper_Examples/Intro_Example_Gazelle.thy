@@ -65,22 +65,28 @@ definition Swr :: "'x \<Rightarrow> 'x swr" where
 "Swr x = (mdp 0 (Some (mdt x)))"
 
 type_synonym ('x) composed_state' =
-  "(int swr * int swr * int swr * (String.literal, int) oalist swr * int swr * 'x)"
+  "(int swr * int swr * int swr * 
+   (String.literal, int) oalist swr * int swr * 'x)"
 
 type_synonym ('s, 'x) composed_state =
   "('s, 'x composed_state') control"
 text_raw \<open>%EndSnippet\<close>
 
 text_raw \<open>%Snippet paper_examples__intro_example_gazelle__lift\<close>
-definition calc_lift' :: "(calc, calc_state, _ composed_state') lifting" where
+definition calc_lift' ::
+  "(calc, calc_state, _ composed_state') lifting" where
 "calc_lift' = 
   schem_lift (SP NA (SP NB NC))
-             (SP (SPRC calc_prio (SO NA)) (SP (SPRC calc_prio (SO NB)) (SP (SPRC calc_prio (SO NC)) NX)))"
+             (SP (SPRC calc_prio (SO NA)) 
+                  (SP (SPRC calc_prio (SO NB))
+                  (SP (SPRC calc_prio (SO NC)) NX)))"
 
-definition calc_lift :: "(calc, calc_state, (composed, _) composed_state) lifting" where
+definition calc_lift ::
+  "(calc, calc_state, (composed, _) composed_state) lifting" where
 "calc_lift = no_control_lifting calc_lift'"
 
-definition mem_lift' :: "(mem, mem_state, _ composed_state') lifting"
+definition mem_lift' ::
+  "(mem, mem_state, _ composed_state') lifting"
   where
 "mem_lift' = 
   schem_lift
@@ -90,20 +96,26 @@ definition mem_lift' :: "(mem, mem_state, _ composed_state') lifting"
         (SP (SPRC mem_prio (SO NC))
         (SP (SPRC mem_prio (SO ND)) NX))))"
 
-definition mem_lift :: "(mem, mem_state, (composed, _) composed_state) lifting" where
+definition mem_lift ::
+  "(mem, mem_state, (composed, _) composed_state) lifting" where
 "mem_lift = no_control_lifting mem_lift'"
 
-definition count_lift' :: "(count, count_state, _ composed_state') lifting" where
+definition count_lift' ::
+  "(count, count_state, _ composed_state') lifting" where
 "count_lift' =
   schem_lift NA
     (SP NX (SP NX (SP NX (SP NX (SP (SPRI (SO NA)) NX)))))"
 
-definition count_lift :: "(count, count_state, (composed, _) composed_state) lifting" where
+definition count_lift ::
+  "(count, count_state, (composed, _) composed_state) lifting" where
 "count_lift = no_control_lifting count_lift'"
 text_raw \<open>%EndSnippet\<close>
 
 text_raw \<open>%Snippet paper_examples__intro_example_gazelle__composition\<close>
-definition composed_sem :: "composed \<Rightarrow> (composed, _) composed_state \<Rightarrow> (composed, _) composed_state" where
+definition composed_sem :: 
+  "composed \<Rightarrow> 
+  (composed, _) composed_state \<Rightarrow>
+  (composed, _) composed_state" where
 "composed_sem =
   pcomps
     [ lift_map_t_s calc_trans calc_lift calc_toggle calc_sem
@@ -129,7 +141,8 @@ definition example_prog :: "composed gensyn" where
 
 definition init_state :: "(composed, unit) composed_state" where
 "init_state =
-  (Swr [example_prog], Swr None, Swr 0, Swr 0, Swr 0, Swr empty, Swr 0, ())"
+  (Swr [example_prog], Swr None, Swr 0, 
+   Swr 0, Swr 0, Swr empty, Swr 0, ())"
 text_raw \<open>%EndSnippet\<close>
 
 text_raw \<open>%Snippet paper_examples__intro_example_gazelle__composition_run_value\<close>

@@ -12,10 +12,14 @@ begin
 definition prio_pleq :
 "x <[ y =
   (case x of
-      mdp xi x' \<Rightarrow> (case y of
-                    mdp yi y' \<Rightarrow> (if (xi \<le> yi) then
-                                      (if (yi \<le> xi) then pleq x' y' else True)
-                                    else False)))"
+      mdp xi x' \<Rightarrow> 
+      (case y of
+        mdp yi y' \<Rightarrow> 
+        (if (xi \<le> yi) then
+          (if (yi \<le> xi) then 
+            pleq x' y' 
+            else True)
+          else False)))"
 text_raw \<open>%EndSnippet\<close>
 instance proof
   fix a :: "'a md_prio"

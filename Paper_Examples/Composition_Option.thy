@@ -7,9 +7,13 @@ datatype flag =
 	| IS_TWO
 
 definition f1 :: "(nat * flag option) \<Rightarrow> (nat * flag option)" where
-	"f1 p = (case p of (x, _) \<Rightarrow> (x, (if x = 1 then Some IS_ONE else None)))"
+	"f1 p = (case p of (x, _) \<Rightarrow> 
+    (x, (if x = 1 then Some IS_ONE 
+                  else None)))"
 definition f2 :: "(nat * flag option) \<Rightarrow> (nat * flag option)" where
-	"f2 p = (case p of (x, _) \<Rightarrow> (x, (if x = 2 then Some IS_TWO else None)))"
+	"f2 p = (case p of (x, _) \<Rightarrow> 
+    (x, (if x = 2 then Some IS_TWO
+                  else None)))"
 text_raw \<open>%EndSnippet\<close>
 
 text_raw \<open>%Snippet paper_examples__composition_option__composed_f1_f2\<close>

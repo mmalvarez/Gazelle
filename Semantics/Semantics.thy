@@ -21,7 +21,8 @@ begin
 (* 'mstate augmented with control information used by the semantics *)
 text_raw \<open>%Snippet gazelle__semantics__semantics__control_type\<close>
 type_synonym ('full, 'mstate) control =
-  "('full gensyn list md_triv option md_prio * String.literal option md_triv option md_prio * 'mstate)"
+  "('full gensyn list md_triv option md_prio * 
+    String.literal option md_triv option md_prio * 'mstate)"
 
 (* TODO: having separate 'syn and 'full type parameters may be unnecessary *)
 type_synonym ('syn, 'full, 'mstate) sem = 
@@ -60,8 +61,10 @@ definition cont :: "('full, 'mstate) control \<Rightarrow> ('full gensyn list or
       (case msg of
         None \<Rightarrow> Inl x
         | Some msg \<Rightarrow> Inr msg)
-    | ((mdp _ None), _, _) \<Rightarrow> Inr (STR ''Hit bottom in continuation field'') 
-    | ((mdp _ _), (mdp _ None), _) \<Rightarrow> Inr (STR ''Hit bottom in message field''))"
+    | ((mdp _ None), _, _) \<Rightarrow>
+      Inr (STR ''Hit bottom in continuation field'') 
+    | ((mdp _ _), (mdp _ None), _) \<Rightarrow>
+      Inr (STR ''Hit bottom in message field''))"
 text_raw \<open>%EndSnippet\<close>
 
 (* Small-step semantics *)
@@ -115,7 +118,8 @@ text_raw \<open>%EndSnippet\<close>
 
 text_raw \<open>%Snippet gazelle__semantics__semantics__sem_step_p\<close>
 inductive sem_step_p ::
-  "('syn, 'mstate) semc  \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> bool"
+  "('syn, 'mstate) semc  \<Rightarrow> ('syn, 'mstate) control \<Rightarrow>
+  ('syn, 'mstate) control \<Rightarrow> bool"
   where
 "\<And> gs m x l  tt .
  cont m = Inl ((G x l)#tt) \<Longrightarrow> 
@@ -125,7 +129,8 @@ text_raw \<open>%EndSnippet\<close>
 (* We can express sem_exec equivalently as a reflexive-transitive closure of taking a step *)
 text_raw \<open>%Snippet gazelle__semantics__semantics__sem_exec_p\<close>
 definition sem_exec_p ::
-  "('syn, 'mstate) semc  \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> bool" where
+  "('syn, 'mstate) semc  \<Rightarrow> ('syn, 'mstate) control \<Rightarrow>
+  ('syn, 'mstate) control \<Rightarrow> bool" where
 "sem_exec_p gs \<equiv>
   (rtranclp (sem_step_p gs))"
 text_raw \<open>%EndSnippet\<close>
@@ -187,7 +192,9 @@ qed
  * We then prove it equivalent to sem_exec_p *)
 text_raw \<open>%Snippet gazelle__semantics__semantics__sem_exec_c_p\<close>
 inductive sem_exec_c_p ::
-  "('syn, 'mstate) semc  \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> nat \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> bool"
+  "('syn, 'mstate) semc  \<Rightarrow>
+  ('syn, 'mstate) control \<Rightarrow> nat \<Rightarrow> 
+  ('syn, 'mstate) control \<Rightarrow> bool"
   for gs :: "('syn, 'mstate) semc" 
   where
 Excp_0 :"sem_exec_c_p gs m 0 m"
