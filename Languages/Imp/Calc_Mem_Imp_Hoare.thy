@@ -838,8 +838,10 @@ lemma Add_Final :
   shows
 "|(sem_final ::
     syn \<Rightarrow> 
-    (syn, (_ ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow>
-    (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state)|
+    (syn, (_ ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all}))
+      state \<Rightarrow>
+    (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all}))
+      state)|
 {~ (\<lambda> st . P st) ~} [G (Sc (Cadd)) z] 
 {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> 
   (case small_new of
