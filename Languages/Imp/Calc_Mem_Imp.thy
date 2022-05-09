@@ -134,13 +134,20 @@ definition calc_lift_aux2 where
 
 text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__calc_schemo\<close>
 definition calc_schemo where
-"calc_schemo = (SP NX (SP (SPRC calc_prio (SO NC)) (SP (SPRI (SO NA)) (SP (SPRI (SO NB)) NX))))"
+"calc_schemo =
+  (SP NX
+  (SP (SPRC calc_prio (SO NC))
+  (SP (SPRI (SO NA))
+  (SP (SPRI (SO NB)) NX))))"
 declare calc_schemo_def [simp]
 text_raw \<open>%EndSnippet\<close>
 
 (* need no_control_lifting_S *)
 text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__calc_lift\<close>
-definition calc_lift :: "(Calc.calc, Calc.calc_state, ('s, 'x :: {Bogus, Pord, Mergeableb, Okay, Pordps}) Mem_Simple.state) lifting" where
+definition calc_lift ::
+  "(Calc.calc, Calc.calc_state, 
+   ('s, 'x :: {Bogus, Pord, Mergeableb, Okay, Pordps})
+    Mem_Simple.state) lifting" where
 "calc_lift = 
   no_control_lifting (schem_lift calc_schemi calc_schemo)"
 text_raw \<open>%EndSnippet\<close>
@@ -289,10 +296,19 @@ apply(fastforce intro: lifting_valid_noaxiom lifting_ortho_noaxiom)
 *)
 
 text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__cond_lift\<close>
-definition cond_lift :: "(Cond.cond, Cond.cond_state, ('s, 'x :: {Bogus, Pord, Mergeableb, Okay, Pordps}) Mem_Simple.state) lifting" where
+definition cond_lift ::
+  "(Cond.cond, Cond.cond_state,
+    ('s, 'x :: {Bogus, Pord, Mergeableb, Okay, Pordps})
+      Mem_Simple.state) lifting" where
 "cond_lift = 
-  no_control_lifting (schem_lift (SP NA NB) (SP (SPRC cond_prio (SO NA)) 
-                     (SP (SPRI (SO NB)) NX)) :: (Cond.cond, Cond.cond_state, ('x :: {Okay, Bogus, Mergeableb, Pordps}) state1) lifting)
+  no_control_lifting
+    (schem_lift
+      (SP NA NB)
+      (SP (SPRC cond_prio (SO NA)) 
+                     (SP (SPRI (SO NB)) NX))
+  :: (Cond.cond, Cond.cond_state,
+      ('x :: {Okay, Bogus, Mergeableb, Pordps})
+        state1) lifting)
 "
 text_raw \<open>%EndSnippet\<close>
 
@@ -352,12 +368,18 @@ definition imp_sem_l :: "syn \<Rightarrow> ('s, (_ :: Pordc_all)) state \<Righta
 
 
 text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__seq_sem_l\<close>
-definition seq_sem_l :: "syn \<Rightarrow> ('s, _ ::{Okay, Bogus, Mergeableb, Pordps}) state \<Rightarrow> ('s, _) state" where
+definition seq_sem_l ::
+  "syn \<Rightarrow>
+   ('s, _ ::{Okay, Bogus, Mergeableb, Pordps}) state \<Rightarrow>
+   ('s, _) state" where
 "seq_sem_l = seq_sem_l_gen seq_trans"
 text_raw \<open>%EndSnippet\<close>
 
 text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__mem_lift\<close>
-definition mem_lift :: "(Mem_Simple.syn, Mem_Simple.state0, ('s, _ ::{Okay, Bogus, Mergeableb, Pordps}) state) lifting" where
+definition mem_lift ::
+  "(Mem_Simple.syn, Mem_Simple.state0,
+   ('s, _ ::{Okay, Bogus, Mergeableb, Pordps}) state)
+    lifting" where
 "mem_lift = no_control_lifting mem_lift1"
 text_raw \<open>%EndSnippet\<close>
 
@@ -395,16 +417,29 @@ text_raw \<open>%EndSnippet\<close>
 text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__imp_sem_lifting_spec\<close>
 definition imp_sem_lifting_spec where
 "imp_sem_lifting_spec = 
-  (imp_sem_lifting_gen :: (_, _, (_, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state) lifting)"
+  (imp_sem_lifting_gen :: 
+    (_, _, (_, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all}))
+      state) lifting)"
 text_raw \<open>%EndSnippet\<close>
 
 text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__imp_sem_l\<close>
-definition imp_sem_l :: "syn \<Rightarrow> ('s, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state" where
-"imp_sem_l = lift_map_t_s imp_trans imp_sem_lifting_spec imp_toggle imp_ctl_sem"
+definition imp_sem_l ::
+  "syn \<Rightarrow>
+   ('s, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all}))
+      state \<Rightarrow>
+   ('s, (_ :: {Okay, Bogus, Mergeableb, Pordps}))
+      state" where
+"imp_sem_l =
+  lift_map_t_s imp_trans imp_sem_lifting_spec imp_toggle imp_ctl_sem"
 text_raw \<open>%EndSnippet\<close>
 
 text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__sem_final\<close>
-definition sem_final :: "syn \<Rightarrow> ('s, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> ('s, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state" where
+definition sem_final ::
+  "syn \<Rightarrow>
+   ('s, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all}))
+    state \<Rightarrow>
+   ('s, (_ :: {Okay, Bogus, Mergeableb, Pordps}))
+    state" where
 "sem_final =
   pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
 text_raw \<open>%EndSnippet\<close>

@@ -302,9 +302,14 @@ fun payload_incr :: "('x md_prio * 'y) \<Rightarrow> ('x md_prio * 'y)" where
 text_raw \<open>%Snippet gazelle__language_components__imp_ctl__imp_ctl_hoare__HxIf\<close>
 lemma HxIf :
   assumes H0 : "gs = pcomps fs"
-  assumes HF : "f = lift_map_t_s lfts 
-    (imp_sem_lifting_gen :: (_, _, (_, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state) lifting)
- tg imp_ctl_sem"
+  assumes HF :
+    "f = lift_map_t_s lfts 
+    (imp_sem_lifting_gen :: 
+      (_, _, 
+        (_, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all}))
+          state)
+         lifting)
+    tg imp_ctl_sem"
   assumes Tg : "tg (Sif') = True"
   assumes Hpres : "sups_pres (set fs) (\<lambda> _ . ok_S)"
   assumes Hnemp : "g \<in> set fs"
@@ -312,14 +317,26 @@ lemma HxIf :
   assumes Hsyn : "lfts Sif' = Sif"
   assumes P1_valid : "\<And> st.  P1 st \<Longrightarrow> get_cond st \<noteq> None"
   assumes P2_valid : "\<And> st . P2 st \<Longrightarrow> get_cond st \<noteq> None"
-  assumes P1_oblivious : "\<And> p p' x rest . P1 (mdp p x, rest) \<Longrightarrow> P1 (mdp p' x, rest)"
-  assumes P2_oblivious : "\<And> p p' x rest . P2 (mdp p x, rest) \<Longrightarrow> P2 (mdp p' x, rest)"
+  assumes P1_oblivious :
+    "\<And> p p' x rest .
+     P1 (mdp p x, rest) \<Longrightarrow>
+     P1 (mdp p' x, rest)"
+  assumes P2_oblivious :
+    "\<And> p p' x rest .
+    P2 (mdp p x, rest) \<Longrightarrow>
+    P2 (mdp p' x, rest)"
 
 
   assumes Hcond : "|gs| {~ P1 ~} [cond] {~ P2 ~}"
-  assumes Htrue : "|gs| {~ (\<lambda> st . P2 st \<and> get_cond st = Some True) ~} [body]
-                        {~ P3 ~}"
-  assumes Hfalse : "|gs| {~ (\<lambda> st . P2 st \<and> get_cond st = Some False) ~} [] {~P3~}"
+  assumes Htrue : 
+    "|gs|
+      {~ (\<lambda> st . P2 st \<and> get_cond st = Some True) ~} 
+      [body]
+      {~ P3 ~}"
+  assumes Hfalse : "|gs|
+    {~ (\<lambda> st . P2 st \<and> get_cond st = Some False) ~}
+    []
+    {~P3~}"
   shows "|gs| {~ P1 ~} [G Sif' [cond, body]] {~ P3 ~}"
 text_raw \<open>%EndSnippet\<close>
 proof(rule HT'I)
@@ -609,8 +626,12 @@ lift_map_t_s imp_trans imp_sem_lifting_spec imp_toggle imp_ctl_sem
 text_raw \<open>%Snippet gazelle__language_components__imp_ctl__imp_ctl_hoare__HxWhileC'\<close>
 lemma HxWhileC' :
   assumes H0 : "gs = pcomps fs"
-  assumes HF : "f = lift_map_t_s lfts 
-    (imp_sem_lifting_gen :: (_, _, (_, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state) lifting)
+  assumes HF : 
+    "f = lift_map_t_s lfts 
+      (imp_sem_lifting_gen :: (_, _, 
+        (_, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all}))
+          state)
+        lifting)
  tg imp_ctl_sem"
   assumes Tg : "tg (SwhileC') = True"
   assumes Hpres : "sups_pres (set fs) (\<lambda> _ . ok_S)"
@@ -618,10 +639,22 @@ lemma HxWhileC' :
   assumes Hdom : "(f \<down> (set fs) {SwhileC'})"
   assumes Hsyn : "lfts SwhileC' = SwhileC"
   assumes PX_valid : "\<And> st.  PX st \<Longrightarrow> get_cond st \<noteq> None"
-  assumes PX_oblivious : "\<And> p p' x rest . PX (mdp p x, rest) \<Longrightarrow> PX (mdp p' x, rest)"
-  assumes Htrue : "\<And> nb2 . \<exists> nb1' . |#gs#| {#- (\<lambda> st. PX st \<and> get_cond st = Some True), (nb1' + nb2) -#} [body] {#- PX, nb2 -#}" 
+  assumes PX_oblivious :
+    "\<And> p p' x rest .
+      PX (mdp p x, rest) \<Longrightarrow>
+      PX (mdp p' x, rest)"
+  assumes Htrue : 
+    "\<And> nb2 . \<exists> nb1' . 
+      |#gs#|
+      {#- (\<lambda> st. PX st \<and> get_cond st = Some True),
+          (nb1' + nb2) -#} 
+      [body] 
+      {#- PX, nb2 -#}" 
   assumes NLs : "nl1 \<le> nl2"
-  shows "|#gs#| {#- PX, nl1  -#} [G SwhileC' [body]] {#- (\<lambda> st . PX st \<and> get_cond st = Some False), nl2 -#}"
+  shows "|#gs#| 
+         {#- PX, nl1  -#} 
+         [G SwhileC' [body]]
+         {#- (\<lambda> st . PX st \<and> get_cond st = Some False), nl2 -#}"
 text_raw \<open>%EndSnippet\<close>
 proof
   fix c'
@@ -855,17 +888,32 @@ qed
 text_raw \<open>%Snippet gazelle__language_components__imp_ctl__imp_ctl_hoare__HxWhileC\<close>
 lemma HxWhileC :
   assumes H0 : "gs = pcomps fs"
-  assumes HF : "f = lift_map_t_s lfts 
-    (imp_sem_lifting_gen :: (_, _, (_, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state) lifting)
- tg imp_ctl_sem"  assumes Tg : "tg (SwhileC') = True"
+  assumes HF :
+    "f = lift_map_t_s lfts 
+    (imp_sem_lifting_gen :: (_, _, 
+      (_, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all}))
+        state)
+      lifting)
+    tg imp_ctl_sem"
+  assumes Tg : "tg (SwhileC') = True"
   assumes Hpres : "sups_pres (set fs) (\<lambda> _ . ok_S)"
   assumes Hnemp : "g \<in> set fs"
   assumes Hdom : "(f \<down> (set fs) {SwhileC'})"
   assumes Hsyn : "lfts SwhileC' = SwhileC"
   assumes PX_valid : "\<And> st.  PX st \<Longrightarrow> get_cond st \<noteq> None"
-  assumes PX_oblivious : "\<And> p p' x rest . PX (mdp p x, rest) \<Longrightarrow> PX (mdp p' x, rest)"
-  assumes Htrue : "|gs| {~ (\<lambda> st . (PX st \<and> get_cond st = Some True))~} [body] {~ PX~}"
-  shows "|gs| {~PX~} [G SwhileC' [body]] {~ (\<lambda> st . PX st \<and> get_cond st = Some False)~}"
+  assumes PX_oblivious :
+    "\<And> p p' x rest .
+      PX (mdp p x, rest) \<Longrightarrow>
+      PX (mdp p' x, rest)"
+  assumes Htrue :
+    "|gs|
+     {~ (\<lambda> st . (PX st \<and> get_cond st = Some True))~}
+     [body]
+      {~PX~}"
+  shows "|gs|
+         {~PX~}
+         [G SwhileC' [body]]
+         {~ (\<lambda> st . PX st \<and> get_cond st = Some False)~}"
 text_raw \<open>%EndSnippet\<close>
 proof(rule HT'I)
   fix npost

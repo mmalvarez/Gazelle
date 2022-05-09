@@ -13,14 +13,43 @@ datatype nA =
   NA
 datatype nB =
   NB
-(* ... *)
+
 class n_A
 class hasntA
 
 class n_B
 class hasntB
-(* ... *)
 text_raw \<open>%EndSnippet\<close>
+
+text_raw \<open>%Snippet paper_examples__auto_lift_snippets__names_schem\<close>
+instantiation nA :: schem begin
+instance proof qed
+end
+
+instantiation nB :: schem begin
+instance proof qed
+end
+text_raw \<open>%EndSnippet\<close>
+
+text_raw \<open>%Snippet paper_examples__auto_lift_snippets__names_basename\<close>
+instantiation nA :: basename begin
+instance proof qed
+end
+
+instantiation nB :: basename begin
+instance proof qed
+end
+text_raw \<open>%EndSnippet\<close>
+
+text_raw \<open>%Snippet paper_examples__auto_lift_snippets__names_hasnt\<close>
+instantiation nA :: hasntB begin
+instance proof qed
+end
+instantiation nB :: hasntA begin
+instance proof qed
+end
+text_raw \<open>%EndSnippet\<close>
+
 
 text_raw \<open>%Snippet paper_examples__auto_lift_snippets__types\<close>
 datatype ('a, 'b) sprod = 
@@ -193,6 +222,7 @@ adhoc_overloading schem_lift
 text_raw \<open>%EndSnippet\<close>
 
 text_raw \<open>%Snippet paper_examples__auto_lift_snippets__option_l_valid_weak_intro\<close>
+\<comment> \<open>option\_l\_valid\_weak.intro:\<close>
 text \<open>@{thm [display] option_l_valid_weak.intro}\<close>
 text_raw \<open>%EndSnippet\<close>
 
@@ -204,9 +234,11 @@ lemma option_l_valid_weak.intro: "\<And> l S . lifting_valid_weak l S \<Longrigh
 *)
 
 text_raw \<open>%Snippet paper_examples__auto_lift_snippets__option_l_valid_weak_ax\<close>
-text \<open>@{thm [display] option_l_valid_weak.ax}\<close>
+lemma (in option_l_valid_weak) ax :
+  shows "lifting_valid_weak (option_l l) (option_l_S S)"
 text_raw \<open>%EndSnippet\<close>
-
+  using out.lifting_valid_weak_axioms
+    by auto
 (*
 text_raw \<open>%Snippet paper_examples__auto_lift_snippets__option_l_valid_weak_ax_nope\<close>
 lemma option_l_valid_weak.ax: "\<And> l S . 
@@ -216,8 +248,13 @@ lemma option_l_valid_weak.ax: "\<And> l S .
 *)
 
 text_raw \<open>%Snippet paper_examples__auto_lift_snippets__option_l_valid_weak_ax_g\<close>
-text \<open>@{thm [display] option_l_valid_weak.ax_g}\<close>
+lemma (in option_l_valid_weak) ax_g :
+  assumes "S' = option_l_S S"
+  shows "lifting_valid_weak (option_l l) S'"
 text_raw \<open>%EndSnippet\<close>
+  using out.lifting_valid_weak_axioms assms
+  by auto
+
 
 
 (*

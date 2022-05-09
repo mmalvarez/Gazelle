@@ -199,15 +199,22 @@ text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp_hoare_example__pr
 lemma prog1_spec :
   assumes Hi1 : "0 < i1" 
   assumes Hi2 : "0 \<le> i2"
-shows "|(sem_final :: (syn \<Rightarrow> (syn, ('x :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))| {~ (\<lambda> st . st \<in> ok_S) ~}
-                   [prog1 i1 i2]
-                   {~ (\<lambda> st . st \<in> ok_S \<and>
-                      (case st of
-                        (reg_flag, reg_c, reg_a, reg_b, mem, xz) \<Rightarrow>
-                          (case mem of
-                            (mdp p (Some (mdt mem'))) \<Rightarrow> get mem'(STR ''acc'') = Some (i1 * i2)
-                            | _ \<Rightarrow> False)))
-  ~}"
+  shows
+    "|(sem_final :: 
+        (syn \<Rightarrow>
+         (syn, ('x :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all}))
+            state \<Rightarrow>
+         (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))|
+     {~ (\<lambda> st . st \<in> ok_S) ~}
+     [prog1 i1 i2]
+     {~ (\<lambda> st . st \<in> ok_S \<and>
+        (case st of
+          (reg_flag, reg_c, reg_a, reg_b, mem, xz) \<Rightarrow>
+            (case mem of
+              (mdp p (Some (mdt mem'))) \<Rightarrow>
+                get mem'(STR ''acc'') = Some (i1 * i2)
+              | _ \<Rightarrow> False)))
+    ~}"
 text_raw \<open>%EndSnippet\<close>
 (*
   using HTS_imp_HT''[where l' = calc_trans, where x = "Calc_Mem_Imp.syn.Sc (Cnum i1)"

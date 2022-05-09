@@ -835,12 +835,17 @@ text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp_hoare__Add_Final\
 lemma Add_Final : 
   assumes P1_ok : "\<And> st . P st \<Longrightarrow> st \<in> ok_S"
   assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut calc_lift' Cadd st)"
-  (* problem: use of old_big inside "Q'" predicate *)
-  shows "|(sem_final :: syn \<Rightarrow> (syn, (_ ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow> (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state)| {~ (\<lambda> st . P st) ~} [G (Sc (Cadd)) z] 
-    {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> 
-      (case small_new of
-        (c1, c2, x) \<Rightarrow> x = c1 + c2 \<and> (\<exists> old . P' (c1, c2, old))) \<and> 
-        st = LUpd calc_lift' (Cadd) small_new old_big)  ~}"
+  shows
+"|(sem_final ::
+    syn \<Rightarrow> 
+    (syn, (_ ::{Okay,Mergeableb,Bogus, Pordps, Pordc_all})) state \<Rightarrow>
+    (syn, (_ ::{Okay,Bogus,Mergeableb, Pordps, Pordc_all})) state)|
+{~ (\<lambda> st . P st) ~} [G (Sc (Cadd)) z] 
+{~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> 
+  (case small_new of
+    (c1, c2, x) \<Rightarrow> 
+      x = c1 + c2 \<and> (\<exists> old . P' (c1, c2, old))) \<and> 
+  st = LUpd calc_lift' (Cadd) small_new old_big)  ~}"
 text_raw \<open>%EndSnippet\<close>
   using assms Add_Final'
   unfolding calc_trans.simps

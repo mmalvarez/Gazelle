@@ -12,15 +12,17 @@ definition prio_l ::
   ('x, 'a, 'b) lifting\<Rightarrow>
   ('x, 'a, 'b md_prio) lifting" where
 "prio_l f0 f1 t =
-      LMake (\<lambda> s a b . (case b of
-                             mdp m b' \<Rightarrow> mdp (f1 s m) (LUpd t s a b')))
+      LMake (\<lambda> s a b . 
+              (case b of
+                mdp m b' \<Rightarrow> mdp (f1 s m) (LUpd t s a b')))
             (\<lambda> s p . (case p of
                        mdp m b \<Rightarrow> LOut t s b))
             (\<lambda> s . mdp (f0 s) (LBase t s))"
 text_raw \<open>%EndSnippet\<close>
 
 text_raw \<open>%Snippet gazelle__lifter__instances__lift_prio__prio_l_S\<close>
-definition prio_l_S :: "('x, 'b) valid_set \<Rightarrow> ('x, 'b md_prio) valid_set" where
+definition prio_l_S :: "('x, 'b) valid_set \<Rightarrow>
+  ('x, 'b md_prio) valid_set" where
 "prio_l_S S s =
   { p . (case p of
           mdp n x \<Rightarrow> x \<in> S s) }"

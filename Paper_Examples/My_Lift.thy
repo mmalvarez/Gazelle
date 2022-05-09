@@ -7,9 +7,12 @@ definition my_lift_manual :: "
 ('x, 'a1 :: Bogus, 'b1 :: Mergeableb) lifting \<Rightarrow>
 ('x, 'a2 :: Bogus, 'b2 :: Mergeableb) lifting \<Rightarrow>
 ('x, 'a3 :: Bogus, 'b3 :: Mergeableb) lifting \<Rightarrow>
-('x, ('a1 * ('a2 * 'a3)), (('b2 * 'b1) * ('b3 * ('b4 :: Mergeableb)))) lifting"  where
+('x, ('a1 * ('a2 * 'a3)),
+  (('b2 * 'b1) * ('b3 * ('b4 :: Mergeableb)))) lifting"  where
 "my_lift_manual l1 l2 l3 =
-  (merge_l (fst_l (snd_l l1)) (merge_l (fst_l (fst_l l2)) (snd_l (fst_l l3))))"
+(merge_l (fst_l (snd_l l1)) 
+         (merge_l (fst_l (fst_l l2)) 
+                  (snd_l (fst_l l3))))"
 text_raw \<open>%EndSnippet\<close>
 
 text_raw \<open>%Snippet paper_examples__my_lift__my_lift\<close>
@@ -17,7 +20,8 @@ definition my_lift :: "
 ('x, 'a1 :: Bogus, 'b1 :: Mergeableb) lifting \<Rightarrow>
 ('x, 'a2 :: Bogus, 'b2 :: Mergeableb) lifting \<Rightarrow>
 ('x, 'a3 :: Bogus, 'b3 :: Mergeableb) lifting \<Rightarrow>
-('x, ('a1 * ('a2 * 'a3)), (('b2 * 'b1) * ('b3 * ('b4 :: Mergeableb)))) lifting"  where
+('x, ('a1 * ('a2 * 'a3)),
+  (('b2 * 'b1) * ('b3 * ('b4 :: Mergeableb)))) lifting"  where
 "my_lift l1 l2 l3 =
 	schem_lift (SP NA (SP NB NC)) 
 		(SP (SP (SINJ l2 NB) (SINJ l1 NA)) (SP (SINJ l3 NC) NX))"

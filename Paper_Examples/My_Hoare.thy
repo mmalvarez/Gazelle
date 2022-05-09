@@ -9,11 +9,15 @@ definition sem :: "prog \<Rightarrow> state \<Rightarrow> state \<Rightarrow> bo
 "sem x y z = (y = z)"
 
 text_raw \<open>%Snippet paper_examples__my_hoare__triple\<close>
-definition triple :: "(state \<Rightarrow> bool) \<Rightarrow> prog \<Rightarrow> (state \<Rightarrow> bool) \<Rightarrow> bool" 
+definition triple :: "(state \<Rightarrow> bool) \<Rightarrow> prog \<Rightarrow> 
+  (state \<Rightarrow> bool) \<Rightarrow> bool" 
   ("{_} _ {_}")
   where
 "triple P c Q =
-	(\<forall> (st :: state) (st' :: state) . P st \<longrightarrow> sem c st st' \<longrightarrow> Q st')"
+	(\<forall> (st :: state) (st' :: state) .
+    P st \<longrightarrow>
+    sem c st st' \<longrightarrow> 
+    Q st')"
 text_raw \<open>%EndSnippet\<close>
 
 definition seq ::

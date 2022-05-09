@@ -50,7 +50,10 @@ lemma Vlift :
   assumes Valid : "lifting_valid_weak l S" 
   assumes V: "(sem) % {{P}} x {{Q}}"
   assumes Syn : "l' x' = x"
-  shows "(lift_map_s l' l sem) % {{lift_pred_noS_s l' l x' P}} x' {{lift_pred_noS_s l' l x' Q}}"
+  shows "(lift_map_s l' l sem) % 
+          {{lift_pred_noS_s l' l x' P}}
+          x'
+          {{lift_pred_noS_s l' l x' Q}}"
 text_raw \<open>%EndSnippet\<close>
 proof-
 

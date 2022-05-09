@@ -9,7 +9,9 @@ begin
  * _Program Logics for Certified Compilers_ and _Separation Logic for Small-Step Cminor_
  *)
 text_raw \<open>%Snippet gazelle__hoare__hoare__imm_safe\<close>
-definition imm_safe :: "('syn, 'mstate) semc \<Rightarrow> ('syn, 'mstate) control  \<Rightarrow> bool" where
+definition imm_safe :: "('syn, 'mstate) semc \<Rightarrow>
+  ('syn, 'mstate) control \<Rightarrow>
+  bool" where
 "imm_safe gs m \<equiv>
  ((cont m = Inl []) \<or>
   (\<exists> m' . sem_step_p gs m m'))"
@@ -34,7 +36,9 @@ lemma imm_safeD :
 
 (* Safe means we terminate or diverge (partial correctness) *)
 text_raw \<open>%Snippet gazelle__hoare__hoare__safe\<close>
-definition safe :: "('syn, 'mstate) semc \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> bool" where
+definition safe :: "('syn, 'mstate) semc \<Rightarrow>
+  ('syn, 'mstate) control \<Rightarrow>
+  bool" where
 "safe gs m \<equiv>
   (\<forall> m' . sem_exec_p gs m m' \<longrightarrow> imm_safe gs m')"
 text_raw \<open>%EndSnippet\<close>
@@ -52,11 +56,14 @@ lemma safeD :
 
 (* Guarded: if we start in a state satisfying P, we are safe *)
 text_raw \<open>%Snippet gazelle__hoare__hoare__guarded\<close>
-definition guarded :: "('syn, ('mstate :: Okay)) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'syn gensyn list \<Rightarrow> bool"
+definition guarded :: "('syn, ('mstate :: Okay)) semc \<Rightarrow>
+  ('mstate \<Rightarrow> bool) \<Rightarrow>
+  'syn gensyn list \<Rightarrow> bool"
 ("|_| {_} _" [200, 202, 204])
  where
 "guarded gs P c =
-  (\<forall> m . m \<in> ok_S \<longrightarrow> P (payload m) \<longrightarrow> cont m = Inl c \<longrightarrow> safe gs m)"
+  (\<forall> m . m \<in> ok_S \<longrightarrow> P (payload m) \<longrightarrow> 
+    cont m = Inl c \<longrightarrow> safe gs m)"
 text_raw \<open>%EndSnippet\<close>
 
 lemma guardedI [intro] :
@@ -78,7 +85,10 @@ lemma guardedD :
  * the program c followed by the tail c' will be safe under P (the precondition)
  *)
 text_raw \<open>%Snippet gazelle__hoare__hoare__HT\<close>
-definition HT :: "('syn, ('mstate :: Okay)) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> 'syn gensyn list \<Rightarrow> ('mstate \<Rightarrow> bool)\<Rightarrow> bool" 
+definition HT :: "('syn, ('mstate :: Okay)) semc \<Rightarrow> 
+  ('mstate \<Rightarrow> bool) \<Rightarrow>
+  'syn gensyn list \<Rightarrow>
+  ('mstate \<Rightarrow> bool) \<Rightarrow> bool" 
   ("|_| {-_-} _ {-_-}" [206, 208, 210])
   where
 "HT gs P c Q =

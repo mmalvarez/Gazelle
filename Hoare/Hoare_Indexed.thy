@@ -13,10 +13,15 @@ begin
 
 (* Captures being safe for a certain number of steps *)
 text_raw \<open>%Snippet gazelle__hoare__hoare_indexed__safe_for\<close>
-definition safe_for :: "('syn, 'mstate) semc \<Rightarrow> ('syn, 'mstate) control \<Rightarrow> nat \<Rightarrow> bool" where
+definition safe_for :: "('syn, 'mstate) semc \<Rightarrow>
+  ('syn, 'mstate) control \<Rightarrow>
+  nat \<Rightarrow> bool" where
 "safe_for gs full n =
-  ((\<exists> n0 full' . n0 \<le> n \<and> sem_exec_c_p gs full n0 full' \<and> cont full' = Inl []) \<or>
-   (\<forall> n0 . n0 \<le> n \<longrightarrow> (\<exists> full' h t . sem_exec_c_p gs full n0 full' \<and> cont full' = Inl (h#t))))"
+  ((\<exists> n0 full' . n0 \<le> n \<and> sem_exec_c_p gs full n0 full' \<and>
+      cont full' = Inl []) \<or>
+   (\<forall> n0 . n0 \<le> n \<longrightarrow> 
+      (\<exists> full' h t . sem_exec_c_p gs full n0 full' \<and>
+      cont full' = Inl (h#t))))"
 text_raw \<open>%EndSnippet\<close>
 
 lemma safe_forI_halt :
@@ -214,11 +219,17 @@ qed
  * means we are safe for a certain number of steps)
  *)
 text_raw \<open>%Snippet gazelle__hoare__hoare_indexed__guarded\<close>
-definition guarded :: "('syn, 'mstate :: Okay) semc \<Rightarrow> ('mstate \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> 'syn gensyn list \<Rightarrow> bool"
+definition guarded :: "('syn, 'mstate :: Okay) semc \<Rightarrow>
+  ('mstate \<Rightarrow> bool) \<Rightarrow>
+  nat \<Rightarrow> 
+  'syn gensyn list \<Rightarrow> bool"
 ("|#_#| {#_, _#} _" [210, 212, 214, 216])
  where
 "guarded gs P n c =
-  (\<forall> m . m \<in> ok_S \<longrightarrow> P (payload m) \<longrightarrow> cont m = Inl c \<longrightarrow> safe_for gs m n)"
+  (\<forall> m . m \<in> ok_S \<longrightarrow>
+    P (payload m) \<longrightarrow>
+    cont m = Inl c \<longrightarrow>
+    safe_for gs m n)"
 text_raw \<open>%EndSnippet\<close>
 
 lemma guardediI [intro] :

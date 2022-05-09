@@ -24,14 +24,17 @@ type_synonym ('syn, 'a, 'b) lifting' =
   "('syn, 'a, 'b) lifting"
 
 text_raw \<open>%Snippet gazelle__lifter__lifter__LMap\<close>
-definition LMap :: "('syn, 'a, 'b) lifting \<Rightarrow> ('syn \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow> ('syn \<Rightarrow> 'b \<Rightarrow> 'b)"
+definition LMap :: "('syn, 'a, 'b) lifting \<Rightarrow>
+  ('syn \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow>
+  ('syn \<Rightarrow> 'b \<Rightarrow> 'b)"
   where
 "LMap l f s b =
   LUpd l s (f s (LOut l s b)) b"
 text_raw \<open>%EndSnippet\<close>
 
 text_raw \<open>%Snippet gazelle__lifter__lifter__LNew\<close>
-definition LNew :: "('syn, 'a, 'b) lifting \<Rightarrow> 'syn \<Rightarrow> 'a \<Rightarrow> 'b"  where
+definition LNew :: "('syn, 'a, 'b) lifting \<Rightarrow>
+  'syn \<Rightarrow> 'a \<Rightarrow> 'b"  where
 "LNew l s a = LUpd l s a (LBase l s)"
 text_raw \<open>%EndSnippet\<close>
 
@@ -63,7 +66,9 @@ locale lifting_presonly = lifting_sig +
     "\<And> v V supr f s . 
          v \<in> V \<Longrightarrow>
          V \<subseteq> S s \<Longrightarrow>
-         is_sup V supr \<Longrightarrow> supr \<in> S s \<Longrightarrow> is_sup (LMap l f s ` V) (LMap l f s supr)"
+         is_sup V supr \<Longrightarrow>
+         supr \<in> S s \<Longrightarrow> 
+         is_sup (LMap l f s ` V) (LMap l f s supr)"
 text_raw \<open>%EndSnippet\<close>
 
 locale lifting_valid_presonly =
@@ -75,7 +80,9 @@ text_raw \<open>%Snippet gazelle__lifter__lifter__lifting_valid_weak\<close>
 locale lifting_valid_weak =
   lifting_putonly +
   assumes put_get : "\<And> a . LOut l s (LUpd l s a b) = a"
-  assumes get_put_weak : "\<And> s b . b \<in> S s \<Longrightarrow> b <[ LUpd l s (LOut l s b) b"
+  assumes get_put_weak : 
+    "\<And> s b . b \<in> S s \<Longrightarrow>
+      b <[ LUpd l s (LOut l s b) b"
 text_raw \<open>%EndSnippet\<close>
 
 text_raw \<open>%Snippet gazelle__lifter__lifter__lifting_valid\<close>

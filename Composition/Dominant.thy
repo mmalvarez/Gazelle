@@ -41,7 +41,9 @@ locale dominant2 = dominant2_sig +
  *)
 text_raw \<open>%Snippet gazelle__composition__dominant__dominant\<close>
 definition dominant ::
-  "('a \<Rightarrow> 'c \<Rightarrow> ('c :: Pord_Weak)) \<Rightarrow> ('a \<Rightarrow> 'c \<Rightarrow> 'c) set \<Rightarrow> 'a set \<Rightarrow> bool"
+  "('a \<Rightarrow> 'c \<Rightarrow> ('c :: Pord_Weak)) \<Rightarrow> 
+   ('a \<Rightarrow> 'c \<Rightarrow> 'c) set \<Rightarrow>
+   'a set \<Rightarrow> bool"
 ("_ \<down> _ _" [250, 252, 254])
 where
 "(f \<down> S X) = 
@@ -552,7 +554,8 @@ lemma dominant_toggles :
   assumes Fs_fin : "finite (Fs :: (_ \<Rightarrow> (_ :: Mergeable) \<Rightarrow> _) set)"
   assumes Fs_f1 : "lift_map_t_s l'1 l1 t1 f1 \<in> Fs"
   assumes Toggle1 : "\<And> s . s \<in> X \<Longrightarrow> t1 s"
-  assumes Toggles: "\<And> f . f \<in> Fs \<Longrightarrow> f \<noteq> lift_map_t_s l'1 l1 t1 f1 \<Longrightarrow>
+  assumes Toggles: "\<And> f . f \<in> Fs \<Longrightarrow> 
+    f \<noteq> lift_map_t_s l'1 l1 t1 f1 \<Longrightarrow>
     (\<exists> tg g . f = toggle tg g \<and> (\<forall> s . s \<in> X \<longrightarrow> \<not> tg s))"
   shows  "(lift_map_t_s l'1 l1 t1 f1) \<down> Fs X"
 text_raw \<open>%EndSnippet\<close>

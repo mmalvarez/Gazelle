@@ -19,8 +19,9 @@ begin
  * by playing the same parametricity trick as with the control languages?
  *)
 text_raw \<open>%Snippet gazelle__hoare__hoare_step__no_control_lifting\<close>
-definition no_control_lifting :: "('a, 'b1, 'b2 :: {Bogus, Pord}) lifting \<Rightarrow>
-  ('a, 'b1, ('x, 'b2) control) lifting" where
+definition no_control_lifting ::
+"('a, 'b1, 'b2 :: {Bogus, Pord}) lifting \<Rightarrow>
+ ('a, 'b1, ('x, 'b2) control) lifting" where
 "no_control_lifting l =
   schem_lift NC (SP NX (SP NX (SINJ l NC)))"
 text_raw \<open>%EndSnippet\<close>
@@ -309,10 +310,13 @@ qed
 
 text_raw \<open>%Snippet gazelle__hoare__hoare_step__HTS_imp_HT''\<close>
 lemma HTS_imp_HT'' :
-  fixes fs :: "('b \<Rightarrow> ('b, 'c) control \<Rightarrow> ('b, 'c :: {Bogus, Mergeableb, Okay}) control) list"
+  fixes fs ::
+    "('b \<Rightarrow> ('b, 'c) control \<Rightarrow>
+     ('b, 'c :: {Bogus, Mergeableb, Okay}) control) list"
   assumes H: "f % {{P'}} (l' x) {{Q'}}"
   assumes Valid : "lifting_valid_ok l S"
-  assumes Hf' : "f' = lift_map_t_s l' (no_control_lifting  l) tg f"
+  assumes Hf' : 
+    "f' = lift_map_t_s l' (no_control_lifting  l) tg f"
   assumes H0 : "gs = pcomps fs"
   assumes Hpres : "sups_pres (set fs) (\<lambda> _ . ok_S)"
   assumes Hseq : "seq_sem_l_gen lfts \<in> set fs"
@@ -323,8 +327,12 @@ lemma HTS_imp_HT'' :
   assumes Hdom : "(f' \<down> (set fs - {seq_sem_l_gen lfts}) X)"
   assumes HP : "\<And> st . P st \<Longrightarrow> P' (LOut l (l' x) st)"
 
-  shows "|gs| {~ (\<lambda> st . P st) ~} [G x z] 
-    {~ (\<lambda> st . \<exists> old_big small_new . P old_big \<and> Q' small_new \<and> st = LUpd l (l' x) small_new old_big) ~}"
+shows 
+  "|gs| {~ (\<lambda> st . P st) ~} [G x z] 
+   {~ (\<lambda> st . \<exists> old_big small_new .
+    P old_big \<and>
+    Q' small_new \<and>
+    st = LUpd l (l' x) small_new old_big) ~}"
 text_raw \<open>%EndSnippet\<close>
 proof(rule HT'I)
   fix npost

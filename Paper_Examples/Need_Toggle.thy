@@ -37,13 +37,20 @@ fun sem2_p :: "syn \<Rightarrow> nat" where
 "sem2_p Op2 = 2"
 | "sem2_p _ = 1"
 
-type_synonym state = "int md_triv option md_prio * int md_triv option md_prio"
+type_synonym state =
+  "int md_triv option md_prio *
+   int md_triv option md_prio"
 
-definition sem1_lift :: "(syn, int, int md_triv option md_prio * ('a :: Mergeableb)) lifting" where
+definition sem1_lift ::
+  "(syn, int,
+    int md_triv option md_prio *
+    ('a :: Mergeableb)) lifting" where
 "sem1_lift = schem_lift NA (SP (SPRC sem1_p (SO NA)) NX)"
 
 definition sem2_lift :: "(syn, (int * int), state) lifting" where
-"sem2_lift = schem_lift (SP NA NB) (SP (SPRI (SO NA)) (SPRC sem2_p (SO NB)))"
+"sem2_lift =
+  schem_lift (SP NA NB)
+    (SP (SPRI (SO NA)) (SPRC sem2_p (SO NB)))"
 text_raw \<open>%EndSnippet\<close>
 
 text_raw \<open>%Snippet paper_examples__need_toggle__toggles\<close>

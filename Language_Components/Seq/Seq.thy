@@ -57,7 +57,8 @@ fun seq_prio :: "syn \<Rightarrow> nat" where
 text_raw \<open>%EndSnippet\<close>
 
 text_raw \<open>%Snippet gazelle__language_components__seq__seq_sem_lifting_gen\<close>
-definition seq_sem_lifting_gen :: "(syn, 'x state', ('x, 'a :: Pordb) control) lifting"
+definition seq_sem_lifting_gen ::
+  "(syn, 'x state', ('x, 'a :: Pordb) control) lifting"
   where
 "seq_sem_lifting_gen = schem_lift
     NC (SP (SPRC seq_prio (SO NC)) NX)"
@@ -89,7 +90,8 @@ lemma seq_sem_lifting_gen_valid' :
 text_raw \<open>%Snippet gazelle__language_components__seq__seq__seq_sem_l_gen\<close>
 definition seq_sem_l_gen ::
   "('s \<Rightarrow> syn) \<Rightarrow>
-   's \<Rightarrow> (('x, 'y :: Pordb) control) \<Rightarrow> (('x, 'y :: Pordb) control)" where
+   's \<Rightarrow> (('x, 'y :: Pordb) control) \<Rightarrow>
+   (('x, 'y :: Pordb) control)" where
 "seq_sem_l_gen lfts =
   lift_map_s lfts
   seq_sem_lifting_gen
