@@ -418,7 +418,9 @@ text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__imp_sem_lifting_
 definition imp_sem_lifting_spec where
 "imp_sem_lifting_spec = 
   (imp_sem_lifting_gen :: 
-    (_, _, (_, (_ :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all}))
+    (_, _, (_, (_ :: 
+      {Okay, Bogus, Mergeableb,
+       Pordps, Pordc_all}))
       state) lifting)"
 text_raw \<open>%EndSnippet\<close>
 
@@ -430,7 +432,8 @@ definition imp_sem_l ::
    ('s, (_ :: {Okay, Bogus, Mergeableb, Pordps}))
       state" where
 "imp_sem_l =
-  lift_map_t_s imp_trans imp_sem_lifting_spec imp_toggle imp_ctl_sem"
+  lift_map_t_s imp_trans imp_sem_lifting_spec
+    imp_toggle imp_ctl_sem"
 text_raw \<open>%EndSnippet\<close>
 
 text_raw \<open>%Snippet gazelle__languages__imp__calc_mem_imp__sem_final\<close>
@@ -441,7 +444,8 @@ definition sem_final ::
    ('s, (_ :: {Okay, Bogus, Mergeableb, Pordps}))
     state" where
 "sem_final =
-  pcomps [calc_sem_l, mem_sem_l, cond_sem_l, imp_sem_l, seq_sem_l]"
+  pcomps [calc_sem_l, mem_sem_l, cond_sem_l, 
+          imp_sem_l, seq_sem_l]"
 text_raw \<open>%EndSnippet\<close>
 
 definition sems ::

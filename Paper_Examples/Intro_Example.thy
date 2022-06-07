@@ -124,7 +124,13 @@ text_raw \<open>%EndSnippet\<close>
 text_raw \<open>%Snippet paper_examples__intro_example__handwritten_composition_run_value\<close>
 value "composed_sem example_prog init_state"
 \<comment> \<open>Result:\<close>
-text \<open>@{value "composed_sem example_prog init_state"}\<close>
+definition result where
+"result =
+(1, 2, 3,
+  Oalist
+   [(STR ''result'', 3), (STR ''x'', 1), 
+    (STR ''y'', 2)],
+  8)"
 text_raw \<open>%EndSnippet\<close>
 
 end

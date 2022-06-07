@@ -17,7 +17,8 @@ definition f2 :: "(nat * flag option) \<Rightarrow> (nat * flag option)" where
 text_raw \<open>%EndSnippet\<close>
 
 text_raw \<open>%Snippet paper_examples__composition_option__composed_f1_f2\<close>
-definition composed_f1_f2 :: "(nat * flag option \<Rightarrow> nat * flag option)" where
+definition composed_f1_f2 ::
+  "(nat * flag option \<Rightarrow> nat * flag option)" where
 "composed_f1_f2 x =
 (case x of
 	(x1, x2) \<Rightarrow>
@@ -27,7 +28,8 @@ definition composed_f1_f2 :: "(nat * flag option \<Rightarrow> nat * flag option
 			(case f2 (x1, x2) of
         (x1'', None) \<Rightarrow> (x1', Some x2')
 				| (x1'', Some x2'') \<Rightarrow> 
-          undefined \<comment> \<open>can't occur for f1, f2 as defined above\<close>)))"
+          \<comment> \<open>can't occur for f1, f2 as defined above\<close>
+          undefined)))"
 text_raw \<open>%EndSnippet\<close>
 
 end

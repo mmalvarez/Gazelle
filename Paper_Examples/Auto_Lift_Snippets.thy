@@ -99,7 +99,8 @@ consts schem_lift ::
 text_raw \<open>%EndSnippet\<close>
 
 text_raw \<open>%Snippet paper_examples__auto_lift_snippets__schem_lift_base_trivA\<close>
-definition schem_lift_base_trivA ::  "('n :: n_A, 'n, 'x, 'a :: Bogus, 'a md_triv) schem_lift" where
+definition schem_lift_base_trivA :: 
+  "('n :: n_A, 'n, 'x, 'a :: Bogus, 'a md_triv) schem_lift" where
 "schem_lift_base_trivA _ _ =
   triv_l"
 text_raw \<open>%EndSnippet\<close>
@@ -122,7 +123,8 @@ text_raw \<open>%EndSnippet\<close>
 text_raw \<open>%Snippet paper_examples__auto_lift_snippets__schem_lift_prod_recR_A\<close>
 definition schem_lift_prod_recR_A_left ::
   "('n, 'ls, 'x, 'a, 'b2 :: Pord) schem_lift \<Rightarrow>
-   ('n :: n_A, ('ls, 'rs :: hasntA) sprod, 'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
+   ('n :: n_A, ('ls, 'rs :: hasntA) sprod, 
+    'x, 'a, 'b2 * ('rest :: Pordb)) schem_lift" where
 "schem_lift_prod_recR_A_left rec n s =
   (case s of
     SP ls rs \<Rightarrow>
@@ -130,7 +132,8 @@ definition schem_lift_prod_recR_A_left ::
 
 definition schem_lift_prod_recR_A_right ::
   "('n, 'rs, 'x, 'a, 'b2 :: Pord) schem_lift \<Rightarrow>
-   ('n :: n_A, ('ls :: hasntA, 'rs ) sprod, 'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
+   ('n :: n_A, ('ls :: hasntA, 'rs ) sprod,
+    'x, 'a, ('rest :: Pordb) * ('b2)) schem_lift" where
 "schem_lift_prod_recR_A_right rec n s =
   (case s of
     SP ls rs \<Rightarrow>
@@ -158,8 +161,11 @@ text_raw \<open>%Snippet paper_examples__auto_lift_snippets__schem_lift_recL\<cl
 definition schem_lift_recL ::
   "('s1l, 's2, 'x, 'a1l, 'b2) schem_lift \<Rightarrow>
    ('s1r, 's2, 'x, 'a1r, 'b2) schem_lift \<Rightarrow>
-   (('s1l :: schem, 's1r :: schem) sprod, 's2 :: schem, 'x, 
-   (('a1l :: Bogus) * ('a1r :: Bogus)), 'b2 :: Mergeable) schem_lift" where
+   (('s1l :: schem, 's1r :: schem) sprod,
+     's2 :: schem,
+     'x, 
+     (('a1l :: Bogus) * ('a1r :: Bogus)),
+     'b2 :: Mergeable) schem_lift" where
 "schem_lift_recL recl recr s1 s2 =
   (case s1 of
     SP s1l s1r \<Rightarrow>
@@ -169,7 +175,8 @@ text_raw \<open>%EndSnippet\<close>
 text_raw \<open>%Snippet paper_examples__auto_lift_snippets__schem_lift_merge_recR\<close>
 definition schem_lift_merge_recR_A_left ::
   "('n, 'ls, 'x, 'a, 'b2) schem_lift \<Rightarrow>
-   ('n :: n_A, ('ls, 'rs :: hasntA) smerge, 'x, 'a, 'b2) schem_lift" where
+   ('n :: n_A, ('ls, 'rs :: hasntA) smerge,
+    'x, 'a, 'b2) schem_lift" where
 "schem_lift_merge_recR_A_left rec n s =
   (case s of
     SM ls rs \<Rightarrow>
@@ -177,7 +184,8 @@ definition schem_lift_merge_recR_A_left ::
 
 definition schem_lift_merge_recR_A_right ::
   "('n, 'rs, 'x, 'a, 'b2) schem_lift \<Rightarrow>
-   ('n :: n_A, ('ls :: hasntA, 'rs) smerge, 'x, 'a, 'b2) schem_lift" where
+   ('n :: n_A, ('ls :: hasntA, 'rs) smerge,
+    'x, 'a, 'b2) schem_lift" where
 "schem_lift_merge_recR_A_right rec n s =
   (case s of
     SM ls rs \<Rightarrow>

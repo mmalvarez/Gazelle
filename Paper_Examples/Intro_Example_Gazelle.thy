@@ -146,11 +146,21 @@ definition init_state :: "(composed, unit) composed_state" where
 text_raw \<open>%EndSnippet\<close>
 
 text_raw \<open>%Snippet paper_examples__intro_example_gazelle__composition_run_value\<close>
-
 value "sem_run composed_sem 99 init_state"
 \<comment> \<open>Result:\<close>
-text \<open>@{value "sem_run composed_sem 99 init_state"}\<close>
-
+definition result where
+"result =
+Inl (mdp 18 (Some (mdt [])),
+     mdp 0 (Some (mdt None)),
+     mdp 16 (Some (mdt 1)), 
+     mdp 16 (Some (mdt 2)),
+     mdp 16 (Some (mdt 3)),
+     mdp 10 (Some
+      (mdt (Oalist
+            [(STR ''result'', 3),
+             (STR ''x'', 1),
+             (STR ''y'', 2)]))),
+     mdp 9 (Some (mdt 8)), ())"
 text_raw \<open>%EndSnippet\<close>
 
 end

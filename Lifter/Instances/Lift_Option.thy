@@ -19,7 +19,8 @@ definition option_l ::
 text_raw \<open>%EndSnippet\<close>
 
 text_raw \<open>%Snippet gazelle__lifter__instances__lift_option__option_l_S\<close>
-definition option_l_S :: "('s, 'b) valid_set \<Rightarrow> ('s, 'b option) valid_set" where
+definition option_l_S ::
+  "('s, 'b) valid_set \<Rightarrow> ('s, 'b option) valid_set" where
 "option_l_S S s = (Some ` S s)"
 text_raw \<open>%EndSnippet\<close>
 

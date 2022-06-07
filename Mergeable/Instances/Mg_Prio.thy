@@ -573,14 +573,16 @@ begin
 definition prio_bsup :
 "bsup a b =
   (case a of
-    mdp ai a' \<Rightarrow> (case b of
-                  mdp bi b' \<Rightarrow> (if ai \<le> bi then
-                                  (if bi \<le> ai then
-                                    (if pleq b' (bsup a' b') then
-                                         mdp ai (bsup a' b')
-                                         else mdp (1 + ai) bot)
-                                                 else mdp bi b')
-                               else mdp ai a')))"
+    mdp ai a' \<Rightarrow>
+      (case b of
+        mdp bi b' \<Rightarrow>
+          (if ai \<le> bi then
+            (if bi \<le> ai then
+              (if pleq b' (bsup a' b') then
+                   mdp ai (bsup a' b')
+                   else mdp (1 + ai) bot)
+                           else mdp bi b')
+         else mdp ai a')))"
 text_raw \<open>%EndSnippet\<close>
 instance proof
   fix a b :: "('a md_prio)"

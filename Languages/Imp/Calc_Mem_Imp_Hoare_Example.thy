@@ -202,9 +202,11 @@ lemma prog1_spec :
   shows
     "|(sem_final :: 
         (syn \<Rightarrow>
-         (syn, ('x :: {Okay, Bogus, Mergeableb, Pordps, Pordc_all}))
+         (syn, ('x :: {Okay, Bogus, Mergeableb, 
+                       Pordps, Pordc_all}))
             state \<Rightarrow>
-         (syn, (_ :: {Okay, Bogus, Mergeableb, Pordps})) state))|
+         (syn, (_ :: {Okay, Bogus, Mergeableb,
+                      Pordps})) state))|
      {~ (\<lambda> st . st \<in> ok_S) ~}
      [prog1 i1 i2]
      {~ (\<lambda> st . st \<in> ok_S \<and>
